@@ -597,7 +597,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   NATO alphabet (alfa/alpha→A, bravo→B, ...). Controls: *undo/delete* removes the last letter,
   *done/that's it* evaluates early, *cancel/never mind* leaves spelling mode. Reaching the entry
   length auto-evaluates. Progress is echoed after each utterance. The assembled word then flows
-  through the normal pipeline (pattern check, entry) as a literal.
+  through the normal pipeline (pattern check, entry) as a literal. On a partially solved entry,
+  *done* with exactly the open-square count fills just those squares (REQ-ANS-018).
 - **Accept:** Given entry length 5 and utterances "H", "echo", "are", "tango? no — undo", ... the
   buffer behaves as specified and evaluates at length 5.
 - **Verify:** unit `tests/unit/matching.test.js` (letter parsing), `tests/unit/machine.test.js`
@@ -664,6 +665,24 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   to say it again or spell it; a repeated "undo" reports nothing to undo. Given HEIST was entered
   over crossing letters via *anyway*, then "undo" restores those letters.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`; manual MT-26.
+
+#### REQ-ANS-018 — Partial spelling fills only the open squares
+- **Status:** Active · **Level:** MUST
+- On a partially solved entry the user MUST be able to spell only the missing letters: in spelling
+  mode, *done* with exactly as many letters as the entry has open squares MUST place those letters
+  into the open squares in order, keeping the grid's existing letters. The resulting full word is
+  spelled back before entering (it differs from what the user voiced — the REQ-ANS-006 exception).
+  Spelling the full entry length MUST keep working unchanged (auto-evaluates on the last letter);
+  the open-square reading applies only on an explicit *done*, so the two never race. Any other
+  letter count reports a mismatch naming both accepted counts, keeping the buffer (REQ-ANS-011).
+  Spelling mode's opening prompt MUST mention the option when the entry is partially solved. A
+  fully filled entry has no open squares — only a full-length spelling can replace it
+  (REQ-ANS-016).
+- **Accept:** Given A1 reads `H__R_` (squares 2, 3 and 5 open) in spelling mode, when the user
+  spells "E, A, T" and says done, then HEART is spelled back and entered. Given the same entry,
+  spelling H-E-A-R-T still auto-evaluates to HEART at the fifth letter. Given "E, A" then done, the
+  report offers 5 letters or 3 for the open squares.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/verbalizer.test.js`.
 
 ---
 

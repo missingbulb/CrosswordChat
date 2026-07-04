@@ -91,6 +91,22 @@ describe('outcome phrasing', () => {
     expect(out).not.toContain('I heard'); // no preamble before the problem
   });
 
+  test('REQ-ANS-018: spelling a partially solved entry — both counts offered, prompt mentions the option', () => {
+    const mismatch = render({
+      kind: 'length-mismatch',
+      variants: [{ word: 'EA', len: 2 }],
+      needed: 5,
+      open: 3,
+    });
+    expect(mismatch).toContain('we need 5');
+    expect(mismatch).toContain('3 for just the open squares');
+
+    expect(render({ kind: 'spell-start', open: 3, length: 5 })).toContain('just the 3 missing letters');
+    // Nothing filled yet (or fully filled): the plain prompt, no partial option.
+    expect(render({ kind: 'spell-start', open: 5, length: 5 })).not.toContain('missing');
+    expect(render({ kind: 'spell-start', open: 0, length: 5 })).not.toContain('missing');
+  });
+
   test('REQ-ANS-008: collision states only the problem — spot, both letters, crossing', () => {
     const out = render({
       kind: 'collision',

@@ -344,6 +344,56 @@ describe('answers (ANS)', () => {
     expect(enter[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
   });
 
+  test('REQ-ANS-018: spelling just the missing letters fills the open squares', () => {
+    // A1 reads H__R_ — three open squares.
+    const s = listening(heartSnapshot(['H..R.', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    const start = s.step(heard('spell'));
+    expect(says(start)[0]).toEqual({ kind: 'spell-start', open: 3, length: 5 });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('e'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('a'));
+    s.step({ type: 'TTS_DONE' });
+    expect(says(s.step(heard('t')))[0]).toEqual({ kind: 'spell-progress', letters: ['E', 'A', 'T'] });
+    s.step({ type: 'TTS_DONE' });
+    const done = s.step(heard('done'));
+    // The user voiced only part of the word, so the whole merged word is read back.
+    expect(says(done)[0]).toMatchObject({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    const enter = s.step({ type: 'TTS_DONE' });
+    expect(enter[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
+  test('REQ-ANS-018: full-length spelling still works on a partially solved entry', () => {
+    const s = listening(heartSnapshot(['H..R.', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('spell'));
+    s.step({ type: 'TTS_DONE' });
+    for (const letter of ['h', 'echo', 'a', 'are']) {
+      s.step(heard(letter));
+      s.step({ type: 'TTS_DONE' });
+    }
+    const done = s.step(heard('tango')); // 5th letter → auto-evaluate as the whole word
+    expect(says(done)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
+  test('REQ-ANS-018: a count matching neither the word nor the open squares names both', () => {
+    const s = listening(heartSnapshot(['H..R.', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('spell'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('e'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('a'));
+    s.step({ type: 'TTS_DONE' });
+    const short = s.step(heard('done')); // 2 letters: not 5, not 3
+    expect(says(short)[0]).toMatchObject({ kind: 'length-mismatch', needed: 5, open: 3 });
+    s.step({ type: 'TTS_DONE' });
+    // Still spelling with the buffer intact — one more letter reaches the open count.
+    s.step(heard('t'));
+    s.step({ type: 'TTS_DONE' });
+    const done = s.step(heard('done'));
+    expect(says(done)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
+  });
+
   test('REQ-ANS-014: bare "pass" is a command; "answer pass" plays the word PASS', () => {
     const blocked = makeSnapshot(['#...', '....', '....', '...#'], {
       clues: { A4: 'Walk casually' },

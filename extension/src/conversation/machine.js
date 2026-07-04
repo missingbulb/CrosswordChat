@@ -214,11 +214,14 @@ function handleCommand(state, cmd) {
       return listenAgain(state, [{ kind: 'help' }]);
     case 'stop':
       return speak(state, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
-    case 'spell':
+    case 'spell': {
+      // REQ-ANS-018: the opening prompt offers the just-the-open-squares option.
+      const pattern = state.model.patternFor(state.clueId);
       return listenAgain(
         { ...state, mode: 'spelling', spellBuffer: [] },
-        [{ kind: 'spell-start' }],
+        [{ kind: 'spell-start', open: pattern.filter((l) => !l).length, length: pattern.length }],
       );
+    }
     case 'enter-anyway': // REQ-ANS-012
       if (!state.pendingWord) return null; // nothing pending — ANYWAY might be the answer
       return speak(
@@ -247,9 +250,19 @@ function handleCommand(state, cmd) {
 }
 
 function finishSpelling(state, buffer) {
-  const word = buffer.join('');
   const rawPattern = state.model.patternFor(state.clueId);
   const pattern = state.model.wordFor(state.clueId) ? rawPattern.map(() => null) : rawPattern;
+  const open = pattern.filter((l) => !l).length;
+  // REQ-ANS-018: on a partially solved entry, exactly as many letters as there are open
+  // squares means "fill just those" — the grid's letters supply the rest of the word.
+  // Only reachable via an explicit "done": auto-evaluation fires at full entry length.
+  if (buffer.length === open && open < pattern.length) {
+    let next = 0;
+    const word = pattern.map((have) => have ?? buffer[next++]).join('');
+    // spelledDifferently: the user voiced only part of the word, so read it back whole.
+    return finishFit({ ...state, mode: 'normal', spellBuffer: [] }, word, true);
+  }
+  const word = buffer.join('');
   const outcome = evaluate({
     alternatives: [{ transcript: word }],
     entryLength: pattern.length,
@@ -271,10 +284,12 @@ function finishSpelling(state, buffer) {
     );
   }
   // length-mismatch: keep the buffer; the user can undo/continue/cancel (REQ-ANS-011).
+  // On a partially solved entry, name the open-square count too (REQ-ANS-018).
   return listenAgain(state, [{
     kind: 'length-mismatch',
     variants: [{ word, len: word.length }],
     needed: pattern.length,
+    ...(open && open < pattern.length ? { open } : {}),
   }]);
 }
 

@@ -101,7 +101,9 @@ export function render(say) {
       const list = say.variants
         .map((v) => `${sayWord(v.word)} is ${v.len} letters`)
         .join(', and ');
-      return `${list} — we need ${say.needed}. Try again, spell it, or say next.`;
+      // REQ-ANS-018: while spelling a partially solved entry, both counts work.
+      const alsoOpen = say.open ? `, or ${say.open} for just the open squares` : '';
+      return `${list} — we need ${say.needed}${alsoOpen}. Try again, spell it, or say next.`;
     }
     case 'collision': {
       // REQ-ANS-008: only the problem — no "fits the length, but" preamble.
@@ -135,8 +137,13 @@ export function render(say) {
       return "Sorry, I didn't catch that. Say an answer, or say help.";
     case 'misheard-reprompt':
       return "My mistake. What's your answer?";
-    case 'spell-start':
-      return 'Okay, spell it letter by letter. Say undo to remove one, done when you finish, or cancel to go back.';
+    case 'spell-start': {
+      // REQ-ANS-018: on a partially solved entry, offer spelling just the missing letters.
+      const partial = say.open && say.open < say.length
+        ? ` — the whole word, or just the ${say.open} missing letters`
+        : '';
+      return `Okay, spell it letter by letter${partial}. Say undo to remove one, done when you finish, or cancel to go back.`;
+    }
     case 'spell-progress':
       return say.letters.length ? `${say.letters.join(', ')}.` : 'Nothing yet.';
     case 'spell-cancelled':
