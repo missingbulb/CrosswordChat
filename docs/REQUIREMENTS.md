@@ -677,9 +677,14 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Status:** Active · **Level:** MUST
 - Speech output MUST use `chrome.tts` when available (extension contexts; unaffected by page
   autoplay policy) and fall back to `speechSynthesis`. The port MUST expose `speak(text) → Promise`
-  (resolving on end/interruption) and `cancel()` (immediate silence, REQ-LIFE-002).
+  (resolving on end/interruption) and `cancel()` (immediate silence, REQ-LIFE-002). Because the OS
+  default voice is often the most robotic one installed, the port SHOULD speak with the first
+  installed voice from a short ranked preference list (e.g. `Google US English`, which ships with
+  desktop Chrome) and use the system default only when none of them is installed.
 - **Accept:** Given a fake `chrome.tts`, then `speak` resolves on the `end` event and `cancel` calls
-  `chrome.tts.stop`; absent `chrome.tts`, `speechSynthesis` is used.
+  `chrome.tts.stop`; absent `chrome.tts`, `speechSynthesis` is used. Given an engine listing a
+  preferred voice, then `speak` uses it; listing none of them, then no voice is set (system
+  default).
 - **Verify:** unit `tests/unit/speech-ports.test.js`; manual MT-03.
 
 #### REQ-SPCH-002 — Speech-to-text listen cycles
