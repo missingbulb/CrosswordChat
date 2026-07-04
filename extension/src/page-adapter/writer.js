@@ -33,10 +33,16 @@ function keyEventInit(key) {
   return { key, code: letter ? `Key${key}` : key, keyCode, which: keyCode };
 }
 
-function typeKey(document, key) {
-  const target = document.activeElement && document.activeElement !== document.body
-    ? document.activeElement
-    : document.body;
+function typeKey(document, key, cellEl) {
+  // Key events must bubble THROUGH the app's root container: the live page delegates
+  // key handling near its own root (React-style), and that root is a DESCENDANT of
+  // <body> — an event dispatched on body bubbles up past document without ever
+  // passing through it. Prefer the element the app focused (the selected cell's rect
+  // carries tabindex=0); otherwise dispatch on the cell itself.
+  const active = document.activeElement;
+  const target = active && active !== document.body && active !== document.documentElement
+    ? active
+    : (cellEl ?? document.body);
   const init = keyEventInit(key);
   fire(target, 'keydown', init);
   if (/^[A-Z]$/.test(key)) fire(target, 'keypress', { ...init, charCode: init.keyCode });
@@ -72,7 +78,7 @@ export async function enterAnswer(document, cells, opts = {}) {
     if (!el) return { ok: false, snapshot: snapshot(document) };
     clickCell(el);
     await settle(keySettleMs); // let the app apply the selection before we type into it
-    typeKey(document, String(letter).toUpperCase());
+    typeKey(document, String(letter).toUpperCase(), el);
     await settle(keySettleMs);
   }
   return verify(
@@ -94,7 +100,7 @@ export async function clearEntry(document, cellIndices, opts = {}) {
     if (!el) continue;
     clickCell(el);
     await settle(keySettleMs);
-    typeKey(document, 'Backspace');
+    typeKey(document, 'Backspace', el);
     await settle(keySettleMs);
   }
   return verify(

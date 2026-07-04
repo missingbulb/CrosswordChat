@@ -7,16 +7,31 @@ function classHas(el, name) {
   return (el.getAttribute?.('class') ?? '').split(/\s+/).includes(name);
 }
 
+// Only an element's OWN text nodes — excludes nested children's content.
+function ownText(el) {
+  return [...el.childNodes]
+    .filter((n) => n.nodeType === 3 /* TEXT_NODE */)
+    .map((n) => n.textContent)
+    .join('')
+    .trim();
+}
+
 function readCellTexts(cellEl) {
-  // Prefer explicit classes; fall back to a heuristic (number = pure digits) so minor
-  // NYT drift degrades gracefully. probe() reports which path matched (REQ-PAGE-009).
-  let letterEl = cellEl.querySelector(SEL.cellLetter);
-  let numberEl = cellEl.querySelector(SEL.cellNumber);
-  if (!letterEl && !numberEl) {
-    const texts = [...cellEl.querySelectorAll('text')];
-    numberEl = texts.find((t) => /^\d+$/.test(t.textContent.trim())) ?? null;
-    letterEl = texts.find((t) => t !== numberEl && t.textContent.trim()) ?? null;
+  // Live markup (verified against a saved Mini page, 2026-07): the number and letter are
+  // direct-child <text> elements with no distinguishing classes, and each NESTS a hidden
+  // aria-live <text class="xwd__cell--hidden"> for screen readers. Reading textContent
+  // would fold that hidden copy in, so only each element's own text nodes count.
+  // Number = the pure-digit element; letter = any other non-empty one.
+  const texts = [...cellEl.children].filter((el) => el.tagName?.toLowerCase() === 'text');
+  if (texts.length) {
+    const own = texts.map(ownText);
+    const numIdx = own.findIndex((t) => /^\d+$/.test(t));
+    const letter = own.find((t, i) => i !== numIdx && t) ?? '';
+    return { letter: letter.toUpperCase(), number: numIdx >= 0 ? Number(own[numIdx]) : null };
   }
+  // Fallback: older class-tagged markup (SEL.cellLetter / SEL.cellNumber).
+  const letterEl = cellEl.querySelector(SEL.cellLetter);
+  const numberEl = cellEl.querySelector(SEL.cellNumber);
   const letter = (letterEl?.textContent ?? '').trim().toUpperCase();
   const numText = (numberEl?.textContent ?? '').trim();
   return { letter, number: /^\d+$/.test(numText) ? Number(numText) : null };

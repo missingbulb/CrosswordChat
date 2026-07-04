@@ -7,11 +7,11 @@
     body { font-family: system-ui, sans-serif; margin: 20px; }
     main { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
     svg { border: 2px solid #000; }
-    g.xwd__cell rect { fill: #fff; stroke: #999; }
-    g.xwd__cell--block rect { fill: #000; }
-    g.xwd__cell--selected rect { fill: #ffda00; }
-    text.xwd__cell-number { font-size: 10px; }
-    text.xwd__cell-letter { font-size: 22px; font-weight: 600; }
+    rect.xwd__cell--cell { fill: #fff; stroke: #999; }
+    rect.xwd__cell--block { fill: #000; stroke: #999; }
+    rect.xwd__cell--selected { fill: #ffda00; }
+    text[data-testid="cell-text"][text-anchor="start"] { font-size: 10px; }
+    text[data-testid="cell-text"][text-anchor="middle"] { font-size: 22px; font-weight: 600; }
     .xwd__clue-list--wrapper { min-width: 220px; }
     .xwd__clue-list--title { text-transform: uppercase; font-size: 14px; }
     ol.xwd__clue-list--list { list-style: none; padding: 0; margin: 0; }

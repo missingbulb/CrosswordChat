@@ -1,6 +1,9 @@
-// A faithful miniature of the NYT crossword page: same class names as
-// extension/src/page-adapter/selectors.js, same interaction model (click to select,
-// document-level keyboard input, congrats modal on correct completion).
+// A faithful miniature of the NYT crossword page, mirroring a saved live Mini dump
+// (2026-07): same class names as extension/src/page-adapter/selectors.js, cell state
+// classes on the <rect> (not the <g>), number/letter as unclassed direct-child <text>
+// elements each nesting a hidden aria-live <text>, and keyboard input handled by a
+// listener on the app root container (React-style delegation — NOT document level,
+// so events dispatched on <body> never arrive, exactly like the live page).
 // It is the integration-test target AND an offline rehearsal stage (npm run fixture).
 // Deliberately self-contained: it must NOT import extension code.
 
@@ -70,14 +73,34 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   svg.setAttribute('viewBox', `0 0 ${cols * CELL} ${rows * CELL}`);
   svg.setAttribute('width', String(cols * CELL));
 
+  // Live cell shape: <g class="xwd__cell"><rect class="xwd__cell--cell xwd__cell--nested" …/>
+  //   <text data-testid="cell-text"><text class="xwd__cell--hidden" aria-live="polite"/>1</text>
+  //   <text data-testid="cell-text"><text class="xwd__cell--hidden" aria-live="polite"/>A</text></g>
   const cellEls = [];
-  const letterEls = [];
+  const rectEls = [];
+  const letterNodes = []; // the visible letter Text node per cell
+  const letterHiddenEls = []; // the nested aria-live copy per cell
+  function cellText(x, y, anchor) {
+    const t = document.createElementNS(SVG, 'text');
+    t.setAttribute('data-testid', 'cell-text');
+    t.setAttribute('x', String(x));
+    t.setAttribute('y', String(y));
+    t.setAttribute('text-anchor', anchor);
+    const hidden = document.createElementNS(SVG, 'text');
+    hidden.setAttribute('class', 'xwd__cell--hidden');
+    hidden.setAttribute('aria-live', 'polite');
+    t.append(hidden);
+    return { t, hidden };
+  }
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const i = r * cols + c;
       const g = document.createElementNS(SVG, 'g');
-      g.setAttribute('class', `xwd__cell${isBlock(r, c) ? ' xwd__cell--block' : ''}`);
+      g.setAttribute('class', 'xwd__cell');
       const rect = document.createElementNS(SVG, 'rect');
+      rect.setAttribute('role', 'cell');
+      rect.setAttribute('tabindex', '-1');
+      rect.setAttribute('class', isBlock(r, c) ? 'xwd__cell--block xwd__cell--nested' : 'xwd__cell--cell xwd__cell--nested');
       rect.setAttribute('x', String(c * CELL));
       rect.setAttribute('y', String(r * CELL));
       rect.setAttribute('width', String(CELL));
@@ -85,23 +108,20 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
       g.append(rect);
       if (!isBlock(r, c)) {
         if (numberAt.has(i)) {
-          const num = document.createElementNS(SVG, 'text');
-          num.setAttribute('class', 'xwd__cell-number');
-          num.setAttribute('x', String(c * CELL + 4));
-          num.setAttribute('y', String(r * CELL + 12));
-          num.textContent = String(numberAt.get(i));
-          g.append(num);
+          const { t } = cellText(c * CELL + 4, r * CELL + 12, 'start');
+          t.append(String(numberAt.get(i)));
+          g.append(t);
         }
-        const letter = document.createElementNS(SVG, 'text');
-        letter.setAttribute('class', 'xwd__cell-letter');
-        letter.setAttribute('x', String(c * CELL + CELL / 2));
-        letter.setAttribute('y', String(r * CELL + CELL - 10));
-        letter.setAttribute('text-anchor', 'middle');
-        g.append(letter);
-        letterEls[i] = letter;
+        const { t, hidden } = cellText(c * CELL + CELL / 2, r * CELL + CELL - 10, 'middle');
+        const visible = document.createTextNode('');
+        t.append(visible);
+        g.append(t);
+        letterNodes[i] = visible;
+        letterHiddenEls[i] = hidden;
       }
       svg.append(g);
       cellEls[i] = g;
+      rectEls[i] = rect;
     }
   }
   boardWrap.append(svg);
@@ -123,7 +143,7 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
       label.className = 'xwd__clue--label';
       label.textContent = String(clue.number);
       const text = document.createElement('span');
-      text.className = 'xwd__clue--text';
+      text.className = 'xwd__clue--text xwd__clue-format';
       text.innerHTML = clue.html;
       li.append(label, text);
       ol.append(li);
@@ -152,12 +172,19 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
 
   function paint() {
     state.letters.forEach((letter, i) => {
-      if (letterEls[i]) letterEls[i].textContent = letter;
+      if (!letterNodes[i]) return;
+      letterNodes[i].textContent = letter;
+      // The live page mirrors state into the hidden aria-live copy; readers that use
+      // textContent instead of own text nodes would see the letter doubled.
+      letterHiddenEls[i].textContent = letter;
     });
     const entry = selectedEntry();
-    cellEls.forEach((g, i) => {
-      const base = `xwd__cell${g.getAttribute('class').includes('--block') ? ' xwd__cell--block' : ''}`;
-      g.setAttribute('class', i === state.selCell ? `${base} xwd__cell--selected` : base);
+    rectEls.forEach((rect, i) => {
+      const block = rect.getAttribute('class').includes('--block');
+      const base = block ? 'xwd__cell--block xwd__cell--nested' : 'xwd__cell--cell xwd__cell--nested';
+      const selected = !block && i === state.selCell;
+      rect.setAttribute('class', selected ? `xwd__cell--selected xwd__cell--highlighted ${base}` : base);
+      rect.setAttribute('tabindex', selected ? '0' : '-1');
     });
     for (const [id, li] of clueItemEls) {
       li.className = entry && id === entry.id ? 'xwd__clue--li xwd__clue--selected' : 'xwd__clue--li';
@@ -184,7 +211,10 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     if (pos >= 0 && pos < entry.cells.length - 1) state.selCell = entry.cells[pos + 1];
   }
 
-  document.addEventListener('keydown', (event) => {
+  // Like the live app, keys are handled by delegation on the app root container —
+  // a DESCENDANT of <body>. Events dispatched on <body>/document never pass through
+  // here; they must be dispatched on (or inside) the board.
+  main.addEventListener('keydown', (event) => {
     if (swallowKeys) return;
     if (legacyKeysOnly && !event.keyCode) return;
     const { key } = event;
@@ -209,7 +239,7 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   });
 
   cellEls.forEach((g, i) => {
-    if (g.getAttribute('class').includes('--block')) return;
+    if (rectEls[i].getAttribute('class').includes('--block')) return;
     g.addEventListener('click', () => {
       if (state.selCell === i) {
         state.selDir = state.selDir === 'across' ? 'down' : 'across'; // NYT: re-click toggles
@@ -240,7 +270,9 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
       state.selDir = dir;
       render();
       for (const ch of word) {
-        document.dispatchEvent(new (document.defaultView.KeyboardEvent)('keydown', {
+        // Dispatched on the selected cell so it bubbles through the app root,
+        // exactly like a real keystroke on the focused rect.
+        cellEls[state.selCell].dispatchEvent(new (document.defaultView.KeyboardEvent)('keydown', {
           key: ch,
           keyCode: ch.toUpperCase().charCodeAt(0),
           bubbles: true,

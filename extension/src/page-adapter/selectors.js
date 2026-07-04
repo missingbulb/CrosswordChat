@@ -6,7 +6,13 @@
 //   2. fix values HERE only,
 //   3. the fake page fixture (tests/fixtures/fake-nyt) mirrors these exactly,
 //      so integration tests define the expected shape.
-// Last verified against: the fake fixture (live verification pending — MT-01).
+// Last verified against: a saved live Mini page (7×7, 2026-07-04). Notable live facts:
+//   - cell state classes (--block/--selected/--highlighted) live on the <rect>, not the <g>;
+//   - number/letter <text> elements carry NO distinguishing classes (cellLetter/cellNumber
+//     below match nothing live — reader.js reads direct-child <text> own-text instead, and
+//     keeps the class path as a fallback for older markup);
+//   - each visible <text> nests a hidden aria-live <text class="xwd__cell--hidden"> copy;
+//   - key handling is delegated at the app root container, NOT at document level.
 
 export const SEL = {
   board: '.xwd__board, [class*="xwd__board"]',
