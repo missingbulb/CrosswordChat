@@ -14,8 +14,10 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
    default speech recognition runs on Google's servers (part of the browser, not ours); recent
    Chrome can do it on-device. Enforced by an architecture test (no network primitives in source).
 2. **Speech APIs available to extensions?** Yes, both directions: `webkitSpeechRecognition`
-   (with an n-best list we exploit for homophones) and `chrome.tts`/`speechSynthesis`. They need
-   a document context, which is why the conversation lives in the side panel.
+   (with an n-best list we exploit for homophones) and `chrome.tts`/`speechSynthesis`. Recognition
+   needs a document context, which is why the conversation lives in the puzzle page itself
+   (content script) — the extension is speech-only, with no visual UI. Speaking goes through the
+   service worker's `chrome.tts`.
 3. **Can we type into the NYT grid?** Yes via simulated click+keydown per cell, verified by
    re-reading the DOM. One real risk (`isTrusted` filtering) with three documented fallbacks —
    validated early by manual test MT-02.
@@ -33,7 +35,7 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 | `extension/src/matching/` | Pure speech-to-answer matching: normalization, digits→words, homophone dictionary, length/collision verdicts, command lexicon. |
 | `extension/src/conversation/` | Pure dialog policy: state machine, next-clue strategies, all English strings + clue verbalizer. |
 | `extension/src/speech/` | TTS/STT wrappers over browser APIs, injectable for tests. |
-| `extension/src/{app,background,content,sidepanel}/` | Wiring: orchestrator, icon toggle, message routing, captions UI. |
+| `extension/src/{app,background,content}/` | Wiring: orchestrator, icon toggle, in-page session host, TTS relay. |
 | `tests/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
 | [`docs/RELEASING.md`](docs/RELEASING.md) | Versioning (current: **0.9.0**), CI workflows, release process, Chrome Web Store deployment setup. |

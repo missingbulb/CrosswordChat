@@ -35,7 +35,8 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 ## 2. Scope & assumptions
 
 - **In scope (MVP):** NYT Daily crossword and the Mini, on desktop Chrome (≥ 116), English (`en-US`),
-  one puzzle tab at a time. Voice-first interaction with a small side-panel UI showing captions.
+  one puzzle tab at a time. Voice-only interaction — the extension shows no visual UI; what was
+  said/heard is mirrored to the page console for debugging (REQ-SPCH-007/008).
 - **Out of scope (MVP), analyzed in §13:** rebus squares, barge-in (interrupting TTS by speaking),
   NYT Check/Reveal integration, following cross-references, multiple simultaneous sessions,
   non-English puzzles, acrostics/other game types.
@@ -58,7 +59,7 @@ The problem decomposes into independently testable modules (see `docs/ARCHITECTU
 | Turn intent into English (and clues into speech text) | `extension/src/conversation/phrases.js` | No | unit |
 | Match utterances to answers (homophones, lengths, collisions) | `extension/src/matching/` | No | unit |
 | Speech I/O (TTS/STT wrappers) | `extension/src/speech/` | No (browser APIs) | unit with fake browser APIs + manual |
-| Wiring, lifecycle, UI shell | `extension/src/background/`, `sidepanel/`, `content/`, `app/` | Chrome APIs | manual + thin by design |
+| Wiring, lifecycle | `extension/src/background/`, `content/`, `app/` | Chrome APIs | manual + thin by design |
 
 ---
 
@@ -116,8 +117,9 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 
 #### REQ-LIFE-001 — Start on icon click
 - **Status:** Active · **Level:** MUST
-- Clicking the extension icon on a NYT crossword page with an unsolved puzzle MUST start a session:
-  open the side panel, snapshot the puzzle, and read the first clue (per REQ-LIFE-007).
+- Clicking the extension icon on a NYT crossword page with an unsolved puzzle MUST start a session
+  hosted in that page: snapshot the puzzle and read the first clue (per REQ-LIFE-007). Nothing
+  visual may open — no panel, popup, or window; the only chrome is the action badge.
 - **Accept:** Given an unsolved puzzle page, when the icon is clicked, then within the latency budget
   (REQ-NFR-003) the current clue is spoken and the mic starts listening.
 - **Verify:** unit `tests/unit/machine.test.js` (START event → clue readout → listen); manual MT-03.
@@ -125,7 +127,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 #### REQ-LIFE-002 — Icon click ends an active session immediately
 - **Status:** Active · **Level:** MUST
 - Clicking the icon during a session MUST end it: speech output stops mid-word, the mic stops,
-  the panel closes. No goodbye message (the user asked for silence). Target ≤ 500 ms to silence.
+  the badge clears. No goodbye message (the user asked for silence). Target ≤ 500 ms to silence.
 - **Accept:** Given a session mid-readout, when the icon is clicked, then audio stops and the mic
   indicator disappears.
 - **Verify:** unit `tests/unit/machine.test.js` (TOGGLE_OFF → END with no SAY); manual MT-04.
@@ -133,8 +135,9 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 #### REQ-LIFE-003 — Clicking where there is no puzzle
 - **Status:** Active · **Level:** MUST
 - On a non-NYT page the icon MUST give lightweight visual feedback (action badge) and MUST NOT open
-  a session. On an NYT page without a detectable puzzle, the panel MUST say so briefly
-  ("I don't see a crossword here") and end.
+  a session. On an NYT page without a detectable puzzle, the extension MUST say so briefly by voice
+  ("I don't see a crossword here") and end — whether the content script is present (crossword
+  section, no grid) or not (article pages; the service worker speaks via `chrome.tts`).
 - Cases: nytimes.com article page; chrome:// pages; crossword archive/landing page (no grid).
 - **Accept:** As above for each case.
 - **Verify:** unit `tests/unit/machine.test.js` (START with status `not-found`); manual MT-12.
@@ -176,9 +179,11 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 #### REQ-LIFE-008 — Page disappears mid-session
 - **Status:** Active · **Level:** MUST
 - If the puzzle tab navigates away, reloads, or closes during a session, the session MUST end and
-  stop all audio within ~2 s; the panel notes why. No retries against a dead page.
-- **Accept:** Given a session, when the tab is closed or navigated, then speech/mic stop and the panel
-  reports the session ended.
+  stop all audio within ~2 s. No retries against a dead page. (The session lives *in* the page, so
+  page death ends it inherently; the service worker notices the port drop, silences any in-flight
+  `chrome.tts` utterance, and clears the badge.)
+- **Accept:** Given a session, when the tab is closed or navigated, then speech/mic stop and the
+  badge clears.
 - **Verify:** manual MT-19.
 
 #### REQ-LIFE-009 — One session at a time
@@ -682,8 +687,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 #### REQ-SPCH-003 — Microphone permission denied
 - **Status:** Active · **Level:** MUST
-- On `not-allowed`/`service-not-allowed`, the session MUST explain by voice and in the panel how to
-  grant mic access, then end. It MUST NOT retry-loop the permission prompt.
+- On `not-allowed`/`service-not-allowed`, the session MUST explain by voice how to grant mic
+  access, then end. It MUST NOT retry-loop the permission prompt. (The mic grant belongs to the
+  page origin — nytimes.com — since recognition runs in the content script.)
 - **Accept:** Given a recognizer erroring `not-allowed`, then the mic-denied utterance is spoken and
   the session ends.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/speech-ports.test.js` (error mapping);
@@ -712,18 +718,20 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given a `?` clue, then the TTS input string ends with `?`.
 - **Verify:** unit `tests/unit/verbalizer.test.js`; manual MT-14.
 
-#### REQ-SPCH-007 — Everything spoken is also shown
+#### REQ-SPCH-007 — Everything spoken is also logged
 - **Status:** Active · **Level:** MUST
-- Every utterance the system speaks MUST appear as a caption in the side panel (accessibility,
-  debugging, and trust).
-- **Accept:** Given a session, then panel captions mirror TTS output 1:1.
+- The product is deliberately speech-only — no captions, panel, or any visual surface. For
+  debugging and trust, every utterance the system speaks MUST be mirrored to the puzzle page's
+  console (prefixed `[CrosswordChat]`). Console only: never into the page's visible DOM, and never
+  to any server (REQ-NFR-001).
+- **Accept:** Given a session, then console lines mirror TTS output 1:1.
 - **Verify:** manual MT-18.
 
-#### REQ-SPCH-008 — What was heard is also shown
+#### REQ-SPCH-008 — What was heard is also logged
 - **Status:** Active · **Level:** SHOULD
-- The top transcript of each utterance SHOULD appear in the panel (`Heard: "plain"`), so
-  recognition problems are visible.
-- **Accept:** Given an utterance, then the panel shows the transcript.
+- The top transcript of each utterance SHOULD appear in the page console (`heard: "plain"`), so
+  recognition problems are diagnosable.
+- **Accept:** Given an utterance, then the console shows the transcript.
 - **Verify:** manual MT-18.
 
 ---
@@ -800,9 +808,10 @@ any time, every selector lives in one file with a self-diagnosing probe.
 #### REQ-PAGE-009 — Selector probe
 - **Status:** Active · **Level:** MUST
 - The adapter MUST ship a `probe()` that checks every selector/heuristic it relies on against the
-  live DOM and returns a per-item ok/fail report (name, selector, match count). The panel MUST
-  expose a "Probe page" button that displays the report. This is the first thing to run when NYT
-  ships a redesign.
+  live DOM and returns a per-item ok/fail report (name, selector, match count). With no UI surface,
+  the probe MUST stay reachable on demand: the content script answers a `cc:probe` message, run
+  from the service-worker console (MT-01 has the one-liner). This is the first thing to run when
+  NYT ships a redesign.
 - **Accept:** Given the fake page, then all probe items report ok; given an empty page, then the
   probe reports failures rather than throwing.
 - **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01.
@@ -841,7 +850,8 @@ any time, every selector lives in one file with a self-diagnosing probe.
 #### REQ-NFR-002 — Privacy: nothing persisted
 - **Status:** Active · **Level:** MUST
 - No audio, transcripts, or puzzle content may be persisted (no `localStorage`, `indexedDB`,
-  `chrome.storage` in MVP source). Transcripts live in panel memory and die with the session.
+  `chrome.storage` in MVP source). Transcripts live in session memory (and the page console) and
+  die with the page.
 - **Accept:** Given the source tree, then no storage primitives appear; given a session end, then no
   extension storage exists.
 - **Verify:** unit `tests/unit/arch.test.js`; manual MT-15.

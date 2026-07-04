@@ -9,28 +9,31 @@ plumbing are five different problems; none imports another's internals.
 ```
 ┌─────────────────────────── Chrome ───────────────────────────────┐
 │                                                                  │
-│  Service worker (background/)          Side panel (sidepanel/)   │
-│  "switchboard"                         "brain + voice"           │
-│  · icon click → open/close panel       · orchestrator (app/)     │
-│  · one-session bookkeeping, badge      · conversation machine    │
-│  · relays close requests               · matching                │
-│         ▲            │                 · speech ports (TTS/STT)  │
-│         │ port       │ open/close      · captions UI             │
-│         ▼            ▼                        │                  │
-│  ┌──────────────────────────────┐             │ chrome.tabs      │
-│  │ NYT crossword tab            │◄────────────┘ .sendMessage     │
-│  │  content script  "hands"     │                                │
-│  │  · page-adapter (read/write) │                                │
-│  │  · watcher (mutations)       │                                │
-│  │  main-world script (probe)   │                                │
-│  └──────────────────────────────┘                                │
+│  Service worker (background/)  "switchboard + mouth"             │
+│  · icon click → start/stop the in-page session                   │
+│  · one-session bookkeeping, badge                                │
+│  · chrome.tts relay (speak/cancel) — content scripts can't       │
+│         ▲                                                        │
+│         │ port (session registration + speak/done/cancel)        │
+│         ▼                                                        │
+│  ┌──────────────────────────────────────────────┐                │
+│  │ NYT crossword tab — content script           │                │
+│  │  "brain + ears + hands", speech-only UI      │                │
+│  │  · orchestrator (app/) · conversation machine│                │
+│  │  · matching · STT port (mic, page origin)    │                │
+│  │  · page-adapter (read/write/watch)           │                │
+│  │  · console diagnostics (no visual UI)        │                │
+│  │  main-world script (probe)                   │                │
+│  └──────────────────────────────────────────────┘                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-- **Why the brain is in the side panel:** speech APIs need a document (not a service worker), the
-  mic grant belongs to the extension origin, and captions need a UI surface. See FEASIBILITY §2.
-- **Why the content script is thin:** everything that touches the NYT DOM is a dumb, verifiable
-  command (`snapshot`, `enter`, `select`, `clear`, `probe`, `watch`). No decisions are made there.
+- **Why the brain is in the page (content script):** the product is deliberately speech-only — no
+  panel or popup to host or babysit. Speech recognition needs a document; the page is one. The mic
+  grant belongs to nytimes.com (prompted once, on first session), and the session's lifetime is the
+  page's — reload/navigate ends it, which is the wanted behavior. See FEASIBILITY §2.
+- **Why TTS stays in the service worker:** `chrome.tts` (immune to page autoplay rules) is not
+  exposed to content scripts, so the session relays speak/cancel over its port.
 
 ## 2. Module map (source of truth for "what goes where")
 
@@ -56,19 +59,19 @@ extension/src/
     strategies.js    next-clue selection: list-order, most-filled
     phrases.js       every English string; clue verbalizer (italics/brackets/?/blank/length)
   speech/          Browser speech plumbing. Injectable for tests.
-    tts-port.js      chrome.tts | speechSynthesis → speak()/cancel()
+    tts-port.js      chrome.tts | speechSynthesis → speak()/cancel() (used by the service worker)
+    remote-tts-port.js  same contract from the content script: relays speak/cancel over the port
     stt-port.js      webkitSpeechRecognition → listenOnce() n-best, error taxonomy, mic preflight
   app/
     orchestrator.js  executes machine actions via ports/pageClient; owns the event loop
   background/
-    service-worker.js  icon toggle, single-session bookkeeping, badge
+    service-worker.js  icon toggle, single-session bookkeeping, badge, chrome.tts relay
   content/
-    content-script.js  message router → page-adapter; inert until asked (REQ-NFR-004)
+    content-script.js  hosts the session: orchestrator + STT + page-adapter, console diagnostics;
+                       inert until asked (REQ-NFR-004)
     main-world.js      optional in-page probe helper (window.gameData presence)
-  sidepanel/
-    panel.html/js/css  boot, captions, probe button, port to service worker
   shared/
-    messages.js      message type constants shared by panel/content/background
+    messages.js      message type constants shared by content/background
 ```
 
 **Dependency direction (enforced by review + arch test):**
@@ -111,24 +114,27 @@ the verbalizer.
 dispatch(event):
   {state, actions} = machine.reduce(state, event)
   for a of actions:
-    SAY         → caption + tts.speak(phrases.render(a.say)) → dispatch(TTS_DONE)
+    SAY         → console line + tts.speak(phrases.render(a.say)) → dispatch(TTS_DONE)
     LISTEN      → stt.listenOnce() → dispatch(HEARD | STT_ERROR)
     ENTER       → pause watcher → pageClient.enterAnswer(...) → dispatch(ENTRY_RESULT)
     SELECT_CLUE → pageClient.selectClue(...)
-    END         → teardown (cancel tts/stt, stop watcher, close panel)
+    END         → teardown (cancel tts/stt, stop watcher, disconnect port)
 ```
 Strictly sequential; no queues, no races. Watcher events are suppressed while we write (our own
 typing must not look like user activity — REQ-NAV-008's echo-loop clause).
 
-## 5. Message protocol (panel ⇄ content ⇄ background)
+## 5. Message protocol (content ⇄ background)
 
-- Panel → content (via `chrome.tabs.sendMessage(tabId, ...)`):
-  `{type:'cc:snapshot'}` → Snapshot · `{type:'cc:enter', cells:[{index,letter}]}` →
-  `{ok,snapshot}` · `{type:'cc:select', clueId}` · `{type:'cc:clear', cellIndices}` ·
-  `{type:'cc:probe'}` → report · `{type:'cc:watch'} / {type:'cc:unwatch'}`
-- Content → panel (broadcast): `{type:'cc:page-event', kind, snapshot, tabId}`
-- Panel ⇄ background (long-lived Port `cc-panel`): hello/`{tabId}` handshake; `close` request;
-  disconnect = session over (badge cleared).
+Page operations need no messages anymore — the orchestrator calls the page adapter directly
+(same document). What's left is session control and the TTS relay:
+
+- Background → content (via `chrome.tabs.sendMessage`): `{type:'cc:start'}` — begin a session.
+  Debug-only, from the service-worker console: `{type:'cc:ping'}` · `{type:'cc:snapshot'}` →
+  Snapshot · `{type:'cc:probe'}` → report (MT-01).
+- Content ⇄ background (long-lived Port `cc-session`): connect = session registered (badge ON);
+  `{type:'cc:speak', id, text}` → `chrome.tts` → `{type:'cc:speak-done', id}` ·
+  `{type:'cc:tts-cancel'}` — immediate silence · `{type:'cc:close'}` (background → content: icon
+  toggle / takeover) · disconnect = session over (badge cleared, in-flight speech cancelled).
 
 ## 6. Testing architecture (the executable-requirements machinery)
 
@@ -150,7 +156,7 @@ NYT subscription.
 
 | # | Decision | Why | Revisit when |
 |---|---|---|---|
-| D1 | MV3 + side panel hosts the conversation | Speech needs a document; panel persists; captions UI | Popup/offscreen if panel UX annoys |
+| D1 | MV3 + the content script hosts the conversation, speech-only (rev. 2 — originally the side panel) | Speech recognition needs a document and the page is one; no UI wanted (captions dropped for console diagnostics); session dying with the page is desired | Offscreen document if page-lifetime coupling or the nytimes.com mic grant annoys |
 | D2 | `chrome.tts` primary for output | Immune to page autoplay rules | speechSynthesis-only if voice quality disappoints |
 | D3 | Synthetic click+keydown for writing | Matches user behavior; per-cell addressing beats cursor settings | MT-02 fails → fallbacks in FEASIBILITY §3 |
 | D4 | Pure reducer for dialog policy | The spec is mostly dialog policy; reducers make it assertable | — |

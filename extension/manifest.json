@@ -5,8 +5,7 @@
   "description": "Solve the New York Times crossword conversationally: it reads clues aloud, you answer by voice.",
   "minimum_chrome_version": "116",
   "permissions": [
-    "tts",
-    "sidePanel"
+    "tts"
   ],
   "host_permissions": [
     "https://www.nytimes.com/*"
@@ -16,9 +15,6 @@
   },
   "action": {
     "default_title": "CrosswordChat — start/stop voice session"
-  },
-  "side_panel": {
-    "default_path": "sidepanel/panel.html"
   },
   "content_scripts": [
     {
