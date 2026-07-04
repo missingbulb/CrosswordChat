@@ -185,11 +185,12 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
     expect(spoken[1]).toContain('Goodbye');
   });
 
-  test('non-stop speech during TTS is discarded — never treated as an answer (REQ-SPCH-005)', async () => {
+  test('REQ-SPCH-005: our own voice echoed into the mic is discarded, readout continues', async () => {
     const spoken = [];
     const readout = deferred();
     let speaks = 0;
     let listenCalls = 0;
+    let listening = false;
     let pendingBarge = null;
     const ended = new Promise((resolve) => {
       const orchestrator = createOrchestrator({
@@ -203,24 +204,26 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
         },
         stt: {
           listenOnce: () => {
-            listenCalls += 1;
-            // 1st cycle: mid-speech chatter ("heart" — a would-be answer). 2nd: still
-            // speaking, cycle stays open while the readout finishes. 3rd: the real
-            // post-speech listen, where the user ends the session.
-            if (listenCalls === 1) return Promise.resolve({ alternatives: [{ transcript: 'heart', confidence: 0.9 }] });
-            if (listenCalls === 2) {
-              return new Promise((res) => {
-                pendingBarge = res;
-                queueMicrotask(() => readout.resolve()); // readout finishes naturally
-              });
+            if (listening) { // the real post-readout LISTEN: end the session
+              return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
             }
-            return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+            listenCalls += 1;
+            // 1st barge cycle: the mic hears the extension reading the clue (echo).
+            if (listenCalls === 1) {
+              return Promise.resolve({ alternatives: [{ transcript: 'organ with four chambers', confidence: 0.8 }] });
+            }
+            // 2nd cycle: quiet while the readout finishes naturally.
+            return new Promise((res) => {
+              pendingBarge = res;
+              queueMicrotask(() => readout.resolve());
+            });
           },
           stop: () => {
             pendingBarge?.({ error: 'aborted' });
             pendingBarge = null;
           },
         },
+        ui: { listening: (on) => { listening = on; } },
         pageClient: {
           snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
           watch: () => {},
@@ -231,9 +234,63 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
       void orchestrator.start();
     });
     await ended;
-    // "heart" mid-speech produced no fit/enter flow: only the readout and the goodbye spoke.
+    // The echo produced no answer flow: only the full readout and the goodbye spoke.
     expect(spoken).toHaveLength(2);
     expect(spoken[1]).toContain('Goodbye');
-    expect(listenCalls).toBe(3);
+  });
+
+  test('REQ-SPCH-009: an answer mid-readout cuts the speech and runs the fit flow', async () => {
+    const spoken = [];
+    const readout = deferred();
+    let speaks = 0;
+    let listening = false;
+    let barged = false;
+    const entered = [];
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            speaks += 1;
+            return speaks === 1 ? readout.p : Promise.resolve();
+          },
+          cancel: () => readout.resolve(),
+        },
+        stt: {
+          listenOnce: () => {
+            if (listening) { // real LISTEN on the next clue: end the session
+              return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+            }
+            barged = true;
+            // The user answers while the opening readout is still playing.
+            return Promise.resolve({ alternatives: [{ transcript: 'heart', confidence: 0.9 }] });
+          },
+          stop: () => {},
+        },
+        ui: { listening: (on) => { listening = on; } },
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          enterAnswer: async (cells) => {
+            entered.push(cells.map((c) => c.letter).join(''));
+            return {
+              ok: true,
+              snapshot: heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }),
+            };
+          },
+          selectClue: async () => ({ ok: true }),
+          watch: () => {},
+          unwatch: () => {},
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+    await ended;
+    expect(barged).toBe(true);
+    expect(entered).toEqual(['HEART']); // the barged answer really landed
+    // Cut readout → "Fits!" → next clue readout → goodbye.
+    expect(spoken[1]).toBe('Fits!');
+    expect(spoken[2]).toContain('Dying fire bit'); // 6 Across follows
+    expect(spoken[3]).toContain('Goodbye');
   });
 });

@@ -514,6 +514,31 @@ describe('hints, commands, control (HINT/CMD/READ)', () => {
   });
 });
 
+describe('barge-in input (SPCH)', () => {
+  test('REQ-SPCH-009: an answer heard mid-readout is processed without waiting', () => {
+    const s = scenario();
+    s.step({ type: 'START', snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    // Still speaking the opening readout — the shell barged in with a HEARD.
+    const actions = s.step(heard('heart'));
+    expect(says(actions)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
+  });
+
+  test('REQ-SPCH-009: a command heard mid-readout is processed without waiting', () => {
+    const s = scenario();
+    s.step({ type: 'START', snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    const actions = s.step(heard('next'));
+    expect(actions.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A6');
+    expect(says(actions)[0].label).toBe('6 Across');
+  });
+
+  test('REQ-SPCH-009: input while the fit confirmation plays is ignored — the entry must land', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('heart')); // "Fits!" is speaking, after:'enter'
+    expect(s.step(heard('next'))).toEqual([]); // ignored
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+});
+
 describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
   test('REQ-SPCH-003: mic denied → explanation, then end', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));

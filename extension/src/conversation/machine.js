@@ -5,9 +5,10 @@
 //             PAGE_EVENT TOGGLE_OFF
 // Actions out: SAY LISTEN ENTER UNDO SELECT_CLUE END
 //
-// Half-duplex invariant (REQ-SPCH-005): LISTEN is never emitted in the same action
-// batch as SAY; listening starts only after speech finishes (TTS_DONE → after:'listen').
-// The shell's stop-only barge-in listener (REQ-CMD-006) surfaces here as BARGE_IN.
+// Echo discipline (REQ-SPCH-005): LISTEN is never emitted in the same action batch
+// as SAY — the formal mic opens only after speech finishes (TTS_DONE → after:'listen').
+// The shell's barge-in mic (REQ-SPCH-009) delivers mid-speech input as ordinary HEARD
+// events (honored while after:'listen'), and stop during other speech as BARGE_IN.
 
 import { buildModel } from '../puzzle-model/model.js';
 import { nextClue, prevClue, STRATEGIES } from './strategies.js';
@@ -493,7 +494,11 @@ function onBargeIn(state) {
 }
 
 function onHeard(state, { alternatives }) {
-  if (state.phase !== 'listening') return { state, actions: [] };
+  // Listening, or barge-in during an utterance that ends in listening (REQ-SPCH-009).
+  // Not while an entry is pending (after:'enter') or during the sign-off.
+  const receptive = state.phase === 'listening'
+    || (state.phase === 'speaking' && state.after === 'listen');
+  if (!receptive) return { state, actions: [] };
   const s = { ...state, sttRetried: false };
   if (!alternatives?.length) return listenAgain(s, [{ kind: 'didnt-catch' }]);
   switch (s.mode) {

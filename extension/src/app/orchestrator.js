@@ -4,6 +4,7 @@
 import { initialState, reduce } from '../conversation/machine.js';
 import { render } from '../conversation/phrases.js';
 import { parseCommand } from '../matching/commands.js';
+import { toLetters } from '../matching/normalize.js';
 
 /**
  * @param {object} deps
@@ -28,13 +29,17 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
 
   const caption = (role, text) => ui.caption?.(role, text);
 
-  // REQ-CMD-006: while TTS speaks, keep a mic cycle open that acts ONLY on "stop".
-  // Everything else — including the TTS echoing into the mic — is discarded, so the
-  // half-duplex discipline for answers (REQ-SPCH-005) still holds. Returns true when
-  // a stop intent cut the speech short.
-  async function speakWithStopBargeIn(text) {
+  // Barge-in (REQ-SPCH-009): while TTS speaks, keep a mic cycle open. Utterances
+  // that read as a chunk of what we're saying are our own voice coming back through
+  // the mic — discarded (echo guard, REQ-SPCH-005). Anything else cuts the speech
+  // short: full input when this utterance ends in listening, stop only otherwise
+  // (REQ-CMD-006 — an answer must not race a pending entry or the sign-off).
+  // Returns the event to enqueue instead of TTS_DONE, or null for normal completion.
+  async function speakWithBargeIn(text) {
+    const spokenLetters = toLetters(text); // echo signature of what WE are saying
+    const full = state.after === 'listen'; // phase is 'speaking' whenever a SAY executes
     let speaking = true;
-    let stopHeard = false;
+    let interrupt = null;
     const speech = Promise.resolve(tts.speak(text)).then(() => { speaking = false; });
     const watcher = (async () => {
       for (;;) {
@@ -42,26 +47,43 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         await Promise.resolve();
         if (!speaking || ended) return;
         const result = await stt.listenOnce();
-        if (!speaking || ended) return;
+        if (ended) return;
         if (result.error) {
+          if (!speaking) return;
           if (result.error === 'no-speech' || result.error === 'aborted') continue;
           return; // mic trouble — the post-speech LISTEN will surface it properly
         }
         lastActivityAt = now();
-        // Top transcript only: scanning the whole n-best list would make an echo of our
-        // own speech (which can contain words like "stop") too likely to end the session.
-        if (parseCommand(result.alternatives[0]?.transcript)?.command === 'stop') {
-          caption('heard', result.alternatives[0].transcript); // REQ-SPCH-008
-          stopHeard = true;
+        const top = result.alternatives[0]?.transcript ?? '';
+        // Echo guard: if ANY alternative reads as a contiguous chunk of the spoken
+        // text, the whole utterance is our own voice — ignore it (REQ-SPCH-005).
+        const isEcho = result.alternatives.some((a) => {
+          const heard = toLetters(a.transcript);
+          return heard && spokenLetters.includes(heard);
+        });
+        if (isEcho || !toLetters(top)) {
+          if (!speaking) return;
+          continue;
+        }
+        if (full) {
+          caption('heard', top); // REQ-SPCH-008
+          interrupt = { type: 'HEARD', alternatives: result.alternatives };
           tts.cancel();
           return;
         }
+        if (parseCommand(top)?.command === 'stop') {
+          caption('heard', top);
+          interrupt = { type: 'BARGE_IN' };
+          tts.cancel();
+          return;
+        }
+        if (!speaking) return;
       }
     })();
     await speech;
     stt.stop(); // abort the watcher's in-flight cycle, if any
     await watcher;
-    return stopHeard;
+    return interrupt;
   }
 
   async function execute(action) {
@@ -69,8 +91,8 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       case 'SAY': {
         const text = render(action.say);
         caption('say', text); // REQ-SPCH-007
-        const stopped = await speakWithStopBargeIn(text);
-        enqueue(stopped ? { type: 'BARGE_IN' } : { type: 'TTS_DONE' });
+        const interrupt = await speakWithBargeIn(text);
+        enqueue(interrupt ?? { type: 'TTS_DONE' });
         break;
       }
       case 'LISTEN': {

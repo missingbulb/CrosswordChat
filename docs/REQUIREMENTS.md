@@ -37,9 +37,9 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 - **In scope (MVP):** NYT Daily crossword and the Mini, on desktop Chrome (≥ 116), English (`en-US`),
   one puzzle tab at a time. Voice-only interaction — the extension shows no visual UI; what was
   said/heard is mirrored to the page console for debugging (REQ-SPCH-007/008).
-- **Out of scope (MVP), analyzed in §13:** rebus squares, full barge-in (interrupting TTS with
-  answers — a stop-only barge-in IS in scope, REQ-CMD-006), NYT Check/Reveal integration, following
+- **Out of scope (MVP), analyzed in §13:** rebus squares, NYT Check/Reveal integration, following
   cross-references, multiple simultaneous sessions, non-English puzzles, acrostics/other game types.
+  (Barge-in — answering and commanding mid-readout — IS in scope: REQ-SPCH-009/REQ-CMD-006.)
 - **Assumptions:**
   - The user is logged in to NYT with whatever subscription the puzzle needs; we piggyback on the
     already-rendered page and never call NYT APIs ourselves.
@@ -445,7 +445,7 @@ entities. The readout must convey what the eye would see.
   says next four times, then the entries are visited in descending-ratio order with no repeats,
   and a fifth next returns to the first-skipped one; given a skipped entry gains a letter from a
   crossing answer, then the following next offers it again.
-- **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`; manual MT-27.
+- **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`; manual MT-28.
 
 #### REQ-NAV-012 — Default strategy is a persisted setting
 - **Status:** Active · **Level:** MUST
@@ -459,7 +459,7 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the stored setting is most-filled, when a session starts and the user says
   next, then the most-filled strategy picks the clue; given no stored value (or a corrupted one),
   then list order is used.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/settings.test.js`; manual MT-27.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/settings.test.js`; manual MT-28.
 
 ---
 
@@ -758,16 +758,17 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   listening continues; once accumulated silence reaches 60 s, the session ends without a word.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-20.
 
-#### REQ-CMD-006 — "Stop" works mid-speech (stop-only barge-in)
+#### REQ-CMD-006 — "Stop" works during ALL speech
 - **Status:** Active · **Level:** MUST
 - The user MUST be able to end the session by saying *stop* (or any stop synonym, REQ-CMD-001)
-  while the extension is still speaking — without waiting for a readout to finish. While TTS is
-  speaking, a barge-in listener runs; it acts ONLY on the stop intent and discards everything else
-  (answers still wait for the readout to finish — full barge-in remains REQ-FUT-002). On stop, the
-  in-flight utterance is cancelled and the session signs off (REQ-CMD-004); a stop heard during the
-  sign-off itself ends silently.
-- **Accept:** Given TTS mid-readout, when the user says "stop", then speech is cancelled and the
-  session ends with the sign-off; given any non-stop speech mid-readout, then nothing changes.
+  while the extension is still speaking — without waiting for any utterance to finish. During
+  utterances that end in listening this is ordinary barge-in input (REQ-SPCH-009). During
+  utterances that do NOT end in listening (the fit confirmation while a word is being entered;
+  the sign-off), a restricted barge-in listener still honors the stop intent and discards
+  everything else. On stop, the in-flight utterance is cancelled and the session signs off
+  (REQ-CMD-004); a stop heard during the sign-off itself ends silently.
+- **Accept:** Given TTS mid-sign-off, when the user says "stop", then speech is cancelled and the
+  session ends; given any non-stop speech during the sign-off, then nothing changes.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`.
 
 ---
@@ -816,15 +817,19 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given one network error then success, the session continues; given two, it ends.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/speech-ports.test.js`; manual MT-11.
 
-#### REQ-SPCH-005 — Half-duplex discipline
+#### REQ-SPCH-005 — Echo discipline
 - **Status:** Active · **Level:** MUST
-- The conversational mic MUST NOT be open while TTS is speaking (self-echo): LISTEN may only
-  follow a completed SAY. Sole exception: the stop-only barge-in listener (REQ-CMD-006), which
-  discards everything except the stop intent — so self-echo can never be mistaken for an answer.
-  (Full barge-in is REQ-FUT-002.)
-- **Accept:** Given any machine trace, then no LISTEN action is emitted between a SAY and its
-  TTS_DONE.
-- **Verify:** unit `tests/unit/machine.test.js` (action-order invariant checked across scenarios).
+- The conversation MUST NOT mistake its own TTS voice for user input. Two mechanisms: (a) at the
+  machine level, LISTEN is never emitted in the same action batch as SAY — the formal answer mic
+  opens only after speech completes; (b) the barge-in mic that runs during speech (REQ-SPCH-009)
+  MUST discard any utterance that reads as a contiguous chunk of the words currently being spoken,
+  checked across the whole n-best list — if ANY alternative matches, the utterance is treated as
+  echo and ignored.
+- **Accept:** Given any machine trace, then no action batch contains both SAY and LISTEN; given a
+  mid-speech transcript repeating part of the spoken text, then it is discarded and the speech
+  continues.
+- **Verify:** unit `tests/unit/machine.test.js` (action-order invariant),
+  `tests/unit/orchestrator.test.js` (echo guard).
 
 #### REQ-SPCH-006 — Question intonation passthrough
 - **Status:** Active · **Level:** MUST
@@ -848,6 +853,21 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   recognition problems are diagnosable.
 - **Accept:** Given an utterance, then the console shows the transcript.
 - **Verify:** manual MT-18.
+
+#### REQ-SPCH-009 — Answers and commands work mid-readout (full barge-in)
+- **Status:** Active · **Level:** MUST
+- From the moment a readout starts playing, the user MUST be able to answer or command without
+  waiting for it to end: during any utterance that ends in listening (clue readouts, reports,
+  prompts), speech heard by the barge-in mic — after the echo guard (REQ-SPCH-005) — MUST cut the
+  utterance short and be processed exactly as if the mic had been formally open: answers evaluate,
+  commands execute, sub-modes (spelling, disambiguation, confirmation) receive their input.
+  During utterances that do NOT end in listening — the fit confirmation while the word is being
+  written, and the sign-off — full input MUST NOT interrupt (an answer there would race the
+  pending entry); only *stop* is honored (REQ-CMD-006).
+- **Accept:** Given the opening readout mid-speech and the fitting utterance "heart", then the
+  readout stops and the fit flow runs; given "next" mid-readout, then the session advances; given
+  input while the fit confirmation plays, then it is ignored and the entry lands.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-27.
 
 ---
 
@@ -1011,8 +1031,8 @@ any time, every selector lives in one file with a self-diagnosing probe.
   (REQ-READ-008, REQ-ANS-005). Plan: detect rebus candidates, announce the caveat, allow spelling
   mode with per-cell grouping. Until then: length = cell count, and a rebus puzzle may be
   unsolvable by voice.
-- **REQ-FUT-002 — Barge-in.** Let the user interrupt TTS by speaking (requires echo-safe ducking or
-  push-to-talk). Today: half-duplex (REQ-SPCH-005) with a stop-only exception (REQ-CMD-006).
+- **REQ-FUT-002 — Barge-in.** Shipped: full barge-in is REQ-SPCH-009, guarded against self-echo by
+  REQ-SPCH-005(b), with the always-available stop path in REQ-CMD-006. Kept here for history.
 - **REQ-FUT-003 — Check/Reveal integration.** Drive NYT's own Check Square/Word features to turn
   REQ-LIFE-006 ("full but wrong") into targeted help.
 - **REQ-FUT-004 — Follow cross-references.** "Go there" after `See 17-Across` (REQ-READ-010).
