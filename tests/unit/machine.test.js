@@ -137,6 +137,30 @@ describe('navigation (NAV)', () => {
     expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['LISTEN']);
   });
 
+  test('REQ-NAV-009: "back" goes to the previous clue in list order, filled ones included', () => {
+    // A1 is filled — "next" would skip it, but "back" exists to revisit and fix.
+    const s = listening(heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A6' } }));
+    const actions = s.step(heard('back'));
+    expect(actions.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A1');
+    expect(says(actions)[0].label).toBe('1 Across');
+    s.step({ type: 'TTS_DONE' });
+
+    // From the very first clue, "back" wraps to the last Down.
+    const first = s.step(heard('back'));
+    expect(first.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('D5');
+    expect(says(first)[0].label).toBe('5 Down');
+  });
+
+  test('REQ-NAV-010: "flip" switches to the crossing clue', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const actions = s.step(heard('flip'));
+    expect(actions.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('D1');
+    expect(says(actions)[0].label).toBe('1 Down');
+    s.step({ type: 'TTS_DONE' });
+    // Flip again → back to an Across at that spot.
+    expect(says(s.step(heard('flip')))[0].label).toBe('1 Across');
+  });
+
   test('REQ-NAV-008: a click during spelling mode abandons the mode and follows', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     s.step(heard('spell'));
@@ -311,6 +335,54 @@ describe('answers (ANS)', () => {
     const go = s.step(heard('anyway'));
     expect(says(go)[0]).toEqual({ kind: 'entering-anyway', word: 'HEART' });
     expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
+  test('REQ-ANS-017: "undo" clears the last entered answer, returns to its clue, and prompts', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('heart'));
+    s.step({ type: 'TTS_DONE' }); // ENTER issued
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A6' } }),
+    }); // advanced to A6
+    s.step({ type: 'TTS_DONE' });
+
+    const undo = s.step(heard('undo'));
+    expect(undo.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A1');
+    const action = undo.find((a) => a.type === 'UNDO');
+    expect(action.clueId).toBe('A1');
+    // A1 was empty before the entry → every cell reverts to cleared.
+    expect(action.cells).toEqual([0, 1, 2, 3, 4].map((index) => ({ index, letter: null })));
+
+    const done = s.step({ type: 'UNDO_RESULT', ok: true, snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    expect(says(done)[0].kind).toBe('undone'); // "say it again, or spell it"
+    s.step({ type: 'TTS_DONE' });
+    expect(says(s.step(heard('heart')))[0]).toMatchObject({ kind: 'fit', word: 'HEART' }); // back on A1
+  });
+
+  test('REQ-ANS-017: undo restores letters the entry overwrote; nothing pending → says so', () => {
+    // HEA.T on A1: HEIST entered via override wrote over H,E,A,T and filled the blank.
+    const s = listening(heartSnapshot(['HEA.T', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heist'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('anyway'));
+    s.step({ type: 'TTS_DONE' }); // ENTER
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(['HEIST', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A6' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    const undo = s.step(heard('undo'));
+    // Restore the pre-entry pattern: letters back, the blank cleared again.
+    expect(undo.find((a) => a.type === 'UNDO').cells).toEqual([
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' }, { index: 2, letter: 'A' },
+      { index: 3, letter: null }, { index: 4, letter: 'T' },
+    ]);
+
+    const s2 = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    expect(says(s2.step(heard('undo')))[0].kind).toBe('nothing-to-undo');
   });
 
   test('REQ-ANS-013: failed write is announced; the clue stays current', () => {

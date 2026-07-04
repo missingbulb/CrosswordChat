@@ -6,6 +6,10 @@ import { normalizeUtterance } from './normalize.js';
 const PHRASES = {
   next: ['next', 'next clue', 'next one', 'pass', 'pass on this', 'skip', 'skip it',
     'skip this one', 'move on'],
+  back: ['back', 'go back', 'previous', 'previous clue', 'previous one'],
+  flip: ['flip', 'flip it', 'switch direction', 'change direction', 'other direction'],
+  // "undue" is what STT usually makes of "undo" (REQ-ANS-017).
+  undo: ['undo', 'undue', 'undo that', 'undo it', 'take that back', 'take it back'],
   repeat: ['repeat', 'repeat that', 'again', 'say again', 'say that again', 'read it again',
     'what', 'come again'],
   hint: ['hint', 'hints', 'give me a hint', 'what do i have', 'whats there', 'whats filled in',

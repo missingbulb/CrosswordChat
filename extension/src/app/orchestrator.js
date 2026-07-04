@@ -10,7 +10,8 @@ import { parseCommand } from '../matching/commands.js';
  * @param {{speak(text):Promise, cancel():void}} deps.tts
  * @param {{listenOnce():Promise, stop():void}} deps.stt
  * @param {object} deps.pageClient
- *   {snapshot, enterAnswer(cells), selectClue(clueId), watch(cb), unwatch, pauseWatch, resumeWatch}
+ *   {snapshot, enterAnswer(cells), clearEntry(cellIndices), selectClue(clueId),
+ *    watch(cb), unwatch, pauseWatch, resumeWatch}
  * @param {object} [deps.ui]  {caption(role, text), listening(bool)}
  * @param {() => void} [deps.onEnd]
  * @param {() => number} [deps.now]  clock, injectable for tests
@@ -96,6 +97,28 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         }
         break;
       }
+      case 'UNDO': {
+        // Revert the last entry (REQ-ANS-017): null letters mean "clear the cell",
+        // real letters mean "restore what our entry overwrote".
+        try {
+          pageClient.pauseWatch?.();
+          const clears = action.cells.filter((c) => !c.letter).map((c) => c.index);
+          const restores = action.cells.filter((c) => c.letter);
+          let ok = true;
+          let snap = null;
+          if (clears.length) ({ ok, snapshot: snap } = await pageClient.clearEntry(clears));
+          if (restores.length) {
+            const res = await pageClient.enterAnswer(restores);
+            ok = ok && res.ok;
+            snap = res.snapshot;
+          }
+          pageClient.resumeWatch?.();
+          enqueue({ type: 'UNDO_RESULT', ok, snapshot: snap ?? await pageClient.snapshot() });
+        } catch {
+          pageLost();
+        }
+        break;
+      }
       case 'SELECT_CLUE': {
         try {
           await pageClient.selectClue(action.clueId);
@@ -142,9 +165,12 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       if (event.kind === 'solved' || event.kind === 'selection') stt.stop();
       if (event.kind === 'selection') {
         // REQ-NAV-008: clicking another clue takes effect NOW — cut any readout short.
-        // Our own SELECT_CLUE echoes back with the clue we already track, so it never cancels.
+        // Our own SELECT_CLUE echoes back with the clue we already track, so it never
+        // cancels; neither does a click the machine won't follow (entry in flight).
         const sel = event.snapshot?.selection?.clueId;
-        if (sel && sel !== state.clueId) tts.cancel();
+        const willFollow = state.phase === 'listening'
+          || (state.phase === 'speaking' && state.after === 'listen');
+        if (sel && sel !== state.clueId && willFollow) tts.cancel();
       }
     }
     queue.push(event);

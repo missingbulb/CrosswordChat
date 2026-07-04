@@ -190,3 +190,12 @@ Covers: REQ-CMD-006
 2. Start again; mid-readout say something that is NOT a stop word (e.g. "hello there").
 3. **PASS:** step 1 — the readout halts promptly and you get the short sign-off, session over.
    Step 2 — the readout continues unaffected and your words are not treated as an answer.
+
+### MT-26 — Undo, back, flip
+Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
+1. Enter a fitting answer by voice; after the session moves on, say "undo".
+2. Say "back". Then say "flip".
+3. **PASS:** undo re-selects the answered clue, empties exactly the cells that answer filled
+   (letters that were there beforehand come back), and prompts you to say it again or spell it;
+   "back" moves to the previous clue in the list — including filled ones — and reads it; "flip"
+   jumps to the crossing clue and reads it; the page highlight follows every move.

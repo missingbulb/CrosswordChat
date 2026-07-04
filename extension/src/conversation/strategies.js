@@ -36,3 +36,16 @@ export function nextClue(model, fromId, strategy = 'list-order') {
   }
   return null;
 }
+
+/**
+ * Previous clue in list order, wrapping from the first Across to the last Down
+ * (REQ-NAV-009). Unlike nextClue, filled entries are NOT skipped — "back" exists
+ * to revisit and fix what is already there. Always list order, whatever the
+ * active strategy: "previous" has no stable meaning under most-filled.
+ * @returns {{clueId: string}}
+ */
+export function prevClue(model, fromId) {
+  const order = model.orderedClueIds;
+  const start = Math.max(order.indexOf(fromId), 0);
+  return { clueId: order[(start - 1 + order.length) % order.length] };
+}

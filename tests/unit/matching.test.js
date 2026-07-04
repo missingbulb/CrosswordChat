@@ -130,6 +130,10 @@ describe('commands', () => {
   test('REQ-CMD-001: the normative lexicon table parses to the right intents', () => {
     const table = [
       ['next', 'next'], ['pass', 'next'], ['skip it', 'next'], ['move on', 'next'],
+      ['back', 'back'], ['go back', 'back'], ['previous clue', 'back'],
+      ['flip', 'flip'], ['flip it', 'flip'], ['switch direction', 'flip'],
+      ['undo', 'undo'], ['undue', 'undo'], ['take it back', 'undo'], // REQ-ANS-017
+
       ['repeat', 'repeat'], ['say that again', 'repeat'], ['what', 'repeat'],
       ['hint', 'hint'], ['what do i have', 'hint'], ["what's filled in", 'hint'], ['pattern', 'hint'],
       ['help', 'help'], ['what can i say', 'help'],

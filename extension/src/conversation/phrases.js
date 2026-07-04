@@ -130,7 +130,7 @@ export function render(say) {
       return `${letters}. ${summary}`;
     }
     case 'help':
-      return 'You can: say an answer, or answer followed by a word. Say pass or next to skip, repeat to hear the clue again, hint for the letters so far, spell it to spell, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
+      return 'You can: say an answer, or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell it to spell, undo to take back the last answer, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
     case 'didnt-catch':
       return "Sorry, I didn't catch that. Say an answer, or say help.";
     case 'misheard-reprompt':
@@ -141,6 +141,12 @@ export function render(say) {
       return say.letters.length ? `${say.letters.join(', ')}.` : 'Nothing yet.';
     case 'spell-cancelled':
       return 'Okay, back to normal answers.';
+    case 'undone':
+      return 'Undone — those letters are out. Say the answer again, or say spell it.';
+    case 'nothing-to-undo':
+      return "There's nothing to undo yet.";
+    case 'no-crossing':
+      return 'No crossing clue there.';
     case 'strategy-ack':
       return say.strategy === 'most-filled' ? 'Okay — most filled first.' : 'Okay — in list order.';
     case 'goodbye':

@@ -96,10 +96,12 @@ DOM numbers (REQ-MODEL-001) — the page adapter stays dumb.
 
 ### Machine events (into `machine.reduce`)
 `START{snapshot}` · `TTS_DONE` · `HEARD{alternatives:[{transcript,confidence}]}` · `BARGE_IN` ·
-`STT_ERROR{code}` · `ENTRY_RESULT{ok,snapshot}` · `PAGE_EVENT{kind,snapshot}` · `TOGGLE_OFF`
+`STT_ERROR{code}` · `ENTRY_RESULT{ok,snapshot}` · `UNDO_RESULT{ok,snapshot}` ·
+`PAGE_EVENT{kind,snapshot}` · `TOGGLE_OFF`
 
 ### Machine actions (out of `machine.reduce`)
-`SAY{say:{kind,...}}` · `LISTEN` · `ENTER{clueId,word}` · `SELECT_CLUE{clueId}` · `END`
+`SAY{say:{kind,...}}` · `LISTEN` · `ENTER{clueId,word}` · `UNDO{clueId,cells}` ·
+`SELECT_CLUE{clueId}` · `END`
 
 The machine is a **pure reducer**: same state + event → same actions, every time. That makes the
 entire dialog policy (the trickiest behavior in the product) unit-testable as data — every
@@ -119,6 +121,8 @@ dispatch(event):
                    intent cancels the utterance and dispatches BARGE_IN — REQ-CMD-006)
     LISTEN      → stt.listenOnce() → dispatch(HEARD | STT_ERROR)
     ENTER       → pause watcher → pageClient.enterAnswer(...) → dispatch(ENTRY_RESULT)
+    UNDO        → pause watcher → clearEntry(blank-before cells) + enterAnswer(overwritten
+                   letters) → dispatch(UNDO_RESULT) — reverts the last entry (REQ-ANS-017)
     SELECT_CLUE → pageClient.selectClue(...)
     END         → teardown (cancel tts/stt, stop watcher, disconnect port)
 ```

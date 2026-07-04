@@ -399,11 +399,35 @@ entities. The readout must convey what the eye would see.
 - If the user clicks a different clue/cell on the page during the session, the conversation MUST
   follow it immediately: abandon whatever it was doing (an in-flight readout is cut short;
   spelling/disambiguation/confirmation modes reset) and read the newly selected clue. Selection
-  changes caused by our own writing/navigation MUST NOT trigger this (no echo loops).
+  changes caused by our own writing/navigation MUST NOT trigger this (no echo loops). One
+  exception: while an accepted answer is being confirmed and written (between "Fits!" and the
+  letters landing), the click is NOT followed — following would silently discard the answer.
 - **Accept:** Given a session on 1A — listening, mid-readout, or in a sub-mode — when the page
   selection changes to 3D (user click), then 3D is read; when selection events arrive for the clue
   we already track, nothing happens.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-13.
+
+#### REQ-NAV-009 — "back" goes to the previous clue
+- **Status:** Active · **Level:** MUST
+- *back* / *go back* / *previous* MUST move to the previous clue in list order — wrapping from the
+  first Across to the last Down — read it, and sync the page highlight. Unlike *next*
+  (REQ-NAV-003), filled entries are NOT skipped: going back exists to revisit and fix what is
+  already there. The active strategy does not affect *back* (list order always — "previous" under
+  most-filled has no stable meaning).
+- **Accept:** Given the current clue is 6 Across with 1 Across filled, when the user says "back",
+  then 1 Across is selected and read; given the current clue is the first Across, then "back"
+  lands on the last Down.
+- **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
+
+#### REQ-NAV-010 — "flip" switches to the crossing clue
+- **Status:** Active · **Level:** MUST
+- *flip* MUST switch from the current clue to the perpendicular clue that crosses it (the crossing
+  at the entry's first crossed cell, REQ-MODEL-002), read it, and sync the page highlight. Flipping
+  again returns to a clue in the original direction. When the entry has no crossing at all, say so
+  briefly and keep listening.
+- **Accept:** Given the current clue is 1 Across, when the user says "flip", then 1 Down (the
+  crossing at its first cell) is selected and read.
+- **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
 
 ---
 
@@ -594,6 +618,21 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   "yes" rewrites the entry.
 - **Verify:** unit `tests/unit/machine.test.js`.
 
+#### REQ-ANS-017 — Undo the last entered answer
+- **Status:** Active · **Level:** MUST
+- *undo* (STT often hears it as "undue" — both MUST work) MUST revert the most recent answer the
+  session entered: every cell of that entry returns to what it held just before the entry —
+  previously empty cells are cleared, overwritten letters are restored. The conversation MUST move
+  back to that clue (page highlight synced) and prompt the user to say the answer again or spell
+  it. With no entry to revert (none made yet, or right after an undo), reply that there is nothing
+  to undo. Undo history is one level deep — a second consecutive *undo* does not go further back.
+  In spelling mode, *undo* keeps its spelling meaning (remove the last letter, REQ-ANS-011).
+- **Accept:** Given HEART was entered into an empty 1 Across and the session moved on, when the
+  user says "undo", then the five cells are empty again, 1 Across is selected, and the prompt asks
+  to say it again or spell it; a repeated "undo" reports nothing to undo. Given HEIST was entered
+  over crossing letters via *anyway*, then "undo" restores those letters.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`; manual MT-26.
+
 ---
 
 ## 9. Hints (HINT)
@@ -630,6 +669,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | Intent | Utterances |
 |---|---|
 | next | next · next clue · next one · pass · pass on this · skip · skip it · skip this one · move on |
+| back | back · go back · previous · previous clue · previous one |
+| flip | flip · flip it · switch direction · change direction · other direction |
+| undo | undo · undue · undo that · undo it · take that back · take it back |
 | repeat | repeat · repeat that · again · say again · say that again · read it again · what · come again |
 | hint | hint · hints · give me a hint · what do i have · what's there · what's filled in · read the letters · pattern |
 | help | help · what can i say · commands · options |
@@ -653,8 +695,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 #### REQ-CMD-002 — Help
 - **Status:** Active · **Level:** MUST
-- *help* MUST speak a one-breath summary of the core commands (answer, pass/next, repeat, hint,
-  spell, stop) and keep listening.
+- *help* MUST speak a one-breath summary of the core commands (answer, pass/next, back, flip,
+  repeat, hint, spell, undo, stop) and keep listening.
 - **Accept:** Given "help", then the help utterance is spoken and the clue stays current.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-16.
 

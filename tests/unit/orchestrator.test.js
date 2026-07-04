@@ -86,12 +86,71 @@ describe('orchestrator silence clock (REQ-CMD-005)', () => {
   });
 });
 
+const deferred = () => {
+  let resolve;
+  const p = new Promise((r) => { resolve = r; });
+  return { p, resolve };
+};
+
+describe('click mid-readout (REQ-NAV-008)', () => {
+  test('clicking another clue cancels the running readout and reads the clicked clue', async () => {
+    const spoken = [];
+    const cancelLog = [];
+    const readout = deferred(); // the opening A1 readout, held in-flight
+    let speaks = 0;
+    let listening = false; // set by ui.listening — distinguishes the real LISTEN from barge-in cycles
+    let pendingBarge = null;
+    let emitPageEvent = null;
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            speaks += 1;
+            return speaks === 1 ? readout.p : Promise.resolve();
+          },
+          cancel: () => {
+            cancelLog.push(spoken.length); // record WHEN the cut happened
+            readout.resolve();
+          },
+        },
+        stt: {
+          listenOnce: () => {
+            if (listening) { // the post-readout LISTEN: end the session
+              return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+            }
+            return new Promise((res) => { pendingBarge = res; }); // barge-in cycle: quiet mic
+          },
+          stop: () => {
+            pendingBarge?.({ error: 'aborted' });
+            pendingBarge = null;
+          },
+        },
+        ui: { listening: (on) => { listening = on; } },
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          watch: (cb) => { emitPageEvent = cb; },
+          unwatch: () => { emitPageEvent = null; },
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+
+    // Give the opening readout a beat to start, then click 2 Down on the page.
+    await new Promise((r) => setTimeout(r, 0));
+    emitPageEvent('selection', heartSnapshot(undefined, { selection: { clueId: 'D2' } }));
+    await ended;
+
+    // The A1 readout was cancelled while it was the only utterance so far...
+    expect(cancelLog[0]).toBe(1);
+    // ...and the very next thing spoken was the clicked clue, then the sign-off.
+    expect(spoken[1]).toContain('Glowing coal'); // D2's clue text
+    expect(spoken[2]).toContain('Goodbye');
+  });
+});
+
 describe('stop-only barge-in (REQ-CMD-006)', () => {
-  const deferred = () => {
-    let resolve;
-    const p = new Promise((r) => { resolve = r; });
-    return { p, resolve };
-  };
 
   test('"stop" heard mid-speech cancels the utterance and the session signs off', async () => {
     const spoken = [];

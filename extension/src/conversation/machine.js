@@ -1,15 +1,16 @@
 // Conversation policy: pure reducer (state, event) → {state, actions}.
 // No browser APIs, no English strings (see phrases.js), no DOM (see page-adapter).
 //
-// Events in:  START TTS_DONE HEARD BARGE_IN STT_ERROR ENTRY_RESULT PAGE_EVENT TOGGLE_OFF
-// Actions out: SAY LISTEN ENTER SELECT_CLUE END
+// Events in:  START TTS_DONE HEARD BARGE_IN STT_ERROR ENTRY_RESULT UNDO_RESULT
+//             PAGE_EVENT TOGGLE_OFF
+// Actions out: SAY LISTEN ENTER UNDO SELECT_CLUE END
 //
 // Half-duplex invariant (REQ-SPCH-005): LISTEN is never emitted in the same action
 // batch as SAY; listening starts only after speech finishes (TTS_DONE → after:'listen').
 // The shell's stop-only barge-in listener (REQ-CMD-006) surfaces here as BARGE_IN.
 
 import { buildModel } from '../puzzle-model/model.js';
-import { nextClue } from './strategies.js';
+import { nextClue, prevClue } from './strategies.js';
 import { evaluate, collectSpelledLetters } from '../matching/evaluate.js';
 import { parseCommand } from '../matching/commands.js';
 
@@ -48,22 +49,37 @@ function readClue(state, extra = {}, leadActions = []) {
   return speak(state, [...leadActions, say(clueSay(state.model, state.clueId, extra))], 'listen');
 }
 
+/** Land on a clue with a clean slate: sub-mode, buffers, and pending work all reset. */
+function moveTo(state, clueId) {
+  return {
+    ...state,
+    clueId,
+    mode: 'normal',
+    rejected: [],
+    lastProposed: null,
+    pendingWord: null,
+    pendingEntry: null,
+    spellBuffer: [],
+    disambigWords: [],
+  };
+}
+
+/** Navigate to a clue, sync the page, and read it (back/flip — REQ-NAV-009/010). */
+function goTo(state, clueId) {
+  const s = moveTo(state, clueId);
+  return speak(s, [
+    { type: 'SELECT_CLUE', clueId },
+    say(clueSay(s.model, clueId)),
+  ], 'listen');
+}
+
 function advance(state, leadSays = []) {
   const next = nextClue(state.model, state.clueId, state.strategy);
   if (!next) {
     // Nothing unfilled anywhere (REQ-LIFE-006 / REQ-NAV-003).
     return listenAgain(state, [...leadSays, { kind: 'grid-full-wrong' }]);
   }
-  const s = {
-    ...state,
-    clueId: next.clueId,
-    mode: 'normal',
-    rejected: [],
-    lastProposed: null,
-    pendingWord: null,
-    spellBuffer: [],
-    disambigWords: [],
-  };
+  const s = moveTo(state, next.clueId);
   return speak(s, [
     ...leadSays.map(say),
     { type: 'SELECT_CLUE', clueId: next.clueId },
@@ -131,6 +147,30 @@ function handleCommand(state, cmd) {
   switch (cmd.command) {
     case 'next':
       return advance(state);
+    case 'back': // REQ-NAV-009: previous in list order, filled entries included
+      return goTo(state, prevClue(state.model, state.clueId).clueId);
+    case 'flip': { // REQ-NAV-010: jump to the crossing clue
+      const clue = state.model.clue(state.clueId);
+      let cross = null;
+      for (let i = 0; i < clue.cellIndices.length && !cross; i++) {
+        cross = state.model.crossingAt(state.clueId, i);
+      }
+      if (!cross) return listenAgain(state, [{ kind: 'no-crossing' }]);
+      return goTo(state, cross.clueId);
+    }
+    case 'undo': { // REQ-ANS-017: revert the last entry we made
+      if (!state.lastEntry) return listenAgain(state, [{ kind: 'nothing-to-undo' }]);
+      const { clueId, before } = state.lastEntry;
+      const cells = state.model.clue(clueId).cellIndices
+        .map((index, i) => ({ index, letter: before[i] })); // letter null → clear the cell
+      return {
+        state: { ...moveTo(state, clueId), phase: 'undoing', lastEntry: null },
+        actions: [
+          { type: 'SELECT_CLUE', clueId },
+          { type: 'UNDO', clueId, cells },
+        ],
+      };
+    }
     case 'repeat':
       return readClue({ ...state, mode: 'normal' }); // REQ-READ-009
     case 'hint': {
@@ -307,6 +347,7 @@ function onStart(state, { snapshot }) {
     disambigWords: [],
     pendingWord: null,
     pendingEntry: null,
+    lastEntry: null,
     rejected: [],
     lastProposed: null,
     sttRetried: false,
@@ -325,7 +366,13 @@ function onTtsDone(state) {
   if (state.after === 'enter') {
     const word = state.pendingEntry.word;
     return {
-      state: { ...state, phase: 'entering' },
+      // Remember what the entry held BEFORE this write, so "undo" can revert it
+      // exactly — clearing what we added, restoring what we overwrote (REQ-ANS-017).
+      state: {
+        ...state,
+        phase: 'entering',
+        lastEntry: { clueId: state.clueId, before: state.model.patternFor(state.clueId) },
+      },
       actions: [{
         type: 'ENTER',
         clueId: state.clueId,
@@ -380,31 +427,30 @@ function onPageEvent(state, { kind, snapshot }) {
     );
   }
   // REQ-NAV-008: a click reaches us while listening AND mid-readout (the shell cuts the
-  // audio short); only 'entering' and the farewell (after:'end') are off-limits.
+  // audio short). Off-limits: entering, the farewell, and the beat between an accepted
+  // answer and its letters landing (after:'enter') — following there would silently
+  // discard the answer.
   const interactive = state.phase === 'listening'
-    || (state.phase === 'speaking' && state.after !== 'end');
+    || (state.phase === 'speaking' && state.after === 'listen');
   if (!interactive) return { state, actions: [] };
   const model = buildModel(snapshot);
   if (kind === 'selection') {
     const sel = snapshot.selection?.clueId;
     if (sel && sel !== state.clueId && model.clue(sel)) {
       // The click wins over whatever was in progress: reset any sub-mode and pending work.
-      return readClue({
-        ...state,
-        model,
-        clueId: sel,
-        mode: 'normal',
-        rejected: [],
-        lastProposed: null,
-        pendingWord: null,
-        pendingEntry: null,
-        spellBuffer: [],
-        disambigWords: [],
-      });
+      return readClue({ ...moveTo(state, sel), model });
     }
   }
   // grid change (user typed manually) or same-clue selection: absorb the fresh state.
   return { state: { ...state, model }, actions: [] };
+}
+
+// REQ-ANS-017: the page finished reverting our last entry.
+function onUndoResult(state, { ok, snapshot }) {
+  if (state.phase !== 'undoing') return { state, actions: [] };
+  const s = { ...state, model: buildModel(snapshot) };
+  if (!ok) return listenAgain(s, [{ kind: 'entry-failed' }]);
+  return listenAgain(s, [{ kind: 'undone' }]); // prompt: say it again, or spell it
 }
 
 // REQ-CMD-006: "stop" heard by the barge-in listener while we were speaking.
@@ -436,6 +482,7 @@ export function reduce(state, event) {
     case 'BARGE_IN': return onBargeIn(state);
     case 'STT_ERROR': return onSttError(state, event);
     case 'ENTRY_RESULT': return onEntryResult(state, event);
+    case 'UNDO_RESULT': return onUndoResult(state, event);
     case 'PAGE_EVENT': return onPageEvent(state, event);
     case 'TOGGLE_OFF': // REQ-LIFE-002: instant, silent teardown
       return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
