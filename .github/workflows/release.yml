@@ -1,0 +1,71 @@
+name: Release
+
+# Bumps the version (manifest + package + lock), verifies, builds, commits, tags
+# vX.Y.Z, and publishes a GitHub Release with the extension zip attached.
+# Publishing the release triggers the Chrome Web Store deploy workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+      version:
+        description: 'Explicit version (e.g. 1.0.0) — overrides the bump choice'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify (tests + requirements trace)
+        run: npm run verify
+
+      - name: Bump version
+        id: bump
+        run: |
+          VERSION=$(node tools/bump-version.mjs "${{ inputs.version || inputs.bump }}")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$VERSION"
+
+      - name: Build
+        run: npm run build
+
+      - name: Zip
+        run: cd dist && zip -r "../crosswordchat-${{ steps.bump.outputs.version }}.zip" .
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add extension/manifest.json package.json package-lock.json
+          git commit -m "Release v${{ steps.bump.outputs.version }}"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin HEAD "v${{ steps.bump.outputs.version }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.bump.outputs.version }}" \
+            "crosswordchat-${{ steps.bump.outputs.version }}.zip" \
+            --title "v${{ steps.bump.outputs.version }}" \
+            --generate-notes

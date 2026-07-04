@@ -1,0 +1,41 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Tests + requirements trace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # npm test + npm run trace: every Active requirement in docs/REQUIREMENTS.md
+      # must be covered by a test or a manual-test item (REQ-NFR-006).
+      - name: Verify (tests + trace)
+        run: npm run verify
+
+      - name: Version records agree (manifest ↔ package)
+        run: |
+          node -e "
+            const m = require('./extension/manifest.json');
+            const p = require('./package.json');
+            if (m.version !== p.version) {
+              console.error('extension/manifest.json is', m.version, 'but package.json is', p.version);
+              process.exit(1);
+            }
+            console.log('version', m.version);
+          "
+
+      - name: Build compiles
+        run: npm run build

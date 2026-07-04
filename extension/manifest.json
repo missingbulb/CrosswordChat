@@ -1,11 +1,16 @@
 {
   "manifest_version": 3,
   "name": "CrosswordChat",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "description": "Solve the New York Times crossword conversationally: it reads clues aloud, you answer by voice.",
   "minimum_chrome_version": "116",
-  "permissions": ["tts", "sidePanel"],
-  "host_permissions": ["https://www.nytimes.com/*"],
+  "permissions": [
+    "tts",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://www.nytimes.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -17,13 +22,21 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.nytimes.com/crosswords*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://www.nytimes.com/crosswords*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.nytimes.com/crosswords*"],
-      "js": ["main-world.js"],
+      "matches": [
+        "https://www.nytimes.com/crosswords*"
+      ],
+      "js": [
+        "main-world.js"
+      ],
       "run_at": "document_idle",
       "world": "MAIN"
     }

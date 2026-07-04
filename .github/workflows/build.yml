@@ -1,0 +1,40 @@
+name: Pack extension
+
+# Builds the MV3 bundle and uploads an installable zip as a workflow artifact.
+# Releases get their zip from the Release workflow; this one is for grabbing a
+# build of any branch without cutting a version.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Read version
+        id: meta
+        run: echo "version=$(node -p "require('./extension/manifest.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: "Zip (store-uploadable: manifest at zip root)"
+        run: cd dist && zip -r "../crosswordchat-${{ steps.meta.outputs.version }}.zip" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crosswordchat-${{ steps.meta.outputs.version }}-${{ github.sha }}
+          path: crosswordchat-${{ steps.meta.outputs.version }}.zip
+          retention-days: 30

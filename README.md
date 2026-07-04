@@ -36,6 +36,8 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 | `extension/src/{app,background,content,sidepanel}/` | Wiring: orchestrator, icon toggle, message routing, captions UI. |
 | `tests/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
+| [`docs/RELEASING.md`](docs/RELEASING.md) | Versioning (current: **0.9.0**), CI workflows, release process, Chrome Web Store deployment setup. |
+| `.github/workflows/` | Test (every push), Pack (installable zip artifact), Release (bump + tag + GitHub Release), Deploy to Chrome Web Store. |
 
 ## Executable requirements — how verification works
 

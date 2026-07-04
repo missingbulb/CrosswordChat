@@ -1,0 +1,110 @@
+name: Deploy to Chrome Web Store
+
+# Uploads the packed extension to the Chrome Web Store via the official API
+# (plain curl — no third-party action ever sees the credentials) and optionally
+# submits it for publishing.
+#
+# Runs automatically when a GitHub Release is published (from the Release
+# workflow), or manually via workflow_dispatch (publish=false → upload as draft).
+#
+# Requires four repository secrets — see docs/RELEASING.md and the tracking
+# issue "Configure Chrome Web Store deployment secrets":
+#   CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN, CHROME_EXTENSION_ID
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Submit for publishing after upload (off = upload as draft)
+        type: boolean
+        default: true
+
+concurrency: chrome-store-deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+      CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+      CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+    steps:
+      - name: Check secrets are configured
+        run: |
+          missing=""
+          for name in CHROME_CLIENT_ID CHROME_CLIENT_SECRET CHROME_REFRESH_TOKEN CHROME_EXTENSION_ID; do
+            [ -z "${!name}" ] && missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing — see the tracking issue 'Configure Chrome Web Store deployment secrets' and docs/RELEASING.md"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify (tests + requirements trace)
+        run: npm run verify
+
+      - name: Build and zip
+        run: |
+          npm run build
+          cd dist && zip -r ../crosswordchat.zip .
+
+      - name: Upload to Chrome Web Store
+        run: |
+          set -euo pipefail
+          ACCESS_TOKEN=$(curl -sf -X POST https://oauth2.googleapis.com/token \
+            -d client_id="$CHROME_CLIENT_ID" \
+            -d client_secret="$CHROME_CLIENT_SECRET" \
+            -d refresh_token="$CHROME_REFRESH_TOKEN" \
+            -d grant_type=refresh_token | jq -r '.access_token')
+          if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
+            echo "::error::Could not obtain an access token — check CHROME_CLIENT_ID / CHROME_CLIENT_SECRET / CHROME_REFRESH_TOKEN"
+            exit 1
+          fi
+          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> "$GITHUB_ENV"
+          echo "::add-mask::$ACCESS_TOKEN"
+
+          RESULT=$(curl -sf -X PUT \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -T crosswordchat.zip \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/$CHROME_EXTENSION_ID")
+          echo "Upload response: $RESULT"
+          STATE=$(echo "$RESULT" | jq -r '.uploadState')
+          if [ "$STATE" != "SUCCESS" ] && [ "$STATE" != "IN_PROGRESS" ]; then
+            echo "::error::Upload failed (uploadState=$STATE): $(echo "$RESULT" | jq -c '.itemError // empty')"
+            exit 1
+          fi
+
+      - name: Submit for publishing
+        if: ${{ github.event_name == 'release' || inputs.publish }}
+        run: |
+          set -euo pipefail
+          RESULT=$(curl -sf -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/$CHROME_EXTENSION_ID/publish")
+          echo "Publish response: $RESULT"
+          STATUS=$(echo "$RESULT" | jq -r '.status[0] // empty')
+          case "$STATUS" in
+            OK|ITEM_PENDING_REVIEW)
+              echo "Submitted (status: $STATUS) — the store review can take a few days." ;;
+            *)
+              echo "::error::Publish failed: $RESULT"
+              exit 1 ;;
+          esac
