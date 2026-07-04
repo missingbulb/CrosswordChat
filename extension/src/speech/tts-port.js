@@ -3,10 +3,13 @@
 
 // The OS default voice is often the most robotic one installed. Prefer these
 // (first installed match wins); fall back to the system default (REQ-SPCH-001).
+// 'Google US English' used to lead this list but sounded bad to users, so the
+// UK voices now outrank it; it stays last as a better-than-default fallback.
 export const PREFERRED_VOICES = [
-  'Google US English', // ships with desktop Chrome
-  'Google UK English Female',
+  'Google UK English Female', // ships with desktop Chrome, like the other Google voices
+  'Google UK English Male',
   'Samantha', // macOS
+  'Google US English',
 ];
 
 export function createTtsPort({

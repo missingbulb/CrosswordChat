@@ -14,7 +14,9 @@ const PHRASES = {
   stop: ['stop', 'goodbye', 'bye', 'end', 'end session', 'quit', 'exit', 'were done', 'im done',
     'stop listening'],
   spell: ['spell', 'spell it', 'let me spell', 'let me spell it', 'ill spell it', 'spelling'],
-  'enter-anyway': ['enter it anyway', 'enter anyway', 'force it', 'overwrite', 'put it in anyway',
+  // Bare "anyway" matters: STT often keeps only that word from "say it anyway" (REQ-ANS-012).
+  'enter-anyway': ['anyway', 'anyways', 'say it anyway', 'do it anyway', 'it anyway',
+    'enter it anyway', 'enter anyway', 'force it', 'overwrite', 'put it in anyway',
     'replace it', 'use it anyway'],
   misheard: ['you misheard', 'you misheard me', 'thats not what i said', 'you heard wrong',
     'wrong word'],

@@ -85,3 +85,96 @@ describe('orchestrator silence clock (REQ-CMD-005)', () => {
     expect(listens()).toBe(2); // the 70 s cycle did NOT end the session
   });
 });
+
+describe('stop-only barge-in (REQ-CMD-006)', () => {
+  const deferred = () => {
+    let resolve;
+    const p = new Promise((r) => { resolve = r; });
+    return { p, resolve };
+  };
+
+  test('"stop" heard mid-speech cancels the utterance and the session signs off', async () => {
+    const spoken = [];
+    const readout = deferred(); // the opening clue readout, held in-flight
+    let speaks = 0;
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            speaks += 1;
+            return speaks === 1 ? readout.p : Promise.resolve();
+          },
+          cancel: () => readout.resolve(), // cancelling ends the in-flight utterance
+        },
+        stt: {
+          // Only the barge-in listener ever runs: it hears "stop" during the readout.
+          listenOnce: async () => ({ alternatives: [{ transcript: 'stop', confidence: 0.9 }] }),
+          stop: () => {},
+        },
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          watch: () => {},
+          unwatch: () => {},
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+    await ended;
+    expect(spoken).toHaveLength(2); // the (cut-short) readout + the sign-off
+    expect(spoken[1]).toContain('Goodbye');
+  });
+
+  test('non-stop speech during TTS is discarded — never treated as an answer (REQ-SPCH-005)', async () => {
+    const spoken = [];
+    const readout = deferred();
+    let speaks = 0;
+    let listenCalls = 0;
+    let pendingBarge = null;
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            speaks += 1;
+            return speaks === 1 ? readout.p : Promise.resolve();
+          },
+          cancel: () => {},
+        },
+        stt: {
+          listenOnce: () => {
+            listenCalls += 1;
+            // 1st cycle: mid-speech chatter ("heart" — a would-be answer). 2nd: still
+            // speaking, cycle stays open while the readout finishes. 3rd: the real
+            // post-speech listen, where the user ends the session.
+            if (listenCalls === 1) return Promise.resolve({ alternatives: [{ transcript: 'heart', confidence: 0.9 }] });
+            if (listenCalls === 2) {
+              return new Promise((res) => {
+                pendingBarge = res;
+                queueMicrotask(() => readout.resolve()); // readout finishes naturally
+              });
+            }
+            return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+          },
+          stop: () => {
+            pendingBarge?.({ error: 'aborted' });
+            pendingBarge = null;
+          },
+        },
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          watch: () => {},
+          unwatch: () => {},
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+    await ended;
+    // "heart" mid-speech produced no fit/enter flow: only the readout and the goodbye spoke.
+    expect(spoken).toHaveLength(2);
+    expect(spoken[1]).toContain('Goodbye');
+    expect(listenCalls).toBe(3);
+  });
+});

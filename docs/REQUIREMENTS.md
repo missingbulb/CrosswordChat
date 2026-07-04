@@ -37,9 +37,9 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 - **In scope (MVP):** NYT Daily crossword and the Mini, on desktop Chrome (≥ 116), English (`en-US`),
   one puzzle tab at a time. Voice-only interaction — the extension shows no visual UI; what was
   said/heard is mirrored to the page console for debugging (REQ-SPCH-007/008).
-- **Out of scope (MVP), analyzed in §13:** rebus squares, barge-in (interrupting TTS by speaking),
-  NYT Check/Reveal integration, following cross-references, multiple simultaneous sessions,
-  non-English puzzles, acrostics/other game types.
+- **Out of scope (MVP), analyzed in §13:** rebus squares, full barge-in (interrupting TTS with
+  answers — a stop-only barge-in IS in scope, REQ-CMD-006), NYT Check/Reveal integration, following
+  cross-references, multiple simultaneous sessions, non-English puzzles, acrostics/other game types.
 - **Assumptions:**
   - The user is logged in to NYT with whatever subscription the puzzle needs; we piggyback on the
     already-rendered page and never call NYT APIs ourselves.
@@ -196,9 +196,9 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 
 #### REQ-LIFE-010 — Minimal preamble
 - **Status:** Active · **Level:** MUST
-- Session start MUST NOT lecture. At most a two-or-three-word greeting glued to the first clue
-  readout ("Let's solve. 17 Across. ..."). Discoverability comes from the *help* command
-  (REQ-CMD-002), not a tutorial.
+- Session start MUST NOT lecture. At most a two-or-three-word greeting glued straight onto the
+  first clue readout ("Let's solve. <clue text>..." — no clue label, REQ-READ-001).
+  Discoverability comes from the *help* command (REQ-CMD-002), not a tutorial.
 - **Accept:** Given session start, then exactly one SAY action is produced and it is the clue readout
   (with greeting folded in).
 - **Verify:** unit `tests/unit/machine.test.js`.
@@ -223,16 +223,18 @@ entities. The readout must convey what the eye would see.
 **Readout grammar (normative):**
 
 ```
-[Greeting | "Back to the top."] <number> <direction>. <spoken clue text>.
+[Greeting | "Back to the top."] <spoken clue text>.
 [<formatting annotations>] <N> letters.
 ```
 
 #### REQ-READ-001 — Readout structure
 - **Status:** Active · **Level:** MUST
-- Every clue readout MUST contain, in order: clue label ("17 Across"), the clue text, any formatting
-  annotations (REQ-READ-002/003/006), and the letter count last (REQ-READ-008).
+- Every clue readout MUST contain, in order: the clue text, any formatting annotations
+  (REQ-READ-002/003/006), and the letter count last (REQ-READ-008). The clue label ("17 Across")
+  MUST NOT be spoken — the page highlight already shows position (REQ-NAV-007), and the readout
+  gets straight to the clue.
 - **Accept:** Given clue 1A "Organ with four chambers" (5 letters), then the readout is
-  "1 Across. Organ with four chambers. 5 letters." (modulo greeting).
+  "Organ with four chambers. 5 letters." (modulo greeting) — no "1 Across" preamble.
 - **Verify:** unit `tests/unit/verbalizer.test.js`.
 
 #### REQ-READ-002 — Italics are announced
@@ -393,12 +395,14 @@ entities. The readout must convey what the eye would see.
   `tests/unit/machine.test.js` (SELECT_CLUE action emitted); manual MT-06.
 
 #### REQ-NAV-008 — Conversation follows manual selection
-- **Status:** Active · **Level:** SHOULD
-- If the user clicks a different clue/cell on the page while the session is listening, the
-  conversation SHOULD follow: announce and read the newly selected clue. Selection changes caused by
-  our own writing/navigation MUST NOT trigger this (no echo loops).
-- **Accept:** Given listening on 1A, when the page selection changes to 3D (user click), then 3D is
-  read; when selection events arrive for the clue we already track, nothing happens.
+- **Status:** Active · **Level:** MUST
+- If the user clicks a different clue/cell on the page during the session, the conversation MUST
+  follow it immediately: abandon whatever it was doing (an in-flight readout is cut short;
+  spelling/disambiguation/confirmation modes reset) and read the newly selected clue. Selection
+  changes caused by our own writing/navigation MUST NOT trigger this (no echo loops).
+- **Accept:** Given a session on 1A — listening, mid-readout, or in a sub-mode — when the page
+  selection changes to 3D (user click), then 3D is read; when selection events arrive for the clue
+  we already track, nothing happens.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-13.
 
 ---
@@ -486,21 +490,22 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 #### REQ-ANS-007 — Length mismatch is reported with numbers
 - **Status:** Active · **Level:** MUST
-- When no candidate passes the length gate, the reply MUST name what was heard, its length, and the
-  needed length — including homophone variants when they differ:
-  `"I heard 'eight'. EIGHT is 5 letters, ATE is 3 — we need 4."` Up to 3 variants are reported.
-  Then keep listening (same clue).
+- When no candidate passes the length gate, the reply MUST state only what is wrong: each heard
+  variant with its length, and the needed length —
+  `"EIGHT is 5 letters, and ATE is 3 letters — we need 4."` Up to 3 variants are reported. No
+  "I heard ..." preamble and no commentary about what does fit. Then keep listening (same clue).
 - **Accept:** Given "ocelot" for a 4-entry, then the reply contains OCELOT, 6, and 4.
 - **Verify:** unit `tests/unit/matching.test.js` (variant list), `tests/unit/verbalizer.test.js`
   (phrasing), `tests/unit/machine.test.js` (stays on clue).
 
 #### REQ-ANS-008 — Collision is reported letter-by-spot
 - **Status:** Active · **Level:** MUST
-- When a candidate fits the length but disagrees with existing grid letters, the reply MUST state,
-  for each colliding position (report up to 3): the ordinal position, the candidate's letter, the
+- When a candidate fits the length but disagrees with existing grid letters, the reply MUST state
+  only the problem — no "fits the length, but" preamble or any other recap of what is fine. For
+  each colliding position (report up to 3): the ordinal position, the candidate's letter, the
   letter already in the grid, and — when known — the crossing clue's label:
-  `"HEIST fits the length, but the third letter would be I, and the grid already has A there from
-  2 Down."` The word is NOT entered; the user may say *enter it anyway* (REQ-ANS-012), give a new
+  `"HEIST doesn't work — the third letter would be I, but the grid already has A there from
+  2 Down."` The word is NOT entered; the user may say *anyway* (REQ-ANS-012), give a new
   answer, or pass.
 - **Accept:** Given pattern `HEA_T` and candidate HEIST, then the collision report names position 3,
   I, A (and the crossing label when the model provides one).
@@ -542,9 +547,11 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 #### REQ-ANS-012 — Explicit override enters despite collisions
 - **Status:** Active · **Level:** MUST
-- After a collision report, *"enter it anyway"* / *"overwrite"* MUST enter the candidate, replacing
-  the colliding letters (they were themselves unverified user input). Override MUST never happen
-  implicitly.
+- After a collision report, *"anyway"* / *"say it anyway"* / *"enter it anyway"* / *"overwrite"*
+  MUST enter the candidate, replacing the colliding letters (they were themselves unverified user
+  input). The bare word *anyway* MUST work: STT frequently keeps only that word from phrases like
+  "say it anyway". When no candidate is pending, an *anyway* phrase MUST fall through to answer
+  evaluation (ANYWAY can itself be a grid answer). Override MUST never happen implicitly.
 - **Accept:** Given a collision report for HEIST, when the user says "enter it anyway", then the grid
   reads HEIST and the conversation advances.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-07.
@@ -626,7 +633,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | help | help · what can i say · commands · options |
 | stop | stop · goodbye · bye · end · end session · quit · exit · we're done · i'm done · stop listening |
 | spell | spell · spell it · let me spell · let me spell it · i'll spell it · spelling |
-| enter-anyway | enter it anyway · enter anyway · force it · overwrite · put it in anyway · replace it · use it anyway |
+| enter-anyway | anyway · anyways · say it anyway · do it anyway · it anyway · enter it anyway · enter anyway · force it · overwrite · put it in anyway · replace it · use it anyway |
 | misheard | you misheard · you misheard me · that's not what i said · you heard wrong · wrong word · no i said … · i meant … · i said … |
 | answer (escape) | answer … · guess … · the answer is … · the word is … · try … |
 | strategy | switch to most filled · most filled first · switch to most solved · go in order · switch to list order · read in order |
@@ -635,7 +642,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | choice (contextual) | first · the first one · second · the second one · third · the third one |
 
 - Contextual intents (yes/no/choice) apply only in their modes (confirm-replace, disambiguation);
-  elsewhere they fall through to answer evaluation (YES may be an answer!).
+  elsewhere they fall through to answer evaluation (YES may be an answer!). enter-anyway with no
+  candidate pending likewise falls through to answer evaluation (REQ-ANS-012).
 - **Accept:** Given each utterance above, then the intent is recognized; given "yes" while not in a
   confirm mode, then it is evaluated as an answer.
 - **Verify:** unit `tests/unit/matching.test.js` (table-driven), `tests/unit/machine.test.js`
@@ -674,6 +682,18 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   listening continues; once accumulated silence reaches 60 s, the session ends without a word.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-20.
 
+#### REQ-CMD-006 — "Stop" works mid-speech (stop-only barge-in)
+- **Status:** Active · **Level:** MUST
+- The user MUST be able to end the session by saying *stop* (or any stop synonym, REQ-CMD-001)
+  while the extension is still speaking — without waiting for a readout to finish. While TTS is
+  speaking, a barge-in listener runs; it acts ONLY on the stop intent and discards everything else
+  (answers still wait for the readout to finish — full barge-in remains REQ-FUT-002). On stop, the
+  in-flight utterance is cancelled and the session signs off (REQ-CMD-004); a stop heard during the
+  sign-off itself ends silently.
+- **Accept:** Given TTS mid-readout, when the user says "stop", then speech is cancelled and the
+  session ends with the sign-off; given any non-stop speech mid-readout, then nothing changes.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`.
+
 ---
 
 ## 11. Speech I/O (SPCH)
@@ -684,8 +704,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   autoplay policy) and fall back to `speechSynthesis`. The port MUST expose `speak(text) → Promise`
   (resolving on end/interruption) and `cancel()` (immediate silence, REQ-LIFE-002). Because the OS
   default voice is often the most robotic one installed, the port SHOULD speak with the first
-  installed voice from a short ranked preference list (e.g. `Google US English`, which ships with
-  desktop Chrome) and use the system default only when none of them is installed.
+  installed voice from a short ranked preference list (e.g. `Google UK English Female`; the Google
+  network voices ship with desktop Chrome) and use the system default only when none of them is
+  installed.
 - **Accept:** Given a fake `chrome.tts`, then `speak` resolves on the `end` event and `cancel` calls
   `chrome.tts.stop`; absent `chrome.tts`, `speechSynthesis` is used. Given an engine listing a
   preferred voice, then `speak` uses it; listing none of them, then no voice is set (system
@@ -721,8 +742,10 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 #### REQ-SPCH-005 — Half-duplex discipline
 - **Status:** Active · **Level:** MUST
-- The mic MUST NOT be open while TTS is speaking (self-echo). LISTEN may only follow a completed
-  SAY. (Barge-in is REQ-FUT-002.)
+- The conversational mic MUST NOT be open while TTS is speaking (self-echo): LISTEN may only
+  follow a completed SAY. Sole exception: the stop-only barge-in listener (REQ-CMD-006), which
+  discards everything except the stop intent — so self-echo can never be mistaken for an answer.
+  (Full barge-in is REQ-FUT-002.)
 - **Accept:** Given any machine trace, then no LISTEN action is emitted between a SAY and its
   TTS_DONE.
 - **Verify:** unit `tests/unit/machine.test.js` (action-order invariant checked across scenarios).
@@ -910,7 +933,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
   mode with per-cell grouping. Until then: length = cell count, and a rebus puzzle may be
   unsolvable by voice.
 - **REQ-FUT-002 — Barge-in.** Let the user interrupt TTS by speaking (requires echo-safe ducking or
-  push-to-talk). Today: half-duplex (REQ-SPCH-005).
+  push-to-talk). Today: half-duplex (REQ-SPCH-005) with a stop-only exception (REQ-CMD-006).
 - **REQ-FUT-003 — Check/Reveal integration.** Drive NYT's own Check Square/Word features to turn
   REQ-LIFE-006 ("full but wrong") into targeted help.
 - **REQ-FUT-004 — Follow cross-references.** "Go there" after `See 17-Across` (REQ-READ-010).

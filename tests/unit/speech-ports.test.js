@@ -80,12 +80,13 @@ describe('tts port', () => {
     await expect(tts.speak('x')).resolves.toBeUndefined();
   });
 
-  test('REQ-SPCH-001: speaks with the first installed preferred voice', async () => {
+  test('REQ-SPCH-001: speaks with the first installed preferred voice (UK Female outranks US)', async () => {
     const voicesUsed = [];
     const chromeTts = {
       getVoices: () => Promise.resolve([
         { voiceName: 'Robotic System Default' },
         { voiceName: 'Google US English' },
+        { voiceName: 'Google UK English Female' },
       ]),
       speak: (text, opts) => {
         voicesUsed.push(opts.voiceName);
@@ -95,7 +96,24 @@ describe('tts port', () => {
     const tts = createTtsPort({ chromeTts, synth: undefined });
     await tts.speak('one');
     await tts.speak('two');
-    expect(voicesUsed).toEqual(['Google US English', 'Google US English']);
+    expect(voicesUsed).toEqual(['Google UK English Female', 'Google UK English Female']);
+  });
+
+  test('REQ-SPCH-001: lower-ranked preferred voice still beats the system default', async () => {
+    const voicesUsed = [];
+    const chromeTts = {
+      getVoices: () => Promise.resolve([
+        { voiceName: 'Robotic System Default' },
+        { voiceName: 'Google US English' }, // last in the preference list, but installed
+      ]),
+      speak: (text, opts) => {
+        voicesUsed.push(opts.voiceName);
+        opts.onEvent({ type: 'end' });
+      },
+    };
+    const tts = createTtsPort({ chromeTts, synth: undefined });
+    await tts.speak('one');
+    expect(voicesUsed).toEqual(['Google US English']);
   });
 
   test('REQ-SPCH-001: no preferred voice installed → system default (no voiceName set)', async () => {

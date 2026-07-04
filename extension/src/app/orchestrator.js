@@ -3,6 +3,7 @@
 
 import { initialState, reduce } from '../conversation/machine.js';
 import { render } from '../conversation/phrases.js';
+import { parseCommand } from '../matching/commands.js';
 
 /**
  * @param {object} deps
@@ -25,13 +26,49 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
 
   const caption = (role, text) => ui.caption?.(role, text);
 
+  // REQ-CMD-006: while TTS speaks, keep a mic cycle open that acts ONLY on "stop".
+  // Everything else — including the TTS echoing into the mic — is discarded, so the
+  // half-duplex discipline for answers (REQ-SPCH-005) still holds. Returns true when
+  // a stop intent cut the speech short.
+  async function speakWithStopBargeIn(text) {
+    let speaking = true;
+    let stopHeard = false;
+    const speech = Promise.resolve(tts.speak(text)).then(() => { speaking = false; });
+    const watcher = (async () => {
+      for (;;) {
+        // Yield first: when speak resolves immediately (headless/tests) the mic never opens.
+        await Promise.resolve();
+        if (!speaking || ended) return;
+        const result = await stt.listenOnce();
+        if (!speaking || ended) return;
+        if (result.error) {
+          if (result.error === 'no-speech' || result.error === 'aborted') continue;
+          return; // mic trouble — the post-speech LISTEN will surface it properly
+        }
+        lastActivityAt = now();
+        // Top transcript only: scanning the whole n-best list would make an echo of our
+        // own speech (which can contain words like "stop") too likely to end the session.
+        if (parseCommand(result.alternatives[0]?.transcript)?.command === 'stop') {
+          caption('heard', result.alternatives[0].transcript); // REQ-SPCH-008
+          stopHeard = true;
+          tts.cancel();
+          return;
+        }
+      }
+    })();
+    await speech;
+    stt.stop(); // abort the watcher's in-flight cycle, if any
+    await watcher;
+    return stopHeard;
+  }
+
   async function execute(action) {
     switch (action.type) {
       case 'SAY': {
         const text = render(action.say);
         caption('say', text); // REQ-SPCH-007
-        await tts.speak(text);
-        enqueue({ type: 'TTS_DONE' });
+        const stopped = await speakWithStopBargeIn(text);
+        enqueue(stopped ? { type: 'BARGE_IN' } : { type: 'TTS_DONE' });
         break;
       }
       case 'LISTEN': {
@@ -103,6 +140,12 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       // Clicking or typing on the puzzle is user presence — reset the silence clock.
       lastActivityAt = now();
       if (event.kind === 'solved' || event.kind === 'selection') stt.stop();
+      if (event.kind === 'selection') {
+        // REQ-NAV-008: clicking another clue takes effect NOW — cut any readout short.
+        // Our own SELECT_CLUE echoes back with the clue we already track, so it never cancels.
+        const sel = event.snapshot?.selection?.clueId;
+        if (sel && sel !== state.clueId) tts.cancel();
+      }
     }
     queue.push(event);
     void drain();

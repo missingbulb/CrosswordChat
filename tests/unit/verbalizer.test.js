@@ -9,9 +9,9 @@ const clue = (runs, extra = {}) => verbalizeClue({
 });
 
 describe('clue readout (READ)', () => {
-  test('REQ-READ-001: label, text, then letter count', () => {
+  test('REQ-READ-001: text then letter count — the clue label is never spoken', () => {
     expect(clue('Organ with four chambers'))
-      .toBe('1 Across. Organ with four chambers. 5 letters.');
+      .toBe('Organ with four chambers. 5 letters.');
   });
 
   test('REQ-READ-002: italic word announced after the text', () => {
@@ -57,16 +57,16 @@ describe('clue readout (READ)', () => {
   });
 
   test('REQ-READ-010: cross-references read literally', () => {
-    expect(clue('See 17-Across')).toBe('1 Across. See 17-Across. 5 letters.');
+    expect(clue('See 17-Across')).toBe('See 17-Across. 5 letters.');
   });
 
   test('REQ-READ-011: editorial tags like ": Abbr." are preserved verbatim', () => {
     expect(clue("Violinist's supply: Abbr.")).toContain(': Abbr.');
   });
 
-  test('REQ-LIFE-010/REQ-NAV-006: greeting and wrap prefixes', () => {
-    expect(clue('Plain clue', { greeting: true }).startsWith("Let's solve. 1 Across.")).toBe(true);
-    expect(clue('Plain clue', { wrapped: true }).startsWith('Back to the top. 1 Across.')).toBe(true);
+  test('REQ-LIFE-010/REQ-NAV-006: greeting and wrap prefixes glue straight onto the clue text', () => {
+    expect(clue('Plain clue', { greeting: true }).startsWith("Let's solve. Plain clue.")).toBe(true);
+    expect(clue('Plain clue', { wrapped: true }).startsWith('Back to the top. Plain clue.')).toBe(true);
   });
 });
 
@@ -79,7 +79,7 @@ describe('outcome phrasing', () => {
     expect(spelled).toContain('it fits');
   });
 
-  test('REQ-ANS-007: length mismatch names every variant length and the target', () => {
+  test('REQ-ANS-007: length mismatch states only the problem — variants, lengths, target', () => {
     const out = render({
       kind: 'length-mismatch',
       variants: [{ word: 'EIGHT', len: 5 }, { word: 'ATE', len: 3 }],
@@ -88,17 +88,20 @@ describe('outcome phrasing', () => {
     expect(out).toContain('Eight is 5 letters');
     expect(out).toContain('Ate is 3 letters');
     expect(out).toContain('we need 4');
+    expect(out).not.toContain('I heard'); // no preamble before the problem
   });
 
-  test('REQ-ANS-008: collision names the ordinal spot, both letters, and the crossing', () => {
+  test('REQ-ANS-008: collision states only the problem — spot, both letters, crossing', () => {
     const out = render({
       kind: 'collision',
       word: 'HEIST',
       collisions: [{ pos: 2, want: 'I', have: 'A', crossLabel: '3 Down' }],
     });
-    expect(out).toContain('Heist fits the length');
+    expect(out).toContain("Heist doesn't work");
+    expect(out).not.toContain('fits the length'); // no what-fits preamble
     expect(out).toContain('the third letter would be I');
     expect(out).toContain('already has A there from 3 Down');
+    expect(out).toContain('say anyway'); // REQ-ANS-012: the offered override phrase matches the lexicon
   });
 
   test('REQ-ANS-009: disambiguation offers spellings', () => {

@@ -107,9 +107,12 @@ Covers: REQ-LIFE-003
 ### MT-13 — Conversation follows your clicks
 Covers: REQ-NAV-008 REQ-PAGE-010
 1. Mid-session while the mic is listening, click a different clue in the page's clue list.
-2. **PASS:** the extension announces and reads the newly selected clue; entering answers via voice
-   right after targets *that* clue. Our own automatic navigation does not re-trigger readouts
-   (no echo loop).
+2. While a long clue is being read out, click yet another clue.
+3. While spelling a word ("spell it", a few letters in), click a different clue.
+4. **PASS:** in all three cases the extension abandons what it was doing (the readout stops within
+   ~a second; the spelling buffer is discarded) and reads the newly selected clue; entering answers
+   via voice right after targets *that* clue. Our own automatic navigation does not re-trigger
+   readouts (no echo loop).
 
 ### MT-14 — Question-mark clues sound right
 Covers: REQ-READ-004 REQ-SPCH-006
@@ -180,3 +183,10 @@ Covers: REQ-LIFE-011
    application (or another Chrome window) without changing tabs.
 2. **PASS:** in each case speech and mic stop within ~1 s, silently — no goodbye, badge clears,
    no zombie session when you come back.
+
+### MT-25 — "Stop" cuts a readout short
+Covers: REQ-CMD-006
+1. Start a session on a puzzle with a longish clue. While the clue is still being read, say "stop".
+2. Start again; mid-readout say something that is NOT a stop word (e.g. "hello there").
+3. **PASS:** step 1 — the readout halts promptly and you get the short sign-off, session over.
+   Step 2 — the readout continues unaffected and your words are not treated as an answer.

@@ -136,6 +136,8 @@ describe('commands', () => {
       ['stop', 'stop'], ['goodbye', 'stop'], ["we're done", 'stop'], ['quit', 'stop'],
       ['spell', 'spell'], ['let me spell it', 'spell'],
       ['enter it anyway', 'enter-anyway'], ['overwrite', 'enter-anyway'], ['force it', 'enter-anyway'],
+      ['anyway', 'enter-anyway'], ['anyways', 'enter-anyway'], ['say it anyway', 'enter-anyway'],
+      ['do it anyway', 'enter-anyway'], ['it anyway', 'enter-anyway'],
       ['you misheard', 'misheard'], ["that's not what i said", 'misheard'],
       ['yes', 'yes'], ['yeah', 'yes'], ['no', 'no'], ['never mind', 'no'],
       ['first', 'choice'], ['the second one', 'choice'],

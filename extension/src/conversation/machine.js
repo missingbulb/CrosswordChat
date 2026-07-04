@@ -1,11 +1,12 @@
 // Conversation policy: pure reducer (state, event) → {state, actions}.
 // No browser APIs, no English strings (see phrases.js), no DOM (see page-adapter).
 //
-// Events in:  START TTS_DONE HEARD STT_ERROR ENTRY_RESULT PAGE_EVENT TOGGLE_OFF
+// Events in:  START TTS_DONE HEARD BARGE_IN STT_ERROR ENTRY_RESULT PAGE_EVENT TOGGLE_OFF
 // Actions out: SAY LISTEN ENTER SELECT_CLUE END
 //
 // Half-duplex invariant (REQ-SPCH-005): LISTEN is never emitted in the same action
 // batch as SAY; listening starts only after speech finishes (TTS_DONE → after:'listen').
+// The shell's stop-only barge-in listener (REQ-CMD-006) surfaces here as BARGE_IN.
 
 import { buildModel } from '../puzzle-model/model.js';
 import { nextClue } from './strategies.js';
@@ -151,7 +152,7 @@ function handleCommand(state, cmd) {
         [{ kind: 'spell-start' }],
       );
     case 'enter-anyway': // REQ-ANS-012
-      if (!state.pendingWord) return listenAgain(state, [{ kind: 'didnt-catch' }]);
+      if (!state.pendingWord) return null; // nothing pending — ANYWAY might be the answer
       return speak(
         { ...state, mode: 'normal', pendingEntry: { word: state.pendingWord } },
         [say({ kind: 'entering-anyway', word: state.pendingWord })],
@@ -251,7 +252,8 @@ function onHeardDisambig(state, alternatives) {
 function onHeardConfirm(state, alternatives) {
   const top = alternatives[0]?.transcript ?? '';
   const cmd = parseCommand(top);
-  if (cmd?.command === 'yes' && state.pendingWord) {
+  // "anyway" counts as yes here — it is an explicit go-ahead (REQ-ANS-012/016).
+  if ((cmd?.command === 'yes' || cmd?.command === 'enter-anyway') && state.pendingWord) {
     return speak(
       { ...state, mode: 'normal', pendingEntry: { word: state.pendingWord } },
       [say({ kind: 'entering-anyway', word: state.pendingWord })],
@@ -377,18 +379,41 @@ function onPageEvent(state, { kind, snapshot }) {
       'end',
     );
   }
-  if (state.phase !== 'listening') return { state, actions: [] };
+  // REQ-NAV-008: a click reaches us while listening AND mid-readout (the shell cuts the
+  // audio short); only 'entering' and the farewell (after:'end') are off-limits.
+  const interactive = state.phase === 'listening'
+    || (state.phase === 'speaking' && state.after !== 'end');
+  if (!interactive) return { state, actions: [] };
   const model = buildModel(snapshot);
-  if (kind === 'selection' && state.mode === 'normal') { // REQ-NAV-008
+  if (kind === 'selection') {
     const sel = snapshot.selection?.clueId;
     if (sel && sel !== state.clueId && model.clue(sel)) {
+      // The click wins over whatever was in progress: reset any sub-mode and pending work.
       return readClue({
-        ...state, model, clueId: sel, rejected: [], lastProposed: null, pendingWord: null,
+        ...state,
+        model,
+        clueId: sel,
+        mode: 'normal',
+        rejected: [],
+        lastProposed: null,
+        pendingWord: null,
+        pendingEntry: null,
+        spellBuffer: [],
+        disambigWords: [],
       });
     }
   }
   // grid change (user typed manually) or same-clue selection: absorb the fresh state.
   return { state: { ...state, model }, actions: [] };
+}
+
+// REQ-CMD-006: "stop" heard by the barge-in listener while we were speaking.
+function onBargeIn(state) {
+  if (state.phase !== 'speaking') return { state, actions: [] };
+  if (state.after === 'end') { // stop during the sign-off itself — just go
+    return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
+  }
+  return speak(state, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
 }
 
 function onHeard(state, { alternatives }) {
@@ -408,6 +433,7 @@ export function reduce(state, event) {
     case 'START': return onStart(state, event);
     case 'TTS_DONE': return onTtsDone(state);
     case 'HEARD': return onHeard(state, event);
+    case 'BARGE_IN': return onBargeIn(state);
     case 'STT_ERROR': return onSttError(state, event);
     case 'ENTRY_RESULT': return onEntryResult(state, event);
     case 'PAGE_EVENT': return onPageEvent(state, event);

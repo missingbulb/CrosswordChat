@@ -27,10 +27,11 @@ export function spellOut(word) {
 }
 
 /**
- * Clue → spoken text (REQ-READ-001..011).
- * @param {object} p {label, runs:[{text,italic}], answerLength, greeting?, wrapped?}
+ * Clue → spoken text (REQ-READ-001..011). The clue label ("17 Across") is deliberately
+ * NOT spoken — the page highlight shows position (REQ-NAV-007).
+ * @param {object} p {runs:[{text,italic}], answerLength, greeting?, wrapped?}
  */
-export function verbalizeClue({ label, runs, answerLength, greeting = false, wrapped = false }) {
+export function verbalizeClue({ runs, answerLength, greeting = false, wrapped = false }) {
   const plain = runs.map((r) => r.text).join('');
   const trimmed = plain.trim();
 
@@ -72,7 +73,6 @@ export function verbalizeClue({ label, runs, answerLength, greeting = false, wra
   const parts = [];
   if (greeting) parts.push("Let's solve.");
   if (wrapped) parts.push('Back to the top.');
-  parts.push(`${label}.`);
   parts.push(bracketed ? `The clue is in brackets: ${body}` : body);
   parts.push(...annotations);
   parts.push(`${answerLength} letters.`); // REQ-READ-008: always last.
@@ -98,17 +98,19 @@ export function render(say) {
       return `${head} ${say.word.length} letters — it fits!`;
     }
     case 'length-mismatch': {
+      // REQ-ANS-007: only the problem — no "I heard ..." preamble.
       const list = say.variants
         .map((v) => `${sayWord(v.word)} is ${v.len} letters`)
         .join(', and ');
-      return `I heard ${sayWord(say.variants[0].word)}. ${list} — we need ${say.needed}. Try again, spell it, or say next.`;
+      return `${list} — we need ${say.needed}. Try again, spell it, or say next.`;
     }
     case 'collision': {
+      // REQ-ANS-008: only the problem — no "fits the length, but" preamble.
       const parts = say.collisions.slice(0, 3).map((c) => {
         const from = c.crossLabel ? ` from ${c.crossLabel}` : '';
-        return `the ${ordinal(c.pos + 1)} letter would be ${c.want}, and the grid already has ${c.have} there${from}`;
+        return `the ${ordinal(c.pos + 1)} letter would be ${c.want}, but the grid already has ${c.have} there${from}`;
       });
-      return `${sayWord(say.word)} fits the length, but ${parts.join('; and ')}. Say a new answer, say enter it anyway, or say next.`;
+      return `${sayWord(say.word)} doesn't work — ${parts.join('; and ')}. Say a new answer, say anyway to enter it, or say next.`;
     }
     case 'ambiguous': {
       const spelled = say.words.map((w) => spellOut(w)).join(', or ');
@@ -129,7 +131,7 @@ export function render(say) {
       return `${letters}. ${summary}`;
     }
     case 'help':
-      return 'You can: say an answer, or answer followed by a word. Say pass or next to skip, repeat to hear the clue again, hint for the letters so far, spell it to spell, enter it anyway to override, switch to most filled to change order, or goodbye to stop.';
+      return 'You can: say an answer, or answer followed by a word. Say pass or next to skip, repeat to hear the clue again, hint for the letters so far, spell it to spell, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
     case 'didnt-catch':
       return "Sorry, I didn't catch that. Say an answer, or say help.";
     case 'misheard-reprompt':

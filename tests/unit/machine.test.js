@@ -123,6 +123,34 @@ describe('navigation (NAV)', () => {
     // Same clue again (e.g. our own SELECT echoing back) → no re-read.
     expect(s.step({ type: 'PAGE_EVENT', kind: 'selection', snapshot: snap2 })).toEqual([]);
   });
+
+  test('REQ-NAV-008: a click mid-readout switches clues (the shell cuts the audio short)', () => {
+    const s = scenario();
+    s.step({ type: 'START', snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    // Still speaking the opening readout when the user clicks 2 Down.
+    const actions = s.step({
+      type: 'PAGE_EVENT',
+      kind: 'selection',
+      snapshot: heartSnapshot(undefined, { selection: { clueId: 'D2' } }),
+    });
+    expect(says(actions)[0].label).toBe('2 Down');
+    expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['LISTEN']);
+  });
+
+  test('REQ-NAV-008: a click during spelling mode abandons the mode and follows', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('spell'));
+    s.step({ type: 'TTS_DONE' });
+    const actions = s.step({
+      type: 'PAGE_EVENT',
+      kind: 'selection',
+      snapshot: heartSnapshot(undefined, { selection: { clueId: 'D2' } }),
+    });
+    expect(says(actions)[0].label).toBe('2 Down');
+    s.step({ type: 'TTS_DONE' });
+    // A whole word is accepted again — spelling mode is gone.
+    expect(says(s.step(heard('ember')))[0].kind).toBe('fit');
+  });
 });
 
 describe('answers (ANS)', () => {
@@ -174,6 +202,22 @@ describe('answers (ANS)', () => {
     expect(says(actions)[0]).toEqual({ kind: 'entering-anyway', word: 'HEIST' });
     const enter = s.step({ type: 'TTS_DONE' });
     expect(enter[0]).toMatchObject({ type: 'ENTER', word: 'HEIST' });
+  });
+
+  test('REQ-ANS-012: bare "anyway" (all STT often keeps of "say it anyway") also overrides', () => {
+    const s = listening(heartSnapshot(['HEA.T', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heist'));
+    s.step({ type: 'TTS_DONE' });
+    const actions = s.step(heard('anyway'));
+    expect(says(actions)[0]).toEqual({ kind: 'entering-anyway', word: 'HEIST' });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEIST' });
+  });
+
+  test('REQ-ANS-012: "anyway" with nothing pending falls through to answer evaluation', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const actions = s.step(heard('anyway')); // ANYWAY (6) into a 5-cell entry → plain mismatch
+    expect(says(actions)[0]).toMatchObject({ kind: 'length-mismatch', needed: 5 });
+    expect(says(actions)[0].variants[0].word).toBe('ANYWAY');
   });
 
   test('REQ-ANS-009: ambiguous homophones ask; "second" picks and enters', () => {
@@ -260,6 +304,15 @@ describe('answers (ANS)', () => {
     expect(says(s3.step(heard('heart')))[0].kind).toBe('fit'); // same word → no confirmation
   });
 
+  test('REQ-ANS-016/REQ-ANS-012: "anyway" during the replace confirmation counts as yes', () => {
+    const s = listening(heartSnapshot(['WRONG', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heart'));
+    s.step({ type: 'TTS_DONE' });
+    const go = s.step(heard('anyway'));
+    expect(says(go)[0]).toEqual({ kind: 'entering-anyway', word: 'HEART' });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
   test('REQ-ANS-013: failed write is announced; the clue stays current', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     s.step(heard('heart'));
@@ -308,6 +361,25 @@ describe('hints, commands, control (HINT/CMD/READ)', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     expect(says(s.step(heard('goodbye')))[0].kind).toBe('goodbye');
     expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['END']);
+  });
+
+  test('REQ-CMD-006: "stop" mid-readout (BARGE_IN) → sign-off, then end', () => {
+    const s = scenario();
+    s.step({ type: 'START', snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    const actions = s.step({ type: 'BARGE_IN' }); // shell heard a stop during the readout
+    expect(says(actions)[0].kind).toBe('goodbye');
+    expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['END']);
+  });
+
+  test('REQ-CMD-006: stop during the sign-off ends silently; BARGE_IN while not speaking is ignored', () => {
+    const s = scenario();
+    s.step({ type: 'START', snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    s.step({ type: 'BARGE_IN' }); // goodbye starts speaking
+    expect(s.step({ type: 'BARGE_IN' })).toEqual([{ type: 'END' }]); // no second goodbye
+    expect(s.state().phase).toBe('done');
+
+    const s2 = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    expect(s2.step({ type: 'BARGE_IN' })).toEqual([]); // nothing speaking — nothing to interrupt
   });
 
   test('REQ-CMD-005: silence is never nagged — quiet re-listen under the timeout, silent end past it', () => {

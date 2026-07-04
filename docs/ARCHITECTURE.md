@@ -95,7 +95,7 @@ Cell indices are row-major DOM order. Clue `runs` preserve formatting for the ve
 DOM numbers (REQ-MODEL-001) — the page adapter stays dumb.
 
 ### Machine events (into `machine.reduce`)
-`START{snapshot}` · `TTS_DONE` · `HEARD{alternatives:[{transcript,confidence}]}` ·
+`START{snapshot}` · `TTS_DONE` · `HEARD{alternatives:[{transcript,confidence}]}` · `BARGE_IN` ·
 `STT_ERROR{code}` · `ENTRY_RESULT{ok,snapshot}` · `PAGE_EVENT{kind,snapshot}` · `TOGGLE_OFF`
 
 ### Machine actions (out of `machine.reduce`)
@@ -115,6 +115,8 @@ dispatch(event):
   {state, actions} = machine.reduce(state, event)
   for a of actions:
     SAY         → console line + tts.speak(phrases.render(a.say)) → dispatch(TTS_DONE)
+                  (a stop-only barge-in mic runs alongside the speech; hearing a stop
+                   intent cancels the utterance and dispatches BARGE_IN — REQ-CMD-006)
     LISTEN      → stt.listenOnce() → dispatch(HEARD | STT_ERROR)
     ENTER       → pause watcher → pageClient.enterAnswer(...) → dispatch(ENTRY_RESULT)
     SELECT_CLUE → pageClient.selectClue(...)
