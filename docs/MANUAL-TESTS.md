@@ -58,7 +58,7 @@ Covers: REQ-SPCH-003
 ### MT-06 — Conversational solve, end to end
 Covers: REQ-ANS-006 REQ-LIFE-005 REQ-NAV-001 REQ-NAV-002 REQ-NAV-003 REQ-NAV-007 REQ-SPCH-002 REQ-SPCH-005 REQ-CMD-001
 1. Solve today's Mini entirely by voice: answer, *pass* on unknowns, come back around.
-2. **PASS:** fitting answers are confirmed ("It fits") and appear in the grid; *pass* leaves cells
+2. **PASS:** fitting answers are confirmed with a terse "Fits!" and appear in the grid; *pass* leaves cells
    untouched and reads the next unfilled clue in list order (wrapping); the page highlight always
    matches the spoken clue; the mic never listens while the extension is talking; completing the
    puzzle triggers NYT's congratulations AND the extension's "Hooray" + session end.

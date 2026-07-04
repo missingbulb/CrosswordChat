@@ -71,12 +71,12 @@ describe('clue readout (READ)', () => {
 });
 
 describe('outcome phrasing', () => {
-  test('REQ-ANS-006: fit announcement; homophone rescues get spelled out', () => {
-    expect(render({ kind: 'fit', word: 'HEART', spelledDifferently: false }))
-      .toBe('Heart. 5 letters — it fits!');
+  test('REQ-ANS-006: fit is a terse "Fits!"; only homophone rescues get spelled out', () => {
+    expect(render({ kind: 'fit', word: 'HEART', spelledDifferently: false })).toBe('Fits!');
     const spelled = render({ kind: 'fit', word: 'ATE', spelledDifferently: true });
     expect(spelled).toContain('A, T, E');
-    expect(spelled).toContain('it fits');
+    expect(spelled).toContain('fits');
+    expect(spelled).not.toContain('letters'); // no letter count in either form
   });
 
   test('REQ-ANS-007: length mismatch states only the problem — variants, lengths, target', () => {

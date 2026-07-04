@@ -479,10 +479,12 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 #### REQ-ANS-006 — Fit → confirm → enter → advance
 - **Status:** Active · **Level:** MUST
-- When exactly one spelling fits length + pattern: say it fits (`"HEART — 5 letters. It fits."`);
-  if the accepted spelling differs from the literal transcript (homophone/digit rescue), spell it
-  out loud first (`"E-I-G-H-T... eight, 5 letters. It fits."`); then enter it into the grid, then
-  advance per strategy and read the next clue. Entering is verified per REQ-ANS-013.
+- When exactly one spelling fits length + pattern: confirm tersely with just `"Fits!"` — no echo
+  of the word and no letter count (the user just said the word; repeating it wastes time). One
+  exception: if the accepted spelling differs from the literal transcript (homophone/digit
+  rescue), spell it out first (`"A, T, E — fits!"`) so the user knows what will be entered. Then
+  enter it into the grid, advance per strategy, and read the next clue. Entering is verified per
+  REQ-ANS-013.
 - **Accept:** Given a fitting answer, then actions occur in order SAY(fit) → ENTER → SELECT/SAY(next
   clue) and the grid contains the word.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js` (spelledDifferently

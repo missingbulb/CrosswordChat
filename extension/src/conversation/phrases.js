@@ -92,11 +92,10 @@ export function render(say) {
       return 'Hooray — puzzle solved! Great work.';
     case 'grid-full-wrong':
       return "The grid is full, but something's not right yet. Say next to move around, or give a new answer to replace one.";
-    case 'fit': {
-      const spoken = sayWord(say.word);
-      const head = say.spelledDifferently ? `${spellOut(say.word)} — ${spoken}.` : `${spoken}.`;
-      return `${head} ${say.word.length} letters — it fits!`;
-    }
+    case 'fit':
+      // REQ-ANS-006: terse — the user just said the word, so don't echo it back. The
+      // spell-out stays only when we accepted a different spelling than they voiced.
+      return say.spelledDifferently ? `${spellOut(say.word)} — fits!` : 'Fits!';
     case 'length-mismatch': {
       // REQ-ANS-007: only the problem — no "I heard ..." preamble.
       const list = say.variants
