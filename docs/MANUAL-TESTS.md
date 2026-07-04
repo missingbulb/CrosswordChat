@@ -17,39 +17,43 @@ For offline tests, `npm run build:dev` + `npm run fixture` and open `http://loca
 
 ### MT-01 — Selector probe on the live page
 Covers: REQ-PAGE-001 REQ-PAGE-002 REQ-PAGE-003 REQ-PAGE-004 REQ-PAGE-009 REQ-MODEL-001
-1. Open today's Mini. Click the extension icon → side panel opens.
-2. Click **Probe page** in the panel.
-3. **PASS:** every probe row shows ✅ (board, cells, letters, numbers, both clue lists, clue text,
-   selection, no congrats modal); reported grid size matches the visible grid; the number of
-   across/down clues matches the printed lists. Any ❌ row = FAIL → fix `selectors.js` first.
+1. Open today's Mini. `chrome://extensions` → CrosswordChat → *Inspect views: service worker*.
+2. In the service-worker console run:
+   `chrome.tabs.query({active:true,currentWindow:true}).then(([t]) => chrome.tabs.sendMessage(t.id, {type:'cc:probe'})).then(r => console.table(r.items))`
+3. **PASS:** every probe row shows `ok: true` (board, cells, letters, numbers, both clue lists,
+   clue text, selection, no congrats modal); reported grid size matches the visible grid; the
+   number of across/down clues matches the printed lists. Any failing row = FAIL → fix
+   `selectors.js` first.
 
 ### MT-02 — Answer injection spike (the go/no-go test)
 Covers: REQ-PAGE-005 REQ-PAGE-006 REQ-PAGE-007 REQ-PAGE-008 REQ-ANS-013
 1. On the Mini with an empty grid, start a session; answer the first clue with a correct word.
 2. Watch the grid while the extension enters it.
-3. **PASS:** letters appear in the correct cells; the panel reports success; saying a *wrong-but-
-   fitting* word later also lands (letters visible), and the clue highlight follows the
-   conversation. If letters do NOT appear: the panel must say entering failed (that part passing
-   = REQ-ANS-013 PASS) — then escalate to the fallbacks in FEASIBILITY §3.
+3. **PASS:** letters appear in the correct cells; the extension confirms by voice; saying a
+   *wrong-but-fitting* word later also lands (letters visible), and the clue highlight follows the
+   conversation. If letters do NOT appear: the extension must say entering failed (that part
+   passing = REQ-ANS-013 PASS) — then escalate to the fallbacks in FEASIBILITY §3.
 
 ### MT-03 — Session start reads the highlighted clue
 Covers: REQ-LIFE-001 REQ-LIFE-007 REQ-LIFE-010 REQ-READ-001 REQ-SPCH-001
 1. On a fresh puzzle, click clue **3 Down** in the page's clue list.
 2. Click the extension icon.
 3. **PASS:** within ~1.5 s you hear at most a couple of greeting words, then "3 Down." + the clue
-   text + "N letters." — and the mic indicator turns on. No tutorial monologue.
+   text + "N letters." — and the mic starts listening (page console shows `[CrosswordChat] mic on`;
+   Chrome shows the tab's mic-in-use indicator). Nothing visual opens. No tutorial monologue.
 
 ### MT-04 — Icon click kills the session instantly
 Covers: REQ-LIFE-002
 1. Start a session; while the clue is mid-readout, click the extension icon again.
-2. **PASS:** audio stops mid-word (≤ ~0.5 s), panel closes, mic indicator gone.
+2. **PASS:** audio stops mid-word (≤ ~0.5 s), badge clears, tab mic indicator gone, page console
+   notes the session ended.
 
 ### MT-05 — Microphone permission denied
 Covers: REQ-SPCH-003
-1. chrome://settings/content/microphone → Block for the extension (or reset and click "Block" on
-   the prompt). Start a session.
-2. **PASS:** after the first readout, the extension says (voice + caption) that the mic is blocked
-   and how to fix it, then ends the session. No prompt loops, no silent hang.
+1. chrome://settings/content/microphone → Block for `https://www.nytimes.com` (the mic now belongs
+   to the page origin — or reset and click "Block" on the prompt). Start a session.
+2. **PASS:** after the first readout, the extension says by voice that the mic is blocked and how
+   to fix it, then ends the session. No prompt loops, no silent hang.
 
 ### MT-06 — Conversational solve, end to end
 Covers: REQ-ANS-006 REQ-LIFE-005 REQ-NAV-001 REQ-NAV-002 REQ-NAV-003 REQ-NAV-007 REQ-SPCH-002 REQ-SPCH-005 REQ-CMD-001
@@ -96,8 +100,9 @@ Covers: REQ-SPCH-004
 Covers: REQ-LIFE-003
 1. Click the icon on: (a) a nytimes.com news article, (b) the crosswords landing/archive page,
    (c) any non-NYT site.
-2. **PASS:** (a),(b) panel opens, says it doesn't see a crossword, ends; (c) badge feedback only
-   (✕ flash), no panel, no errors in the service-worker console.
+2. **PASS:** (a),(b) a spoken "I don't see a crossword here" and no session ((a) is voiced by the
+   service worker itself — there's no content script on article pages); (c) badge feedback only
+   (✕ flash), no speech, no errors in the service-worker console.
 
 ### MT-13 — Conversation follows your clicks
 Covers: REQ-NAV-008 REQ-PAGE-010
@@ -110,14 +115,15 @@ Covers: REQ-NAV-008 REQ-PAGE-010
 Covers: REQ-READ-004 REQ-SPCH-006
 1. Find a `?` clue (Minis usually have one; any daily does). Have it read.
 2. **PASS:** you hear the clue (ideally with rising intonation — voice-dependent) AND the words
-   "question mark". The caption shows the `?`.
+   "question mark". The console line shows the `?`.
 
 ### MT-15 — Network & storage audit
 Covers: REQ-NFR-001 REQ-NFR-002
-1. DevTools on the side panel + service worker: run a full session (MT-06 scale).
+1. DevTools on the puzzle page + service worker: run a full session (MT-06 scale).
 2. **PASS:** no `fetch`/XHR/WebSocket initiated by the extension contexts (browser-internal speech
-   traffic doesn't appear as extension requests); `chrome.storage` is empty; panel Application tab
-   shows no localStorage/IndexedDB writes; closing the session leaves nothing behind.
+   traffic doesn't appear as extension requests); `chrome.storage` is empty; no extension-written
+   localStorage/IndexedDB entries appear; closing the session leaves nothing behind but console
+   lines.
 
 ### MT-16 — Hint, help, repeat
 Covers: REQ-HINT-001 REQ-HINT-002 REQ-CMD-002 REQ-READ-009
@@ -131,23 +137,25 @@ Covers: REQ-LIFE-009
 1. Session running on tab A (Mini). Open the daily in tab B; click the icon there.
 2. **PASS:** tab A's session goes silent/closed; tab B starts fresh; only one badge/mic at a time.
 
-### MT-18 — Captions mirror the conversation
+### MT-18 — Console mirrors the conversation
 Covers: REQ-SPCH-007 REQ-SPCH-008
-1. Run a few exchanges.
-2. **PASS:** every spoken system line appears as a caption, and each of your utterances appears as
-   `Heard: "..."` — nothing spoken-but-unshown.
+1. Open the puzzle page's DevTools console (Verbose level on). Run a few exchanges.
+2. **PASS:** every spoken system line appears as a `[CrosswordChat]` console line, and each of your
+   utterances appears as `heard: "..."` — nothing spoken-but-unlogged, and nothing rendered into
+   the page itself.
 
 ### MT-19 — Tab disappears mid-session
 Covers: REQ-LIFE-008
 1. Mid-session: navigate the puzzle tab to nytimes.com home; repeat with closing the tab.
-2. **PASS:** speech/mic stop within ~2 s, panel notes the session ended; no error spam, no zombie
-   badge.
+2. **PASS:** speech/mic stop within ~2 s (the session lives in the page, so it dies with it; the
+   service worker silences any in-flight utterance); no error spam, no zombie badge.
 
-### MT-20 — Silence wind-down
+### MT-20 — Silence never gets nagged
 Covers: REQ-CMD-005
-1. Start a session and say nothing.
-2. **PASS:** one "still there?" re-prompt, one "I'll keep listening", then quiet listening, and on
-   the fifth silent cycle a polite sign-off + session end. Speaking at any point resets the ladder.
+1. Start a session and say nothing for over a minute. Keep the tab focused.
+2. **PASS:** not a single spoken word about the silence — no "still there?", no sign-off. The
+   session listens quietly and after ~60 s simply ends: tab mic indicator off, badge clears.
+   Speaking (or clicking a clue) at any point restarts the clock.
 
 ### MT-21 — Inert when off
 Covers: REQ-NFR-004
@@ -165,3 +173,10 @@ Covers: REQ-NFR-006
 1. `npm run build:dev`, `npm run fixture`, open `http://localhost:8787`, click the icon.
 2. Expect the entire conversation loop to work against the fake page — useful for demos and for
    rehearsing every MT above without an NYT subscription.
+
+### MT-24 — Looking away ends the session
+Covers: REQ-LIFE-011
+1. Mid-session: switch to another tab in the same window. Start again, then switch to a different
+   application (or another Chrome window) without changing tabs.
+2. **PASS:** in each case speech and mic stop within ~1 s, silently — no goodbye, badge clears,
+   no zombie session when you come back.

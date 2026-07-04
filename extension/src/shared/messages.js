@@ -1,20 +1,16 @@
-// Message vocabulary shared by panel ⇄ content ⇄ background. Data only.
+// Message vocabulary shared by content ⇄ background. Data only.
 
 export const MSG = {
-  // panel → content (request/response)
+  // background → content (session control)
+  START: 'cc:start',
+  CLOSE: 'cc:close',
+  // debugging via the service-worker console (MT-01; no user-facing UI)
   PING: 'cc:ping',
   SNAPSHOT: 'cc:snapshot',
-  ENTER: 'cc:enter',
-  SELECT: 'cc:select',
-  CLEAR: 'cc:clear',
   PROBE: 'cc:probe',
-  WATCH: 'cc:watch',
-  UNWATCH: 'cc:unwatch',
-  // content → panel (broadcast)
-  PAGE_EVENT: 'cc:page-event',
-  // panel ⇄ background port
-  PANEL_PORT: 'cc-panel',
-  HELLO: 'cc:hello',
-  TAB: 'cc:tab',
-  CLOSE: 'cc:close',
+  // content ⇄ background port: session registration + chrome.tts relay
+  SESSION_PORT: 'cc-session',
+  SPEAK: 'cc:speak',
+  SPEAK_DONE: 'cc:speak-done',
+  TTS_CANCEL: 'cc:tts-cancel',
 };

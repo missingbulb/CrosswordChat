@@ -4,7 +4,7 @@
 // voice loop can be rehearsed without an NYT subscription (MT-23).
 
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -13,13 +13,12 @@ const DIST = join(ROOT, 'dist');
 const dev = process.argv.includes('--dev');
 
 rmSync(DIST, { recursive: true, force: true });
-mkdirSync(join(DIST, 'sidepanel'), { recursive: true });
+mkdirSync(DIST, { recursive: true });
 
 const entries = [
   { in: join(SRC, 'background/service-worker.js'), out: join(DIST, 'background.js') },
   { in: join(SRC, 'content/content-script.js'), out: join(DIST, 'content.js') },
   { in: join(SRC, 'content/main-world.js'), out: join(DIST, 'main-world.js') },
-  { in: join(SRC, 'sidepanel/panel.js'), out: join(DIST, 'sidepanel/panel.js') },
 ];
 
 for (const { in: input, out } of entries) {
@@ -33,9 +32,6 @@ for (const { in: input, out } of entries) {
     minify: !dev,
   });
 }
-
-cpSync(join(SRC, 'sidepanel/panel.html'), join(DIST, 'sidepanel/panel.html'));
-cpSync(join(SRC, 'sidepanel/panel.css'), join(DIST, 'sidepanel/panel.css'));
 
 const manifest = JSON.parse(readFileSync(join(ROOT, 'extension/manifest.json'), 'utf8'));
 if (dev) {

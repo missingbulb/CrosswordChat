@@ -12,7 +12,7 @@
 | Workflow | File | Trigger | What it does |
 |---|---|---|---|
 | **Test** | `.github/workflows/test.yml` | every push; PRs to `main` | `npm run verify` (118 tests + requirements-coverage trace), version-consistency check, build compiles |
-| **Pack extension** | `.github/workflows/build.yml` | push to `main`; manual | Builds `dist/`, zips it (manifest at zip root — store-uploadable), uploads as a 30-day workflow artifact |
+| **Pack extension** | `.github/workflows/build.yml` | push to `main`; manual | Builds `dist/`, zips it (manifest at zip root — store-uploadable), uploads as a 30-day workflow artifact; on `main` also refreshes the rolling **`latest` prerelease**, so [`releases/download/latest/crosswordchat-latest.zip`](https://github.com/missingbulb/CrosswordChat/releases/download/latest/crosswordchat-latest.zip) is a permanent URL to the newest build (no login needed, linked from the README). Marked prerelease so it never shadows real releases and the store deploy skips it |
 | **Release** | `.github/workflows/release.yml` | manual (choose patch/minor/major or an explicit version) | Verify → bump → build → commit `Release vX.Y.Z` → tag `vX.Y.Z` → GitHub Release with the zip attached |
 | **Deploy to Chrome Web Store** | `.github/workflows/deploy-chrome-store.yml` | automatically on a published Release; or manual (with a draft-only option) | Rebuilds from the tag, uploads to the store via the official API (plain `curl`, no third-party action touches credentials), optionally submits for review |
 

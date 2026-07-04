@@ -43,23 +43,32 @@ Conclusion: the assumption in the brief is **correct**. The extension is a pure 
 ### Speech-to-text (available, with three practical caveats)
 - **`webkitSpeechRecognition`** (Web Speech API) is available in *document* contexts: content
   scripts, side panel, popup, offscreen documents. It is **not** available in the MV3 service
-  worker — which is fine, because our conversation runs in the side panel (a document).
+  worker — which is fine, because our conversation runs in the content script (the puzzle page is
+  a document).
 - It returns an **n-best list** (`maxAlternatives`), which we exploit for homophone handling
   (REQ-ANS-004) — a genuine bonus for this use case.
 - Caveats and how the design absorbs them:
-  1. **Mic permission context.** Permission is granted per-origin. Requesting from the side panel
-     ties the grant to the extension origin — granted once, persists across NYT visits. The STT
-     port pre-flights `navigator.permissions.query({name:'microphone'})` + a one-time
+  1. **Mic permission context.** Permission is granted per-origin. Recognition runs in the content
+     script, so the grant belongs to **nytimes.com** — the prompt reads as the site asking, and the
+     grant persists across NYT visits. Accepted deliberately (rev. 2): it buys a zero-UI product.
+     The STT port pre-flights `navigator.permissions.query({name:'microphone'})` + a one-time
      `getUserMedia` to surface the prompt cleanly (REQ-SPCH-003, MT-05).
-  2. **No recognition in service workers.** Solved by architecture: speech lives in the side panel.
+  2. **No recognition in service workers.** Solved by architecture: recognition lives in the page;
+     TTS lives in the service worker (`chrome.tts`, relayed over the session port).
   3. **Cloud vs on-device** — see §1's asterisk.
 
-### Why the conversation runs in the **side panel** (`chrome.sidePanel`, Chrome ≥ 114)
-- It's a persistent extension document: survives while you play, hosts STT/TTS legally, and gives
-  us the caption/transcript UI (REQ-SPCH-007/008) for free.
-- A popup would close on any click into the page (killing the mic); a content script could host
-  speech but ties mic permission and autoplay rules to nytimes.com and offers no UI surface.
-- The extension icon still toggles the whole session (open panel = start, click again = close/stop),
+### Why the conversation runs **in the page** (content script) — rev. 2; originally the side panel
+- The product is speech-only by decision: no captions, no panel, no visual surface (diagnostics go
+  to the page console, REQ-SPCH-007/008). That removes the side panel's main reason to exist.
+- A content script is a document, so recognition works; the mic prompt coming from nytimes.com and
+  the session dying on page reload/navigation are both accepted — the latter is even wanted
+  (REQ-LIFE-008 for free).
+- TTS is *not* hosted in the page: `speechSynthesis` there is subject to nytimes.com's
+  autoplay/user-activation rules, so speaking is relayed to the service worker's `chrome.tts`
+  (immune to page policies) over the session port.
+- A popup would close on any click into the page (killing the mic); the side panel worked but was
+  a permanent visual appendage the product doesn't need.
+- The extension icon still toggles the whole session (click = start, click again = stop),
   matching the brief's interaction model (REQ-LIFE-001/002).
 
 ## 3. Can we type answers into the NYT grid? — **Yes, with one risk to validate early.**
@@ -69,8 +78,8 @@ What the page gives us:
 - **Reading state** is straightforward: the grid is an SVG (`g.xwd__cell` cells with letter/number
   text), the clue lists are `<ol>`s with rich-text `<li>`s, selection is expressed via CSS classes,
   and solving triggers a congratulations modal. All selectors are quarantined in
-  `page-adapter/selectors.js` with a one-click **probe** (REQ-PAGE-009) because NYT can rename
-  classes any day.
+  `page-adapter/selectors.js` with an on-demand **probe** (REQ-PAGE-009, run per MT-01) because
+  NYT can rename classes any day.
 - **Writing** (primary approach): do what the user's fingers do —
   1. click the target cell (selects it),
   2. dispatch a `keydown` KeyboardEvent with the letter (NYT listens at document level),

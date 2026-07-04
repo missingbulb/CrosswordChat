@@ -1,6 +1,8 @@
 import { describe, test, expect, vi } from 'vitest';
 import { createTtsPort } from '../../extension/src/speech/tts-port.js';
+import { createRemoteTtsPort } from '../../extension/src/speech/remote-tts-port.js';
 import { createSttPort, mapSttError, DEFAULT_LANG } from '../../extension/src/speech/stt-port.js';
+import { MSG } from '../../extension/src/shared/messages.js';
 
 // ---- fakes -------------------------------------------------------------------
 
@@ -76,6 +78,108 @@ describe('tts port', () => {
   test('headless (no engines) resolves instead of hanging', async () => {
     const tts = createTtsPort({ chromeTts: undefined, synth: undefined });
     await expect(tts.speak('x')).resolves.toBeUndefined();
+  });
+
+  test('REQ-SPCH-001: speaks with the first installed preferred voice', async () => {
+    const voicesUsed = [];
+    const chromeTts = {
+      getVoices: () => Promise.resolve([
+        { voiceName: 'Robotic System Default' },
+        { voiceName: 'Google US English' },
+      ]),
+      speak: (text, opts) => {
+        voicesUsed.push(opts.voiceName);
+        opts.onEvent({ type: 'end' });
+      },
+    };
+    const tts = createTtsPort({ chromeTts, synth: undefined });
+    await tts.speak('one');
+    await tts.speak('two');
+    expect(voicesUsed).toEqual(['Google US English', 'Google US English']);
+  });
+
+  test('REQ-SPCH-001: no preferred voice installed → system default (no voiceName set)', async () => {
+    const voicesUsed = [];
+    const chromeTts = {
+      getVoices: () => Promise.resolve([{ voiceName: 'Robotic System Default' }]),
+      speak: (text, opts) => {
+        voicesUsed.push(opts.voiceName);
+        opts.onEvent({ type: 'end' });
+      },
+    };
+    const tts = createTtsPort({ chromeTts, synth: undefined });
+    await tts.speak('hello');
+    expect(voicesUsed).toEqual([undefined]);
+  });
+
+  test('REQ-SPCH-001: speechSynthesis fallback sets the preferred voice object', async () => {
+    vi.stubGlobal('SpeechSynthesisUtterance', class {
+      constructor(text) {
+        this.text = text;
+      }
+    });
+    const google = { name: 'Google US English', lang: 'en-US' };
+    const voicesUsed = [];
+    const synth = {
+      getVoices: () => [{ name: 'Robotic System Default', lang: 'en-US' }, google],
+      speak: (utterance) => {
+        voicesUsed.push(utterance.voice);
+        utterance.onend();
+      },
+    };
+    const tts = createTtsPort({ chromeTts: undefined, synth });
+    await tts.speak('x');
+    expect(voicesUsed).toEqual([google]);
+    vi.unstubAllGlobals();
+  });
+});
+
+// ---- Remote TTS (content script → service worker relay) -----------------------
+
+function makeFakePort() {
+  const posted = [];
+  const messageListeners = [];
+  const disconnectListeners = [];
+  return {
+    posted,
+    postMessage: (msg) => posted.push(msg),
+    onMessage: { addListener: (fn) => messageListeners.push(fn) },
+    onDisconnect: { addListener: (fn) => disconnectListeners.push(fn) },
+    emit: (msg) => messageListeners.forEach((fn) => fn(msg)),
+    drop: () => disconnectListeners.forEach((fn) => fn()),
+  };
+}
+
+describe('remote tts port', () => {
+  test('REQ-SPCH-001: speak posts over the port and resolves on the matching SPEAK_DONE', async () => {
+    const port = makeFakePort();
+    const tts = createRemoteTtsPort(port);
+    const done = vi.fn();
+    const pending = tts.speak('hello').then(done);
+    expect(port.posted).toEqual([{ type: MSG.SPEAK, id: 1, text: 'hello' }]);
+    port.emit({ type: MSG.SPEAK_DONE, id: 99 }); // someone else's utterance
+    await Promise.resolve();
+    expect(done).not.toHaveBeenCalled();
+    port.emit({ type: MSG.SPEAK_DONE, id: 1 });
+    await pending;
+  });
+
+  test('REQ-LIFE-002: cancel posts an immediate stop request', () => {
+    const port = makeFakePort();
+    createRemoteTtsPort(port).cancel();
+    expect(port.posted).toEqual([{ type: MSG.TTS_CANCEL }]);
+  });
+
+  test('port death resolves in-flight speech instead of hanging the conversation', async () => {
+    const port = makeFakePort();
+    const tts = createRemoteTtsPort(port);
+    const pending = tts.speak('doomed');
+    port.drop();
+    await expect(pending).resolves.toBeUndefined();
+    // and a fully dead port never rejects
+    port.postMessage = () => { throw new Error('disconnected'); };
+    await expect(tts.speak('later')).resolves.toBeUndefined();
+    expect(() => tts.cancel()).not.toThrow();
   });
 });
 
