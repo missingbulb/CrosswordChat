@@ -1,5 +1,6 @@
 // Service worker: the "switchboard". Icon toggle (REQ-LIFE-001/002), one session at
-// a time (REQ-LIFE-009), badge feedback for pages we can't work on (REQ-LIFE-003).
+// a time (REQ-LIFE-009), badge feedback for pages we can't work on (REQ-LIFE-003),
+// session ends when the puzzle tab loses the user's attention (REQ-LIFE-011).
 
 import { MSG } from '../shared/messages.js';
 
@@ -62,3 +63,21 @@ chrome.runtime.onConnect.addListener((port) => {
 chrome.tabs.onRemoved.addListener((tabId) => {
   if (session?.tabId === tabId) closeSession(); // REQ-LIFE-008
 });
+
+// REQ-LIFE-011: the mic never stays open on a puzzle the user isn't looking at.
+// Switching to another tab, another Chrome window, or another app ends the
+// session — silently, like the icon toggle.
+async function endSessionIfHidden() {
+  if (!session) return;
+  const { tabId } = session;
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    const win = await chrome.windows.get(tab.windowId);
+    if (session?.tabId === tabId && (!tab.active || !win.focused)) closeSession();
+  } catch {
+    if (session?.tabId === tabId) closeSession(); // tab already gone
+  }
+}
+
+chrome.tabs.onActivated.addListener(() => { void endSessionIfHidden(); });
+chrome.windows.onFocusChanged.addListener(() => { void endSessionIfHidden(); });

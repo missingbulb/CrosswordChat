@@ -198,6 +198,16 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   (with greeting folded in).
 - **Verify:** unit `tests/unit/machine.test.js`.
 
+#### REQ-LIFE-011 — Looking away ends the session
+- **Status:** Active · **Level:** MUST
+- The session MUST end — instantly and silently, like the icon toggle (REQ-LIFE-002) — when the
+  puzzle tab stops being the active tab, or when the Chrome window loses focus (the user switched
+  to another window or another app). The microphone never stays open on a puzzle the user is not
+  looking at.
+- **Accept:** Given a running session, when the user switches to another tab or to a different
+  app, then speech and mic stop within ~1 s with no spoken goodbye and the badge clears.
+- **Verify:** manual MT-24.
+
 ---
 
 ## 6. Clue readout (READ)
@@ -648,15 +658,16 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given "goodbye", then a sign-off is spoken and the session ends.
 - **Verify:** unit `tests/unit/machine.test.js`.
 
-#### REQ-CMD-005 — Silence ladder
+#### REQ-CMD-005 — Silence is fine; after a minute the mic quietly closes
 - **Status:** Active · **Level:** MUST
-- Consecutive empty listen cycles (STT `no-speech`) MUST escalate deterministically:
-  1st → re-prompt ("Still there? Say an answer, or say help."); 2nd → "I'll keep listening."; 3rd–4th →
-  listen again silently; 5th → polite sign-off and end session. Any successful utterance resets the
-  counter.
-- **Accept:** Given five consecutive no-speech events, then exactly the prompts above occur and the
-  session ends.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-20.
+- This is a thinking game: long pauses between utterances are normal, so silence MUST NOT be
+  nagged about — empty listen cycles (STT `no-speech`) produce no speech, ever. The session keeps
+  listening quietly; once ~60 s pass with nothing heard (`SILENCE_TIMEOUT_MS`), it ends silently —
+  the mic just stops, no re-prompt, no sign-off. Heard speech or user activity on the puzzle
+  (clicking a clue, typing letters) resets the clock.
+- **Accept:** Given consecutive no-speech cycles totalling under 60 s, then nothing is spoken and
+  listening continues; once accumulated silence reaches 60 s, the session ends without a word.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-20.
 
 ---
 

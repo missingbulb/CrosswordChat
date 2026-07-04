@@ -12,12 +12,16 @@ import { render } from '../conversation/phrases.js';
  *   {snapshot, enterAnswer(cells), selectClue(clueId), watch(cb), unwatch, pauseWatch, resumeWatch}
  * @param {object} [deps.ui]  {caption(role, text), listening(bool)}
  * @param {() => void} [deps.onEnd]
+ * @param {() => number} [deps.now]  clock, injectable for tests
  */
-export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {} }) {
+export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {}, now = Date.now }) {
   let state = initialState();
   const queue = [];
   let processing = false;
   let ended = false;
+  // REQ-CMD-005: last moment the user was audibly or visibly active. The machine is
+  // pure, so the shell measures silence and passes it along with no-speech errors.
+  let lastActivityAt = now();
 
   const caption = (role, text) => ui.caption?.(role, text);
 
@@ -36,8 +40,9 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         ui.listening?.(false);
         if (ended) break;
         if (result.error) {
-          enqueue({ type: 'STT_ERROR', code: result.error });
+          enqueue({ type: 'STT_ERROR', code: result.error, silentMs: now() - lastActivityAt });
         } else {
+          lastActivityAt = now();
           caption('heard', result.alternatives[0]?.transcript ?? ''); // REQ-SPCH-008
           enqueue({ type: 'HEARD', alternatives: result.alternatives });
         }
@@ -94,8 +99,10 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
     if (event.type === 'TOGGLE_OFF') { // REQ-LIFE-002: instant silence
       tts.cancel();
       stt.stop();
-    } else if (event.type === 'PAGE_EVENT' && (event.kind === 'solved' || event.kind === 'selection')) {
-      stt.stop();
+    } else if (event.type === 'PAGE_EVENT') {
+      // Clicking or typing on the puzzle is user presence — reset the silence clock.
+      lastActivityAt = now();
+      if (event.kind === 'solved' || event.kind === 'selection') stt.stop();
     }
     queue.push(event);
     void drain();
@@ -119,6 +126,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
 
   return {
     async start() {
+      lastActivityAt = now(); // session start is user activity (icon click)
       let snap;
       try {
         snap = await pageClient.snapshot();

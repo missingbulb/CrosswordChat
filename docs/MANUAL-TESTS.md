@@ -143,11 +143,12 @@ Covers: REQ-LIFE-008
 2. **PASS:** speech/mic stop within ~2 s, panel notes the session ended; no error spam, no zombie
    badge.
 
-### MT-20 — Silence wind-down
+### MT-20 — Silence never gets nagged
 Covers: REQ-CMD-005
-1. Start a session and say nothing.
-2. **PASS:** one "still there?" re-prompt, one "I'll keep listening", then quiet listening, and on
-   the fifth silent cycle a polite sign-off + session end. Speaking at any point resets the ladder.
+1. Start a session and say nothing for over a minute. Keep the tab focused.
+2. **PASS:** not a single spoken word about the silence — no "still there?", no sign-off. The
+   session listens quietly and after ~60 s simply ends: mic indicator off, panel closes. Speaking
+   (or clicking a clue) at any point restarts the clock.
 
 ### MT-21 — Inert when off
 Covers: REQ-NFR-004
@@ -165,3 +166,10 @@ Covers: REQ-NFR-006
 1. `npm run build:dev`, `npm run fixture`, open `http://localhost:8787`, click the icon.
 2. Expect the entire conversation loop to work against the fake page — useful for demos and for
    rehearsing every MT above without an NYT subscription.
+
+### MT-24 — Looking away ends the session
+Covers: REQ-LIFE-011
+1. Mid-session: switch to another tab in the same window. Start again, then switch to a different
+   application (or another Chrome window) without changing tabs.
+2. **PASS:** in each case speech and mic stop within ~1 s, silently — no goodbye, panel closes,
+   badge clears, no zombie session when you come back.

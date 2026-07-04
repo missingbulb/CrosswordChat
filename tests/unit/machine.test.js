@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { initialState, reduce } from '../../extension/src/conversation/machine.js';
+import { initialState, reduce, SILENCE_TIMEOUT_MS } from '../../extension/src/conversation/machine.js';
 import { heartSnapshot, makeSnapshot, SOLVED_HEART_ROWS } from '../helpers/snapshots.js';
 
 // Every action batch from every scenario is collected so the half-duplex invariant
@@ -310,17 +310,15 @@ describe('hints, commands, control (HINT/CMD/READ)', () => {
     expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['END']);
   });
 
-  test('REQ-CMD-005: the silence ladder escalates deterministically and ends politely', () => {
+  test('REQ-CMD-005: silence is never nagged — quiet re-listen under the timeout, silent end past it', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
-    const noSpeech = { type: 'STT_ERROR', code: 'no-speech' };
-    expect(says(s.step(noSpeech))[0].kind).toBe('silence-reprompt'); // 1
-    s.step({ type: 'TTS_DONE' });
-    expect(says(s.step(noSpeech))[0].kind).toBe('waiting-note'); // 2
-    s.step({ type: 'TTS_DONE' });
-    expect(types(s.step(noSpeech))).toEqual(['LISTEN']); // 3 silent
-    expect(types(s.step(noSpeech))).toEqual(['LISTEN']); // 4 silent
-    expect(says(s.step(noSpeech))[0].kind).toBe('goodbye-idle'); // 5 → sign off
-    expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['END']);
+    const noSpeech = (silentMs) => ({ type: 'STT_ERROR', code: 'no-speech', silentMs });
+    // Below the timeout: keep listening without a single SAY.
+    expect(types(s.step(noSpeech(8_000)))).toEqual(['LISTEN']);
+    expect(types(s.step(noSpeech(SILENCE_TIMEOUT_MS - 1)))).toEqual(['LISTEN']);
+    // At the timeout: end immediately — no goodbye, no reprompt, just END.
+    expect(s.step(noSpeech(SILENCE_TIMEOUT_MS))).toEqual([{ type: 'END' }]);
+    expect(s.state().phase).toBe('done');
   });
 });
 

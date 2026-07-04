@@ -27,7 +27,7 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | **Source of truth.** ~80 testable requirements with case analyses; every Active one is enforced to have a test (see below). |
 | [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md) | Client-side validation, speech API availability, grid-writing strategies + fallbacks. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module map, runtime topology, data contracts, decision log. |
-| [`docs/MANUAL-TESTS.md`](docs/MANUAL-TESTS.md) | MT-01…MT-23: minutes-long scripts for everything a browser can't fake (live page, mic, audio). |
+| [`docs/MANUAL-TESTS.md`](docs/MANUAL-TESTS.md) | MT-01…MT-24: minutes-long scripts for everything a browser can't fake (live page, mic, audio). |
 | `extension/src/page-adapter/` | The only code that knows the NYT DOM (read grid/clues, type answers, watch changes, self-diagnosing probe). |
 | `extension/src/puzzle-model/` | Pure crossword semantics: numbering, crossings, patterns, full-vs-solved. |
 | `extension/src/matching/` | Pure speech-to-answer matching: normalization, digits→words, homophone dictionary, length/collision verdicts, command lexicon. |
