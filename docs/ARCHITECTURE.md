@@ -117,8 +117,9 @@ dispatch(event):
   {state, actions} = machine.reduce(state, event)
   for a of actions:
     SAY         → console line + tts.speak(phrases.render(a.say)) → dispatch(TTS_DONE)
-                  (a stop-only barge-in mic runs alongside the speech; hearing a stop
-                   intent cancels the utterance and dispatches BARGE_IN — REQ-CMD-006)
+                  (a barge-in mic runs alongside the speech — REQ-SPCH-009: echo-guarded
+                   input cancels the utterance and dispatches HEARD when the utterance
+                   ends in listening; otherwise only stop is honored → BARGE_IN)
     LISTEN      → stt.listenOnce() → dispatch(HEARD | STT_ERROR)
     ENTER       → pause watcher → pageClient.enterAnswer(...) → dispatch(ENTRY_RESULT)
     UNDO        → pause watcher → clearEntry(blank-before cells) + enterAnswer(overwritten

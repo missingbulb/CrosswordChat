@@ -184,12 +184,11 @@ Covers: REQ-LIFE-011
 2. **PASS:** in each case speech and mic stop within ~1 s, silently — no goodbye, badge clears,
    no zombie session when you come back.
 
-### MT-25 — "Stop" cuts a readout short
+### MT-25 — "Stop" cuts any speech short
 Covers: REQ-CMD-006
-1. Start a session on a puzzle with a longish clue. While the clue is still being read, say "stop".
-2. Start again; mid-readout say something that is NOT a stop word (e.g. "hello there").
-3. **PASS:** step 1 — the readout halts promptly and you get the short sign-off, session over.
-   Step 2 — the readout continues unaffected and your words are not treated as an answer.
+1. Start a session. While a clue is still being read, say "stop".
+2. Start again; give a fitting answer, and while the "Fits!" confirmation is playing say "stop".
+3. **PASS:** both times the audio halts promptly, the short sign-off plays, and the session ends.
 
 ### MT-26 — Undo, back, flip
 Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
@@ -199,3 +198,12 @@ Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
    (letters that were there beforehand come back), and prompts you to say it again or spell it;
    "back" moves to the previous clue in the list — including filled ones — and reads it; "flip"
    jumps to the crossing clue and reads it; the page highlight follows every move.
+
+### MT-27 — Answer before the readout ends
+Covers: REQ-SPCH-009
+1. Start a session; while the clue is still being read, say a fitting answer.
+2. On the next clue, mid-readout, say "next".
+3. With sound on speakers (no headphones), stay silent through a full readout and the mic open.
+4. **PASS:** steps 1–2 — the readout stops within ~a second and the answer/command is handled
+   exactly as if spoken after the readout. Step 3 — the extension never reacts to its own voice
+   (the echo guard discards it); no self-triggered replies, ever.
