@@ -38,10 +38,13 @@ function entriesFromGrid(rows, cols, isBlock) {
  * Build the fake page inside `document.body` and wire up its behavior.
  * @param {Document} document
  * @param {object} puzzle  see puzzle.js
- * @param {{swallowKeys?: boolean}} [opts]  swallowKeys simulates a page that ignores
- *   synthetic keyboard input (for REQ-PAGE-007 / REQ-ANS-013 failure-path tests).
+ * @param {{swallowKeys?: boolean, renderDelayMs?: number, legacyKeysOnly?: boolean}} [opts]
+ *   swallowKeys — page ignores ALL keyboard input (REQ-PAGE-007 / REQ-ANS-013 failure paths).
+ *   renderDelayMs — DOM repaints lag state changes by this long, like the live React app.
+ *   legacyKeysOnly — key handler ignores events whose legacy keyCode is 0, like handlers
+ *     that read event.keyCode/which (bare synthetic {key} events construct those as 0).
  */
-export function initFakeNyt(document, puzzle, { swallowKeys = false } = {}) {
+export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false } = {}) {
   const { rows, cols, solution } = puzzle;
   const isBlock = (r, c) => solution[r][c] === '#';
   const entries = entriesFromGrid(rows, cols, isBlock);
@@ -140,6 +143,14 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false } = {}) {
   }
 
   function render() {
+    if (renderDelayMs > 0) {
+      setTimeout(paint, renderDelayMs); // state is current; the DOM catches up later
+    } else {
+      paint();
+    }
+  }
+
+  function paint() {
     state.letters.forEach((letter, i) => {
       if (letterEls[i]) letterEls[i].textContent = letter;
     });
@@ -175,6 +186,7 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false } = {}) {
 
   document.addEventListener('keydown', (event) => {
     if (swallowKeys) return;
+    if (legacyKeysOnly && !event.keyCode) return;
     const { key } = event;
     if (/^[a-zA-Z]$/.test(key)) {
       state.letters[state.selCell] = key.toUpperCase();
@@ -230,6 +242,7 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false } = {}) {
       for (const ch of word) {
         document.dispatchEvent(new (document.defaultView.KeyboardEvent)('keydown', {
           key: ch,
+          keyCode: ch.toUpperCase().charCodeAt(0),
           bubbles: true,
         }));
       }

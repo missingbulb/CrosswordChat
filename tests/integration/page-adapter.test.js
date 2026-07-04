@@ -80,26 +80,35 @@ describe('navigator', () => {
 });
 
 describe('writer', () => {
-  test('REQ-PAGE-006: types a word into the right cells via click + keydown', () => {
-    const result = enterAnswer(document, word('HEART', 0, 1)); // A1
+  test('REQ-PAGE-006: types a word into the right cells via click + keydown', async () => {
+    const result = await enterAnswer(document, word('HEART', 0, 1)); // A1
     expect(result.ok).toBe(true);
     expect(result.snapshot.cells.slice(0, 5).map((c) => c.letter)).toEqual(['H', 'E', 'A', 'R', 'T']);
 
-    const down = enterAnswer(document, word('TREND', 4, 5)); // D5 (column 4)
+    const down = await enterAnswer(document, word('TREND', 4, 5)); // D5 (column 4)
     expect(down.ok).toBe(true);
     expect(down.snapshot.cells[9].letter).toBe('R');
     expect(down.snapshot.cells[24].letter).toBe('D');
   });
 
-  test('REQ-PAGE-007/REQ-ANS-013: verification catches a page that swallows keystrokes', () => {
+  test('REQ-PAGE-006/007: survives a live-like page — async repaints + legacy-keyCode handlers', async () => {
+    // The failure seen on the real page: probe all green, yet entry "fails" because the
+    // app repaints asynchronously and its handlers read event.keyCode (0 on bare events).
+    app = initFakeNyt(document, FIXTURE_PUZZLE, { renderDelayMs: 30, legacyKeysOnly: true });
+    const result = await enterAnswer(document, word('HEART', 0, 1));
+    expect(result.ok).toBe(true);
+    expect(result.snapshot.cells.slice(0, 5).map((c) => c.letter)).toEqual(['H', 'E', 'A', 'R', 'T']);
+  });
+
+  test('REQ-PAGE-007/REQ-ANS-013: verification catches a page that swallows keystrokes', async () => {
     app = initFakeNyt(document, FIXTURE_PUZZLE, { swallowKeys: true });
-    const result = enterAnswer(document, word('HEART', 0, 1));
+    const result = await enterAnswer(document, word('HEART', 0, 1), { verifyTimeoutMs: 80, pollMs: 20 });
     expect(result.ok).toBe(false); // honest failure, surfaced to the conversation
   });
 
-  test('REQ-PAGE-008: clearEntry empties the targeted cells', () => {
-    enterAnswer(document, word('HEART', 0, 1));
-    const result = clearEntry(document, [0, 1, 2, 3, 4]);
+  test('REQ-PAGE-008: clearEntry empties the targeted cells', async () => {
+    await enterAnswer(document, word('HEART', 0, 1));
+    const result = await clearEntry(document, [0, 1, 2, 3, 4]);
     expect(result.ok).toBe(true);
     expect(result.snapshot.cells.slice(0, 5).map((c) => c.letter)).toEqual(['', '', '', '', '']);
   });
@@ -141,7 +150,7 @@ describe('watcher', () => {
 
     events.length = 0;
     watcher.pause();
-    enterAnswer(document, word('EMBER', 5, 1)); // our own write while paused
+    await enterAnswer(document, word('EMBER', 5, 1)); // our own write while paused
     await sleep(40);
     watcher.resume();
     await sleep(40);

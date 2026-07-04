@@ -34,17 +34,19 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       break;
     case MSG.ENTER: {
       watcher?.pause();
-      const result = enterAnswer(document, msg.cells);
-      watcher?.resume();
-      sendResponse(result);
-      break;
+      enterAnswer(document, msg.cells).then((result) => {
+        watcher?.resume();
+        sendResponse(result);
+      });
+      return true; // writing verifies asynchronously (polls the page) — respond later
     }
     case MSG.CLEAR: {
       watcher?.pause();
-      const result = clearEntry(document, msg.cellIndices);
-      watcher?.resume();
-      sendResponse(result);
-      break;
+      clearEntry(document, msg.cellIndices).then((result) => {
+        watcher?.resume();
+        sendResponse(result);
+      });
+      return true; // async response, as above
     }
     case MSG.SELECT:
       sendResponse({ ok: selectClue(document, msg.clueId) });
@@ -63,5 +65,5 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     default:
       return false; // not ours
   }
-  return false; // all responses are synchronous
+  return false; // remaining responses are synchronous
 });

@@ -77,6 +77,11 @@ What the page gives us:
   3. repeat per letter; then **re-read the cells to verify** (REQ-PAGE-007) and report honestly
      (REQ-ANS-013).
   Per-cell addressing sidesteps NYT's cursor-skip settings.
+  Live-page hardening (post-MT-02): synthetic key events carry the legacy
+  `keyCode`/`which`/`charCode` fields (bare `{key}` events construct them as 0, which
+  keyCode-reading handlers ignore), a short settle delay separates the selection click from the
+  keystroke, and verification **polls** the grid for up to ~1.5 s instead of reading it
+  synchronously — the live app is a React page and repaints after our dispatch returns.
 - **The risk:** synthetic events from a content script have `isTrusted:false`. Community solvers
   have driven the NYT grid with synthetic keyboard events successfully, but NYT could start
   filtering. This is why MT-02 (live injection spike) is ordered as the **second** manual test —
