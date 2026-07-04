@@ -362,13 +362,14 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the next two clues in order are filled, when advancing, then the third is selected.
 - **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`.
 
-#### REQ-NAV-004 — Strategy: most-filled-first
+#### REQ-NAV-004 — Strategy: most-filled-first (easiest = highest fill ratio)
 - **Status:** Active · **Level:** MUST
-- A second strategy MUST rank unfilled clues by most filled-in letters (descending), tie-broken by
-  list order, cycling through the current one last. Rationale: entries with many crossings filled
-  are easiest to answer.
-- **Accept:** Given entries with 3/5, 1/4, 0/3 letters filled, when advancing under most-filled, then
-  the 3/5 entry is chosen.
+- A second strategy MUST rank unfilled clues by the *percentage* of their letters already in the
+  grid (`filled ÷ length`, descending), tie-broken by list order, cycling through the current one
+  last. Rationale: the entry with the largest share of its letters already in place is the easiest
+  to complete. Ratio, not raw count: 2 of 3 letters (67%) beats 3 of 5 (60%).
+- **Accept:** Given entries with 3/5 and 2/3 letters filled, when advancing under most-filled, then
+  the 2/3 entry is chosen.
 - **Verify:** unit `tests/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
@@ -428,6 +429,37 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the current clue is 1 Across, when the user says "flip", then 1 Down (the
   crossing at its first cell) is selected and read.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
+
+#### REQ-NAV-011 — Skip memory under most-filled
+- **Status:** Active · **Level:** MUST
+- Under the most-filled strategy, saying *next* MUST remember the clue it just left (together with
+  its filled-letter count at that moment), and remembered clues MUST NOT be offered again while
+  their letters are unchanged — so repeated *next* walks the open clues in descending fill-ratio
+  order instead of ping-ponging between the two fullest. A remembered clue becomes eligible again
+  the moment its filled letters change (e.g. a crossing answer landed — its new ratio may make it
+  the best pick once more). When every open clue is remembered-and-unchanged, advancing MUST cycle
+  back to the *least recently* skipped one rather than getting stuck. Skip memory is
+  session-scoped; it does not constrain the list-order strategy (REQ-NAV-002), *back*
+  (REQ-NAV-009), *flip* (REQ-NAV-010), or manual clicks (REQ-NAV-008).
+- **Accept:** Given four open entries with distinct fill ratios under most-filled, when the user
+  says next four times, then the entries are visited in descending-ratio order with no repeats,
+  and a fifth next returns to the first-skipped one; given a skipped entry gains a letter from a
+  crossing answer, then the following next offers it again.
+- **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`; manual MT-27.
+
+#### REQ-NAV-012 — Default strategy is a persisted setting
+- **Status:** Active · **Level:** MUST
+- The extension MUST offer an options page — Chrome's standard settings surface, reached by
+  right-clicking the toolbar icon → *Options* (or chrome://extensions → Details → Extension
+  options) — where the user picks between the two navigation modes (list order / most filled
+  first). The choice MUST persist in `chrome.storage.sync` and MUST be applied as the starting
+  strategy of every new session. Voice switching (REQ-NAV-005) still changes the strategy for the
+  rest of the session only; it MUST NOT write the setting back. A missing or invalid stored value
+  falls back to list order (REQ-NAV-002).
+- **Accept:** Given the stored setting is most-filled, when a session starts and the user says
+  next, then the most-filled strategy picks the clue; given no stored value (or a corrupted one),
+  then list order is used.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/settings.test.js`; manual MT-27.
 
 ---
 
@@ -930,13 +962,16 @@ any time, every selector lives in one file with a self-diagnosing probe.
   live session, then DevTools shows no extension-originated requests.
 - **Verify:** unit `tests/unit/arch.test.js`; manual MT-15.
 
-#### REQ-NFR-002 — Privacy: nothing persisted
+#### REQ-NFR-002 — Privacy: nothing about the puzzle is persisted
 - **Status:** Active · **Level:** MUST
-- No audio, transcripts, or puzzle content may be persisted (no `localStorage`, `indexedDB`,
-  `chrome.storage` in MVP source). Transcripts live in session memory (and the page console) and
-  die with the page.
-- **Accept:** Given the source tree, then no storage primitives appear; given a session end, then no
-  extension storage exists.
+- No audio, transcripts, or puzzle content may be persisted. Transcripts live in session memory
+  (and the page console) and die with the page. The sole allowed persistence is the user's
+  settings object (REQ-NAV-012) in `chrome.storage.sync`, and storage primitives (`localStorage`,
+  `indexedDB`, `chrome.storage`) may appear only in the settings module
+  (`extension/src/settings/`) and the options page (`extension/src/options/`) — nowhere else in
+  extension source.
+- **Accept:** Given the source tree, then storage primitives appear only under the two allowed
+  paths; given a session end, then extension storage holds nothing beyond the settings object.
 - **Verify:** unit `tests/unit/arch.test.js`; manual MT-15.
 
 #### REQ-NFR-003 — Latency budgets
@@ -984,8 +1019,9 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - **REQ-FUT-005 — Multi-tab sessions.** Today: single session (REQ-LIFE-009).
 - **REQ-FUT-006 — On-device STT preference.** Surface Chrome's on-device recognition
   (`processLocally`) as a privacy setting when available.
-- **REQ-FUT-007 — Settings UI.** Voice, rate, verbosity (e.g. REQ-READ-004 announcement),
-  strategy default. Requires `chrome.storage` and revisiting REQ-NFR-002's blanket ban.
+- **REQ-FUT-007 — Settings UI.** Voice, rate, verbosity (e.g. REQ-READ-004 announcement).
+  The strategy default, the options page, and the `chrome.storage.sync` carve-out from
+  REQ-NFR-002 are delivered (REQ-NAV-012); the remaining knobs stay future work.
 
 ---
 

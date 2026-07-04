@@ -4,7 +4,7 @@
 // voice loop can be rehearsed without an NYT subscription (MT-23).
 
 import { build } from 'esbuild';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -19,6 +19,7 @@ const entries = [
   { in: join(SRC, 'background/service-worker.js'), out: join(DIST, 'background.js') },
   { in: join(SRC, 'content/content-script.js'), out: join(DIST, 'content.js') },
   { in: join(SRC, 'content/main-world.js'), out: join(DIST, 'main-world.js') },
+  { in: join(SRC, 'options/options.js'), out: join(DIST, 'options.js') },
 ];
 
 for (const { in: input, out } of entries) {
@@ -32,6 +33,8 @@ for (const { in: input, out } of entries) {
     minify: !dev,
   });
 }
+
+copyFileSync(join(SRC, 'options/options.html'), join(DIST, 'options.html'));
 
 const manifest = JSON.parse(readFileSync(join(ROOT, 'extension/manifest.json'), 'utf8'));
 if (dev) {

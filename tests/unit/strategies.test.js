@@ -1,7 +1,11 @@
 import { describe, test, expect } from 'vitest';
 import { buildModel } from '../../extension/src/puzzle-model/model.js';
 import { nextClue } from '../../extension/src/conversation/strategies.js';
-import { heartSnapshot } from '../helpers/snapshots.js';
+import { heartSnapshot, makeSnapshot } from '../helpers/snapshots.js';
+
+// Across-only grid (block rows kill the downs): independent entries with
+// controllable lengths/fills. A1 = 3/5 (60%), A2 = 2/3 (67%), A3 = 0/5.
+const RATIO_ROWS = ['HEA..', '#####', 'AB.#.', '#####', '.....'];
 
 describe('next-clue strategies', () => {
   test('REQ-NAV-002: list order advances after the current clue and wraps', () => {
@@ -40,5 +44,22 @@ describe('next-clue strategies', () => {
     const model = buildModel(heartSnapshot());
     // All empty: ties everywhere → first in list order that isn't the current clue.
     expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A6');
+  });
+
+  test('REQ-NAV-004: most-filled ranks by fill percentage, not raw letter count', () => {
+    const model = buildModel(makeSnapshot(RATIO_ROWS));
+    // A2 at 2/3 (67%) beats A1 at 3/5 (60%) even though A1 has more letters placed.
+    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A2');
+  });
+
+  test('REQ-NAV-011: recently skipped clues are passed over for the next-best ratio', () => {
+    const model = buildModel(makeSnapshot(RATIO_ROWS));
+    expect(nextClue(model, 'A3', 'most-filled', ['A2']).clueId).toBe('A1');
+  });
+
+  test('REQ-NAV-011: with every open clue skipped, the least recently skipped is revisited', () => {
+    const model = buildModel(makeSnapshot(RATIO_ROWS));
+    expect(nextClue(model, 'A3', 'most-filled', ['A2', 'A1']).clueId).toBe('A2');
+    expect(nextClue(model, 'A3', 'most-filled', ['A1', 'A2']).clueId).toBe('A1');
   });
 });

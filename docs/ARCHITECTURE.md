@@ -62,6 +62,11 @@ extension/src/
     tts-port.js      chrome.tts | speechSynthesis → speak()/cancel() (used by the service worker)
     remote-tts-port.js  same contract from the content script: relays speak/cancel over the port
     stt-port.js      webkitSpeechRecognition → listenOnce() n-best, error taxonomy, mic preflight
+  settings/        Persisted user settings (REQ-NAV-012). With options/, the ONLY place
+    settings.js      allowed to touch chrome.storage (REQ-NFR-002): load/save/sanitize
+  options/         The options page (right-click the toolbar icon → Options)
+    options.html     strategy picker markup (copied to dist/ by the build)
+    options.js       wires the radios to settings.js; saves on change
   app/
     orchestrator.js  executes machine actions via ports/pageClient; owns the event loop
   background/
@@ -95,7 +100,7 @@ Cell indices are row-major DOM order. Clue `runs` preserve formatting for the ve
 DOM numbers (REQ-MODEL-001) — the page adapter stays dumb.
 
 ### Machine events (into `machine.reduce`)
-`START{snapshot}` · `TTS_DONE` · `HEARD{alternatives:[{transcript,confidence}]}` · `BARGE_IN` ·
+`START{snapshot,settings}` · `TTS_DONE` · `HEARD{alternatives:[{transcript,confidence}]}` · `BARGE_IN` ·
 `STT_ERROR{code}` · `ENTRY_RESULT{ok,snapshot}` · `UNDO_RESULT{ok,snapshot}` ·
 `PAGE_EVENT{kind,snapshot}` · `TOGGLE_OFF`
 

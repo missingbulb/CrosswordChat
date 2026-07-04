@@ -5,8 +5,13 @@
   "description": "Solve the New York Times crossword conversationally: it reads clues aloud, you answer by voice.",
   "minimum_chrome_version": "116",
   "permissions": [
-    "tts"
+    "tts",
+    "storage"
   ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
   "host_permissions": [
     "https://www.nytimes.com/*"
   ],

@@ -10,7 +10,7 @@
 // The shell's stop-only barge-in listener (REQ-CMD-006) surfaces here as BARGE_IN.
 
 import { buildModel } from '../puzzle-model/model.js';
-import { nextClue, prevClue } from './strategies.js';
+import { nextClue, prevClue, STRATEGIES } from './strategies.js';
 import { evaluate, collectSpelledLetters } from '../matching/evaluate.js';
 import { parseCommand } from '../matching/commands.js';
 
@@ -73,13 +73,40 @@ function goTo(state, clueId) {
   ], 'listen');
 }
 
+/**
+ * Skip records still standing (REQ-NAV-011): a record dies when its entry fills up or
+ * its letter count changes — a changed entry earned a fresh look (new ratio, new odds).
+ */
+function liveSkips(state) {
+  return state.skipped.filter(({ clueId, filled }) => {
+    const p = state.model.progressFor(clueId);
+    return p.filled === filled && p.filled < p.length;
+  });
+}
+
+/** An explicit "next" skips the current clue: remember it + its letter count (REQ-NAV-011). */
+function recordSkip(state) {
+  const p = state.model.progressFor(state.clueId);
+  if (p.filled >= p.length) return state; // leaving a filled entry is not a skip
+  const skipped = [
+    ...state.skipped.filter((e) => e.clueId !== state.clueId),
+    { clueId: state.clueId, filled: p.filled },
+  ];
+  return { ...state, skipped };
+}
+
 function advance(state, leadSays = []) {
-  const next = nextClue(state.model, state.clueId, state.strategy);
+  const skipped = liveSkips(state);
+  const next = nextClue(state.model, state.clueId, state.strategy, skipped.map((e) => e.clueId));
   if (!next) {
     // Nothing unfilled anywhere (REQ-LIFE-006 / REQ-NAV-003).
-    return listenAgain(state, [...leadSays, { kind: 'grid-full-wrong' }]);
+    return listenAgain({ ...state, skipped }, [...leadSays, { kind: 'grid-full-wrong' }]);
   }
-  const s = moveTo(state, next.clueId);
+  // Landing on a clue clears its skip record — skipping it again re-files it as newest.
+  const s = {
+    ...moveTo(state, next.clueId),
+    skipped: skipped.filter((e) => e.clueId !== next.clueId),
+  };
   return speak(s, [
     ...leadSays.map(say),
     { type: 'SELECT_CLUE', clueId: next.clueId },
@@ -146,7 +173,7 @@ function evaluateAnswer(state, alternatives) {
 function handleCommand(state, cmd) {
   switch (cmd.command) {
     case 'next':
-      return advance(state);
+      return advance(recordSkip(state)); // REQ-NAV-011: an explicit skip is remembered
     case 'back': // REQ-NAV-009: previous in list order, filled entries included
       return goTo(state, prevClue(state.model, state.clueId).clueId);
     case 'flip': { // REQ-NAV-010: jump to the crossing clue
@@ -326,7 +353,7 @@ function onHeardNormal(state, alternatives) {
   return listenAgain(state, [{ kind: 'didnt-catch' }]); // REQ-CMD-003
 }
 
-function onStart(state, { snapshot }) {
+function onStart(state, { snapshot, settings }) {
   if (snapshot.status === 'not-found') {
     return speak({ ...state, phase: 'speaking' }, [say({ kind: 'no-puzzle' })], 'end'); // REQ-LIFE-003
   }
@@ -341,7 +368,10 @@ function onStart(state, { snapshot }) {
     after: 'listen',
     model,
     clueId,
-    strategy: 'list-order',
+    // REQ-NAV-012: the persisted setting seeds the strategy; anything unrecognized
+    // (corrupt storage, older versions) falls back to list order.
+    strategy: STRATEGIES.includes(settings?.strategy) ? settings.strategy : 'list-order',
+    skipped: [], // REQ-NAV-011
     mode: 'normal',
     spellBuffer: [],
     disambigWords: [],

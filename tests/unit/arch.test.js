@@ -34,9 +34,11 @@ describe('architecture rules', () => {
     expect(offenders).toEqual([]);
   });
 
-  test('REQ-NFR-002: no persistence primitives (localStorage/indexedDB/chrome.storage)', () => {
+  test('REQ-NFR-002: persistence primitives only in the settings module and options page', () => {
     const STORAGE = /localStorage|sessionStorage|indexedDB|chrome\.storage/;
+    const ALLOWED = ['extension/src/settings/', 'extension/src/options/'];
     const offenders = sourceFiles()
+      .filter((p) => !ALLOWED.some((dir) => rel(p).startsWith(dir)))
       .filter((p) => STORAGE.test(readFileSync(p, 'utf8')))
       .map(rel);
     expect(offenders).toEqual([]);

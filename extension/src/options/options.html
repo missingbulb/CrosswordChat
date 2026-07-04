@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CrosswordChat settings</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; min-width: 320px; color: #222; }
+    h1 { font-size: 15px; margin: 0 0 4px; }
+    p.hint { margin: 0 0 12px; color: #666; }
+    fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; }
+    legend { font-weight: 600; padding: 0 4px; }
+    label { display: block; margin: 6px 0; cursor: pointer; }
+    small { color: #666; display: block; margin-left: 22px; }
+  </style>
+</head>
+<body>
+  <h1>CrosswordChat</h1>
+  <p class="hint">Applies the next time you start a voice session. Saying
+    “switch to most filled” or “go in order” still changes it mid-session.</p>
+  <fieldset>
+    <legend>Where “next” goes</legend>
+    <label>
+      <input type="radio" name="strategy" value="list-order">
+      In list order
+      <small>The next unsolved clue, top to bottom — Across then Down.</small>
+    </label>
+    <label>
+      <input type="radio" name="strategy" value="most-filled">
+      Most filled first (easiest)
+      <small>The open clue with the highest percentage of its letters already in the grid.
+        Clues you just skipped wait their turn until their letters change.</small>
+    </label>
+  </fieldset>
+  <script src="options.js"></script>
+</body>
+</html>

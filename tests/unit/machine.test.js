@@ -114,6 +114,54 @@ describe('navigation (NAV)', () => {
     expect(nav.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('D1'); // 4/5 filled beats empty A1
   });
 
+  // Across-only grid (block rows kill the downs): four independent entries whose fill
+  // ratios are fully controllable. A1 = 2/5, A2 = 3/5, A3 = 1/5, A4 = 0/5.
+  const ratioRows = (a2 = 'CDE..') => ['AB...', '#####', a2, '#####', 'F....', '#####', '.....'];
+  const picked = (actions) => actions.find((a) => a.type === 'SELECT_CLUE')?.clueId;
+
+  test('REQ-NAV-011: repeated "next" under most-filled walks ratios down, no ping-pong, then cycles', () => {
+    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }));
+    s.step(heard('switch to most filled'));
+    s.step({ type: 'TTS_DONE' });
+    const walk = [];
+    for (let i = 0; i < 5; i++) {
+      walk.push(picked(s.step(heard('next'))));
+      s.step({ type: 'TTS_DONE' });
+    }
+    // Descending ratio (A2 60%, A1 40%, A3 20%, A4 0%) — never straight back to the
+    // fullest — and once everything was skipped, the oldest skip (A2) comes around again.
+    expect(walk).toEqual(['A2', 'A1', 'A3', 'A4', 'A2']);
+  });
+
+  test('REQ-NAV-011: a skipped clue whose letters changed is back in the running', () => {
+    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }));
+    s.step(heard('switch to most filled'));
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('next')))).toBe('A2'); // skips A4
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('next')))).toBe('A1'); // skips A2 (3/5)
+    s.step({ type: 'TTS_DONE' });
+    // A2 gains a letter (e.g. the user typed one) → its skip record no longer applies.
+    s.step({ type: 'PAGE_EVENT', kind: 'grid', snapshot: makeSnapshot(ratioRows('CDEF.')) });
+    expect(picked(s.step(heard('next')))).toBe('A2'); // 4/5 and eligible again; A4 stays skipped
+  });
+
+  test('REQ-NAV-012: the stored strategy setting is applied from session start', () => {
+    const snap = heartSnapshot(['.....', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], { selection: { clueId: 'A1' } });
+    const s = scenario();
+    s.step({ type: 'START', snapshot: snap, settings: { strategy: 'most-filled' } });
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('next')))).toBe('D1'); // 4/5 filled beats empty A1 — no voice switch needed
+  });
+
+  test('REQ-NAV-012: a missing or invalid stored strategy falls back to list order', () => {
+    const snap = heartSnapshot(undefined, { selection: { clueId: 'A1' } });
+    const s = scenario();
+    s.step({ type: 'START', snapshot: snap, settings: { strategy: 'bogus' } });
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('next')))).toBe('A6'); // plain list order
+  });
+
   test('REQ-NAV-008: conversation follows a manual clue click, ignores echoes', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const snap2 = heartSnapshot(undefined, { selection: { clueId: 'D2' } });

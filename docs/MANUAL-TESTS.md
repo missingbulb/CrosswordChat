@@ -124,9 +124,9 @@ Covers: REQ-READ-004 REQ-SPCH-006
 Covers: REQ-NFR-001 REQ-NFR-002
 1. DevTools on the puzzle page + service worker: run a full session (MT-06 scale).
 2. **PASS:** no `fetch`/XHR/WebSocket initiated by the extension contexts (browser-internal speech
-   traffic doesn't appear as extension requests); `chrome.storage` is empty; no extension-written
-   localStorage/IndexedDB entries appear; closing the session leaves nothing behind but console
-   lines.
+   traffic doesn't appear as extension requests); `chrome.storage` holds nothing beyond the
+   settings object (`{strategy}` — REQ-NAV-012); no extension-written localStorage/IndexedDB
+   entries appear; closing the session leaves nothing behind but console lines.
 
 ### MT-16 — Hint, help, repeat
 Covers: REQ-HINT-001 REQ-HINT-002 REQ-CMD-002 REQ-READ-009
@@ -199,3 +199,15 @@ Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
    (letters that were there beforehand come back), and prompts you to say it again or spell it;
    "back" moves to the previous clue in the list — including filled ones — and reads it; "flip"
    jumps to the crossing clue and reads it; the page highlight follows every move.
+
+### MT-27 — Strategy setting and easiest-first skipping
+Covers: REQ-NAV-011 REQ-NAV-012
+1. Right-click the toolbar icon → Options. Pick "Most filled first (easiest)". Close the page.
+2. Start a session on a partially solved puzzle and, without answering, say "next" several times.
+3. Answer one clue that crosses an entry you skipped in step 2, then say "next" again.
+4. Reopen Options; switch back to "In list order"; start a new session and say "next".
+5. **PASS:** step 2 — each "next" lands on the open clue with the highest percentage of letters
+   filled that you haven't just skipped: no ping-ponging between the top two; once every open
+   clue has been skipped, "next" cycles back to the one skipped longest ago. Step 3 — the skipped
+   entry whose letters just changed is offered again. Step 4 — the new session advances in plain
+   list order; the setting survived the browser restart / new session.

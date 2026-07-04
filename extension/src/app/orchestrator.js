@@ -15,8 +15,9 @@ import { parseCommand } from '../matching/commands.js';
  * @param {object} [deps.ui]  {caption(role, text), listening(bool)}
  * @param {() => void} [deps.onEnd]
  * @param {() => number} [deps.now]  clock, injectable for tests
+ * @param {object} [deps.settings]  persisted user settings, e.g. {strategy} (REQ-NAV-012)
  */
-export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {}, now = Date.now }) {
+export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {}, now = Date.now, settings = {} }) {
   let state = initialState();
   const queue = [];
   let processing = false;
@@ -203,7 +204,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       } catch {
         snap = { status: 'not-found', size: { rows: 0, cols: 0 }, cells: [], clues: [], selection: {} };
       }
-      enqueue({ type: 'START', snapshot: snap });
+      enqueue({ type: 'START', snapshot: snap, settings });
     },
     stop() {
       enqueue({ type: 'TOGGLE_OFF' });

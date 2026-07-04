@@ -13,6 +13,7 @@ import { createWatcher } from '../page-adapter/watcher.js';
 import { createOrchestrator } from '../app/orchestrator.js';
 import { createSttPort } from '../speech/stt-port.js';
 import { createRemoteTtsPort } from '../speech/remote-tts-port.js';
+import { loadSettings } from '../settings/settings.js';
 
 const TAG = '[CrosswordChat]';
 let session = null; // { orchestrator, port }
@@ -44,11 +45,13 @@ async function startSession() {
   const port = chrome.runtime.connect({ name: MSG.SESSION_PORT });
   const stt = createSttPort();
   const tts = createRemoteTtsPort(port);
+  const settings = await loadSettings(); // REQ-NAV-012: options-page choices apply per session
 
   const orchestrator = createOrchestrator({
     tts,
     stt,
     pageClient: createPageClient(),
+    settings,
     ui: {
       caption: (role, text) => {
         if (!text) return;
