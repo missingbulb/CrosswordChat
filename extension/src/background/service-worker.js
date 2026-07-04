@@ -22,7 +22,7 @@ function closeSession() {
   chrome.action.setBadgeText({ text: '' });
 }
 
-chrome.action.onClicked.addListener(async (tab) => {
+chrome.action.onClicked.addListener((tab) => {
   if (session?.tabId === tab.id) { // toggle off (REQ-LIFE-002)
     closeSession();
     return;
@@ -36,12 +36,10 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 
   pendingTabId = tab.id;
-  await chrome.sidePanel.setOptions({
-    tabId: tab.id,
-    path: 'sidepanel/panel.html',
-    enabled: true,
-  });
-  await chrome.sidePanel.open({ tabId: tab.id });
+  // Must be called synchronously in the click handler: any await first (even a
+  // sidePanel.setOptions) drops the user-gesture context and Chrome silently
+  // refuses to open the panel. The panel path comes from the manifest default.
+  chrome.sidePanel.open({ tabId: tab.id });
 });
 
 chrome.runtime.onConnect.addListener((port) => {
