@@ -1,3 +1,7 @@
 /.claudinite/*
 !/.claudinite/.gitkeep
 /.claudinite.new/
+
+node_modules/
+dist/
+*.log

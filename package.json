@@ -1,0 +1,21 @@
+{
+  "name": "crosswordchat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension for solving the NYT crossword conversationally (voice in, voice out).",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "trace": "node tools/trace.mjs",
+    "verify": "npm run test && npm run trace",
+    "build": "node tools/build.mjs",
+    "build:dev": "node tools/build.mjs --dev",
+    "fixture": "node tools/serve-fixture.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0",
+    "vitest": "^3.0.0"
+  }
+}

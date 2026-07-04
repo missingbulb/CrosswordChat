@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fake NYT Crossword (CrosswordChat fixture)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    main { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+    svg { border: 2px solid #000; }
+    g.xwd__cell rect { fill: #fff; stroke: #999; }
+    g.xwd__cell--block rect { fill: #000; }
+    g.xwd__cell--selected rect { fill: #ffda00; }
+    text.xwd__cell-number { font-size: 10px; }
+    text.xwd__cell-letter { font-size: 22px; font-weight: 600; }
+    .xwd__clue-list--wrapper { min-width: 220px; }
+    .xwd__clue-list--title { text-transform: uppercase; font-size: 14px; }
+    ol.xwd__clue-list--list { list-style: none; padding: 0; margin: 0; }
+    li.xwd__clue--li { padding: 4px 6px; cursor: pointer; display: flex; gap: 8px; }
+    li.xwd__clue--selected { background: #a7d8ff; }
+    .xwd__clue--label { font-weight: 700; min-width: 1.5em; }
+    .xwd__congrats-modal { position: fixed; inset: 30% 20%; background: #fff; border: 3px solid gold;
+      display: grid; place-items: center; font-size: 32px; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import { FIXTURE_PUZZLE } from './puzzle.js';
+    import { initFakeNyt } from './fake-app.js';
+    window.__fakeNyt = initFakeNyt(document, FIXTURE_PUZZLE);
+  </script>
+</body>
+</html>
