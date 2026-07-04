@@ -37,7 +37,7 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 | `tests/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
 | [`docs/RELEASING.md`](docs/RELEASING.md) | Versioning (current: **0.9.0**), CI workflows, release process, Chrome Web Store deployment setup. |
-| `.github/workflows/` | Test (every push), Pack (installable zip artifact), Release (bump + tag + GitHub Release), Deploy to Chrome Web Store. |
+| `.github/workflows/` | Test (every push), Pack (installable zip artifact + rolling `latest` download), Release (bump + tag + GitHub Release), Deploy to Chrome Web Store. |
 
 ## Executable requirements — how verification works
 
@@ -54,11 +54,16 @@ npm run verify    # both
 
 ## Try it
 
+Grab the newest build — no checkout needed:
+[**crosswordchat-latest.zip**](https://github.com/missingbulb/CrosswordChat/releases/download/latest/crosswordchat-latest.zip)
+(stable link, repacked by CI on every push to `main`). Or build it yourself:
+
 ```bash
 npm run build     # → dist/
 ```
 
-Load `dist/` via `chrome://extensions` → Developer mode → **Load unpacked** (Chrome ≥ 116).
+Load the unzipped folder (or `dist/`) via `chrome://extensions` → Developer mode →
+**Load unpacked** (Chrome ≥ 116).
 Open a NYT crossword (the free Mini works), click the CrosswordChat icon, allow the microphone,
 and talk: an answer, `pass`, `repeat`, `hint`, `spell it`, `help`, `goodbye`.
 

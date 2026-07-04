@@ -25,6 +25,9 @@ concurrency: chrome-store-deploy
 
 jobs:
   deploy:
+    # Never deploy prereleases — the Pack workflow maintains a rolling "latest"
+    # prerelease on every main push, and that must not reach the store.
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
     runs-on: ubuntu-latest
     env:
       CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
