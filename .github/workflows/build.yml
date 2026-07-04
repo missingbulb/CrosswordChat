@@ -1,6 +1,10 @@
 name: Pack extension
 
 # Builds the MV3 bundle and uploads an installable zip as a workflow artifact.
+# Pushes to main also refresh the rolling "latest" prerelease, so
+#   …/releases/download/latest/crosswordchat-latest.zip
+# always serves the newest build — a stable URL (linked from the README) that
+# needs no GitHub login, unlike workflow artifacts.
 # Releases get their zip from the Release workflow; this one is for grabbing a
 # build of any branch without cutting a version.
 
@@ -8,6 +12,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pack
+  cancel-in-progress: true
 
 jobs:
   pack:
@@ -38,3 +49,22 @@ jobs:
           name: crosswordchat-${{ steps.meta.outputs.version }}-${{ github.sha }}
           path: crosswordchat-${{ steps.meta.outputs.version }}.zip
           retention-days: 30
+
+      # Marked prerelease so it never becomes the repo's "latest release" and the
+      # Chrome Web Store deploy workflow (which skips prereleases) ignores it.
+      # GITHUB_TOKEN-made pushes/releases trigger no other workflows, so no loops.
+      - name: Refresh rolling "latest" prerelease (main only)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp "crosswordchat-${{ steps.meta.outputs.version }}.zip" crosswordchat-latest.zip
+          git tag -f latest
+          git push -f origin latest
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --prerelease --title "Latest build (main)" --notes ""
+          gh release edit latest --prerelease \
+            --title "Latest build (main)" \
+            --notes "Rolling build of \`main\` — v${{ steps.meta.outputs.version }}, commit ${{ github.sha }}. Overwritten on every push to main; for versioned releases see below."
+          gh release upload latest crosswordchat-latest.zip --clobber

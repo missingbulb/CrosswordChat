@@ -79,6 +79,59 @@ describe('tts port', () => {
     const tts = createTtsPort({ chromeTts: undefined, synth: undefined });
     await expect(tts.speak('x')).resolves.toBeUndefined();
   });
+
+  test('REQ-SPCH-001: speaks with the first installed preferred voice', async () => {
+    const voicesUsed = [];
+    const chromeTts = {
+      getVoices: () => Promise.resolve([
+        { voiceName: 'Robotic System Default' },
+        { voiceName: 'Google US English' },
+      ]),
+      speak: (text, opts) => {
+        voicesUsed.push(opts.voiceName);
+        opts.onEvent({ type: 'end' });
+      },
+    };
+    const tts = createTtsPort({ chromeTts, synth: undefined });
+    await tts.speak('one');
+    await tts.speak('two');
+    expect(voicesUsed).toEqual(['Google US English', 'Google US English']);
+  });
+
+  test('REQ-SPCH-001: no preferred voice installed → system default (no voiceName set)', async () => {
+    const voicesUsed = [];
+    const chromeTts = {
+      getVoices: () => Promise.resolve([{ voiceName: 'Robotic System Default' }]),
+      speak: (text, opts) => {
+        voicesUsed.push(opts.voiceName);
+        opts.onEvent({ type: 'end' });
+      },
+    };
+    const tts = createTtsPort({ chromeTts, synth: undefined });
+    await tts.speak('hello');
+    expect(voicesUsed).toEqual([undefined]);
+  });
+
+  test('REQ-SPCH-001: speechSynthesis fallback sets the preferred voice object', async () => {
+    vi.stubGlobal('SpeechSynthesisUtterance', class {
+      constructor(text) {
+        this.text = text;
+      }
+    });
+    const google = { name: 'Google US English', lang: 'en-US' };
+    const voicesUsed = [];
+    const synth = {
+      getVoices: () => [{ name: 'Robotic System Default', lang: 'en-US' }, google],
+      speak: (utterance) => {
+        voicesUsed.push(utterance.voice);
+        utterance.onend();
+      },
+    };
+    const tts = createTtsPort({ chromeTts: undefined, synth });
+    await tts.speak('x');
+    expect(voicesUsed).toEqual([google]);
+    vi.unstubAllGlobals();
+  });
 });
 
 // ---- Remote TTS (content script → service worker relay) -----------------------

@@ -142,14 +142,8 @@ export function render(say) {
       return 'Okay, back to normal answers.';
     case 'strategy-ack':
       return say.strategy === 'most-filled' ? 'Okay — most filled first.' : 'Okay — in list order.';
-    case 'silence-reprompt':
-      return 'Still there? Say an answer, say hint, or say help.';
-    case 'waiting-note':
-      return "I'll keep listening.";
     case 'goodbye':
       return 'Goodbye — happy solving!';
-    case 'goodbye-idle':
-      return "I'll stop listening for now. Click the puzzle icon when you want me back.";
     case 'mic-denied':
       return "I can't hear you — microphone access is blocked. Allow the microphone for this extension in Chrome's site settings, then click the icon to start again.";
     case 'stt-error':

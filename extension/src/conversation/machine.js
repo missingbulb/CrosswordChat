@@ -16,6 +16,10 @@ export function initialState() {
   return { phase: 'idle' };
 }
 
+// REQ-CMD-005: how long we listen without hearing anything before quietly stopping.
+// This is a thinking game — pauses are normal, so nothing is ever said about silence.
+export const SILENCE_TIMEOUT_MS = 60_000;
+
 const say = (payload) => ({ type: 'SAY', say: payload });
 const CONTEXTUAL = new Set(['yes', 'no', 'choice']);
 
@@ -303,7 +307,6 @@ function onStart(state, { snapshot }) {
     pendingEntry: null,
     rejected: [],
     lastProposed: null,
-    silence: 0,
     sttRetried: false,
     celebrated: false,
   };
@@ -332,19 +335,18 @@ function onTtsDone(state) {
   return { state: { ...state, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
 }
 
-function onSttError(state, { code }) {
+function onSttError(state, { code, silentMs }) {
   if (state.phase !== 'listening') return { state, actions: [] };
   if (code === 'aborted') return { state, actions: [] };
   if (code === 'not-allowed') { // REQ-SPCH-003
     return speak(state, [say({ kind: 'mic-denied' })], 'end');
   }
-  if (code === 'no-speech') { // REQ-CMD-005 silence ladder
-    const silence = state.silence + 1;
-    const s = { ...state, silence };
-    if (silence === 1) return listenAgain(s, [{ kind: 'silence-reprompt' }]);
-    if (silence === 2) return listenAgain(s, [{ kind: 'waiting-note' }]);
-    if (silence <= 4) return { state: { ...s, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
-    return speak(s, [say({ kind: 'goodbye-idle' })], 'end');
+  if (code === 'no-speech') { // REQ-CMD-005: never nag about silence
+    if ((silentMs ?? 0) >= SILENCE_TIMEOUT_MS) {
+      // Enough quiet — just stop listening, as silently as the icon toggle.
+      return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
+    }
+    return { state: { ...state, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
   }
   // network / audio-capture / other: retry once (REQ-SPCH-004)
   if (!state.sttRetried) {
@@ -391,7 +393,7 @@ function onPageEvent(state, { kind, snapshot }) {
 
 function onHeard(state, { alternatives }) {
   if (state.phase !== 'listening') return { state, actions: [] };
-  const s = { ...state, silence: 0, sttRetried: false };
+  const s = { ...state, sttRetried: false };
   if (!alternatives?.length) return listenAgain(s, [{ kind: 'didnt-catch' }]);
   switch (s.mode) {
     case 'spelling': return onHeardSpelling(s, alternatives);
