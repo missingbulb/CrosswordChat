@@ -305,11 +305,9 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     if (legacyKeysOnly && !event.keyCode) return;
     const { key } = event;
     if (/^[a-zA-Z]$/.test(key)) {
-      // Like the live app: retyping the letter a cell already shows is a NO-OP — it
-      // does not convert pen↔pencil (writers must clear first, REQ-PAGE-012).
-      if (state.letters[state.selCell] === key.toUpperCase()) return;
       state.letters[state.selCell] = key.toUpperCase();
-      // The active toggle decides pen vs pencil for the newly typed letter.
+      // Like the live app (verified 2026-07): the active toggle decides pen vs pencil,
+      // and retyping the letter a cell already shows converts it in place.
       state.penciled[state.selCell] = state.pencilMode;
       advanceWithin(selectedEntry());
       render();

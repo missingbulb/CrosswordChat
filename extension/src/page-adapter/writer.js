@@ -108,9 +108,6 @@ async function verify(document, want, judge, { verifyTimeoutMs, pollMs }) {
 export async function enterAnswer(document, cells, opts = {}) {
   const { verifyTimeoutMs = 1500, pollMs = 50, keySettleMs = 15 } = opts;
   const els = cellElements(document);
-  // Current letters, for the same-letter conversion below.
-  const letterAt = new Map(snapshot(document).cells.map((c) => [c.index, c.letter]));
-
   const detected = pencilModeOn(document); // true | false | null (live page: null)
   const wasPencilOn = detected ?? false; // blind ⇒ assume the common case: pen
   let toggleClicks = 0;
@@ -149,15 +146,9 @@ export async function enterAnswer(document, cells, opts = {}) {
       }
       clickCell(el);
       await settle(keySettleMs); // let the app apply the selection before we type into it
-      const target = String(letter).toUpperCase();
-      // Retyping the letter a cell already shows is a no-op to the app, so a pure
-      // pen↔pencil conversion (REQ-ANS-019 softening, undo's un-softening) would
-      // change nothing — clear first, then retype in the current mode.
-      if ((letterAt.get(index) ?? '') === target) {
-        typeKey(document, 'Backspace', el);
-        await settle(keySettleMs);
-      }
-      typeKey(document, target, el);
+      // Retyping the letter a cell already shows converts pen↔pencil in place —
+      // verified live (REQ-ANS-019 softening and undo's un-softening ride on this).
+      typeKey(document, String(letter).toUpperCase(), el);
       await settle(keySettleMs);
     }
     if (missingCell) break;

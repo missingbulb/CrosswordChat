@@ -191,11 +191,22 @@ function finishFit(state, word, spelledDifferently) {
   );
 }
 
+/**
+ * The current entry's pattern as ANSWER EVALUATION sees it. Fully filled entries gate
+ * on length only (their letters are what a new answer would replace, REQ-ANS-016).
+ * Penciled letters never gate either (REQ-ANS-023): they are the solver's own "not
+ * sure" marks, so a clashing answer simply writes over them — those squares evaluate
+ * as open. Only pen letters on a partially filled entry produce collisions.
+ */
+function evalPattern(state) {
+  const raw = state.model.patternFor(state.clueId);
+  if (state.model.wordFor(state.clueId)) return raw.map(() => null);
+  const pencil = state.model.pencilFor(state.clueId);
+  return raw.map((letter, i) => (pencil[i] ? null : letter));
+}
+
 function evaluateAnswer(state, alternatives) {
-  const rawPattern = state.model.patternFor(state.clueId);
-  // Fully filled entry: its letters are what a new answer would REPLACE, so only the
-  // length gate applies — collisions are for partially filled entries (REQ-ANS-016).
-  const pattern = state.model.wordFor(state.clueId) ? rawPattern.map(() => null) : rawPattern;
+  const pattern = evalPattern(state);
   const outcome = evaluate({
     alternatives,
     entryLength: pattern.length,
@@ -290,7 +301,7 @@ function handleCommand(state, cmd) {
     case 'stop':
       return speak(state, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
     case 'spell': {
-      const pattern = state.model.patternFor(state.clueId);
+      const pattern = evalPattern(state); // penciled squares count as open (REQ-ANS-023)
       const open = pattern.filter((l) => !l).length;
       // "spell a b c" — the letters arrived with the verb (REQ-CMD-001). A complete
       // count (full word, or exactly the open squares) evaluates right away; anything
@@ -348,8 +359,7 @@ function handleCommand(state, cmd) {
 }
 
 function finishSpelling(state, buffer) {
-  const rawPattern = state.model.patternFor(state.clueId);
-  const pattern = state.model.wordFor(state.clueId) ? rawPattern.map(() => null) : rawPattern;
+  const pattern = evalPattern(state); // penciled squares count as open (REQ-ANS-023)
   const open = pattern.filter((l) => !l).length;
   // REQ-ANS-018: on a partially solved entry, exactly as many letters as there are open
   // squares means "fill just those" — the grid's letters supply the rest of the word.

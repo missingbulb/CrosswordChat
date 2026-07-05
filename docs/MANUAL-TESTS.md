@@ -234,12 +234,15 @@ Covers: REQ-NAV-011 REQ-NAV-012
    list order; the setting survived the browser restart / new session.
 
 ### MT-29 — Override pencils the malformed crossing; undo restores pen
-Covers: REQ-ANS-019 REQ-PAGE-012
+Covers: REQ-ANS-019 REQ-PAGE-012 REQ-ANS-023
 1. On a fresh Mini, answer one Down clue by voice so several of its letters are in the grid.
 2. Move to an Across clue that crosses it and give an answer that collides with that Down entry's
    letter; after the collision report, say "anyway".
 3. Say "undo".
 4. Toggle NYT's pencil button ON yourself, then answer another clue by voice.
+5. Extra (REQ-ANS-023): with a PENCILED letter in some entry's path, give an answer for that
+   entry which disagrees only with the penciled letter — it must say "Fits!" and write straight
+   over it, no collision report.
 5. **PASS:** step 2 — the new word lands in normal pen; the crossed Down entry's *remaining*
    letters turn gray (penciled), except any letter that also belongs to a fully filled entry —
    those keep their pen. Step 3 — the overriding word is removed, the Down entry's letters return

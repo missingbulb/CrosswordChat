@@ -933,6 +933,20 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   reading (word tokens are not letters).
 - **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
 
+#### REQ-ANS-023 — Penciled letters never gate an answer
+- **Status:** Active · **Level:** MUST
+- Penciled letters are the solver's own "not sure" marks (REQ-PAGE-012), so they MUST NOT block
+  a new answer: for evaluation, a penciled square counts as OPEN. An answer that disagrees only
+  with penciled letters gets no collision report — it fits ("Fits!") and is written over them.
+  Only PEN letters on a partially filled entry produce collisions (REQ-ANS-008); fully filled
+  entries keep the replace-confirmation flow (REQ-ANS-016) regardless of pencil state. The
+  open-square readings (REQ-ANS-018 partial spelling, spell-start's open count) use the same
+  rule: penciled squares count among the open ones.
+- **Accept:** Given A1 reads `_EA__` with the A penciled, when the user says "heist", then HEIST
+  fits and enters (the penciled A is overwritten); given the same grid with the A in pen, then
+  the collision report plays and nothing is entered.
+- **Verify:** unit `tests/unit/machine.test.js`; manual MT-29.
+
 ---
 
 ## 9. Hints (HINT)
@@ -1293,14 +1307,13 @@ any time, every selector lives in one file with a self-diagnosing probe.
   as penciled) so live drift can be diagnosed from probe output alone.
 - Live facts (captured 2026-07): the toggle is `<button><i class="xwd__toolbar_icon--pencil"
   data-testid="tool-icon"></i></button>` — NO aria-label, NO aria-pressed, and no known class
-  change when active: its state is UNREADABLE. Two consequences the adapter MUST honor:
-  (1) **click parity** — when no state is readable, mode is derived from the assumed starting
-  state (pen, the common case) plus the adapter's own click count, guaranteeing net-zero clicks
-  over a write so the user's toggle is never stolen even blind (accepted residual: a user who
-  solves in pencil gets our writes in inverted modes until an ON-state marker is captured);
-  (2) **clear-before-retype** — the app ignores retyping the letter a cell already shows, so a
-  pure pen↔pencil conversion (REQ-ANS-019 softening, undo's un-softening) MUST Backspace the
-  cell first and retype the letter in the target mode.
+  change when active: its state is UNREADABLE. The adapter MUST therefore use **click parity**:
+  when no state is readable, mode is derived from the assumed starting state (pen, the common
+  case) plus the adapter's own click count, guaranteeing net-zero clicks over a write so the
+  user's toggle is never stolen even blind (accepted residual: a user who solves in pencil gets
+  our writes in inverted modes until an ON-state marker is captured — the probe forensics exist
+  to capture one). Retyping the letter a cell already shows CONVERTS it pen↔pencil in place
+  (verified live) — REQ-ANS-019 softening and undo's un-softening ride on plain retypes.
 - **Accept:** Given the fake page, when cells are entered with mixed pencil flags, then letters and
   penciled states match per cell and the toggle returns to its prior state (both from pen and from
   pencil); given a page without the toggle, then letters still land and `ok` reflects the letters.

@@ -327,6 +327,22 @@ describe('answers (ANS)', () => {
     expect(says(forced)[0]).toMatchObject({ kind: 'length-mismatch', needed: 5 }); // ANYWAY is 6
   });
 
+  test('REQ-ANS-023: a clash on a PENCILED letter is no clash — fits and writes over', () => {
+    // A1 reads _EA__ with the A penciled (lowercase in fixture rows): HEIST disagrees
+    // only with that penciled A → no collision report, plain fit.
+    const s = listening(heartSnapshot(['.Ea..', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('heist'));
+    expect(says(out)[0]).toMatchObject({ kind: 'fit', word: 'HEIST' });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', clueId: 'A1', word: 'HEIST' });
+  });
+
+  test('REQ-ANS-023: the same clash on a PEN letter still collides', () => {
+    const s = listening(heartSnapshot(['.EA..', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('heist'));
+    expect(says(out)[0]).toMatchObject({ kind: 'collision', word: 'HEIST' });
+    expect(out.find((a) => a.type === 'ENTER')).toBeUndefined();
+  });
+
   test('REQ-ANS-009: ambiguous homophones ask; "second" picks and enters', () => {
     const s = listening(heartSnapshot(['.L...', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
     const ask = s.step(heard('plain'));
