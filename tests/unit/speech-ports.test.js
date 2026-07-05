@@ -85,7 +85,7 @@ describe('tts port', () => {
     await expect(tts.speak('x')).resolves.toBeUndefined();
   });
 
-  test('REQ-SPCH-001: speaks at the faster default rate (≥1.5×)', async () => {
+  test('REQ-SPCH-001: speaks at the 1.3× default rate when none is given', async () => {
     const rates = [];
     const chromeTts = {
       speak: (text, opts) => {
@@ -94,8 +94,37 @@ describe('tts port', () => {
       },
     };
     await createTtsPort({ chromeTts, synth: undefined }).speak('x');
-    expect(rates[0]).toBe(DEFAULT_RATE);
-    expect(rates[0]).toBeGreaterThanOrEqual(1.5);
+    expect(rates).toEqual([DEFAULT_RATE]);
+    expect(DEFAULT_RATE).toBe(1.3);
+  });
+
+  test('REQ-SPCH-001: a per-utterance rate (the user setting) reaches both engines', async () => {
+    const rates = [];
+    const chromeTts = {
+      speak: (text, opts) => {
+        rates.push(opts.rate);
+        opts.onEvent({ type: 'end' });
+      },
+    };
+    const viaChromeTts = createTtsPort({ chromeTts, synth: undefined });
+    await viaChromeTts.speak('x', { rate: 2.4 });
+    await viaChromeTts.speak('y'); // no override → back to the default
+
+    vi.stubGlobal('SpeechSynthesisUtterance', class {
+      constructor(text) {
+        this.text = text;
+      }
+    });
+    const synth = {
+      speak: (utterance) => {
+        rates.push(utterance.rate);
+        utterance.onend();
+      },
+    };
+    await createTtsPort({ chromeTts: undefined, synth }).speak('z', { rate: 0.8 });
+    vi.unstubAllGlobals();
+
+    expect(rates).toEqual([2.4, DEFAULT_RATE, 0.8]);
   });
 
   test('REQ-SPCH-010: the ready ping is best-effort — no audio, no error', () => {

@@ -1030,14 +1030,21 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   default voice is often the most robotic one installed, the port SHOULD speak with the first
   installed voice from a short ranked preference list (e.g. `Google UK English Female`; the Google
   network voices ship with desktop Chrome) and use the system default only when none of them is
-  installed. Speech MUST play at a brisk default rate of at least 1.5×; the current default is
-  2.0× (`DEFAULT_RATE`) — solvers sit through many short prompts and normal speed drags (user
-  feedback, twice: 1.5× first, then "try 2.0").
+  installed. The speaking rate MUST be a persisted user setting — an options-page slider stored
+  alongside the strategy setting (REQ-NAV-012 mechanics) — with a default of 1.3×
+  (`DEFAULT_RATE`) and bounds of 0.5×–3.0×; a missing or invalid stored value falls back to the
+  default, an out-of-range one is clamped. The service worker reads the stored rate per
+  utterance, so a change applies from the next spoken line, even mid-session. (Rate history: a
+  fixed rate was bumped 1.5× → 2.0× on user feedback, then 2.0× proved too fast — hence a modest
+  1.3× default plus a per-user knob instead of chasing one number.)
 - **Accept:** Given a fake `chrome.tts`, then `speak` resolves on the `end` event and `cancel` calls
   `chrome.tts.stop`; absent `chrome.tts`, `speechSynthesis` is used. Given an engine listing a
   preferred voice, then `speak` uses it; listing none of them, then no voice is set (system
-  default). Given a `speak`, then its rate is ≥ 1.5.
-- **Verify:** unit `tests/unit/speech-ports.test.js`; manual MT-03.
+  default). Given a `speak` with no explicit rate, then its rate is 1.3; given `speak(text,
+  {rate})`, then that rate reaches the engine. Given a stored rate of 9 (or `"fast"`), then
+  sanitization yields 3.0 (or 1.3).
+- **Verify:** unit `tests/unit/speech-ports.test.js`, `tests/unit/settings.test.js`;
+  manual MT-03, MT-33.
 
 #### REQ-SPCH-002 — Speech-to-text listen cycles
 - **Status:** Active · **Level:** MUST
@@ -1347,9 +1354,10 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - **REQ-FUT-005 — Multi-tab sessions.** Today: single session (REQ-LIFE-009).
 - **REQ-FUT-006 — On-device STT preference.** Surface Chrome's on-device recognition
   (`processLocally`) as a privacy setting when available.
-- **REQ-FUT-007 — Settings UI.** Voice, rate, verbosity (e.g. REQ-READ-004 announcement).
-  The strategy default, the options page, and the `chrome.storage.sync` carve-out from
-  REQ-NFR-002 are delivered (REQ-NAV-012); the remaining knobs stay future work.
+- **REQ-FUT-007 — Settings UI.** Voice, verbosity (e.g. REQ-READ-004 announcement).
+  The strategy default, the options page, the `chrome.storage.sync` carve-out from
+  REQ-NFR-002 (REQ-NAV-012), and the reading-speed slider (REQ-SPCH-001) are delivered;
+  the remaining knobs stay future work.
 
 ---
 

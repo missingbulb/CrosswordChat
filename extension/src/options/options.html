@@ -5,20 +5,29 @@
   <title>CrosswordChat settings</title>
   <style>
     body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; min-width: 320px; color: #222; }
-    h1 { font-size: 15px; margin: 0 0 4px; }
-    p.hint { margin: 0 0 12px; color: #666; }
-    fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; }
+    h1 { font-size: 15px; margin: 0 0 12px; }
+    p.hint { margin: 0 0 8px; color: #666; }
+    fieldset { border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; margin: 0 0 12px; }
     legend { font-weight: 600; padding: 0 4px; }
     label { display: block; margin: 6px 0; cursor: pointer; }
-    small { color: #666; display: block; margin-left: 22px; }
+    small { color: #666; display: block; }
+    label small { margin-left: 22px; }
+    input[type="range"] { width: 100%; margin: 4px 0 6px; }
+    output { font-weight: 600; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
   <h1>CrosswordChat</h1>
-  <p class="hint">Applies the next time you start a voice session. Saying
-    “switch to most filled” or “go in order” still changes it mid-session.</p>
+  <fieldset>
+    <legend>Reading speed</legend>
+    <label for="rate">Read clues and prompts at <output id="rate-value">1.3×</output></label>
+    <input type="range" id="rate">
+    <small>Applies from the next spoken line — even mid-session.</small>
+  </fieldset>
   <fieldset>
     <legend>Where “next” goes</legend>
+    <p class="hint">Applies the next time you start a voice session. Saying
+      “switch to most filled” or “go in order” still changes it mid-session.</p>
     <label>
       <input type="radio" name="strategy" value="list-order">
       In list order

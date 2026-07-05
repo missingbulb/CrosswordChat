@@ -9,9 +9,17 @@ import { MSG } from '../shared/messages.js';
 import { isSupportedPuzzleUrl } from '../shared/urls.js';
 import { createTtsPort } from '../speech/tts-port.js';
 import { render } from '../conversation/phrases.js';
+import { loadSettings } from '../settings/settings.js';
 
 let session = null; // { tabId, port }
 const tts = createTtsPort();
+
+// Everything spoken goes through here: the rate is the user's options-page setting,
+// read per utterance so a mid-session change applies from the next line (REQ-SPCH-001).
+async function speakAtUserRate(text) {
+  const { rate } = await loadSettings();
+  return tts.speak(text, { rate });
+}
 
 function flashBadge(text) {
   chrome.action.setBadgeText({ text });
@@ -73,7 +81,7 @@ chrome.action.onClicked.addListener((tab) => {
     // Supported-looking URL but no content script to host a session, and no UI to
     // explain — so say it by voice (REQ-LIFE-003).
     flashBadge('✕');
-    tts.speak(render({ kind: 'no-puzzle' }));
+    void speakAtUserRate(render({ kind: 'no-puzzle' }));
   });
 });
 
@@ -86,7 +94,7 @@ chrome.runtime.onConnect.addListener((port) => {
   chrome.action.setBadgeText({ text: 'ON' });
   port.onMessage.addListener(async (msg) => {
     if (msg?.type === MSG.SPEAK) {
-      await tts.speak(msg.text);
+      await speakAtUserRate(msg.text);
       try {
         port.postMessage({ type: MSG.SPEAK_DONE, id: msg.id });
       } catch { /* session ended while speaking */ }

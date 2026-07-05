@@ -70,8 +70,8 @@ extension/src/
   settings/        Persisted user settings (REQ-NAV-012). With options/, the ONLY place
     settings.js      allowed to touch chrome.storage (REQ-NFR-002): load/save/sanitize
   options/         The options page (right-click the toolbar icon → Options)
-    options.html     strategy picker markup (copied to dist/ by the build)
-    options.js       wires the radios to settings.js; saves on change
+    options.html     reading-speed slider + strategy picker markup (copied to dist/ by the build)
+    options.js       wires the slider and radios to settings.js; saves on change
   app/
     orchestrator.js  executes machine actions via ports/pageClient; owns the event loop
   background/

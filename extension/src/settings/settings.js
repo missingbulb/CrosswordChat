@@ -1,15 +1,27 @@
-// Persisted user settings (REQ-NAV-012). This module and the options page are the ONLY
-// places allowed to touch chrome.storage — settings only, never audio, transcripts, or
-// puzzle content (REQ-NFR-002).
+// Persisted user settings (REQ-NAV-012, REQ-SPCH-001). This module and the options page
+// are the ONLY places allowed to touch chrome.storage — settings only, never audio,
+// transcripts, or puzzle content (REQ-NFR-002).
 
 import { STRATEGIES } from '../conversation/strategies.js';
+import { DEFAULT_RATE } from '../speech/tts-port.js';
 
-export const DEFAULT_SETTINGS = { strategy: 'list-order' };
+// Reading-speed slider bounds (REQ-SPCH-001); sanitization clamps stored values to match.
+export const RATE_MIN = 0.5;
+export const RATE_MAX = 3;
+
+export const DEFAULT_SETTINGS = { strategy: 'list-order', rate: DEFAULT_RATE };
+
+function sanitizeRate(raw) {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_RATE;
+  // One decimal: the slider's granularity, and what the options page displays.
+  return Math.min(RATE_MAX, Math.max(RATE_MIN, Math.round(raw * 10) / 10));
+}
 
 /** Whatever storage held → a settings object we trust (unknown values → defaults). */
 export function sanitizeSettings(raw) {
   return {
     strategy: STRATEGIES.includes(raw?.strategy) ? raw.strategy : DEFAULT_SETTINGS.strategy,
+    rate: sanitizeRate(raw?.rate),
   };
 }
 

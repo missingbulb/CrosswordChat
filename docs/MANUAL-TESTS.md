@@ -129,7 +129,8 @@ Covers: REQ-NFR-001 REQ-NFR-002
 1. DevTools on the puzzle page + service worker: run a full session (MT-06 scale).
 2. **PASS:** no `fetch`/XHR/WebSocket initiated by the extension contexts (browser-internal speech
    traffic doesn't appear as extension requests); `chrome.storage` holds nothing beyond the
-   settings object (`{strategy}` — REQ-NAV-012); no extension-written localStorage/IndexedDB
+   settings object (`{strategy, rate}` — REQ-NAV-012, REQ-SPCH-001); no extension-written
+   localStorage/IndexedDB
    entries appear; closing the session leaves nothing behind but console lines.
 
 ### MT-16 — Hint, help, repeat
@@ -290,14 +291,18 @@ Covers: REQ-ANS-011 REQ-ANS-018 REQ-ANS-020 REQ-ANS-021 REQ-ANS-012
    immediately, no letter-by-letter prompt. Step 4 — "next" advances (spelling never traps);
    "anyway" gets "No word is waiting to be entered", not a length report of ANYWAY itself.
 
-### MT-33 — Speech feel: fast voice, ready ping, pause reset, Escape, splash
+### MT-33 — Speech feel: speed setting, ready ping, pause reset, Escape, splash
 Covers: REQ-SPCH-001 REQ-SPCH-010 REQ-LIFE-015 REQ-LIFE-016
 1. Start a session and listen to a readout; note the speaking speed and the tick right after it.
+   With the session still running, open Options (right-click the toolbar icon), drag the reading
+   speed slider to the maximum, return to the puzzle, and say "repeat".
 2. Say half an answer and stop mid-word; wait ~2 s.
 3. Say an answer, wait ~2 s, then repeat the same answer.
 4. Press Escape mid-session. Then open a fresh puzzle showing "Ready to start solving?" and
    start a session from the toolbar button without clicking Play yourself.
-5. **PASS:** step 1 — speech is noticeably brisk (~2×) and a tiny ping marks the mic opening.
+5. **PASS:** step 1 — speech plays at a comfortable clip (default 1.3×) and a tiny ping marks
+   the mic opening; after moving the slider the very next line is dramatically faster — no
+   session restart needed — and reopening Options shows the slider where you left it.
    Step 2 — a ping replays (the reset cue); nothing is spoken about it. Step 3 — the answer is
    never doubled into "X X"; either the first utterance was taken, or the reset ping told you to
    restart. Step 4 — Escape cuts speech and mic instantly (button back to gold) and NYT's rebus

@@ -12,10 +12,11 @@ export const PREFERRED_VOICES = [
   'Google US English',
 ];
 
-// Solvers listen to a LOT of prompts; regular speed drags (user feedback — first
-// bumped to 1.5×, then to 2.0× on request). Short clue readouts stay intelligible
-// at this pace (REQ-SPCH-001).
-export const DEFAULT_RATE = 2.0;
+// Solvers listen to a LOT of prompts, but taste varies — feedback drove the fixed
+// rate 1.5× → 2.0× and then back down. 1.3× is the shipping default; the options
+// page lets each user pick their own, passed per utterance (REQ-SPCH-001). This is
+// only the fallback when no rate is given.
+export const DEFAULT_RATE = 1.3;
 
 export function createTtsPort({
   chromeTts = globalThis.chrome?.tts,
@@ -40,13 +41,16 @@ export function createTtsPort({
   }
 
   return {
-    /** Speak text; resolves when done (or interrupted/cancelled). Never rejects. */
-    async speak(text) {
+    /**
+     * Speak text, at `rate` when given (the user's setting) or the port's default.
+     * Resolves when done (or interrupted/cancelled). Never rejects.
+     */
+    async speak(text, { rate: utteranceRate = rate } = {}) {
       const voice = await resolveVoice();
       if (chromeTts) {
         return new Promise((resolve) => {
           const options = {
-            rate,
+            rate: utteranceRate,
             enqueue: false,
             onEvent(event) {
               if (['end', 'interrupted', 'cancelled', 'error'].includes(event.type)) resolve();
@@ -60,7 +64,7 @@ export function createTtsPort({
         return new Promise((resolve) => {
           const view = globalThis;
           const utterance = new view.SpeechSynthesisUtterance(text);
-          utterance.rate = rate;
+          utterance.rate = utteranceRate;
           if (voice) {
             const match = synth.getVoices().find((v) => v.name === voice);
             if (match) utterance.voice = match;
