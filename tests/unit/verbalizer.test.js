@@ -45,9 +45,9 @@ describe('clue readout (READ)', () => {
     expect(out).not.toContain('_');
   });
 
-  test('REQ-READ-006: quoted clues announced (whole vs partial)', () => {
+  test('REQ-READ-006: only a fully quoted clue is announced; partial quotes stay silent', () => {
     expect(clue('"Hooray!"')).toContain('The clue is in quotes.');
-    expect(clue('Word after "boo", often')).toContain('Part of the clue is in quotes.');
+    expect(clue('Word after "boo", often')).not.toContain('quotes');
   });
 
   test('REQ-READ-008: letter count is always the final sentence', () => {

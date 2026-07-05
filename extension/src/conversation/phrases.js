@@ -61,12 +61,9 @@ export function verbalizeClue({ runs, answerLength, greeting = false }) {
     }
   }
 
-  // REQ-READ-006: quotes.
-  const quoteChars = (trimmed.match(/["“”]/g) ?? []).length;
-  if (quoteChars >= 2) {
-    const whole = /^["“].*["”]$/s.test(trimmed);
-    annotations.push(whole ? 'The clue is in quotes.' : 'Part of the clue is in quotes.');
-  }
+  // REQ-READ-006: quotes — announced only when the WHOLE clue is quoted. Partial
+  // quotes are too common to be worth an annotation (user feedback).
+  if (/^["“].*["”]$/s.test(trimmed)) annotations.push('The clue is in quotes.');
 
   if (isQuestion && OPTIONS.announceQuestionMark) annotations.push('Question mark.');
 

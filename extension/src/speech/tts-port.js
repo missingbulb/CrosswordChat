@@ -12,9 +12,10 @@ export const PREFERRED_VOICES = [
   'Google US English',
 ];
 
-// Solvers listen to a LOT of prompts; regular speed drags (user feedback). 1.5× is
-// still comfortably intelligible for short clue readouts (REQ-SPCH-001).
-export const DEFAULT_RATE = 1.5;
+// Solvers listen to a LOT of prompts; regular speed drags (user feedback — first
+// bumped to 1.5×, then to 2.0× on request). Short clue readouts stay intelligible
+// at this pace (REQ-SPCH-001).
+export const DEFAULT_RATE = 2.0;
 
 export function createTtsPort({
   chromeTts = globalThis.chrome?.tts,

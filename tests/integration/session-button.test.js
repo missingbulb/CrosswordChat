@@ -84,6 +84,18 @@ describe('session button', () => {
     expect(button().getAttribute('aria-pressed')).toBe('true'); // remembered state applied
   });
 
+  test('REQ-LIFE-012: board but no findable toolbar → floats the button over the page', async () => {
+    initFakeNyt(document, FIXTURE_PUZZLE, { noPencilToggle: true }); // board, no toolbar at all
+    const handle = mountSessionButton(document, () => {}, { waitMs: 1000, floatAfterMs: 20 });
+    expect(button()).toBeNull(); // still hunting for a toolbar anchor
+    await sleep(60); // floatAfterMs passed with a visible board
+    expect(button()).toBeTruthy();
+    expect(button().style.position).toBe('fixed'); // floating, not inline in a toolbar
+    expect(button().querySelector('svg [data-cc-bg]')).toBeTruthy(); // wears the mark
+    handle.remove();
+    expect(button()).toBeNull();
+  });
+
   test('REQ-LIFE-012: app markup but no toolbar (splash screen) → keeps waiting past waitMs', async () => {
     initFakeNyt(document, FIXTURE_PUZZLE, { noPencilToggle: true }); // board, no toolbar yet
     const handle = mountSessionButton(document, () => {}, { waitMs: 30 });

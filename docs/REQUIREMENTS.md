@@ -238,7 +238,10 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   one-session-at-a-time (REQ-LIFE-009). Pencil discovery MUST be live-markup-defensive
   (`findPencilToggle`: accessible name → pencil-classed icon's owning button → button text);
   when no pencil is findable but a toolbar exists, the button MUST fall back to the end of the
-  tool row rather than not appearing. Because the NYT app renders after the content script loads
+  tool row rather than not appearing; and when not even a toolbar is findable while a BOARD is
+  visibly there (~10 s of hunting), the button MUST float over the page (fixed, bottom-right) —
+  on a puzzle the user can see, the mark is never simply absent. Because the NYT app renders
+  after the content script loads
   — and can sit behind the pre-puzzle splash for minutes — injection MUST wait with an observer
   that disconnects once the button is placed, and MUST keep waiting as long as the page carries
   crossword app markup; only pages with no app markup at all (archive pages, section fronts) may
@@ -284,10 +287,14 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Status:** Active · **Level:** MUST
 - Pressing the Escape key during a session MUST end it exactly like the toggle: instantly and
   silently (REQ-LIFE-002). Only trusted key events count (`event.isTrusted`) — the extension's
-  own synthetic keystrokes, or the page's, can never end a session. The listener is
-  session-scoped: added when a session starts, removed when it ends (REQ-NFR-004 inertness).
+  own synthetic keystrokes, or the page's, can never end a session. During a session the key is
+  OURS: the capture-phase listener stops propagation and default handling, so NYT's own Escape
+  binding (it opens the rebus entry box) MUST NOT fire alongside the teardown. The listener is
+  session-scoped: added when a session starts, removed when it ends (REQ-NFR-004 inertness) —
+  outside a session Escape reaches NYT untouched.
 - **Accept:** Given a running session, when the user presses Escape, then speech and mic stop
-  immediately and the button/badge show off; given no session, then Escape does nothing of ours.
+  immediately, the button/badge show off, and NO rebus box opens; given no session, then Escape
+  does nothing of ours (NYT's rebus binding works normally).
 - **Verify:** manual MT-33 (the listener wiring is content-script glue; the teardown path it
   invokes is REQ-LIFE-002's).
 
@@ -366,12 +373,15 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given clue `"The ___ of the Matter"`, then the spoken text contains `The blank of the Matter`.
 - **Verify:** unit `tests/unit/verbalizer.test.js`.
 
-#### REQ-READ-006 — Quoted text is announced
+#### REQ-READ-006 — Quoted text is announced (whole clue only)
 - **Status:** Active · **Level:** SHOULD
-- If the clue contains a quoted span (straight or curly double quotes), append annotation
-  `Part of the clue is in quotes.`; if the whole clue is quoted, `The clue is in quotes.`
-  (Quotes signal spoken phrases/titles — meaning-bearing, same rationale as italics.)
-- **Accept:** Given `"Hooray!"`, then annotation "The clue is in quotes." is present.
+- If the WHOLE clue is quoted (straight or curly double quotes), append annotation
+  `The clue is in quotes.` (a fully quoted clue signals a spoken phrase/title —
+  meaning-bearing, same rationale as italics). Partial quoted spans get NO annotation:
+  they are too common to be worth the airtime (user feedback — the annotation was
+  dropped).
+- **Accept:** Given `"Hooray!"`, then annotation "The clue is in quotes." is present;
+  given `Word after "boo", often`, then no quotes annotation at all.
 - **Verify:** unit `tests/unit/verbalizer.test.js`.
 
 #### REQ-READ-007 — HTML entities are decoded
@@ -1020,8 +1030,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   default voice is often the most robotic one installed, the port SHOULD speak with the first
   installed voice from a short ranked preference list (e.g. `Google UK English Female`; the Google
   network voices ship with desktop Chrome) and use the system default only when none of them is
-  installed. Speech MUST play at a brisk default rate of at least 1.5× (`DEFAULT_RATE`) — solvers
-  sit through many short prompts and normal speed drags (user feedback).
+  installed. Speech MUST play at a brisk default rate of at least 1.5×; the current default is
+  2.0× (`DEFAULT_RATE`) — solvers sit through many short prompts and normal speed drags (user
+  feedback, twice: 1.5× first, then "try 2.0").
 - **Accept:** Given a fake `chrome.tts`, then `speak` resolves on the `end` event and `cancel` calls
   `chrome.tts.stop`; absent `chrome.tts`, `speechSynthesis` is used. Given an engine listing a
   preferred voice, then `speak` uses it; listing none of them, then no voice is set (system

@@ -34,6 +34,19 @@ export function probe(document) {
   const toolbars = count(SEL.toolbar);
   add('toolbar', toolbars >= 1, `${toolbars} match(es) for ${SEL.toolbar} (REQ-LIFE-012 anchor)`);
 
+  // Live-markup forensics: every button the page offers, so a failed pencil/toolbar
+  // hunt can be diagnosed from the probe output alone (informational).
+  const describe = (b) => {
+    const name = (b.getAttribute('aria-label') ?? b.getAttribute('title')
+      ?? b.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40) || '(unnamed)';
+    const cls = (b.getAttribute('class') ?? '').split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
+    return cls ? `${name} <${cls}>` : name;
+  };
+  const pageButtons = [...document.querySelectorAll('button, [role="button"]')].slice(0, 25);
+  add('page buttons', true, pageButtons.length
+    ? pageButtons.map(describe).join(' · ')
+    : 'none found (informational)');
+
   let snap = null;
   try {
     snap = snapshot(document);

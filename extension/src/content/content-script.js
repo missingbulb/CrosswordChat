@@ -84,8 +84,15 @@ async function startSession() {
 
     // REQ-LIFE-015: Escape ends the session instantly, like the toggle. Only real
     // key presses count (isTrusted) — synthetic events can never end the session.
+    // NYT binds Escape too (it opens rebus entry): during a session the key is OURS —
+    // capture-phase on document runs before the app's delegated handler, and stopping
+    // propagation keeps the rebus box from popping alongside the teardown.
     const onKeydown = (event) => {
-      if (event.key === 'Escape' && event.isTrusted) orchestrator.stop();
+      if (event.key === 'Escape' && event.isTrusted) {
+        event.stopPropagation();
+        event.preventDefault();
+        orchestrator.stop();
+      }
     };
     document.addEventListener('keydown', onKeydown, true);
 

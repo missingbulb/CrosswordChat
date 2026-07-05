@@ -38,21 +38,26 @@ function findAnchor(document) {
  * Inject the toggle button (now, or as soon as the toolbar renders).
  * @param {Document} document
  * @param {() => void} onToggle  called on every click; the caller decides start vs stop
- * @param {{waitMs?: number}} [opts]  give-up re-check interval for non-app pages
+ * @param {{waitMs?: number, floatAfterMs?: number}} [opts]  waitMs — give-up re-check
+ *   interval for non-app pages; floatAfterMs — how long to hunt for a toolbar anchor
+ *   before floating the button over the board instead (0 disables floating)
  * @returns {{setActive(on: boolean): void, remove(): void}}
  */
-export function mountSessionButton(document, onToggle, { waitMs = 30_000 } = {}) {
+export function mountSessionButton(document, onToggle, { waitMs = 30_000, floatAfterMs = 10_000 } = {}) {
   const view = document.defaultView ?? globalThis;
   let button = null;
   let active = false;
   let observer = null;
   let giveUp = null;
+  let floatTimer = null;
 
   const settle = () => {
     observer?.disconnect();
     observer = null;
     if (giveUp != null) view.clearTimeout(giveUp);
     giveUp = null;
+    if (floatTimer != null) view.clearTimeout(floatTimer);
+    floatTimer = null;
   };
 
   const apply = () => {
@@ -82,6 +87,31 @@ export function mountSessionButton(document, onToggle, { waitMs = 30_000 } = {})
     return true;
   };
 
+  // Last-resort placement (REQ-LIFE-012 tier 3): when a board is visibly there but no
+  // toolbar anchor has turned up for floatAfterMs, float the button over the page —
+  // the mark must never be simply absent on a puzzle the user can see.
+  const mountFloating = () => {
+    if (document.getElementById(BUTTON_ID)) return true;
+    if (!document.querySelector(SEL.board)) return false;
+    button = document.createElement('button');
+    button.id = BUTTON_ID;
+    button.type = 'button';
+    button.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483647;'
+      + 'width:44px;height:44px;padding:5px;background:#fff;border:1px solid #c7c7c7;'
+      + 'border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;'
+      + 'justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+    button.addEventListener('click', () => onToggle());
+    document.body.append(button);
+    apply();
+    return true;
+  };
+
+  const tryFloat = () => {
+    floatTimer = null;
+    if (mountFloating()) settle();
+    else floatTimer = view.setTimeout(tryFloat, floatAfterMs); // no board yet — keep checking
+  };
+
   // The crossword app can render (or leave the splash) minutes after us, so as long as
   // the page carries app markup this stays a patient wait; only markup-free pages make
   // it give up and go back to fully inert (REQ-NFR-004).
@@ -97,6 +127,7 @@ export function mountSessionButton(document, onToggle, { waitMs = 30_000 } = {})
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
     giveUp = view.setTimeout(checkGiveUp, waitMs);
+    if (floatAfterMs > 0) floatTimer = view.setTimeout(tryFloat, floatAfterMs);
   }
 
   return {

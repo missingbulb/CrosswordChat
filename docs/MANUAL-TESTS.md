@@ -247,8 +247,10 @@ Covers: REQ-LIFE-012
    before clicking Play — the button must still appear afterwards. Find the CrosswordChat
    button — the same gold crossword-bubble tile as the extension icon — in the puzzle toolbar:
    immediately right of NYT's pencil toggle, or at the end of the tool row when no pencil is
-   recognized (hover it: the tooltip names CrosswordChat). If it is missing, run the probe
-   (MT-01) and check its `pencil toggle` and `toolbar` lines.
+   recognized, or (last resort, ~10 s after load) floating bottom-right over the page when no
+   toolbar is recognized at all (hover it: the tooltip names CrosswordChat). If it is missing
+   entirely, run the probe (MT-01) and paste its `pencil toggle`, `toolbar`, and `page buttons`
+   lines into the tracking issue.
 2. Click it. Answer one clue by voice. While the session runs, look at the button; then click it
    again mid-readout.
 3. Reload the page and start a session from the *extension icon* instead; end it by voice
@@ -291,9 +293,10 @@ Covers: REQ-SPCH-001 REQ-SPCH-010 REQ-LIFE-015 REQ-LIFE-016
 3. Say an answer, wait ~2 s, then repeat the same answer.
 4. Press Escape mid-session. Then open a fresh puzzle showing "Ready to start solving?" and
    start a session from the toolbar button without clicking Play yourself.
-5. **PASS:** step 1 — speech is noticeably brisk (~1.5×) and a tiny ping marks the mic opening.
+5. **PASS:** step 1 — speech is noticeably brisk (~2×) and a tiny ping marks the mic opening.
    Step 2 — a ping replays (the reset cue); nothing is spoken about it. Step 3 — the answer is
    never doubled into "X X"; either the first utterance was taken, or the reset ping told you to
-   restart. Step 4 — Escape cuts speech and mic instantly (button back to gold); on the splash
-   page, Play is clicked for you (or you're asked to click it), and the first clue reads once
-   the board shows.
+   restart. Step 4 — Escape cuts speech and mic instantly (button back to gold) and NYT's rebus
+   box does NOT open (we swallow the key during a session; outside one, Escape reaches NYT
+   normally); on the splash page, Play is clicked for you (or you're asked to click it), and
+   the first clue reads once the board shows.
