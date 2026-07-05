@@ -846,6 +846,12 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
       .toEqual({ kind: 'no-such-clue', number: 12, direction: 'down' });
   });
 
+  test('REQ-SPCH-010: a pause reset reopens the mic immediately, no chatter', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const out = s.step({ type: 'STT_ERROR', code: 'reset', silentMs: 0 });
+    expect(out).toEqual([{ type: 'LISTEN' }]); // no SAY — the ready ping is the only cue
+  });
+
   test('external grid changes are absorbed without speaking', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const actions = s.step({

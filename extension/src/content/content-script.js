@@ -12,9 +12,12 @@ import { selectClue } from '../page-adapter/navigator.js';
 import { probe } from '../page-adapter/probe.js';
 import { createWatcher } from '../page-adapter/watcher.js';
 import { mountSessionButton } from '../page-adapter/session-button.js';
+import { dismissSplash, waitForSplashClear } from '../page-adapter/splash.js';
+import { render } from '../conversation/phrases.js';
 import { createOrchestrator } from '../app/orchestrator.js';
 import { createSttPort } from '../speech/stt-port.js';
 import { createRemoteTtsPort } from '../speech/remote-tts-port.js';
+import { createPing } from '../speech/ping.js';
 import { loadSettings } from '../settings/settings.js';
 
 const TAG = '[CrosswordChat]';
@@ -57,6 +60,8 @@ async function startSession() {
       stt,
       pageClient: createPageClient(),
       settings,
+      ping: createPing(), // REQ-SPCH-010: audible "mic open / reset" tick
+
       ui: {
         caption: (role, text) => {
           if (!text) return;
@@ -68,6 +73,7 @@ async function startSession() {
         console.info(`${TAG} session ended`);
         session = null;
         toggleButton.setActive(false);
+        document.removeEventListener('keydown', onKeydown, true);
         try {
           port.disconnect(); // badge clears in the service worker
         } catch { /* already gone */ }
@@ -75,6 +81,13 @@ async function startSession() {
     });
     session = { orchestrator, port };
     toggleButton.setActive(true);
+
+    // REQ-LIFE-015: Escape ends the session instantly, like the toggle. Only real
+    // key presses count (isTrusted) — synthetic events can never end the session.
+    const onKeydown = (event) => {
+      if (event.key === 'Escape' && event.isTrusted) orchestrator.stop();
+    };
+    document.addEventListener('keydown', onKeydown, true);
 
     port.onMessage.addListener((msg) => {
       if (msg?.type === MSG.CLOSE) orchestrator.stop(); // icon toggle / takeover
@@ -84,6 +97,17 @@ async function startSession() {
     // Surface the mic prompt (page origin) at a sane moment (REQ-SPCH-003); recognition
     // errors still flow through the machine if the user denies here.
     await stt.ensureMicPermission();
+
+    // REQ-LIFE-016: the pre-puzzle splash ("Ready to start solving?") hides the board.
+    // Click Play for the user; if the page insists on a real click, ask them to and
+    // wait — the session then starts the moment the board appears.
+    if (!(await dismissSplash(document))) {
+      await tts.speak(render({ kind: 'splash' }));
+      if (!(await waitForSplashClear(document))) {
+        orchestrator.stop();
+        return;
+      }
+    }
     await orchestrator.start();
   } finally {
     starting = false;

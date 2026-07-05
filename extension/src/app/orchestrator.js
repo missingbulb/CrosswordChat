@@ -23,8 +23,9 @@ export const ECHO_MIN_LETTERS = 8;
  * @param {() => void} [deps.onEnd]
  * @param {() => number} [deps.now]  clock, injectable for tests
  * @param {object} [deps.settings]  persisted user settings, e.g. {strategy} (REQ-NAV-012)
+ * @param {{play():void, dispose():void}} [deps.ping]  ready/reset tick (REQ-SPCH-010)
  */
-export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {}, now = Date.now, settings = {} }) {
+export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {}, now = Date.now, settings = {}, ping = null }) {
   let state = initialState();
   const queue = [];
   let processing = false;
@@ -56,7 +57,9 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         if (ended) return;
         if (result.error) {
           if (!speaking) return;
-          if (result.error === 'no-speech' || result.error === 'aborted') continue;
+          // 'reset' (REQ-SPCH-010) is routine here: our own speech feeds the mic
+          // interim noise that then pauses — never let it kill the barge-in watcher.
+          if (['no-speech', 'aborted', 'reset'].includes(result.error)) continue;
           return; // mic trouble — the post-speech LISTEN will surface it properly
         }
         lastActivityAt = now();
@@ -115,10 +118,13 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       }
       case 'LISTEN': {
         ui.listening?.(true);
+        ping?.play(); // REQ-SPCH-010: the audible cursor — mic open, slate clean
         const result = await stt.listenOnce();
         ui.listening?.(false);
         if (ended) break;
         if (result.error) {
+          // A pause reset means the user WAS speaking — that's activity, not silence.
+          if (result.error === 'reset') lastActivityAt = now();
           enqueue({ type: 'STT_ERROR', code: result.error, silentMs: now() - lastActivityAt });
         } else {
           lastActivityAt = now();
@@ -181,6 +187,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
     ended = true;
     tts.cancel();
     stt.stop();
+    ping?.dispose();
     try {
       pageClient.unwatch?.();
     } catch { /* page already gone */ }
@@ -203,7 +210,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
     } else if (event.type === 'PAGE_EVENT') {
       // Clicking or typing on the puzzle is user presence — reset the silence clock.
       lastActivityAt = now();
-      if (event.kind === 'solved' || event.kind === 'selection') stt.stop();
+      if (event.kind === 'solved') stt.stop();
       if (event.kind === 'selection') {
         // REQ-NAV-008: only the newest click matters. Clicks can arrive faster than
         // readouts play; a superseded selection still waiting in the queue would
@@ -211,13 +218,20 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         for (let i = queue.length - 1; i >= 0; i--) {
           if (queue[i].type === 'PAGE_EVENT' && queue[i].kind === 'selection') queue.splice(i, 1);
         }
-        // Clicking another clue takes effect NOW — cut any readout short.
-        // Our own SELECT_CLUE echoes back with the clue we already track, so it never
-        // cancels; neither does a click the machine won't follow (entry in flight).
+        // Clicking another clue takes effect NOW — cut any readout AND the open mic
+        // short (the machine re-opens it after reading the clicked clue). Our own
+        // SELECT_CLUE echoes back with the clue we already track, so it never cancels;
+        // neither does a click the machine won't follow (entry in flight). Those
+        // absorbed events MUST leave the mic alone: the machine emits no LISTEN for
+        // them, so stopping here would leave the session deaf with the badge ON
+        // (the "clicked back onto my own clue and it went dead" bug).
         const sel = event.snapshot?.selection?.clueId;
         const willFollow = state.phase === 'listening'
           || (state.phase === 'speaking' && state.after === 'listen');
-        if (sel && sel !== state.clueId && willFollow) tts.cancel();
+        if (sel && sel !== state.clueId && willFollow) {
+          tts.cancel();
+          stt.stop();
+        }
       }
     }
     queue.push(event);

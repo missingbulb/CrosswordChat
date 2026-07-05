@@ -56,8 +56,11 @@ function entriesFromGrid(rows, cols, isBlock) {
  *     is suspected to use (findPencilToggle()'s fallback net).
  *   toolbarWithoutPencil — render the toolbar with other tool buttons but no pencil,
  *     like a redesigned toolbar (session button falls back to the end of the row).
+ *   splash — cover the app with the pre-puzzle "Ready to start solving?" modal
+ *     (REQ-LIFE-016); its Play button removes it. 'stuck' renders a Play button
+ *     that ignores clicks, like a page that only honors trusted input.
  */
-export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false, pencilMarkup = 'aria', toolbarWithoutPencil = false } = {}) {
+export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false, pencilMarkup = 'aria', toolbarWithoutPencil = false, splash = false } = {}) {
   const { rows, cols, solution } = puzzle;
   const isBlock = (r, c) => solution[r][c] === '#';
   const entries = entriesFromGrid(rows, cols, isBlock);
@@ -200,6 +203,22 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     main.append(wrapper);
   }
   document.body.append(main);
+
+  // Pre-puzzle splash (REQ-LIFE-016): a veil with a Play button, like the live page's
+  // "Ready to start solving?" moment. Play removes it — unless it's 'stuck'.
+  if (splash) {
+    const veil = document.createElement('div');
+    veil.className = 'xwd__modal';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Ready to start solving?';
+    const play = document.createElement('button');
+    play.textContent = 'Play';
+    if (splash !== 'stuck') {
+      play.addEventListener('click', () => veil.remove());
+    }
+    veil.append(heading, play);
+    document.body.append(veil);
+  }
 
   const entryAt = (cellIndex, dir) =>
     entries.find((e) => e.direction === dir && e.cells.includes(cellIndex))

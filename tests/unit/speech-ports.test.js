@@ -1,7 +1,8 @@
 import { describe, test, expect, vi } from 'vitest';
-import { createTtsPort } from '../../extension/src/speech/tts-port.js';
+import { createTtsPort, DEFAULT_RATE } from '../../extension/src/speech/tts-port.js';
 import { createRemoteTtsPort } from '../../extension/src/speech/remote-tts-port.js';
 import { createSttPort, mapSttError, DEFAULT_LANG } from '../../extension/src/speech/stt-port.js';
+import { createPing } from '../../extension/src/speech/ping.js';
 import { MSG } from '../../extension/src/shared/messages.js';
 
 // ---- fakes -------------------------------------------------------------------
@@ -18,8 +19,12 @@ function makeFakeRecognition() {
       const events = script.shift() ?? [{ type: 'end' }];
       queueMicrotask(() => {
         for (const e of events) {
-          if (e.type === 'result') this.onresult?.({ results: [e.alternatives] });
-          else if (e.type === 'error') this.onerror?.({ error: e.error });
+          if (e.type === 'result') {
+            // A SpeechRecognitionResult is array-like with an isFinal flag; interim
+            // hypotheses (REQ-SPCH-010 pause monitor) carry final:false.
+            const result = Object.assign(e.alternatives.slice(), { isFinal: e.final !== false });
+            this.onresult?.({ results: [result] });
+          } else if (e.type === 'error') this.onerror?.({ error: e.error });
           else this.onend?.();
         }
       });
@@ -78,6 +83,30 @@ describe('tts port', () => {
   test('headless (no engines) resolves instead of hanging', async () => {
     const tts = createTtsPort({ chromeTts: undefined, synth: undefined });
     await expect(tts.speak('x')).resolves.toBeUndefined();
+  });
+
+  test('REQ-SPCH-001: speaks at the faster default rate (≥1.5×)', async () => {
+    const rates = [];
+    const chromeTts = {
+      speak: (text, opts) => {
+        rates.push(opts.rate);
+        opts.onEvent({ type: 'end' });
+      },
+    };
+    await createTtsPort({ chromeTts, synth: undefined }).speak('x');
+    expect(rates[0]).toBe(DEFAULT_RATE);
+    expect(rates[0]).toBeGreaterThanOrEqual(1.5);
+  });
+
+  test('REQ-SPCH-010: the ready ping is best-effort — no audio, no error', () => {
+    expect(() => createPing({ AudioContextCtor: undefined }).play()).not.toThrow();
+    const ping = createPing({
+      AudioContextCtor: class {
+        constructor() { throw new Error('no audio device'); }
+      },
+    });
+    expect(() => ping.play()).not.toThrow();
+    expect(() => ping.dispose()).not.toThrow();
   });
 
   test('REQ-SPCH-001: speaks with the first installed preferred voice (UK Female outranks US)', async () => {
@@ -212,7 +241,7 @@ describe('stt port', () => {
     expect(result.alternatives.map((a) => a.transcript)).toEqual(['plain', 'plane', 'playing']);
   });
 
-  test('REQ-SPCH-002/REQ-NFR-005: recognizer configured en-US, ≥3 alternatives, no interim results', async () => {
+  test('REQ-SPCH-002/REQ-NFR-005: recognizer configured en-US, ≥3 alternatives, one-shot', async () => {
     const { FakeRecognition, instances, script } = makeFakeRecognition();
     script.push([{ type: 'result', alternatives: [alt('hi', 1)] }]);
     const stt = createSttPort({ Recognition: FakeRecognition });
@@ -221,8 +250,34 @@ describe('stt port', () => {
     expect(rec.lang).toBe(DEFAULT_LANG);
     expect(rec.lang).toBe('en-US');
     expect(rec.maxAlternatives).toBeGreaterThanOrEqual(3);
-    expect(rec.interimResults).toBe(false);
+    // Interim hypotheses feed the pause monitor (REQ-SPCH-010) but stay internal.
+    expect(rec.interimResults).toBe(true);
     expect(rec.continuous).toBe(false);
+  });
+
+  test('REQ-SPCH-010: interim hypotheses are never delivered — only the final result is', async () => {
+    const { FakeRecognition, script } = makeFakeRecognition();
+    script.push([
+      { type: 'result', alternatives: [alt('hea', 0.3)], final: false }, // interim
+      { type: 'result', alternatives: [alt('heart', 0.9)] }, // final
+    ]);
+    const stt = createSttPort({ Recognition: FakeRecognition });
+    const result = await stt.listenOnce();
+    expect(result.alternatives.map((a) => a.transcript)).toEqual(['heart']);
+  });
+
+  test('REQ-SPCH-010: a mid-utterance pause past the limit resets the cycle', async () => {
+    const { FakeRecognition, script } = makeFakeRecognition();
+    script.push([{ type: 'result', alternatives: [alt('hear', 0.5)], final: false }]); // interim, then silence
+    const stt = createSttPort({ Recognition: FakeRecognition, pauseResetMs: 30 });
+    expect(await stt.listenOnce()).toEqual({ error: 'reset' });
+  });
+
+  test('REQ-SPCH-010: silence with no speech at all stays a plain no-speech, never a reset', async () => {
+    const { FakeRecognition, script } = makeFakeRecognition();
+    script.push([{ type: 'end' }]); // the engine gave up on its own, no interim ever
+    const stt = createSttPort({ Recognition: FakeRecognition, pauseResetMs: 30 });
+    expect(await stt.listenOnce()).toEqual({ error: 'no-speech' });
   });
 
   test('REQ-SPCH-003: permission errors map to not-allowed (both raw forms)', async () => {

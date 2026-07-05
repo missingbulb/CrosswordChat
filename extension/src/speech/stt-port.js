@@ -27,6 +27,11 @@ export function createSttPort({
   Recognition = globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition,
   lang = DEFAULT_LANG,
   maxAlternatives = 5,
+  // REQ-SPCH-010: a pause this long in the MIDDLE of an utterance (interim hypotheses
+  // exist but the engine hasn't finalized) drops the half-heard input and surfaces
+  // {error:'reset'} — the caller reopens a fresh cycle. Prevents "heart heart" doubles
+  // when the engine misses its endpoint and the user repeats themselves. 0 disables.
+  pauseResetMs = 1200,
 } = {}) {
   let current = null;
 
@@ -35,7 +40,8 @@ export function createSttPort({
 
     /**
      * One listen cycle. Resolves {alternatives:[{transcript, confidence}]} or {error}.
-     * Never rejects. A cycle ending without any result maps to {error:'no-speech'}.
+     * Never rejects. A cycle ending without any result maps to {error:'no-speech'};
+     * a mid-utterance pause past pauseResetMs maps to {error:'reset'} (REQ-SPCH-010).
      */
     listenOnce() {
       if (!Recognition) return Promise.resolve({ error: 'other' });
@@ -43,22 +49,40 @@ export function createSttPort({
         const rec = new Recognition();
         current = rec;
         let settled = false;
+        let timer = null;
+        let lastInterimAt = 0; // 0 = the user hasn't started speaking yet
         const settle = (value) => {
           if (settled) return;
           settled = true;
+          if (timer != null) globalThis.clearInterval(timer);
+          timer = null;
           if (current === rec) current = null;
           resolve(value);
         };
 
         rec.lang = lang;
         rec.maxAlternatives = maxAlternatives;
-        rec.interimResults = false;
+        // Interim hypotheses are the "user is still speaking" signal the pause monitor
+        // needs; they are never delivered to the caller.
+        rec.interimResults = pauseResetMs > 0;
         rec.continuous = false;
 
         rec.onresult = (event) => {
-          const result = event.results?.[0];
+          const results = event.results ?? [];
+          let result = null;
+          for (let i = 0; i < results.length; i++) {
+            // Engines omit isFinal when interimResults is off — treat that as final.
+            if (results[i] && results[i].isFinal !== false) {
+              result = results[i];
+              break;
+            }
+          }
+          if (!result) {
+            lastInterimAt = Date.now(); // interim only: the utterance is still forming
+            return;
+          }
           const alternatives = [];
-          for (let i = 0; result && i < result.length; i++) {
+          for (let i = 0; i < result.length; i++) {
             const alt = result[i];
             if (alt?.transcript) {
               alternatives.push({ transcript: alt.transcript, confidence: alt.confidence ?? 0 });
@@ -68,6 +92,17 @@ export function createSttPort({
         };
         rec.onerror = (event) => settle({ error: mapSttError(event?.error) });
         rec.onend = () => settle({ error: 'no-speech' });
+
+        if (pauseResetMs > 0) {
+          timer = globalThis.setInterval(() => {
+            if (lastInterimAt && Date.now() - lastInterimAt >= pauseResetMs) {
+              settle({ error: 'reset' }); // REQ-SPCH-010: discard and start fresh
+              try {
+                rec.abort();
+              } catch { /* already gone */ }
+            }
+          }, Math.min(100, pauseResetMs));
+        }
 
         try {
           rec.start();

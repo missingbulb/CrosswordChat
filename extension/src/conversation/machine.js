@@ -521,6 +521,12 @@ function onTtsDone(state) {
 function onSttError(state, { code, silentMs }) {
   if (state.phase !== 'listening') return { state, actions: [] };
   if (code === 'aborted') return { state, actions: [] };
+  if (code === 'reset') {
+    // REQ-SPCH-010: the port dropped a half-heard utterance after a mid-answer pause.
+    // Reopen the mic right away — the fresh LISTEN's ready ping tells the user they
+    // are starting from scratch.
+    return { state: { ...state, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
+  }
   if (code === 'not-allowed') { // REQ-SPCH-003
     return speak(state, [say({ kind: 'mic-denied' })], 'end');
   }
@@ -577,7 +583,10 @@ function onPageEvent(state, { kind, snapshot }) {
       return readClue({ ...moveTo(state, sel), model });
     }
   }
-  // grid change (user typed manually) or same-clue selection: absorb the fresh state.
+  // Grid change (user typed manually) or same-clue selection: absorb the fresh state.
+  // The shell must NOT have stopped the mic for an absorbed event (see the orchestrator's
+  // enqueue) — stopping it here with no follow-up LISTEN would leave the session deaf
+  // while the badge still says ON.
   return { state: { ...state, model }, actions: [] };
 }
 

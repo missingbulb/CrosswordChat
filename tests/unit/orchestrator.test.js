@@ -16,6 +16,7 @@ function runSession(listenScript) {
   const clock = { t: 0 };
   const spoken = [];
   let listens = 0;
+  let micStops = 0;
   let pageEventCb = null;
   const emitPageEvent = (kind, snapshot) => pageEventCb?.(kind, snapshot);
 
@@ -31,9 +32,9 @@ function runSession(listenScript) {
           listens += 1;
           const step = listenScript.shift();
           if (!step) throw new Error('listen cycle beyond the scripted ones');
-          return step({ clock, emitPageEvent });
+          return step({ clock, emitPageEvent, micStops: () => micStops });
         },
-        stop: () => {},
+        stop: () => { micStops += 1; },
       },
       pageClient: {
         snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
@@ -45,7 +46,7 @@ function runSession(listenScript) {
     void orchestrator.start();
   });
 
-  return done.then(() => ({ spoken, listens: () => listens }));
+  return done.then(() => ({ spoken, listens: () => listens, micStops: () => micStops }));
 }
 
 const noSpeech = { error: 'no-speech' };
@@ -83,6 +84,21 @@ describe('orchestrator silence clock (REQ-CMD-005)', () => {
       ({ clock }) => { clock.t += SILENCE_TIMEOUT_MS; return noSpeech; },
     ]);
     expect(listens()).toBe(2); // the 70 s cycle did NOT end the session
+  });
+
+  test('a click the machine absorbs (same clue) never stops the mic — no deaf sessions', async () => {
+    let stopsCausedByClick = -1;
+    await runSession([
+      ({ emitPageEvent, micStops }) => {
+        // Same-clue selection: the machine absorbs it with no follow-up LISTEN, so the
+        // shell must leave the in-flight cycle running (stopping = deaf with badge ON).
+        const before = micStops();
+        emitPageEvent('selection', heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+        stopsCausedByClick = micStops() - before;
+        return { alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] };
+      },
+    ]);
+    expect(stopsCausedByClick).toBe(0); // not aborted for the absorbed click
   });
 });
 

@@ -280,6 +280,30 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   opens and the session toggles.
 - **Verify:** manual MT-31.
 
+#### REQ-LIFE-015 — Escape ends the session
+- **Status:** Active · **Level:** MUST
+- Pressing the Escape key during a session MUST end it exactly like the toggle: instantly and
+  silently (REQ-LIFE-002). Only trusted key events count (`event.isTrusted`) — the extension's
+  own synthetic keystrokes, or the page's, can never end a session. The listener is
+  session-scoped: added when a session starts, removed when it ends (REQ-NFR-004 inertness).
+- **Accept:** Given a running session, when the user presses Escape, then speech and mic stop
+  immediately and the button/badge show off; given no session, then Escape does nothing of ours.
+- **Verify:** manual MT-33 (the listener wiring is content-script glue; the teardown path it
+  invokes is REQ-LIFE-002's).
+
+#### REQ-LIFE-016 — The pre-puzzle splash screen
+- **Status:** Active · **Level:** MUST
+- Starting a session while the puzzle still sits behind its splash ("Ready to start solving?"
+  with a Play button) MUST NOT dead-end. Best effort, in order: (1) find the splash's Play-ish
+  button and click it like a user would; (2) if the splash stays (a page that honors only trusted
+  clicks), say by voice that the user should click Play, keep waiting, and start the conversation
+  the moment the splash clears; (3) if it never clears (~60 s), end quietly. Splash detection is
+  page-adapter knowledge (REQ-PAGE-011) and MUST degrade to "no splash" on pages without one.
+- **Accept:** Given the fake page with a splash, then Play is clicked and the session proceeds;
+  given a splash that ignores synthetic clicks, then the prompt is spoken and the session starts
+  once the splash is cleared by hand.
+- **Verify:** integration `tests/integration/splash.test.js`; manual MT-33.
+
 ---
 
 ## 6. Clue readout (READ)
@@ -475,10 +499,15 @@ entities. The readout must convey what the eye would see.
   changes caused by our own writing/navigation MUST NOT trigger this (no echo loops). One
   exception: while an accepted answer is being confirmed and written (between "Fits!" and the
   letters landing), the click is NOT followed — following would silently discard the answer.
+- Absorbed selection events — the clue we already track, or a click the machine won't follow —
+  MUST leave the open mic alone: the shell only aborts the in-flight listen cycle for clicks it
+  will follow (which re-open the mic after the readout). Stopping the mic for an absorbed event
+  produced deaf sessions that still showed ON (mic-death bug).
 - **Accept:** Given a session on 1A — listening, mid-readout, or in a sub-mode — when the page
   selection changes to 3D (user click), then 3D is read; when selection events arrive for the clue
-  we already track, nothing happens; when several clicks land in quick succession (faster than
-  readouts play), then only the LAST clicked clue is read — superseded clicks produce no readout.
+  we already track, nothing happens AND the mic keeps listening; when several clicks land in quick
+  succession (faster than readouts play), then only the LAST clicked clue is read — superseded
+  clicks produce no readout.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (rapid clicks);
   manual MT-13.
 
@@ -991,20 +1020,24 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   default voice is often the most robotic one installed, the port SHOULD speak with the first
   installed voice from a short ranked preference list (e.g. `Google UK English Female`; the Google
   network voices ship with desktop Chrome) and use the system default only when none of them is
-  installed.
+  installed. Speech MUST play at a brisk default rate of at least 1.5× (`DEFAULT_RATE`) — solvers
+  sit through many short prompts and normal speed drags (user feedback).
 - **Accept:** Given a fake `chrome.tts`, then `speak` resolves on the `end` event and `cancel` calls
   `chrome.tts.stop`; absent `chrome.tts`, `speechSynthesis` is used. Given an engine listing a
   preferred voice, then `speak` uses it; listing none of them, then no voice is set (system
-  default).
+  default). Given a `speak`, then its rate is ≥ 1.5.
 - **Verify:** unit `tests/unit/speech-ports.test.js`; manual MT-03.
 
 #### REQ-SPCH-002 — Speech-to-text listen cycles
 - **Status:** Active · **Level:** MUST
 - Speech input MUST use the Web Speech API (`SpeechRecognition`/`webkitSpeechRecognition`),
-  one utterance per listen cycle, `maxAlternatives ≥ 3` (we use 5), interim results off, and
-  deliver the full alternatives list (transcript + confidence) to the matcher (REQ-ANS-004).
-  A cycle that ends with no result maps to `no-speech`.
-- **Accept:** Given a fake recognizer emitting 3 alternatives, then all 3 reach the caller in order.
+  one utterance per listen cycle, `maxAlternatives ≥ 3` (we use 5), and deliver the full
+  alternatives list (transcript + confidence) of the FINAL result to the matcher (REQ-ANS-004).
+  Interim hypotheses are consumed internally as the pause monitor's "still speaking" signal
+  (REQ-SPCH-010) and MUST never be delivered to the caller. A cycle that ends with no result
+  maps to `no-speech`.
+- **Accept:** Given a fake recognizer emitting 3 alternatives, then all 3 reach the caller in
+  order; given an interim hypothesis followed by a final result, then only the final one arrives.
 - **Verify:** unit `tests/unit/speech-ports.test.js`; manual MT-06.
 
 #### REQ-SPCH-003 — Microphone permission denied
@@ -1083,6 +1116,26 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   readout stops and the fit flow runs; given "next" mid-readout, then the session advances; given
   input while the fit confirmation plays, then it is ignored and the entry lands.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-27.
+
+#### REQ-SPCH-010 — Mid-utterance pause resets; the ready ping is the cue
+- **Status:** Active · **Level:** MUST
+- When the recognizer has interim hypotheses (the user started speaking) but produces no final
+  result and the hypotheses stop changing for longer than the pause limit (~1.2 s), the listen
+  cycle MUST discard the half-heard input and surface `reset`; the shell reopens the mic at once,
+  and the machine says nothing about it. Rationale: engines that miss their endpoint otherwise
+  swallow the pause AND the user's repeat into one absurd utterance ("heart heart"). Silence with
+  no speech at all stays a plain `no-speech` (REQ-CMD-005) — a reset only ever follows actual
+  speech, and it counts as user activity for the silence clock. Slow letter-by-letter spellers
+  will trip this; that is accepted and signaled (below).
+- Every formal mic opening MUST play a tiny audible ping — the audible cursor: after a readout it
+  means "you can speak now", after a reset it means "start over from scratch". The ping is
+  best-effort (Web Audio; no audio → no ping, never an error) and MUST NOT play for barge-in
+  cycles while TTS is still speaking. Resets during barge-in listening are routine (our own voice
+  pauses) and MUST NOT terminate the barge-in watcher.
+- **Accept:** Given interim results then 1.2 s of stillness, then the cycle resolves `reset`, the
+  next LISTEN follows immediately with a ping, and nothing is spoken; given plain silence, then
+  `no-speech` (no reset); given a fake with no AudioContext, then pings are silently skipped.
+- **Verify:** unit `tests/unit/speech-ports.test.js`, `tests/unit/machine.test.js`; manual MT-33.
 
 ---
 

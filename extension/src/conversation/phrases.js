@@ -85,6 +85,8 @@ export function render(say) {
       return verbalizeClue(say);
     case 'no-puzzle':
       return "I don't see a crossword puzzle here. Open a New York Times crossword and click me again.";
+    case 'splash':
+      return "The puzzle is waiting behind its start screen — click Play, and I'll jump right in.";
     case 'already-solved':
       return "This one's already solved — hooray! Nothing left for us to do.";
     case 'celebration':

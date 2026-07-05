@@ -283,3 +283,17 @@ Covers: REQ-ANS-011 REQ-ANS-018 REQ-ANS-020 REQ-ANS-021 REQ-ANS-012
    word is found (or an honest numeric mismatch, never an absurd double). Step 3 — evaluates
    immediately, no letter-by-letter prompt. Step 4 — "next" advances (spelling never traps);
    "anyway" gets "No word is waiting to be entered", not a length report of ANYWAY itself.
+
+### MT-33 — Speech feel: fast voice, ready ping, pause reset, Escape, splash
+Covers: REQ-SPCH-001 REQ-SPCH-010 REQ-LIFE-015 REQ-LIFE-016
+1. Start a session and listen to a readout; note the speaking speed and the tick right after it.
+2. Say half an answer and stop mid-word; wait ~2 s.
+3. Say an answer, wait ~2 s, then repeat the same answer.
+4. Press Escape mid-session. Then open a fresh puzzle showing "Ready to start solving?" and
+   start a session from the toolbar button without clicking Play yourself.
+5. **PASS:** step 1 — speech is noticeably brisk (~1.5×) and a tiny ping marks the mic opening.
+   Step 2 — a ping replays (the reset cue); nothing is spoken about it. Step 3 — the answer is
+   never doubled into "X X"; either the first utterance was taken, or the reset ping told you to
+   restart. Step 4 — Escape cuts speech and mic instantly (button back to gold); on the splash
+   page, Play is clicked for you (or you're asked to click it), and the first clue reads once
+   the board shows.

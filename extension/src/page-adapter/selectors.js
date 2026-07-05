@@ -39,6 +39,9 @@ export const SEL = {
   // ("Ready to start solving?") hides the board — used to tell "puzzle page, still
   // rendering" apart from "not a puzzle page at all".
   app: '[class*="xwd__"]',
+  // The pre-puzzle splash/veil containers (REQ-LIFE-016). ⚠️ Best-effort shapes from
+  // the modal family; splash.js additionally requires a Play-ish button inside.
+  splash: '[class*="xwd__modal"], [class*="xwd__start"], [class*="xwd__veil"]',
 };
 
 // Our own injected toggle (session-button.js uses this as its id). It borrows the
