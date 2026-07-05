@@ -405,8 +405,10 @@ entities. The readout must convey what the eye would see.
   letters landing), the click is NOT followed — following would silently discard the answer.
 - **Accept:** Given a session on 1A — listening, mid-readout, or in a sub-mode — when the page
   selection changes to 3D (user click), then 3D is read; when selection events arrive for the clue
-  we already track, nothing happens.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-13.
+  we already track, nothing happens; when several clicks land in quick succession (faster than
+  readouts play), then only the LAST clicked clue is read — superseded clicks produce no readout.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (rapid clicks);
+  manual MT-13.
 
 #### REQ-NAV-009 — "back" goes to the previous clue
 - **Status:** Active · **Level:** MUST
@@ -841,12 +843,19 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - The conversation MUST NOT mistake its own TTS voice for user input. Two mechanisms: (a) at the
   machine level, LISTEN is never emitted in the same action batch as SAY — the formal answer mic
   opens only after speech completes; (b) the barge-in mic that runs during speech (REQ-SPCH-009)
-  MUST discard any utterance that reads as a contiguous chunk of the words currently being spoken,
-  checked across the whole n-best list — if ANY alternative matches, the utterance is treated as
-  echo and ignored.
+  MUST discard any utterance where ANY n-best alternative reads as a *substantial* contiguous
+  chunk of the words currently being spoken (or as the entire utterance). Short fragments are
+  ambiguous — prompts deliberately solicit one-word replies that are part of the prompt text
+  ("Yes or no", "say anyway", "First or second") — so a short in-prompt fragment MUST be kept
+  when any alternative parses as a command or contextual reply, and discarded otherwise.
+  Accepted residual risk: an echo recognized as ONLY a bare command word passes the guard; in
+  practice echo carries neighboring prompt words on some alternative, which the substantial-chunk
+  check catches.
 - **Accept:** Given any machine trace, then no action batch contains both SAY and LISTEN; given a
-  mid-speech transcript repeating part of the spoken text, then it is discarded and the speech
-  continues.
+  mid-speech transcript repeating a multi-word span of the spoken text, then it is discarded and
+  the speech continues; given a short non-command fragment of the spoken text, then it is
+  discarded; given "yes" barged into a prompt ending in "Yes or no.", then it is processed as
+  the reply.
 - **Verify:** unit `tests/unit/machine.test.js` (action-order invariant),
   `tests/unit/orchestrator.test.js` (echo guard).
 
