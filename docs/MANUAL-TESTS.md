@@ -67,8 +67,9 @@ Covers: REQ-ANS-006 REQ-LIFE-005 REQ-NAV-001 REQ-NAV-002 REQ-NAV-003 REQ-NAV-007
 Covers: REQ-ANS-008 REQ-ANS-012 REQ-ANS-016
 1. Fill a crossing letter manually so your next voice answer conflicts (e.g. grid has A where your
    word needs I). Give that answer.
-2. **PASS:** the extension names the position, your letter, the existing letter (and the crossing
-   clue), and does NOT enter. Say "enter it anyway" → now it enters, replacing the letter. Then
+2. **PASS:** a quick one-liner names the position, the existing letter (and the crossing clue) —
+   no options menu — and does NOT enter. Say "enter it anyway" → now it enters, replacing the
+   letter. Then
    answer a *different* fitting word on an already-full entry → it asks before replacing; "no"
    keeps the grid unchanged.
 
@@ -108,7 +109,7 @@ Covers: REQ-LIFE-003
 Covers: REQ-NAV-008 REQ-PAGE-010
 1. Mid-session while the mic is listening, click a different clue in the page's clue list.
 2. While a long clue is being read out, click yet another clue.
-3. While spelling a word ("spell it", a few letters in), click a different clue.
+3. While spelling a word ("spell", a few letters in), click a different clue.
 4. **PASS:** in all three cases the extension abandons what it was doing (the readout stops within
    ~a second; the spelling buffer is discarded) and reads the newly selected clue; entering answers
    via voice right after targets *that* clue. Our own automatic navigation does not re-trigger
@@ -195,7 +196,7 @@ Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
 1. Enter a fitting answer by voice; after the session moves on, say "undo".
 2. Say "back". Then say "flip".
 3. **PASS:** undo re-selects the answered clue, empties exactly the cells that answer filled
-   (letters that were there beforehand come back), and prompts you to say it again or spell it;
+   (letters that were there beforehand come back), and confirms with a brief "Undone.";
    "back" moves to the previous clue in the list — including filled ones — and reads it; "flip"
    jumps to the crossing clue and reads it; the page highlight follows every move.
 

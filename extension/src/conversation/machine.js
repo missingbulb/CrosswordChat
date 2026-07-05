@@ -62,6 +62,33 @@ function moveTo(state, clueId) {
     pendingEntry: null,
     spellBuffer: [],
     disambigWords: [],
+    undoSay: null,
+    pendingCorrection: null,
+  };
+}
+
+/**
+ * Revert the last entry (REQ-ANS-017). `sayKind` is spoken once the page confirms.
+ * `rejected`/`correction` serve the misheard merge (REQ-ANS-010): the undone word is
+ * excluded from re-matching, and an "I said X" correction is evaluated after the revert.
+ */
+function startUndo(state, { sayKind = 'undone', rejected = [], correction = null } = {}) {
+  const { clueId, before } = state.lastEntry;
+  const cells = state.model.clue(clueId).cellIndices
+    .map((index, i) => ({ index, letter: before[i] })); // letter null → clear the cell
+  return {
+    state: {
+      ...moveTo(state, clueId),
+      phase: 'undoing',
+      lastEntry: null,
+      rejected,
+      undoSay: sayKind,
+      pendingCorrection: correction,
+    },
+    actions: [
+      { type: 'SELECT_CLUE', clueId },
+      { type: 'UNDO', clueId, cells },
+    ],
   };
 }
 
@@ -111,7 +138,7 @@ function advance(state, leadSays = []) {
   return speak(s, [
     ...leadSays.map(say),
     { type: 'SELECT_CLUE', clueId: next.clueId },
-    say(clueSay(s.model, s.clueId, { wrapped: next.wrapped })),
+    say(clueSay(s.model, s.clueId)),
   ], 'listen');
 }
 
@@ -119,8 +146,9 @@ function advance(state, leadSays = []) {
 function finishFit(state, word, spelledDifferently) {
   const current = state.model.wordFor(state.clueId);
   if (current && current !== word) {
+    // lastProposed too: "you misheard" during the confirmation rejects this word.
     return listenAgain(
-      { ...state, mode: 'confirm-replace', pendingWord: word, spellBuffer: [] },
+      { ...state, mode: 'confirm-replace', pendingWord: word, lastProposed: word, spellBuffer: [] },
       [{ kind: 'replace-confirm', word, current }],
     );
   }
@@ -186,19 +214,9 @@ function handleCommand(state, cmd) {
       if (!cross) return listenAgain(state, [{ kind: 'no-crossing' }]);
       return goTo(state, cross.clueId);
     }
-    case 'undo': { // REQ-ANS-017: revert the last entry we made
+    case 'undo': // REQ-ANS-017: revert the last entry we made
       if (!state.lastEntry) return listenAgain(state, [{ kind: 'nothing-to-undo' }]);
-      const { clueId, before } = state.lastEntry;
-      const cells = state.model.clue(clueId).cellIndices
-        .map((index, i) => ({ index, letter: before[i] })); // letter null → clear the cell
-      return {
-        state: { ...moveTo(state, clueId), phase: 'undoing', lastEntry: null },
-        actions: [
-          { type: 'SELECT_CLUE', clueId },
-          { type: 'UNDO', clueId, cells },
-        ],
-      };
-    }
+      return startUndo(state);
     case 'repeat':
       return readClue({ ...state, mode: 'normal' }); // REQ-READ-009
     case 'hint': {
@@ -230,9 +248,17 @@ function handleCommand(state, cmd) {
         'enter',
       );
     case 'misheard': { // REQ-ANS-010
+      // With nothing proposed on this clue, the misheard word is the one we already
+      // ENTERED (it fit and we moved on) — so the correction starts with an undo.
+      const entered = !state.lastProposed && state.lastEntry;
+      const undoneWord = entered ? state.model.wordFor(state.lastEntry.clueId) : null;
       if (cmd.arg) {
+        if (entered) return startUndo(state, { rejected: [undoneWord].filter(Boolean), correction: cmd.arg });
         return evaluateAnswer(state, [{ transcript: cmd.arg }])
           ?? listenAgain(state, [{ kind: 'didnt-catch' }]);
+      }
+      if (entered) {
+        return startUndo(state, { sayKind: 'misheard-reprompt', rejected: [undoneWord].filter(Boolean) });
       }
       const rejected = state.lastProposed
         ? [...state.rejected, state.lastProposed]
@@ -396,6 +422,8 @@ function onStart(state, { snapshot, settings }) {
     lastEntry: null,
     rejected: [],
     lastProposed: null,
+    undoSay: null,
+    pendingCorrection: null,
     sttRetried: false,
     celebrated: false,
   };
@@ -453,8 +481,10 @@ function onSttError(state, { code, silentMs }) {
 function onEntryResult(state, { ok, snapshot }) {
   if (state.phase !== 'entering') return { state, actions: [] };
   const model = buildModel(snapshot);
-  const s = { ...state, model, pendingEntry: null, pendingWord: null, mode: 'normal' };
+  let s = { ...state, model, pendingEntry: null, pendingWord: null, mode: 'normal' };
   if (!ok) return listenAgain(s, [{ kind: 'entry-failed' }]); // REQ-ANS-013
+  // The proposal is an entry now: from here "you misheard" means undo it (REQ-ANS-010).
+  s = { ...s, lastProposed: null };
   if (model.isSolved() && !s.celebrated) { // REQ-LIFE-005
     return speak({ ...s, celebrated: true }, [say({ kind: 'celebration' })], 'end');
   }
@@ -494,9 +524,14 @@ function onPageEvent(state, { kind, snapshot }) {
 // REQ-ANS-017: the page finished reverting our last entry.
 function onUndoResult(state, { ok, snapshot }) {
   if (state.phase !== 'undoing') return { state, actions: [] };
-  const s = { ...state, model: buildModel(snapshot) };
+  const { undoSay, pendingCorrection } = state;
+  const s = { ...state, model: buildModel(snapshot), undoSay: null, pendingCorrection: null };
   if (!ok) return listenAgain(s, [{ kind: 'entry-failed' }]);
-  return listenAgain(s, [{ kind: 'undone' }]); // prompt: say it again, or spell it
+  if (pendingCorrection) { // "no, I said X" across an entry: revert landed, now try X here
+    return evaluateAnswer(s, [{ transcript: pendingCorrection }])
+      ?? listenAgain(s, [{ kind: 'didnt-catch' }]);
+  }
+  return listenAgain(s, [{ kind: undoSay ?? 'undone' }]);
 }
 
 // REQ-CMD-006: "stop" heard by the barge-in listener while we were speaking.

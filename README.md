@@ -67,7 +67,7 @@ npm run build     # → dist/
 Load the unzipped folder (or `dist/`) via `chrome://extensions` → Developer mode →
 **Load unpacked** (Chrome ≥ 116).
 Open a NYT crossword (the free Mini works), click the CrosswordChat icon, allow the microphone,
-and talk: an answer, `pass`, `repeat`, `hint`, `spell it`, `help`, `goodbye`.
+and talk: an answer, `pass`, `repeat`, `hint`, `spell`, `help`, `goodbye`.
 
 No NYT subscription handy? Rehearse offline against the fake page:
 

@@ -136,6 +136,7 @@ describe('commands', () => {
 
       ['repeat', 'repeat'], ['say that again', 'repeat'], ['what', 'repeat'],
       ['hint', 'hint'], ['what do i have', 'hint'], ["what's filled in", 'hint'], ['pattern', 'hint'],
+      ['letters', 'hint'], ['spell it', 'hint'], // "spell it" reads the letters TO the user
       ['help', 'help'], ['what can i say', 'help'],
       ['stop', 'stop'], ['goodbye', 'stop'], ["we're done", 'stop'], ['quit', 'stop'],
       ['spell', 'spell'], ['let me spell it', 'spell'],

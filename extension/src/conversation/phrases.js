@@ -29,9 +29,9 @@ export function spellOut(word) {
 /**
  * Clue → spoken text (REQ-READ-001..011). The clue label ("17 Across") is deliberately
  * NOT spoken — the page highlight shows position (REQ-NAV-007).
- * @param {object} p {runs:[{text,italic}], answerLength, greeting?, wrapped?}
+ * @param {object} p {runs:[{text,italic}], answerLength, greeting?}
  */
-export function verbalizeClue({ runs, answerLength, greeting = false, wrapped = false }) {
+export function verbalizeClue({ runs, answerLength, greeting = false }) {
   const plain = runs.map((r) => r.text).join('');
   const trimmed = plain.trim();
 
@@ -72,7 +72,6 @@ export function verbalizeClue({ runs, answerLength, greeting = false, wrapped = 
 
   const parts = [];
   if (greeting) parts.push("Let's solve.");
-  if (wrapped) parts.push('Back to the top.');
   parts.push(bracketed ? `The clue is in brackets: ${body}` : body);
   parts.push(...annotations);
   parts.push(`${answerLength} letters.`); // REQ-READ-008: always last.
@@ -103,15 +102,15 @@ export function render(say) {
         .join(', and ');
       // REQ-ANS-018: while spelling a partially solved entry, both counts work.
       const alsoOpen = say.open ? `, or ${say.open} for just the open squares` : '';
-      return `${list} — we need ${say.needed}${alsoOpen}. Try again, spell it, or say next.`;
+      return `${list} — we need ${say.needed}${alsoOpen}. Try again, say spell, or say next.`;
     }
     case 'collision': {
-      // REQ-ANS-008: only the problem — no "fits the length, but" preamble.
-      const parts = say.collisions.slice(0, 3).map((c) => {
-        const from = c.crossLabel ? ` from ${c.crossLabel}` : '';
-        return `the ${ordinal(c.pos + 1)} letter would be ${c.want}, but the grid already has ${c.have} there${from}`;
-      });
-      return `${sayWord(say.word)} doesn't work — ${parts.join('; and ')}. Say a new answer, say anyway to enter it, or say next.`;
+      // REQ-ANS-008: quick — the first clash in full, the rest only as a count.
+      // No options menu; anyway/new answer/next stay available (help lists them).
+      const [first, ...rest] = say.collisions;
+      const from = first.crossLabel ? `, from ${first.crossLabel}` : '';
+      const more = rest.length ? `, and ${rest.length} more clash${rest.length > 1 ? 'es' : ''}` : '';
+      return `${sayWord(say.word)} clashes — the ${ordinal(first.pos + 1)} letter is already ${first.have}${from}${more}.`;
     }
     case 'ambiguous': {
       const spelled = say.words.map((w) => spellOut(w)).join(', or ');
@@ -132,7 +131,7 @@ export function render(say) {
       return `${letters}. ${summary}`;
     }
     case 'help':
-      return 'You can: say an answer, or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell it to spell, undo to take back the last answer, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
+      return 'You can: say an answer, or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
     case 'didnt-catch':
       return "Sorry, I didn't catch that. Say an answer, or say help.";
     case 'misheard-reprompt':
@@ -149,7 +148,7 @@ export function render(say) {
     case 'spell-cancelled':
       return 'Okay, back to normal answers.';
     case 'undone':
-      return 'Undone — those letters are out. Say the answer again, or say spell it.';
+      return 'Undone.';
     case 'nothing-to-undo':
       return "There's nothing to undo yet.";
     case 'no-crossing':

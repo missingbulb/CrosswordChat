@@ -64,9 +64,9 @@ describe('clue readout (READ)', () => {
     expect(clue("Violinist's supply: Abbr.")).toContain(': Abbr.');
   });
 
-  test('REQ-LIFE-010/REQ-NAV-006: greeting and wrap prefixes glue straight onto the clue text', () => {
+  test('REQ-LIFE-010: the greeting glues straight onto the clue text; no wrap prefix exists', () => {
     expect(clue('Plain clue', { greeting: true }).startsWith("Let's solve. Plain clue.")).toBe(true);
-    expect(clue('Plain clue', { wrapped: true }).startsWith('Back to the top. Plain clue.')).toBe(true);
+    expect(clue('Plain clue', { wrapped: true })).toBe('Plain clue. 5 letters.'); // REQ-NAV-006 retired
   });
 });
 
@@ -107,17 +107,26 @@ describe('outcome phrasing', () => {
     expect(render({ kind: 'spell-start', open: 0, length: 5 })).not.toContain('missing');
   });
 
-  test('REQ-ANS-008: collision states only the problem — spot, both letters, crossing', () => {
+  test('REQ-ANS-008: collision is quick — spot, grid letter, crossing; no preamble, no menu', () => {
     const out = render({
       kind: 'collision',
       word: 'HEIST',
       collisions: [{ pos: 2, want: 'I', have: 'A', crossLabel: '3 Down' }],
     });
-    expect(out).toContain("Heist doesn't work");
-    expect(out).not.toContain('fits the length'); // no what-fits preamble
-    expect(out).toContain('the third letter would be I');
-    expect(out).toContain('already has A there from 3 Down');
-    expect(out).toContain('say anyway'); // REQ-ANS-012: the offered override phrase matches the lexicon
+    expect(out).toBe('Heist clashes — the third letter is already A, from 3 Down.');
+  });
+
+  test('REQ-ANS-008: multiple collisions — first in full, the rest only counted', () => {
+    const out = render({
+      kind: 'collision',
+      word: 'PLANE',
+      collisions: [
+        { pos: 1, want: 'L', have: 'X', crossLabel: '2 Down' },
+        { pos: 3, want: 'N', have: 'I', crossLabel: null },
+        { pos: 4, want: 'E', have: 'O', crossLabel: '5 Down' },
+      ],
+    });
+    expect(out).toBe('Plane clashes — the second letter is already X, from 2 Down, and 2 more clashes.');
   });
 
   test('REQ-ANS-009: disambiguation offers spellings', () => {

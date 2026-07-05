@@ -12,7 +12,7 @@ function unfilledIds(model) {
 /**
  * @param {string[]} avoid  recently skipped clue ids, oldest skip first (REQ-NAV-011);
  *   honored by most-filled only — list order has a fixed path and cannot loop.
- * @returns {{clueId: string, wrapped: boolean} | null}  null when nothing is unfilled.
+ * @returns {{clueId: string} | null}  null when nothing is unfilled.
  */
 export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
   const candidates = unfilledIds(model);
@@ -30,21 +30,19 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
       .filter((id) => !avoid.includes(id))
       .sort((a, b) => ratio(b) - ratio(a)
         || model.orderedClueIds.indexOf(a) - model.orderedClueIds.indexOf(b));
-    if (fresh.length) return { clueId: fresh[0], wrapped: false };
+    if (fresh.length) return { clueId: fresh[0] };
     // Every open clue was skipped recently and is unchanged: cycle back to the one
     // skipped longest ago instead of getting stuck (REQ-NAV-011).
     const stale = avoid.find((id) => others.includes(id));
-    return { clueId: stale ?? fromId, wrapped: false };
+    return { clueId: stale ?? fromId };
   }
 
-  // list-order (default): next unfilled after fromId, cycling past the end (REQ-NAV-002/006).
+  // list-order (default): next unfilled after fromId, cycling past the end (REQ-NAV-002).
   const order = model.orderedClueIds;
   const start = Math.max(order.indexOf(fromId), 0);
   for (let step = 1; step <= order.length; step++) {
     const i = (start + step) % order.length;
-    if (candidates.includes(order[i])) {
-      return { clueId: order[i], wrapped: start + step >= order.length };
-    }
+    if (candidates.includes(order[i])) return { clueId: order[i] };
   }
   return null;
 }

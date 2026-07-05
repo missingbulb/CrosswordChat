@@ -223,7 +223,7 @@ entities. The readout must convey what the eye would see.
 **Readout grammar (normative):**
 
 ```
-[Greeting | "Back to the top."] <spoken clue text>.
+[Greeting] <spoken clue text>.
 [<formatting annotations>] <N> letters.
 ```
 
@@ -351,7 +351,7 @@ entities. The readout must convey what the eye would see.
 - The default strategy MUST be NYT list order (REQ-MODEL-005) starting after the current clue,
   wrapping from the last Down back to the first Across.
 - **Accept:** Given current = last Down with earlier clues unfilled, when advancing, then the first
-  unfilled Across is chosen and `wrapped` is signaled.
+  unfilled Across is chosen.
 - **Verify:** unit `tests/unit/strategies.test.js`.
 
 #### REQ-NAV-003 — Fully filled clues are skipped when advancing
@@ -381,10 +381,11 @@ entities. The readout must convey what the eye would see.
 - **Verify:** unit `tests/unit/machine.test.js`.
 
 #### REQ-NAV-006 — Wrap-around is announced
-- **Status:** Active · **Level:** SHOULD
-- When list-order advancing wraps past the end, the next readout SHOULD be prefixed with
-  "Back to the top." so the user keeps their bearings.
-- **Accept:** Given a wrap, then the readout starts with the wrap phrase.
+- **Status:** Retired · **Level:** —
+- Retired: wrapping past the end now happens silently. The "Back to the top." prefix added
+  readout latency without aiding orientation — the page highlight (REQ-NAV-007) already shows
+  where the conversation is. Could return as an opt-in setting if missed.
+- **Accept:** Given a wrap, then the readout is the plain clue readout, no prefix.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/verbalizer.test.js`.
 
 #### REQ-NAV-007 — Page highlight follows the conversation
@@ -558,15 +559,17 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 #### REQ-ANS-008 — Collision is reported letter-by-spot
 - **Status:** Active · **Level:** MUST
-- When a candidate fits the length but disagrees with existing grid letters, the reply MUST state
-  only the problem — no "fits the length, but" preamble or any other recap of what is fine. For
-  each colliding position (report up to 3): the ordinal position, the candidate's letter, the
-  letter already in the grid, and — when known — the crossing clue's label:
-  `"HEIST doesn't work — the third letter would be I, but the grid already has A there from
-  2 Down."` The word is NOT entered; the user may say *anyway* (REQ-ANS-012), give a new
-  answer, or pass.
-- **Accept:** Given pattern `HEA_T` and candidate HEIST, then the collision report names position 3,
-  I, A (and the crossing label when the model provides one).
+- When a candidate fits the length but disagrees with existing grid letters, the reply MUST be
+  quick and state only the problem — no "fits the length, but" preamble, no trailing options
+  menu (*anyway*/new answer/*next* stay available; *help* lists them). Only the FIRST colliding
+  position is reported in full — the ordinal position, the letter already in the grid, and, when
+  known, the crossing clue's label; further collisions are given as a count only:
+  `"HEIST clashes — the third letter is already A, from 2 Down."` /
+  `"PLANE clashes — the second letter is already X, from 2 Down, and 2 more clashes."`
+  The word is NOT entered; the user may say *anyway* (REQ-ANS-012), give a new answer, or pass.
+- **Accept:** Given pattern `HEA_T` and candidate HEIST, then the report names position 3 and A
+  (and the crossing label when the model provides one); given three collisions, then only the
+  first is detailed and the other two are counted.
 - **Verify:** unit `tests/unit/matching.test.js` (positions), `tests/unit/machine.test.js` (cross
   label enrichment, no ENTER emitted), `tests/unit/verbalizer.test.js` (phrasing); manual MT-07.
 
@@ -586,8 +589,17 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - *"You misheard"* / *"that's not what I said"* MUST mark the last candidate(s) rejected (excluded
   from future evaluation this clue) and re-prompt. *"I meant X"* / *"no, I said X"* MUST evaluate X
   directly. Rejections reset when the conversation moves to another clue.
+- Merged with undo (REQ-ANS-017): when there is no live proposal on the current clue but a word
+  was ENTERED by the session (it fit, was written, and the conversation moved on), a misheard
+  phrase MUST first revert that entry exactly as *undo* does — move back to its clue, restore the
+  cells — and reject the undone word there. Without an argument it then re-prompts
+  ("My mistake. What's your answer?"); with *"no, I said X"* it evaluates X on that clue once the
+  revert lands.
 - **Accept:** Given HEART was heard and rejected, when the same utterance arrives again, then HEART
-  is not proposed; given "I meant plane", then PLANE is evaluated.
+  is not proposed; given "I meant plane", then PLANE is evaluated. Given HEART was entered and the
+  session moved on, when the user says "you misheard", then the entry is reverted, HEART is
+  rejected on that clue, and the re-prompt plays; given "no I said heist" instead, then HEIST is
+  evaluated on the reverted clue.
 - **Verify:** unit `tests/unit/machine.test.js`.
 
 #### REQ-ANS-011 — Spelling mode
@@ -656,14 +668,16 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - *undo* (STT often hears it as "undue" — both MUST work) MUST revert the most recent answer the
   session entered: every cell of that entry returns to what it held just before the entry —
   previously empty cells are cleared, overwritten letters are restored. The conversation MUST move
-  back to that clue (page highlight synced) and prompt the user to say the answer again or spell
-  it. With no entry to revert (none made yet, or right after an undo), reply that there is nothing
-  to undo. Undo history is one level deep — a second consecutive *undo* does not go further back.
-  In spelling mode, *undo* keeps its spelling meaning (remove the last letter, REQ-ANS-011).
+  back to that clue (page highlight synced) and confirm with a single word ("Undone.") — the user
+  knows what to do next. With no entry to revert (none made yet, or right after an undo), reply
+  that there is nothing to undo. Undo history is one level deep — a second consecutive *undo* does
+  not go further back. In spelling mode, *undo* keeps its spelling meaning (remove the last
+  letter, REQ-ANS-011). A misheard phrase with an entered word also runs through undo
+  (REQ-ANS-010).
 - **Accept:** Given HEART was entered into an empty 1 Across and the session moved on, when the
-  user says "undo", then the five cells are empty again, 1 Across is selected, and the prompt asks
-  to say it again or spell it; a repeated "undo" reports nothing to undo. Given HEIST was entered
-  over crossing letters via *anyway*, then "undo" restores those letters.
+  user says "undo", then the five cells are empty again, 1 Across is selected, and the brief
+  confirmation plays; a repeated "undo" reports nothing to undo. Given HEIST was entered over
+  crossing letters via *anyway*, then "undo" restores those letters.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`; manual MT-26.
 
 #### REQ-ANS-018 — Partial spelling fills only the open squares
@@ -724,10 +738,10 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | flip | flip · flip it · switch direction · change direction · other direction |
 | undo | undo · undue · undo that · undo it · take that back · take it back |
 | repeat | repeat · repeat that · again · say again · say that again · read it again · what · come again |
-| hint | hint · hints · give me a hint · what do i have · what's there · what's filled in · read the letters · pattern |
+| hint | hint · hints · give me a hint · what do i have · what's there · what's filled in · read the letters · pattern · letters · the letters · spell it |
 | help | help · what can i say · commands · options |
 | stop | stop · goodbye · bye · end · end session · quit · exit · we're done · i'm done · stop listening |
-| spell | spell · spell it · let me spell · let me spell it · i'll spell it · spelling |
+| spell | spell · let me spell · let me spell it · i'll spell it · spelling |
 | enter-anyway | anyway · anyways · say it anyway · do it anyway · it anyway · enter it anyway · enter anyway · force it · overwrite · put it in anyway · replace it · use it anyway |
 | misheard | you misheard · you misheard me · that's not what i said · you heard wrong · wrong word · no i said … · i meant … · i said … |
 | answer (escape) | answer … · guess … · the answer is … · the word is … · try … |

@@ -10,8 +10,8 @@ const RATIO_ROWS = ['HEA..', '#####', 'AB.#.', '#####', '.....'];
 describe('next-clue strategies', () => {
   test('REQ-NAV-002: list order advances after the current clue and wraps', () => {
     const model = buildModel(heartSnapshot());
-    expect(nextClue(model, 'A1', 'list-order')).toEqual({ clueId: 'A6', wrapped: false });
-    expect(nextClue(model, 'D5', 'list-order')).toEqual({ clueId: 'A1', wrapped: true });
+    expect(nextClue(model, 'A1', 'list-order')).toEqual({ clueId: 'A6' });
+    expect(nextClue(model, 'D5', 'list-order')).toEqual({ clueId: 'A1' });
   });
 
   test('REQ-NAV-003: fully filled entries are skipped when advancing', () => {
@@ -37,7 +37,6 @@ describe('next-clue strategies', () => {
     ]));
     const pick = nextClue(model, 'A9', 'most-filled');
     expect(pick.clueId).toBe('A1'); // 3 letters beats everything else
-    expect(pick.wrapped).toBe(false);
   });
 
   test('REQ-NAV-004: most-filled prefers others over the current clue and ties break by list order', () => {
