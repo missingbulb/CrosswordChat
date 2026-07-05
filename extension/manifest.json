@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CrosswordChat",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "Solve the New York Times crossword conversationally: it reads clues aloud, you answer by voice.",
   "minimum_chrome_version": "116",
   "icons": {
