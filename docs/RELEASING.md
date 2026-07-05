@@ -37,6 +37,10 @@ Tracked in the issue *“Configure Chrome Web Store deployment secrets.”*
 1. **Create the store listing manually (once).** The API can update an existing item but the
    listing itself — description, screenshots, privacy disclosures, the one-time $5 developer
    fee — must be created in the [developer dashboard](https://chrome.google.com/webstore/devconsole).
+   **Every answer and asset the dashboard asks for is pre-written in
+   [`docs/STORE-LISTING.md`](STORE-LISTING.md)** (descriptions, permission justifications,
+   data-usage disclosures, privacy policy URL, reviewer notes; graphics in `assets/store/`,
+   regenerable via `node tools/make-store-assets.mjs`).
    Upload any zip from the *Pack extension* workflow (or `npm run build` + zip `dist/`).
    Copy the item ID → `CHROME_EXTENSION_ID`.
 2. **Create API credentials.** Follow Google's guide,
