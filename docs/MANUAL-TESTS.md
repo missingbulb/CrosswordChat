@@ -202,11 +202,15 @@ Covers: REQ-CMD-006
 Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
 1. Enter a fitting answer by voice; after the session moves on, say "undo".
 2. Say "back". Then say "flip".
-3. **PASS:** undo re-selects the answered clue — the page cursor lands back on that clue in its
-   own direction (never the crossing/vertical one), empties exactly the cells that answer filled
-   (letters that were there beforehand come back), confirms with a brief "Undone." and rereads
-   the clue; "back" moves to the previous clue in the list — including filled ones — and reads
-   it; "flip" jumps to the crossing clue and reads it; the page highlight follows every move.
+3. On a partially solved puzzle, say "switch to most filled", then "next" twice, then
+   "back" twice.
+4. **PASS:** step 1 — undo re-selects the answered clue — the page cursor lands back on that
+   clue in its own direction (never the crossing/vertical one), empties exactly the cells that
+   answer filled (letters that were there beforehand come back), confirms with a brief "Undone."
+   and rereads the clue. Step 2 — "back" moves to the previous clue in the list — including
+   filled ones — and reads it; "flip" jumps to the crossing clue and reads it. Step 3 — each
+   "back" retraces next's own jumps: the first returns to the clue you just left, the second to
+   the one before it — never the list-order neighbor. The page highlight follows every move.
 
 ### MT-27 — Answer before the readout ends
 Covers: REQ-SPCH-009

@@ -57,8 +57,9 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
 /**
  * Previous clue in list order, wrapping from the first Across to the last Down
  * (REQ-NAV-009). Unlike nextClue, filled entries are NOT skipped — "back" exists
- * to revisit and fix what is already there. Always list order, whatever the
- * active strategy: "previous" has no stable meaning under most-filled.
+ * to revisit and fix what is already there. This is "back"'s whole meaning under
+ * list order; under most-filled the machine retraces its own visited trail first
+ * and falls back to this only once the trail runs dry.
  * @returns {{clueId: string}}
  */
 export function prevClue(model, fromId) {

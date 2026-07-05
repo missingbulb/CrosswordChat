@@ -101,13 +101,26 @@ function startUndo(state, { sayKind = 'undone', rejected = [], correction = null
   };
 }
 
-/** Navigate to a clue, sync the page, and read it (back/flip — REQ-NAV-009/010). */
-function goTo(state, clueId) {
+// Forward navigation leaves a breadcrumb so "back" can retrace the session's own path
+// under most-filled (REQ-NAV-009). Bounded: a courtesy trail, not a full session log.
+const TRAIL_MAX = 50;
+function leaveCrumb(state) {
+  if (!state.clueId) return state;
+  return { ...state, trail: [...state.trail, state.clueId].slice(-TRAIL_MAX) };
+}
+
+/** Navigate to a clue, sync the page, and read it. No breadcrumb — "back" uses this. */
+function jumpTo(state, clueId) {
   const s = moveTo(state, clueId);
   return speak(s, [
     { type: 'SELECT_CLUE', clueId },
     say(clueSay(s.model, clueId)),
   ], 'listen');
+}
+
+/** Forward navigation (flip/goto — REQ-NAV-010/013): jumpTo plus a breadcrumb. */
+function goTo(state, clueId) {
+  return jumpTo(leaveCrumb(state), clueId);
 }
 
 /**
@@ -132,7 +145,8 @@ function recordSkip(state) {
   return { ...state, skipped };
 }
 
-function advance(state, leadSays = []) {
+function advance(from, leadSays = []) {
+  const state = leaveCrumb(from); // "back" can return to the clue being left (REQ-NAV-009)
   const skipped = liveSkips(state);
   const next = nextClue(state.model, state.clueId, state.strategy, skipped.map((e) => e.clueId));
   if (!next) {
@@ -221,8 +235,24 @@ function handleCommand(state, cmd) {
   switch (cmd.command) {
     case 'next':
       return advance(recordSkip(state)); // REQ-NAV-011: an explicit skip is remembered
-    case 'back': // REQ-NAV-009: previous in list order, filled entries included
-      return goTo(state, prevClue(state.model, state.clueId).clueId);
+    case 'back': {
+      // REQ-NAV-009: under most-filled, "next" jumps by fill ratio, so "previous in
+      // list order" would be a non sequitur — "back" retraces the trail of clues this
+      // session actually visited, newest first. List order (filled entries included)
+      // remains the meaning under list order, and the fallback once the trail runs
+      // dry. Back never leaves a breadcrumb of its own: a chain of "back"s walks
+      // steadily backward instead of ping-ponging between two clues.
+      if (state.strategy === 'most-filled') {
+        const trail = [...state.trail];
+        while (trail.length) {
+          const crumb = trail.pop();
+          if (crumb !== state.clueId && state.model.clue(crumb)) {
+            return jumpTo({ ...state, trail }, crumb);
+          }
+        }
+      }
+      return jumpTo(state, prevClue(state.model, state.clueId).clueId);
+    }
     case 'flip': { // REQ-NAV-010: jump to the crossing clue
       const clue = state.model.clue(state.clueId);
       let cross = null;
@@ -462,6 +492,7 @@ function onStart(state, { snapshot, settings }) {
     // (corrupt storage, older versions) falls back to list order.
     strategy: STRATEGIES.includes(settings?.strategy) ? settings.strategy : 'list-order',
     skipped: [], // REQ-NAV-011
+    trail: [], // visited-clue breadcrumbs for "back" under most-filled (REQ-NAV-009)
     mode: 'normal',
     spellBuffer: [],
     disambigWords: [],
@@ -579,8 +610,9 @@ function onPageEvent(state, { kind, snapshot }) {
   if (kind === 'selection') {
     const sel = snapshot.selection?.clueId;
     if (sel && sel !== state.clueId && model.clue(sel)) {
-      // The click wins over whatever was in progress: reset any sub-mode and pending work.
-      return readClue({ ...moveTo(state, sel), model });
+      // The click wins over whatever was in progress: reset any sub-mode and pending
+      // work. It leaves a breadcrumb like any forward navigation (REQ-NAV-009).
+      return readClue({ ...moveTo(leaveCrumb(state), sel), model });
     }
   }
   // Grid change (user typed manually) or same-clue selection: absorb the fresh state.

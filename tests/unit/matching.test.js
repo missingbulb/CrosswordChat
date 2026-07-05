@@ -156,6 +156,34 @@ describe('evaluate', () => {
       .toBe('length-mismatch');
   });
 
+  test('REQ-ANS-022: "say it, then spell it" reads as the word, not a doubled-up join', () => {
+    // Bare letters: DOGDOG (the join) exists, but DOG also runs — and fits.
+    expect(evaluate({ alternatives: [{ transcript: 'dog d o g' }], entryLength: 3, pattern: P('...') }))
+      .toEqual({ kind: 'fit', word: 'DOG', spelledDifferently: true });
+    // Letter names and NATO spell too.
+    expect(evaluate({ alternatives: [{ transcript: 'dog dee oh gee' }], entryLength: 3, pattern: P('...') }))
+      .toEqual({ kind: 'fit', word: 'DOG', spelledDifferently: true });
+    expect(evaluate({ alternatives: [{ transcript: 'exit echo xray india tango' }], entryLength: 4, pattern: P('....') }))
+      .toEqual({ kind: 'fit', word: 'EXIT', spelledDifferently: true });
+    // Multi-word answers join before the comparison (REQ-ANS-015).
+    expect(evaluate({ alternatives: [{ transcript: 'a lot a l o t' }], entryLength: 4, pattern: P('....') }))
+      .toEqual({ kind: 'fit', word: 'ALOT', spelledDifferently: true });
+  });
+
+  test('REQ-ANS-022: a mismatch report leads with the said word, and the join stays reachable', () => {
+    // Neither reading fits a 5-entry — but the complaint names DOG, not DOGDOG.
+    const miss = evaluate({ alternatives: [{ transcript: 'dog d o g' }], entryLength: 5, pattern: P('.....') });
+    expect(miss.kind).toBe('length-mismatch');
+    expect(miss.variants[0]).toEqual({ word: 'DOG', len: 3 });
+    // Trailing letters that spell something ELSE are not the pattern — no DOG candidate.
+    const other = evaluate({ alternatives: [{ transcript: 'dog c a t' }], entryLength: 3, pattern: P('...') });
+    expect(other.kind).toBe('length-mismatch');
+    expect(other.variants[0].word).toBe('DOGCAT');
+    // A genuinely doubled utterance ("dog dog") is still the join, never collapsed.
+    expect(evaluate({ alternatives: [{ transcript: 'dog dog' }], entryLength: 6, pattern: P('......') }))
+      .toEqual({ kind: 'fit', word: 'DOGDOG', spelledDifferently: false });
+  });
+
   test('REQ-ANS-018: letters matching the open-square count fill just those — no mode', () => {
     // H E _ R _ (2 open): two spoken letters land in the holes; read back whole.
     expect(evaluate({ alternatives: [{ transcript: 'alpha tango' }], entryLength: 5, pattern: P('HE.R.') }))

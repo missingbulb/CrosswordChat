@@ -47,6 +47,32 @@ export function expandCandidates(tokens) {
   return out;
 }
 
+/**
+ * "Say it, then spell it" (REQ-ANS-022): solvers often give the word and its spelling
+ * in one breath — "dog, D, O, G". When a trailing run of spoken letters (bare, letter
+ * names, NATO) spells the leading word — or one of its expansions, so "gray, G, R, E, Y"
+ * follows the spelling — the utterance is ONE word, not the doubled-up join (DOGDOG).
+ * Returns the spelled word, or null when the utterance doesn't have that shape.
+ */
+export function sayThenSpell(transcript) {
+  const tokens = String(transcript ?? '')
+    .toLowerCase()
+    .replace(/[’‘']/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  if (tokens.length < 2 || tokens.length > 12) return null;
+  // Earliest split wins — the longest spelled suffix — so multi-word answers
+  // ("a lot, A, L, O, T") compare whole (REQ-ANS-015).
+  for (let k = 1; k < tokens.length; k++) {
+    const { letters, control, ignored } = collectSpelledLetters(tokens.slice(k).join(' '));
+    if (control || ignored || letters.length < 2) continue;
+    const spelled = letters.join('');
+    const said = normalizedTokens(tokens.slice(0, k).join(' '));
+    if (said.length && expandCandidates(said).some((c) => c.word === spelled)) return spelled;
+  }
+  return null;
+}
+
 /** True iff word agrees with every non-null pattern letter. */
 export function patternCompatible(word, pattern) {
   return pattern.every((p, i) => !p || p === word[i]);
@@ -86,6 +112,11 @@ export function evaluate({ alternatives, entryLength, pattern, rejected = [], li
     if (!tokens.length) return;
     if (altIndex === 0 || literalTop === null) literalTop ??= tokens.join('');
     if (!literalOnly) {
+      // REQ-ANS-022: "dog, D, O, G" is the word DOG, not DOGDOG. Pushed first so a
+      // mismatch report leads with the word the user actually meant; the plain join
+      // stays a candidate below, so the length gate still decides.
+      const echoed = sayThenSpell(alt.transcript);
+      if (echoed) candidates.push({ word: echoed, swaps: 0, altIndex });
       // REQ-ANS-020: an utterance that is spoken letters throughout (bare, letter
       // names, NATO) is also a candidate as the spelled word — no mode needed.
       // Strict all-or-nothing: one non-letter token and the reading is off. Pushed

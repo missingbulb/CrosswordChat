@@ -523,14 +523,19 @@ entities. The readout must convey what the eye would see.
 
 #### REQ-NAV-009 — "back" goes to the previous clue
 - **Status:** Active · **Level:** MUST
-- *back* / *go back* / *previous* MUST move to the previous clue in list order — wrapping from the
-  first Across to the last Down — read it, and sync the page highlight. Unlike *next*
-  (REQ-NAV-003), filled entries are NOT skipped: going back exists to revisit and fix what is
-  already there. The active strategy does not affect *back* (list order always — "previous" under
-  most-filled has no stable meaning).
+- *back* / *go back* / *previous* MUST move to the previous clue, read it, and sync the page
+  highlight. Under list order, "previous" is the previous clue in list order — wrapping from the
+  first Across to the last Down. Under most-filled (REQ-NAV-004), *next* jumps around the grid,
+  so list order would be a non sequitur: *back* MUST instead retrace the session's own trail —
+  the clues actually visited, newest first, whether reached by next, flip, goto, the
+  auto-advance after an answer, or a click. Going back never re-records the clue it leaves, so
+  a chain of *back*s walks steadily backward instead of ping-ponging; once the trail runs dry,
+  *back* falls back to list order. Unlike *next* (REQ-NAV-003), filled entries are NOT skipped
+  in either mode: going back exists to revisit and fix what is already there.
 - **Accept:** Given the current clue is 6 Across with 1 Across filled, when the user says "back",
   then 1 Across is selected and read; given the current clue is the first Across, then "back"
-  lands on the last Down.
+  lands on the last Down. Given most-filled took the session A4 → A2 → A1, when the user says
+  "back" twice, then it lands on A2 and then A4; a third "back" uses list order.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
 
 #### REQ-NAV-010 — "flip" switches to the crossing clue
@@ -601,6 +606,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
    (REQ-ANS-001, REQ-ANS-015). The unexpanded join of the top alternative is the **literal**.
    An utterance that is spoken letters throughout (bare letters, letter names, NATO) also yields
    the joined letters as a candidate (REQ-ANS-020) — spelling without entering spelling mode.
+   A word whose own spelling trails it ("dog, D, O, G") also yields that word alone
+   (REQ-ANS-022) — never only the doubled-up join.
 3. Keep candidates that are pure A–Z; drop candidates the user already rejected (REQ-ANS-010).
 4. Gate by entry length (REQ-ANS-005). No length match → report per REQ-ANS-007.
 5. Among length-fitting candidates, check the pattern. Exactly one pattern-fitting spelling from the
@@ -621,6 +628,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | 5 | `HEA_T` | "heist" | `heist` | length 5 ok; `I` vs `A` at position 3 → collision report |
 | 4 | `____` | "pass" | `pass` | command *pass* wins → skip clue (say "answer pass" to play PASS) |
 | 5 | `_____` | "H, E, A, R, T" | `aitch e a are tea` | all tokens are letters → HEART → fits, spelled back |
+| 3 | `___` | "dog, D, O, G" | `dog d o g` | trailing letters spell the word → DOG (3) → fits, spelled back |
 
 #### REQ-ANS-001 — Answer normalization
 - **Status:** Active · **Level:** MUST
@@ -907,6 +915,23 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   5-entry, DCLAW (the literal join) is evaluated instead; given "d" alone on a 3-entry, then the
   reply is a length mismatch for D, never DEE.
 - **Verify:** unit `tests/unit/matching.test.js`.
+
+#### REQ-ANS-022 — Saying the word and then spelling it is one answer
+- **Status:** Active · **Level:** MUST
+- Solvers often give the word and its spelling in one breath — "dog, D, O, G". When a trailing
+  run of spoken letters (bare letters, letter names, or NATO words) spells the leading word —
+  or one of its expansions (REQ-ANS-003/021), so the spelling is authoritative — the utterance
+  MUST also be read as that ONE word, never only as the doubled-up join ("Dogdog is 6 letters —
+  we need 3" was the complaint this kills). The reading needs at least two trailing letters and
+  joins the normal pipeline as a leading candidate: the length gate, pattern, and rejections
+  still apply, the plain join stays a candidate too (a genuinely doubled word remains
+  reachable), and a mismatch report leads with the word the user meant. An accepted reading is
+  spelled back (REQ-ANS-006 exception, as REQ-ANS-020).
+- **Accept:** Given "dog d o g" (or "dog dee oh gee") on a 3-entry, then DOG fits and is spelled
+  back; on a 5-entry, the mismatch report leads with DOG, not DOGDOG; given "dog c a t", then no
+  DOG candidate arises (the letters spell something else); given "dog dog", then DOGDOG is the
+  reading (word tokens are not letters).
+- **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
 
 ---
 

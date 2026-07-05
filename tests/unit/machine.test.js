@@ -146,6 +146,38 @@ describe('navigation (NAV)', () => {
     expect(picked(s.step(heard('next')))).toBe('A2'); // 4/5 and eligible again; A4 stays skipped
   });
 
+  test('REQ-NAV-009: under most-filled, "back" retraces the visited trail, then falls back to list order', () => {
+    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }));
+    s.step(heard('switch to most filled'));
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('next')))).toBe('A2'); // highest ratio; trail: A4
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('next')))).toBe('A1'); // trail: A4, A2
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('back')))).toBe('A2'); // newest crumb first — NOT list order
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('back')))).toBe('A4'); // keeps walking backward, no ping-pong
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('back')))).toBe('A3'); // trail dry → previous in list order
+  });
+
+  test('REQ-NAV-009: under most-filled, a click leaves a crumb — "back" returns to where you were', () => {
+    const s = scenario();
+    s.step({
+      type: 'START',
+      snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+      settings: { strategy: 'most-filled' },
+    });
+    s.step({ type: 'TTS_DONE' });
+    s.step({
+      type: 'PAGE_EVENT',
+      kind: 'selection',
+      snapshot: heartSnapshot(undefined, { selection: { clueId: 'D2' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    expect(picked(s.step(heard('back')))).toBe('A1');
+  });
+
   test('REQ-NAV-012: the stored strategy setting is applied from session start', () => {
     const snap = heartSnapshot(['.....', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], { selection: { clueId: 'A1' } });
     const s = scenario();
@@ -434,6 +466,13 @@ describe('answers (ANS)', () => {
   test('REQ-ANS-020: a spelled-out answer works straight from normal listening — no mode', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const fit = s.step(heard('aitch e a are tea')); // letter names, one utterance
+    expect(says(fit)[0]).toMatchObject({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
+  test('REQ-ANS-022: saying the word and then spelling it is accepted as one answer', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const fit = s.step(heard('heart h e a r t')); // the word, then its spelling
     expect(says(fit)[0]).toMatchObject({ kind: 'fit', word: 'HEART', spelledDifferently: true });
     expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
   });
