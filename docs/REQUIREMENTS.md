@@ -171,9 +171,12 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - If every cell is filled but NYT has not confirmed success, the session MUST say so
   ("The grid is full, but something's not right yet") and keep the conversation alive so the user can
   revisit entries (navigation + replace flows still work). It MUST NOT claim which letters are wrong
-  (we don't know) and MUST NOT celebrate.
+  (we don't know) and MUST NOT celebrate. The discrepancy message plays when the grid fills (and at
+  a full-grid session start) and is NOT repeated: on a full grid, *next* MUST actually move — forward
+  through the filled clues in list order, reading each — never loop the same prompt back.
 - **Accept:** Given a full-but-wrong grid after an entry, then the discrepancy message is spoken and
-  the session continues listening on the current clue.
+  the session continues listening on the current clue; when the user then says "next" repeatedly,
+  each filled clue is read in turn and the discrepancy message never replays.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-09.
 
 #### REQ-LIFE-007 — First clue read = currently highlighted clue
@@ -429,11 +432,15 @@ entities. The readout must convey what the eye would see.
 #### REQ-NAV-004 — Strategy: most-filled-first (easiest = highest fill ratio)
 - **Status:** Active · **Level:** MUST
 - A second strategy MUST rank unfilled clues by the *percentage* of their letters already in the
-  grid (`filled ÷ length`, descending), tie-broken by list order, cycling through the current one
-  last. Rationale: the entry with the largest share of its letters already in place is the easiest
-  to complete. Ratio, not raw count: 2 of 3 letters (67%) beats 3 of 5 (60%).
+  grid (`filled ÷ length`, descending). Equal ratios are tie-broken by DISTANCE: the clue nearest
+  the current one in list order wins (smallest jump — from clue 4, an equal clue 5 beats clue 6),
+  a forward clue winning an exact-distance tie; remaining ties by list order, cycling through the
+  current clue last. Rationale: the entry with the largest share of its letters already in place
+  is the easiest to complete, and among equals the smallest jump keeps the solver oriented.
+  Ratio, not raw count: 2 of 3 letters (67%) beats 3 of 5 (60%).
 - **Accept:** Given entries with 3/5 and 2/3 letters filled, when advancing under most-filled, then
-  the 2/3 entry is chosen.
+  the 2/3 entry is chosen. Given equal ratios one and two steps ahead, then the one-step clue is
+  chosen.
 - **Verify:** unit `tests/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
@@ -527,6 +534,18 @@ entities. The readout must convey what the eye would see.
   next, then the most-filled strategy picks the clue; given no stored value (or a corrupted one),
   then list order is used.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/settings.test.js`; manual MT-28.
+
+#### REQ-NAV-013 — Jump to a clue by its spoken label
+- **Status:** Active · **Level:** MUST
+- Saying a clue label — a number and a direction, e.g. *"seven across"*, *"22 down"*,
+  *"go to twenty two across"* — MUST select that clue on the page and read it, exactly like
+  clicking it. Numbers work as digits or number words (REQ-ANS-002 conventions). When the puzzle
+  has no such clue, reply that it doesn't exist and keep listening; utterances whose leading part
+  is not a number ("falling down") are NOT gotos and stay available to the answer pipeline.
+- **Accept:** Given "six across" on a puzzle with a 6-Across, then 6-Across is selected and read;
+  given "twelve down" with no 12-Down, then the reply says there is no 12 down.
+- **Verify:** unit `tests/unit/matching.test.js` (parsing), `tests/unit/machine.test.js` (jump +
+  missing label).
 
 ---
 
@@ -887,6 +906,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 |---|---|
 | next | next · next clue · next one · pass · pass on this · skip · skip it · skip this one · move on |
 | back | back · go back · previous · previous clue · previous one |
+| goto | …number across · …number down · go to …number across/down (digits or number words, REQ-NAV-013) |
 | flip | flip · flip it · switch direction · change direction · other direction |
 | undo | undo · undue · undo that · undo it · take that back · take it back |
 | repeat | repeat · repeat that · again · say again · say that again · read it again · what · come again |

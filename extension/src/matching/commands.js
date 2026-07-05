@@ -1,8 +1,18 @@
 // Command lexicon (REQ-CMD-001). Matched on the whole normalized utterance;
 // answers get an escape hatch via "answer ..." (REQ-ANS-014).
 
-import { normalizeUtterance } from './normalize.js';
+import { normalizeUtterance, numberToWord } from './normalize.js';
 import { collectSpelledLetters } from './evaluate.js';
+
+// Spoken clue numbers ("seven", "twenty two") → integers, for goto (REQ-NAV-013).
+const NUMBER_WORDS = new Map();
+for (let n = 1; n <= 150; n++) NUMBER_WORDS.set(numberToWord(n).toLowerCase(), n);
+
+function parseClueNumber(text) {
+  if (/^\d+$/.test(text)) return Number(text);
+  const joined = text.split(' ').filter((t) => t !== 'and').join('');
+  return NUMBER_WORDS.get(joined) ?? null;
+}
 
 const PHRASES = {
   next: ['next', 'next clue', 'next one', 'pass', 'pass on this', 'skip', 'skip it',
@@ -75,6 +85,14 @@ export function parseCommand(text) {
   if (m) {
     const { letters, control, ignored } = collectSpelledLetters(m[1]);
     if (letters.length && !control && !ignored) return { command: 'spell', arg: letters };
+  }
+
+  // "seven across" / "go to 22 down" — a clue label is a navigation command
+  // (REQ-NAV-013). Only a real number counts; other "... down" utterances fall through.
+  m = norm.match(/^(?:go to |goto |jump to )?(.+?) (across|down)$/);
+  if (m) {
+    const number = parseClueNumber(m[1]);
+    if (number != null) return { command: 'goto', arg: { number, direction: m[2] } };
   }
 
   m = norm.match(/^(?:the )?(?:answer|word|guess) (?:is )?(.+)$/) || norm.match(/^try (.+)$/);

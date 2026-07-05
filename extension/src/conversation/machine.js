@@ -136,8 +136,17 @@ function advance(state, leadSays = []) {
   const skipped = liveSkips(state);
   const next = nextClue(state.model, state.clueId, state.strategy, skipped.map((e) => e.clueId));
   if (!next) {
-    // Nothing unfilled anywhere (REQ-LIFE-006 / REQ-NAV-003).
-    return listenAgain({ ...state, skipped }, [...leadSays, { kind: 'grid-full-wrong' }]);
+    // Nothing unfilled anywhere (REQ-LIFE-006 / REQ-NAV-003): "next" still moves —
+    // forward through the FILLED clues in list order, reading each one. The grid-full
+    // coaching played once when the grid filled up; repeating it here would loop.
+    const order = state.model.orderedClueIds;
+    const at = Math.max(order.indexOf(state.clueId), 0);
+    const s = moveTo({ ...state, skipped }, order[(at + 1) % order.length]);
+    return speak(s, [
+      ...leadSays.map(say),
+      { type: 'SELECT_CLUE', clueId: s.clueId },
+      say(clueSay(s.model, s.clueId)),
+    ], 'listen');
   }
   // Landing on a clue clears its skip record — skipping it again re-files it as newest.
   const s = {
@@ -226,6 +235,15 @@ function handleCommand(state, cmd) {
     case 'undo': // REQ-ANS-017: revert the last entry we made
       if (!state.lastEntry) return listenAgain(state, [{ kind: 'nothing-to-undo' }]);
       return startUndo(state);
+    case 'goto': { // REQ-NAV-013: jump straight to a clue by its spoken label
+      const id = `${cmd.arg.direction === 'across' ? 'A' : 'D'}${cmd.arg.number}`;
+      if (!state.model.clue(id)) {
+        return listenAgain(state, [{
+          kind: 'no-such-clue', number: cmd.arg.number, direction: cmd.arg.direction,
+        }]);
+      }
+      return goTo(state, id);
+    }
     case 'repeat':
       return readClue({ ...state, mode: 'normal' }); // REQ-READ-009
     case 'hint': {

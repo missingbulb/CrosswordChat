@@ -20,16 +20,23 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
 
   if (strategy === 'most-filled') {
     // Easiest first: highest share of letters already in place (ratio, not count —
-    // 2/3 beats 3/5, REQ-NAV-004); ties by list order; current clue last resort.
+    // 2/3 beats 3/5, REQ-NAV-004); equal ratios go to the clue NEAREST the current one
+    // in list order (smallest jump; forward wins an exact-distance tie), then list
+    // order; current clue last resort.
     const others = candidates.filter((id) => id !== fromId);
+    const order = model.orderedClueIds;
+    const from = Math.max(order.indexOf(fromId), 0);
     const ratio = (id) => {
       const p = model.progressFor(id);
       return p.filled / p.length;
     };
+    const dist = (id) => Math.abs(order.indexOf(id) - from);
     const fresh = others
       .filter((id) => !avoid.includes(id))
       .sort((a, b) => ratio(b) - ratio(a)
-        || model.orderedClueIds.indexOf(a) - model.orderedClueIds.indexOf(b));
+        || dist(a) - dist(b)
+        || (order.indexOf(b) > from) - (order.indexOf(a) > from)
+        || order.indexOf(a) - order.indexOf(b));
     if (fresh.length) return { clueId: fresh[0] };
     // Every open clue was skipped recently and is unchanged: cycle back to the one
     // skipped longest ago instead of getting stuck (REQ-NAV-011).

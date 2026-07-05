@@ -217,6 +217,15 @@ describe('commands', () => {
     expect(parseCommand('no i said heart')).toEqual({ command: 'misheard', arg: 'heart' });
   });
 
+  test('REQ-NAV-013: a spoken clue label parses to a goto command', () => {
+    expect(parseCommand('seven across')).toEqual({ command: 'goto', arg: { number: 7, direction: 'across' } });
+    expect(parseCommand('go to 22 down')).toEqual({ command: 'goto', arg: { number: 22, direction: 'down' } });
+    expect(parseCommand('twenty two across')).toEqual({ command: 'goto', arg: { number: 22, direction: 'across' } });
+    expect(parseCommand('one hundred and five down')).toEqual({ command: 'goto', arg: { number: 105, direction: 'down' } });
+    // No number → not a goto; the utterance stays available to the answer pipeline.
+    expect(parseCommand('falling down')).toBeNull();
+  });
+
   test('REQ-CMD-001: "spell" followed by letters carries them as the argument', () => {
     expect(parseCommand('spell a b c')).toEqual({ command: 'spell', arg: ['A', 'B', 'C'] });
     expect(parseCommand('spell bee sea dee')).toEqual({ command: 'spell', arg: ['B', 'C', 'D'] });

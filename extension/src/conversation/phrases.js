@@ -155,6 +155,8 @@ export function render(say) {
       return "There's nothing to undo yet.";
     case 'no-crossing':
       return 'No crossing clue there.';
+    case 'no-such-clue':
+      return `There's no ${say.number} ${say.direction} in this puzzle.`;
     case 'strategy-ack':
       return say.strategy === 'most-filled' ? 'Okay — most filled first.' : 'Okay — in list order.';
     case 'goodbye':

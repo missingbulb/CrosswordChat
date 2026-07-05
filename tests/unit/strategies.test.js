@@ -39,10 +39,18 @@ describe('next-clue strategies', () => {
     expect(pick.clueId).toBe('A1'); // 3 letters beats everything else
   });
 
-  test('REQ-NAV-004: most-filled prefers others over the current clue and ties break by list order', () => {
+  test('REQ-NAV-004: most-filled prefers others over the current clue; ties go nearest', () => {
     const model = buildModel(heartSnapshot());
-    // All empty: ties everywhere → first in list order that isn't the current clue.
+    // All empty: ties everywhere → the closest clue in list order (here also the next one).
     expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A6');
+  });
+
+  test('REQ-NAV-004: equal ratios jump the least distance; forward wins an exact tie', () => {
+    const model = buildModel(heartSnapshot());
+    // All ratios equal. From A8: A7 and A9 are both one step away — forward wins.
+    expect(nextClue(model, 'A8', 'most-filled').clueId).toBe('A9');
+    // From D2 the nearest open clues are D1/D3 (one step) — never a far jump to A1.
+    expect(nextClue(model, 'D2', 'most-filled').clueId).toBe('D3');
   });
 
   test('REQ-NAV-004: most-filled ranks by fill percentage, not raw letter count', () => {

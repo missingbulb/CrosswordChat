@@ -827,6 +827,25 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
     expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['LISTEN']);
   });
 
+  test('REQ-LIFE-006: "next" on a full grid moves to the next clue — never the same prompt again', () => {
+    const s = listening(heartSnapshot(['HEART', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('next'));
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '6 Across' }); // moved forward
+    s.step({ type: 'TTS_DONE' });
+    const again = s.step(heard('next'));
+    expect(says(again)[0]).toMatchObject({ kind: 'clue', label: '7 Across' }); // keeps moving
+  });
+
+  test('REQ-NAV-013: "six across" jumps to that clue; a missing label is reported', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('six across'));
+    expect(out.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A6');
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '6 Across' });
+    s.step({ type: 'TTS_DONE' });
+    expect(says(s.step(heard('twelve down')))[0])
+      .toEqual({ kind: 'no-such-clue', number: 12, direction: 'down' });
+  });
+
   test('external grid changes are absorbed without speaking', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const actions = s.step({
