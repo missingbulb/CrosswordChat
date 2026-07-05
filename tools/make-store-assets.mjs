@@ -6,10 +6,10 @@
 //   node tools/make-store-assets.mjs
 //
 // Outputs:
-//   extension/icons/icon-{16,32,48,128}.png   — manifest icons (transparent corners)
-//   assets/store/screenshot-{1,2}-1280x800.png — store screenshots
-//   assets/store/promo-small-440x280.png       — small promo tile
-//   assets/store/promo-marquee-1400x560.png    — marquee promo tile
+//   extension/icons/icon-{16,32,48,128}.png              — manifest icons (transparent corners)
+//   dev/build/store-assets/screenshot-{1,2}-1280x800.png — store screenshots
+//   dev/build/store-assets/promo-small-440x280.png       — small promo tile
+//   dev/build/store-assets/promo-marquee-1400x560.png    — marquee promo tile
 //
 // Chromium: uses Playwright's managed browser (PLAYWRIGHT_BROWSERS_PATH) when present;
 // set CHROME_BIN to point at any Chromium/Chrome binary otherwise.
@@ -20,7 +20,7 @@ import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const ICONS = join(ROOT, 'extension/icons');
-const STORE = join(ROOT, 'assets/store');
+const STORE = join(ROOT, 'dev/build/store-assets');
 mkdirSync(ICONS, { recursive: true });
 mkdirSync(STORE, { recursive: true });
 

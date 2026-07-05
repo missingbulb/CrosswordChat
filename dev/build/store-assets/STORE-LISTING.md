@@ -5,9 +5,9 @@ listing, pre-written. Dashboard: https://chrome.google.com/webstore/devconsole
 (one-time $5 developer fee; the publisher account needs a verified contact email and
 two-factor authentication).
 
-Graphic assets live in [`assets/store/`](../assets/store); regenerate any of them with
-`node tools/make-store-assets.mjs` (icons land in `extension/icons/` and ship inside the
-zip automatically).
+Graphic assets live alongside this file in `dev/build/store-assets/`; regenerate any of
+them with `node tools/make-store-assets.mjs` (icons land in `extension/icons/` and ship
+inside the zip automatically).
 
 ---
 
@@ -44,7 +44,7 @@ PRIVATE BY DESIGN
 No servers, no accounts, no analytics. The extension makes zero network requests of its
 own — speech recognition and text-to-speech are Chrome's built-in engines, and nothing
 you say or solve is ever recorded or stored. The only thing it saves is your settings.
-Full policy: https://github.com/missingbulb/CrosswordChat/blob/main/PRIVACY.md
+Full policy: https://github.com/missingbulb/CrosswordChat/blob/main/dev/build/store-assets/PRIVACY.md
 
 HOW TO USE IT
 1. Open any New York Times crossword (the free Mini works).
@@ -63,10 +63,10 @@ inert everywhere else. Not affiliated with or endorsed by The New York Times.
 | Dashboard field | File |
 |---|---|
 | Store icon (128×128) | `extension/icons/icon-128.png` |
-| Screenshot 1 (1280×800) | `assets/store/screenshot-1-1280x800.png` |
-| Screenshot 2 (1280×800) | `assets/store/screenshot-2-1280x800.png` |
-| Small promo tile (440×280) | `assets/store/promo-small-440x280.png` |
-| Marquee promo tile (1400×560, optional) | `assets/store/promo-marquee-1400x560.png` |
+| Screenshot 1 (1280×800) | `dev/build/store-assets/screenshot-1-1280x800.png` |
+| Screenshot 2 (1280×800) | `dev/build/store-assets/screenshot-2-1280x800.png` |
+| Small promo tile (440×280) | `dev/build/store-assets/promo-small-440x280.png` |
+| Marquee promo tile (1400×560, optional) | `dev/build/store-assets/promo-marquee-1400x560.png` |
 
 **Additional fields:**
 
@@ -114,7 +114,7 @@ no network primitives in source, storage APIs allowed only in the settings modul
 **Privacy policy URL:**
 
 ```
-https://github.com/missingbulb/CrosswordChat/blob/main/PRIVACY.md
+https://github.com/missingbulb/CrosswordChat/blob/main/dev/build/store-assets/PRIVACY.md
 ```
 
 ---

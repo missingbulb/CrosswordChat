@@ -39,8 +39,7 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 | `tests/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
 | [`docs/RELEASING.md`](docs/RELEASING.md) | Versioning (current: **0.9.0**), CI workflows, release process, Chrome Web Store deployment setup. |
-| [`docs/STORE-LISTING.md`](docs/STORE-LISTING.md) | Chrome Web Store submission kit: listing copy, permission justifications, privacy disclosures, reviewer notes. Graphics in `assets/store/` (regenerate: `node tools/make-store-assets.mjs`). |
-| [`PRIVACY.md`](PRIVACY.md) | The public privacy policy linked from the store listing. |
+| [`dev/build/store-assets/`](dev/build/store-assets) | Chrome Web Store submission kit: [`STORE-LISTING.md`](dev/build/store-assets/STORE-LISTING.md) (listing copy, permission justifications, privacy disclosures, reviewer notes), [`PRIVACY.md`](dev/build/store-assets/PRIVACY.md) (the public privacy policy), screenshots and promo tiles (regenerate: `node tools/make-store-assets.mjs`). |
 | `.github/workflows/` | Test (every push), Pack (installable zip artifact + rolling `latest` download), Release (bump + tag + GitHub Release), Deploy to Chrome Web Store. |
 
 ## Executable requirements — how verification works
