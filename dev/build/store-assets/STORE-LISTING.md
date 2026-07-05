@@ -44,7 +44,7 @@ PRIVATE BY DESIGN
 No servers, no accounts, no analytics. The extension makes zero network requests of its
 own — speech recognition and text-to-speech are Chrome's built-in engines, and nothing
 you say or solve is ever recorded or stored. The only thing it saves is your settings.
-Full policy: https://github.com/missingbulb/CrosswordChat/blob/main/dev/build/store-assets/PRIVACY.md
+Full policy: https://missingbulb.github.io/CrosswordChat/privacy.html
 
 HOW TO USE IT
 1. Open any New York Times crossword (the free Mini works).
@@ -114,7 +114,7 @@ no network primitives in source, storage APIs allowed only in the settings modul
 **Privacy policy URL:**
 
 ```
-https://github.com/missingbulb/CrosswordChat/blob/main/dev/build/store-assets/PRIVACY.md
+https://missingbulb.github.io/CrosswordChat/privacy.html
 ```
 
 ---

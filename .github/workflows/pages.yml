@@ -1,0 +1,49 @@
+# Publish the privacy policy to GitHub Pages whenever it changes on main.
+# Permalink: https://missingbulb.github.io/CrosswordChat/privacy.html
+#
+# configure-pages tries to enable Pages automatically (enablement: true). If the very
+# first run fails on that step, flip the switch once by hand: repo Settings → Pages →
+# Source: "GitHub Actions", then re-run the workflow.
+
+name: Publish privacy page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - dev/build/store-assets/PRIVACY.md
+      - tools/build-privacy-page.mjs
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node tools/build-privacy-page.mjs
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-pages
+      - id: deployment
+        uses: actions/deploy-pages@v4

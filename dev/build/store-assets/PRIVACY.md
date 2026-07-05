@@ -1,6 +1,8 @@
 # CrosswordChat Privacy Policy
 
 **Effective date: July 5, 2026**
+**Permalink:** <https://missingbulb.github.io/CrosswordChat/privacy.html> (republished
+automatically whenever this file changes)
 
 CrosswordChat is a Chrome extension that lets you solve the New York Times crossword by
 voice: it reads clues aloud and types the answers you speak. This policy explains what the

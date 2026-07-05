@@ -7,13 +7,14 @@
 - Bump with `node tools/bump-version.mjs patch|minor|major|x.y.z` — updates all three files
   and prints the new version. The Release workflow does this for you.
 
-## The four workflows
+## The five workflows
 
 | Workflow | File | Trigger | What it does |
 |---|---|---|---|
 | **Test** | `.github/workflows/test.yml` | every push; PRs to `main` | `npm run verify` (118 tests + requirements-coverage trace), version-consistency check, build compiles |
 | **Pack extension** | `.github/workflows/build.yml` | push to `main`; manual | Builds `dist/`, zips it (manifest at zip root — store-uploadable), uploads as a 30-day workflow artifact; on `main` also refreshes the rolling **`latest` prerelease**, so [`releases/download/latest/crosswordchat-latest.zip`](https://github.com/missingbulb/CrosswordChat/releases/download/latest/crosswordchat-latest.zip) is a permanent URL to the newest build (no login needed, linked from the README). Marked prerelease so it never shadows real releases and the store deploy skips it |
 | **Release** | `.github/workflows/release.yml` | manual (choose patch/minor/major or an explicit version) | Verify → bump → build → commit `Release vX.Y.Z` → tag `vX.Y.Z` → GitHub Release with the zip attached |
+| **Publish privacy page** | `.github/workflows/pages.yml` | change to `PRIVACY.md` on `main`; manual | Renders the privacy policy to GitHub Pages — the store listing's privacy-policy permalink, [missingbulb.github.io/CrosswordChat/privacy.html](https://missingbulb.github.io/CrosswordChat/privacy.html) |
 | **Deploy to Chrome Web Store** | `.github/workflows/deploy-chrome-store.yml` | automatically on a published Release; or manual (with a draft-only option) | Rebuilds from the tag, uploads to the store via the official API (plain `curl`, no third-party action touches credentials), optionally submits for review |
 
 Normal release path: **Actions → Release → Run workflow** (pick the bump) — everything else
