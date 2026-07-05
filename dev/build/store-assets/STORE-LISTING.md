@@ -28,6 +28,9 @@ it into the grid, and moves on to the next clue. Solve the whole puzzle in one s
 conversation while you cook, fold laundry, or rest your eyes.
 
 WHAT IT DOES WELL
+• Lives where you solve: a speech-bubble button right in the NYT puzzle toolbar, next to
+  the pencil. One click and you're talking. (The extension icon works too — and it grays
+  out on pages CrosswordChat doesn't support, so you always know where it can help.)
 • Reads clues the way a friend would: italics, quotes, brackets, "blank" for ___, and the
   answer length, every time.
 • Understands you, not just your words: homophone-aware matching ("roe" vs "row"),
@@ -47,9 +50,15 @@ you say or solve is ever recorded or stored. The only thing it saves is your set
 Full policy: https://missingbulb.github.io/CrosswordChat/privacy.html
 
 HOW TO USE IT
-1. Open any New York Times crossword (the free Mini works).
-2. Click the CrosswordChat toolbar icon and allow the microphone.
-3. Talk. Click the icon again (or say "goodbye") to stop.
+1. Open a New York Times crossword — the Mini, the Midi, or the daily (the free Mini works).
+2. Click the speech-bubble button next to the pencil in the puzzle toolbar (or the
+   extension icon) and allow the microphone.
+3. Talk. Click the button again (or say "goodbye") to stop.
+
+Not sure whether a page is supported? The extension icon is in color where CrosswordChat
+works and gray where it doesn't — and clicking it on an unsupported page explains why,
+with a support address (crosswords@missingbulb.com) if you've found a crossword we
+should cover next.
 
 Requires Chrome 116+. Works only on nytimes.com crossword pages — it stays completely
 inert everywhere else. Not affiliated with or endorsed by The New York Times.
@@ -88,7 +97,7 @@ inert everywhere else. Not affiliated with or endorsed by The New York Times.
 
 | Permission | Justification to paste |
 |---|---|
-| `tts` | Speaks crossword clues and feedback aloud with Chrome's text-to-speech engine. Voice output is the extension's core interface — it has no visual UI. |
+| `tts` | Speaks crossword clues and feedback aloud with Chrome's text-to-speech engine. Voice output is the extension's core interface — its only visual UI is the start/stop button in the puzzle toolbar and a static informational popup on unsupported pages. |
 | `storage` | Stores the user's settings (e.g. the clue-selection strategy chosen on the options page) in chrome.storage.sync. No other data is ever stored. |
 | Host permission `https://www.nytimes.com/*` | The extension works exclusively on the New York Times crossword: content scripts read the clues and grid from the puzzle page and simulate keystrokes to enter the user's spoken answers. It is inert on every other site and requests no other host. |
 
@@ -132,10 +141,13 @@ https://missingbulb.github.io/CrosswordChat/privacy.html
 ```
 Testing requires a microphone and a New York Times crossword page. The free NYT Mini
 works without a subscription: https://www.nytimes.com/crosswords/game/mini
-Open it, click the extension's toolbar icon, grant the microphone permission, and speak
-an answer or a command ("help" lists them). Click the icon again or say "goodbye" to
-stop. The extension is voice-only (no popup UI), runs only on nytimes.com, and makes no
-network requests of its own.
+Open it and click the speech-bubble button that appears right of the pencil in the
+puzzle toolbar (the extension's toolbar icon does the same thing); grant the microphone
+permission and speak an answer or a command ("help" lists them). Click the button again
+or say "goodbye" to stop. On pages that are not a supported NYT crossword, the action
+icon turns gray and clicking it shows a small static popup explaining where the
+extension works; no other UI exists. The extension runs only on nytimes.com and makes
+no network requests of its own.
 ```
 
 ---

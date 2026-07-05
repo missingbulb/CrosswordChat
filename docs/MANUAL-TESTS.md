@@ -101,9 +101,10 @@ Covers: REQ-SPCH-004
 Covers: REQ-LIFE-003
 1. Click the icon on: (a) a nytimes.com news article, (b) the crosswords landing/archive page,
    (c) any non-NYT site.
-2. **PASS:** (a),(b) a spoken "I don't see a crossword here" and no session ((a) is voiced by the
-   service worker itself — there's no content script on article pages); (c) badge feedback only
-   (✕ flash), no speech, no errors in the service-worker console.
+2. **PASS:** all three open the unsupported-site popup (details in MT-31) — no session, no
+   speech, no errors in the service-worker console. The spoken "I don't see a crossword here"
+   is reserved for supported game URLs whose grid can't be parsed (hard to stage on the live
+   site; the machine unit tests cover it).
 
 ### MT-13 — Conversation follows your clicks
 Covers: REQ-NAV-008 REQ-PAGE-010
@@ -139,7 +140,9 @@ Covers: REQ-HINT-001 REQ-HINT-002 REQ-CMD-002 REQ-READ-009
 ### MT-17 — Second tab takes over
 Covers: REQ-LIFE-009
 1. Session running on tab A (Mini). Open the daily in tab B; click the icon there.
-2. **PASS:** tab A's session goes silent/closed; tab B starts fresh; only one badge/mic at a time.
+2. Repeat, but start tab B's session from the in-page bubble button (MT-30) instead.
+3. **PASS:** both times tab A's session goes silent/closed; tab B starts fresh; only one
+   badge/mic at a time.
 
 ### MT-18 — Console mirrors the conversation
 Covers: REQ-SPCH-007 REQ-SPCH-008
@@ -164,8 +167,9 @@ Covers: REQ-CMD-005
 ### MT-21 — Inert when off
 Covers: REQ-NFR-004
 1. Extension installed, no session. Solve part of a puzzle by keyboard for a minute.
-2. **PASS:** zero visible/behavioral difference vs. extension disabled (typing, navigation,
-   timer, rebus button all normal); content-script console silent.
+2. **PASS:** the only difference vs. extension disabled is the idle CrosswordChat bubble button
+   in the toolbar (REQ-LIFE-012) — typing, navigation, timer, rebus and pencil buttons all
+   behave normally; content-script console silent; no mic indicator, ever.
 
 ### MT-22 — The verification pipeline itself
 Covers: REQ-NFR-006
@@ -233,3 +237,29 @@ Covers: REQ-ANS-019 REQ-PAGE-012
    those keep their pen. Step 3 — the overriding word is removed, the Down entry's letters return
    exactly as they were and in pen (no gray left behind). Step 4 — our letters land in pen but the
    pencil toggle is back ON for you afterwards (the session never steals your toggle state).
+
+### MT-30 — The in-page toolbar button
+Covers: REQ-LIFE-012
+1. Open the Mini. Find the speech-bubble button immediately right of NYT's pencil toggle in the
+   puzzle toolbar (hover it: the tooltip names CrosswordChat).
+2. Click it. Answer one clue by voice. While the session runs, look at the button; then click it
+   again mid-readout.
+3. Reload the page and start a session from the *extension icon* instead; end it by voice
+   ("goodbye").
+4. **PASS:** step 2 — the click starts the session exactly like the icon (clue read, mic on,
+   badge ON) and the bubble fills gold while the session runs; the second click cuts speech
+   instantly and silently (like MT-04) and the bubble empties. Step 3 — the button also tracks
+   sessions it didn't start: filled during, empty after. The button never doubles up, and the
+   rest of the toolbar looks and works untouched.
+
+### MT-31 — Icon variants and the unsupported-site popup
+Covers: REQ-LIFE-013 REQ-LIFE-014
+1. Open four tabs: today's Mini, an NYT news article, the crosswords landing page, and any
+   non-NYT site. Compare the extension's toolbar icon across the four.
+2. In the Mini tab, navigate to an NYT article in the same tab, then go back.
+3. Click the extension icon on the article tab; then on the Mini tab.
+4. **PASS:** step 1 — the Mini tab shows the full-color icon; the other three show the gray
+   variant. Step 2 — the icon follows the navigation both ways. Step 3 — on the article tab a
+   small popup opens (no session, no speech) saying CrosswordChat isn't supported on this site,
+   naming the NYT Mini/Midi/daily puzzles, and offering crosswords@missingbulb.com for support
+   requests; on the Mini tab the click starts the session directly, no popup.

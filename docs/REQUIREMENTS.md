@@ -25,7 +25,7 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 | **Pattern** | The current per-cell contents of an entry, e.g. `H _ _ R T` (filled letters + blanks). |
 | **Crossing** | The perpendicular clue that shares a given cell with the current entry. |
 | **Collision** | A candidate answer letter that disagrees with a letter already in the grid at that cell. |
-| **Session** | An active conversation, started/stopped by clicking the extension icon. |
+| **Session** | An active conversation, started/stopped by clicking the extension icon or the in-page toolbar button (REQ-LIFE-012). |
 | **Filled** | Every cell of an entry (or the grid) contains a letter. Filled ≠ correct. |
 | **Solved** | NYT itself confirms the puzzle is correctly completed (congratulations modal). |
 | **Homophone set** | Words pronounced (near-)identically with different spellings: *plain/plane*, *ate/eight*. The user says "homonyms"; we implement homophones. |
@@ -37,8 +37,9 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 ## 2. Scope & assumptions
 
 - **In scope (MVP):** NYT Daily crossword and the Mini, on desktop Chrome (≥ 116), English (`en-US`),
-  one puzzle tab at a time. Voice-only interaction — the extension shows no visual UI; what was
-  said/heard is mirrored to the page console for debugging (REQ-SPCH-007/008).
+  one puzzle tab at a time. Voice-only interaction — the extension shows no visual UI beyond a
+  single start/stop button placed in the puzzle toolbar (REQ-LIFE-012); what was said/heard is
+  mirrored to the page console for debugging (REQ-SPCH-007/008).
 - **Out of scope (MVP), analyzed in §13:** rebus squares, NYT Check/Reveal integration, following
   cross-references, multiple simultaneous sessions, non-English puzzles, acrostics/other game types.
   (Barge-in — answering and commanding mid-readout — IS in scope: REQ-SPCH-009/REQ-CMD-006.)
@@ -121,7 +122,8 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Status:** Active · **Level:** MUST
 - Clicking the extension icon on a NYT crossword page with an unsolved puzzle MUST start a session
   hosted in that page: snapshot the puzzle and read the first clue (per REQ-LIFE-007). Nothing
-  visual may open — no panel, popup, or window; the only chrome is the action badge.
+  visual may open — no panel, popup, or window; the only chrome is the action badge. The in-page
+  toolbar button (REQ-LIFE-012) is an equivalent start control.
 - **Accept:** Given an unsolved puzzle page, when the icon is clicked, then within the latency budget
   (REQ-NFR-003) the current clue is spoken and the mic starts listening.
 - **Verify:** unit `tests/unit/machine.test.js` (START event → clue readout → listen); manual MT-03.
@@ -130,17 +132,21 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Status:** Active · **Level:** MUST
 - Clicking the icon during a session MUST end it: speech output stops mid-word, the mic stops,
   the badge clears. No goodbye message (the user asked for silence). Target ≤ 500 ms to silence.
+  The in-page toolbar button (REQ-LIFE-012) ends a session the same way.
 - **Accept:** Given a session mid-readout, when the icon is clicked, then audio stops and the mic
   indicator disappears.
 - **Verify:** unit `tests/unit/machine.test.js` (TOGGLE_OFF → END with no SAY); manual MT-04.
 
 #### REQ-LIFE-003 — Clicking where there is no puzzle
 - **Status:** Active · **Level:** MUST
-- On a non-NYT page the icon MUST give lightweight visual feedback (action badge) and MUST NOT open
-  a session. On an NYT page without a detectable puzzle, the extension MUST say so briefly by voice
-  ("I don't see a crossword here") and end — whether the content script is present (crossword
-  section, no grid) or not (article pages; the service worker speaks via `chrome.tts`).
-- Cases: nytimes.com article page; chrome:// pages; crossword archive/landing page (no grid).
+- On a page outside the supported URL set (REQ-LIFE-013) the icon click MUST open the
+  unsupported-site popup (REQ-LIFE-014) and MUST NOT start a session. On a supported puzzle URL
+  whose page has no detectable grid, the extension MUST say so briefly by voice ("I don't see a
+  crossword here") and end. Safety net: if a supported-looking NYT page has no content script to
+  host the session, the service worker speaks the same message via `chrome.tts` and flashes the
+  badge.
+- Cases: nytimes.com article page (popup); chrome:// pages (popup); crossword archive/landing
+  page (popup — unsupported URL); supported game URL whose grid fails to parse (voice).
 - **Accept:** As above for each case.
 - **Verify:** unit `tests/unit/machine.test.js` (START with status `not-found`); manual MT-12.
 
@@ -214,6 +220,53 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Accept:** Given a running session, when the user switches to another tab or to a different
   app, then speech and mic stop within ~1 s with no spoken goodbye and the badge clears.
 - **Verify:** manual MT-24.
+
+#### REQ-LIFE-012 — On-page toggle button in the puzzle toolbar
+- **Status:** Active · **Level:** MUST
+- The content script MUST place a start/stop button inside the puzzle page itself: in NYT's
+  toolbar, immediately to the right of the pencil toggle — so the feature is discoverable where
+  the solving happens (the extension icon remains an equivalent control). The button MUST carry a
+  speech-bubble icon (the visual language of conversation), an accessible label, and MUST reflect
+  session state (`aria-pressed`; the bubble fills while a session runs). Clicking it MUST behave
+  exactly like the extension icon: no session → start one (REQ-LIFE-001); a session running in
+  this tab → end it instantly and silently (REQ-LIFE-002). Sessions started from the button obey
+  one-session-at-a-time (REQ-LIFE-009). Because the NYT app renders after the content script
+  loads, injection MUST wait for the toolbar (a bounded observer that disconnects once the button
+  is placed or after a give-up timeout) and MUST degrade silently when no pencil toggle exists
+  (toolbar redesign, archive pages): no button, no errors, the extension icon still works. The
+  injection lives in the page adapter (REQ-PAGE-011 — it is NYT DOM knowledge).
+- **Accept:** Given a puzzle page, then exactly one labeled button sits right of the pencil
+  toggle, clicking it starts a session and clicking again ends it, with `aria-pressed` tracking;
+  given a toolbar that renders late, then the button appears once the toolbar does; given a page
+  without a pencil toggle, then no button is injected and nothing throws.
+- **Verify:** integration `tests/integration/session-button.test.js`; manual MT-30.
+
+#### REQ-LIFE-013 — Action icon signals supported pages
+- **Status:** Active · **Level:** MUST
+- The extension's toolbar (action) icon MUST look different on supported puzzle pages than
+  everywhere else, so the user can tell at a glance where CrosswordChat works. Supported = tab
+  URL starting `https://www.nytimes.com/crosswords/game/mini`, `.../midi`, or `.../daily`
+  (plus the localhost dev fixture, `http://localhost:8787/`): full-color icon. Anywhere else:
+  a grayed-out variant. The check is URL-only (no page inspection — the icon must be right even
+  before the page loads), and the icon MUST track tab navigation and tab switches.
+- **Accept:** Given a Mini/Midi/Daily tab, then the colored icon shows; given an NYT article page
+  or any non-NYT tab, then the gray icon shows; navigating one tab between the two updates it.
+- **Verify:** unit `tests/unit/urls.test.js` (supported-URL matcher); manual MT-31.
+
+#### REQ-LIFE-014 — Unsupported-site popup
+- **Status:** Active · **Level:** MUST
+- On tabs outside the supported URL set (REQ-LIFE-013), clicking the action icon MUST open a
+  small popup instead of silently doing nothing: it says CrosswordChat is not supported on this
+  site, names where it works (the NYT Mini, Midi and daily crosswords), and — for pages that DO
+  show a crossword we don't cover yet — invites a support request at `crosswords@missingbulb.com`
+  (mailto link). On supported tabs there MUST be no popup: the click goes straight to
+  start/stop (REQ-LIFE-001/002). The popup is set per tab (`chrome.action.setPopup`), tracked
+  together with the icon variant (REQ-LIFE-013), and is pure static HTML — no scripts, no
+  network, nothing read from the page (REQ-NFR-001/002 apply).
+- **Accept:** Given a non-supported tab, when the icon is clicked, then the popup opens showing
+  the unsupported message and the support address; given a supported puzzle tab, then no popup
+  opens and the session toggles.
+- **Verify:** manual MT-31.
 
 ---
 
@@ -1111,10 +1164,12 @@ any time, every selector lives in one file with a self-diagnosing probe.
 
 #### REQ-NFR-004 — Inert when off
 - **Status:** Active · **Level:** MUST
-- With no session, the extension MUST NOT affect the page: the content script only registers a
-  message listener (no DOM reads/writes, no observers) until a session command arrives.
-- **Accept:** Given the extension installed and no session, then normal play is unaffected and no
-  observers run.
+- With no session, the extension MUST NOT affect the page beyond one visible addition: the
+  toolbar toggle button (REQ-LIFE-012), placed by a short-lived observer that disconnects as soon
+  as the button lands (or gives up). Everything else stays dormant until a session starts: no
+  other DOM reads/writes, no persistent observers, no listeners on page input.
+- **Accept:** Given the extension installed and no session, then normal play is unaffected — the
+  only difference is the idle toolbar button — and no observers survive the injection.
 - **Verify:** manual MT-21 (+ code structure: watcher starts on demand, REQ-PAGE-010).
 
 #### REQ-NFR-005 — Language

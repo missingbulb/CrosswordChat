@@ -7,6 +7,7 @@
 //
 // Outputs:
 //   extension/icons/icon-{16,32,48,128}.png              — manifest icons (transparent corners)
+//   extension/icons/icon-{16,32,48,128}-gray.png         — unsupported-tab variant (REQ-LIFE-013)
 //   dev/build/store-assets/screenshot-{1,2}-1280x800.png — store screenshots
 //   dev/build/store-assets/promo-small-440x280.png       — small promo tile
 //   dev/build/store-assets/promo-marquee-1400x560.png    — marquee promo tile
@@ -40,22 +41,27 @@ const SANS = "'Liberation Sans', Arial, sans-serif";
 const BUBBLE = 'M34 20 h60 a12 12 0 0 1 12 12 v48 a12 12 0 0 1 -12 12 H62 L40 110 V92 '
   + 'h-6 a12 12 0 0 1 -12 -12 V32 a12 12 0 0 1 12 -12 z';
 
-const iconSvg = `
+const makeIconSvg = ({ bg, ink, bubble }) => `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="27" fill="${GOLD}"/>
+  <rect width="128" height="128" rx="27" fill="${bg}"/>
   <defs><clipPath id="b"><path d="${BUBBLE}"/></clipPath></defs>
-  <path d="${BUBBLE}" fill="#FFFFFF"/>
+  <path d="${BUBBLE}" fill="${bubble}"/>
   <g clip-path="url(#b)">
-    <rect x="78" y="20" width="30" height="36" fill="${INK}"/>
-    <path d="M50 20 V92 M78 20 V92 M22 56 H108" stroke="${INK}" stroke-width="6"/>
+    <rect x="78" y="20" width="30" height="36" fill="${ink}"/>
+    <path d="M50 20 V92 M78 20 V92 M22 56 H108" stroke="${ink}" stroke-width="6"/>
   </g>
-  <path d="${BUBBLE}" fill="none" stroke="${INK}" stroke-width="8" stroke-linejoin="round"/>
+  <path d="${BUBBLE}" fill="none" stroke="${ink}" stroke-width="8" stroke-linejoin="round"/>
 </svg>`;
 
-const iconPage = (px) => `<!doctype html><html><head><style>
+const iconSvg = makeIconSvg({ bg: GOLD, ink: INK, bubble: '#FFFFFF' });
+// Unsupported-tab variant (REQ-LIFE-013): the same mark, drained of color, so the
+// action icon itself says "CrosswordChat has nothing to do here".
+const iconSvgGray = makeIconSvg({ bg: '#D9D9D9', ink: '#7C7C7C', bubble: '#F3F3F3' });
+
+const iconPage = (svg, px) => `<!doctype html><html><head><style>
   html,body{margin:0;padding:0;background:transparent}
   svg{display:block;width:${px}px;height:${px}px}
-</style></head><body>${iconSvg}</body></html>`;
+</style></head><body>${svg}</body></html>`;
 
 // ------------------------------------------------------- shared page bits ---
 
@@ -97,6 +103,44 @@ function bubble(text, { user = false, size = 26 } = {}) {
     box-shadow:3px 3px 0 rgba(25,25,25,.12)">
     <span style="font-size:${size * 0.85}px">${user ? '🎤' : '🔊'}</span>&nbsp; ${text}</div>`;
 }
+
+// ---------------------------------------------------- in-page toolbar mock ---
+// The NYT puzzle toolbar as the solver sees it, with the CrosswordChat speech-bubble
+// button sitting right of the pencil — the "here's where you turn it on" visual
+// (REQ-LIFE-012). Line icons mirror extension/src/page-adapter/session-button.js.
+
+const lineIcon = (inner, size = 27) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}"
+  fill="none" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"
+  stroke-linejoin="round">${inner}</svg>`;
+
+const PENCIL_ICON = lineIcon('<path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 3 21.5 4 17z"/>');
+const CHAT_ICON = lineIcon(
+  `<path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" fill="${GOLD}"/>`
+  + `<circle cx="8.4" cy="10" r="1" fill="${INK}" stroke="none"/>`
+  + `<circle cx="12" cy="10" r="1" fill="${INK}" stroke="none"/>`
+  + `<circle cx="15.6" cy="10" r="1" fill="${INK}" stroke="none"/>`, 30);
+
+const toolbarMock = `
+  <div style="background:${CARD};border:2.5px solid ${INK};border-radius:16px;
+              box-shadow:4px 4px 0 rgba(25,25,25,.12);padding:15px 30px;
+              display:flex;align-items:center;gap:30px">
+    <div style="font-size:21px;color:#3d3d3d;font-variant-numeric:tabular-nums">⏱&nbsp;27:31</div>
+    <div style="flex:1"></div>
+    ${['Rebus', 'Clear', 'Reveal', 'Check'].map((label) =>
+      `<div style="font-size:20px">${label}</div>`).join('')}
+    <div style="width:27px;height:27px;border:2px solid ${INK};border-radius:50%;flex:none;
+                display:flex;align-items:center;justify-content:center;
+                font-size:16px;font-weight:700">?</div>
+    ${PENCIL_ICON}
+    <div style="width:52px;height:52px;border-radius:50%;background:${GOLD_SOFT};flex:none;
+                border:3px solid ${INK};display:flex;align-items:center;
+                justify-content:center">${CHAT_ICON}</div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;
+              margin:10px 6px 0;font-size:20px;color:#3d3d3d">
+    <span>the speech bubble next to NYT's pencil — one click and you're talking</span>
+    <span style="font-size:26px;line-height:1">↗</span>
+  </div>`;
 
 // ----------------------------------------------------------- screenshot 1 ---
 // Hero: the conversation next to the grid it is filling in.
@@ -158,34 +202,36 @@ const CMD_GROUPS = [
 ];
 
 const screenshot2 = `<!doctype html><html><head><style>${baseCss}</style></head><body>
-  <div style="padding:40px 64px 0">${brandRow(48)}</div>
-  <div style="padding:18px 64px 0">
-    <h1 class="serif" style="font-size:50px">Say it like you’d say it to a friend.</h1>
-    <p style="font-size:23px;color:#3d3d3d;margin-top:10px">
-      Click the toolbar icon to start a session. Say <b>“goodbye”</b> when you’re done.</p>
+  <div style="padding:24px 64px 0">${brandRow(40)}</div>
+  <div style="padding:10px 64px 0">
+    <h1 class="serif" style="font-size:42px">Starts right on the puzzle page.</h1>
+    <p style="font-size:21px;color:#3d3d3d;margin-top:6px">
+      Click the speech-bubble button in the puzzle toolbar, then say it like you’d say it
+      to a friend. Say <b>“goodbye”</b> — or click again — when you’re done.</p>
   </div>
-  <div style="flex:1;display:flex;gap:26px;padding:30px 64px 0">
+  <div style="padding:14px 64px 0">${toolbarMock}</div>
+  <div style="flex:1;display:flex;gap:26px;padding:12px 64px 0">
     ${CMD_GROUPS.map(([title, rows]) => `
       <div style="flex:1;background:${CARD};border:2.5px solid ${INK};border-radius:18px;
-                  padding:26px 28px;box-shadow:4px 4px 0 rgba(25,25,25,.12)">
-        <div class="serif" style="font-size:27px;font-weight:bold;border-bottom:2.5px solid ${INK};
-                    padding-bottom:12px;margin-bottom:16px">${title}</div>
+                  padding:18px 24px;box-shadow:4px 4px 0 rgba(25,25,25,.12)">
+        <div class="serif" style="font-size:24px;font-weight:bold;border-bottom:2.5px solid ${INK};
+                    padding-bottom:9px;margin-bottom:12px">${title}</div>
         ${rows.map(([cmd, what]) => `
-          <div style="margin-bottom:15px">
+          <div style="margin-bottom:11px">
             <div style="display:inline-block;background:${GOLD_SOFT};border:1.5px solid ${INK};
-                        border-radius:8px;padding:3px 10px;font-size:20px;font-weight:bold">
+                        border-radius:8px;padding:2px 10px;font-size:19px;font-weight:bold">
               ${cmd}</div>
-            <div style="font-size:19px;color:#3d3d3d;margin-top:5px">${what}</div>
+            <div style="font-size:18px;color:#3d3d3d;margin-top:4px">${what}</div>
           </div>`).join('')}
       </div>`).join('')}
   </div>
-  <div style="margin:30px 64px 38px;background:${INK};color:${PAPER};border-radius:18px;
-              padding:24px 30px;display:flex;align-items:center;gap:24px">
-    <div style="font-size:40px">🔒</div>
+  <div style="margin:16px 64px 24px;background:${INK};color:${PAPER};border-radius:18px;
+              padding:16px 28px;display:flex;align-items:center;gap:22px">
+    <div style="font-size:34px">🔒</div>
     <div>
-      <div class="serif" style="font-size:26px;font-weight:bold;color:${GOLD}">
+      <div class="serif" style="font-size:24px;font-weight:bold;color:${GOLD}">
         Private by design</div>
-      <div style="font-size:20px;line-height:1.4;margin-top:4px">
+      <div style="font-size:19px;line-height:1.35;margin-top:3px">
         No servers, no accounts, no analytics. Speech stays in Chrome’s built-in engine,
         and nothing about your puzzle is ever recorded or stored.</div>
     </div>
@@ -248,9 +294,13 @@ async function shoot(html, { width, height, out, transparent = false }) {
 }
 
 for (const px of [16, 32, 48, 128]) {
-  await shoot(iconPage(px), {
+  await shoot(iconPage(iconSvg, px), {
     width: px, height: px, transparent: true,
     out: join(ICONS, `icon-${px}.png`),
+  });
+  await shoot(iconPage(iconSvgGray, px), {
+    width: px, height: px, transparent: true,
+    out: join(ICONS, `icon-${px}-gray.png`),
   });
 }
 await shoot(screenshot1, { width: 1280, height: 800, out: join(STORE, 'screenshot-1-1280x800.png') });

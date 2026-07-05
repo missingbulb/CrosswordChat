@@ -12,6 +12,7 @@ plumbing are five different problems; none imports another's internals.
 │  Service worker (background/)  "switchboard + mouth"             │
 │  · icon click → start/stop the in-page session                   │
 │  · one-session bookkeeping, badge                                │
+│  · per-tab icon variant + unsupported popup (URL-gated)          │
 │  · chrome.tts relay (speak/cancel) — content scripts can't       │
 │         ▲                                                        │
 │         │ port (session registration + speak/done/cancel)        │
@@ -19,10 +20,11 @@ plumbing are five different problems; none imports another's internals.
 │  ┌──────────────────────────────────────────────┐                │
 │  │ NYT crossword tab — content script           │                │
 │  │  "brain + ears + hands", speech-only UI      │                │
+│  │  · toolbar toggle button (start/stop in-page)│                │
 │  │  · orchestrator (app/) · conversation machine│                │
 │  │  · matching · STT port (mic, page origin)    │                │
 │  │  · page-adapter (read/write/watch)           │                │
-│  │  · console diagnostics (no visual UI)        │                │
+│  │  · console diagnostics                       │                │
 │  │  main-world script (probe)                   │                │
 │  └──────────────────────────────────────────────┘                │
 └──────────────────────────────────────────────────────────────────┘
@@ -46,6 +48,8 @@ extension/src/
                      per-cell pencil mode via the toolbar toggle, user's state restored
     navigator.js     selectClue (click the clue list item)
     watcher.js       MutationObserver → {solved | selection | grid} events (session-scoped)
+    session-button.js  the in-page start/stop toggle, injected right of NYT's pencil
+                     (REQ-LIFE-012); waits for the toolbar, degrades to no-button
     probe.js         selector health report for the live page
     clue-html.js     clue innerHTML → [{text, italic}] runs (pure; entities decoded)
   puzzle-model/    Crossword semantics. Pure.
@@ -71,13 +75,19 @@ extension/src/
   app/
     orchestrator.js  executes machine actions via ports/pageClient; owns the event loop
   background/
-    service-worker.js  icon toggle, single-session bookkeeping, badge, chrome.tts relay
+    service-worker.js  icon toggle, single-session bookkeeping, badge, chrome.tts relay,
+                       per-tab icon variant + unsupported-site popup (REQ-LIFE-013/014)
+  popup/
+    unsupported.html   static popup for unsupported tabs (REQ-LIFE-014); set per tab via
+                       chrome.action.setPopup — supported tabs have no popup at all
   content/
     content-script.js  hosts the session: orchestrator + STT + page-adapter, console diagnostics;
-                       inert until asked (REQ-NFR-004)
+                       inert until asked (REQ-NFR-004) apart from mounting the toolbar button
+                       (REQ-LIFE-012), which starts/stops sessions from inside the page
     main-world.js      optional in-page probe helper (window.gameData presence)
   shared/
     messages.js      message type constants shared by content/background
+    urls.js          supported-puzzle URL matcher (REQ-LIFE-013) — icon + popup gating
 ```
 
 **Dependency direction (enforced by review + arch test):**
@@ -150,10 +160,14 @@ Page operations need no messages anymore — the orchestrator calls the page ada
 - Background → content (via `chrome.tabs.sendMessage`): `{type:'cc:start'}` — begin a session.
   Debug-only, from the service-worker console: `{type:'cc:ping'}` · `{type:'cc:snapshot'}` →
   Snapshot · `{type:'cc:probe'}` → report (MT-01).
-- Content ⇄ background (long-lived Port `cc-session`): connect = session registered (badge ON);
+- Content ⇄ background (long-lived Port `cc-session`): connect = session registered (badge ON;
+  a pre-existing session on another tab is closed here — REQ-LIFE-009);
   `{type:'cc:speak', id, text}` → `chrome.tts` → `{type:'cc:speak-done', id}` ·
   `{type:'cc:tts-cancel'}` — immediate silence · `{type:'cc:close'}` (background → content: icon
   toggle / takeover) · disconnect = session over (badge cleared, in-flight speech cancelled).
+- The in-page toggle button (REQ-LIFE-012) needs no messages of its own: it starts/stops the
+  session directly in the content script, and the service worker finds out the way it always
+  does — the port connects or disconnects.
 
 ## 6. Testing architecture (the executable-requirements machinery)
 
@@ -183,3 +197,5 @@ NYT subscription.
 | D6 | Plain ES modules + esbuild, no TS | Zero-config bundling for MV3; JSDoc where shapes matter | Team growth |
 | D7 | Homophones via bundled dictionary + n-best STT | Client-side (REQ-NFR-001); alternatives catch what the dictionary misses | Dictionary gaps observed in MT-06 |
 | D8 | Numbering derived, DOM cross-checked | Survives NYT markup drift; catches reader bugs | — |
+| D9 | In-page toolbar button as the primary start control (rev. of "no visual UI") | The action icon is invisible while solving; a speech-bubble next to NYT's pencil makes the feature discoverable where it's used. One button, no other surface; injection quarantined in page-adapter | NYT toolbar redesign breaks the anchor (probe + graceful degradation cover it) |
+| D10 | Per-tab action icon + unsupported-site popup, gated by URL prefix only | The icon should say where CrosswordChat works before anything loads; a popup explains "why not here" and gives a support contact — no "tabs" permission needed (URL-less tabs are simply unsupported) | Supported-URL list grows (shared/urls.js is the one place) |
