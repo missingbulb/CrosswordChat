@@ -224,24 +224,25 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
 
   // Pre-puzzle splash (REQ-LIFE-016): the live "Ready to start solving?" moment is
   // rendered by the NYT games shell in the pz-moment class family (NOT xwd__ — that
-  // mismatch was the v0.11.2 "splash not recognized" bug), so the fixture mirrors
-  // that shape. Play removes it — unless it's 'stuck'.
+  // mismatch was the v0.11.2 "splash not recognized" bug). Shape mirrors a live
+  // capture (2026-07-05): the TITLE is the puzzle's name, the headline copy sits in
+  // pz-moment__description, and the Play button's classes are build-hashed CSS-module
+  // names — no stable class hook, so splash.js matches it by TEXT. Play removes the
+  // moment — unless it's 'stuck'.
   if (splash) {
     const veil = document.createElement('div');
-    veil.className = 'pz-moment__container';
-    const moment = document.createElement('div');
-    moment.className = 'pz-moment pz-moment--start';
-    const heading = document.createElement('h2');
-    heading.className = 'pz-moment__title';
-    heading.textContent = 'Ready to start solving?';
-    const play = document.createElement('button');
-    play.className = 'pz-moment__button primary';
-    play.textContent = 'Play';
+    veil.className = 'pz-moment__content SequenceAnimation-module_in__QL6mR';
+    veil.innerHTML = [
+      '<div class="pz-moment__icon medium mini" data-testid="moment-icon"></div>',
+      '<h2 class="pz-moment__title large karnak">The Mini</h2>',
+      '<h3 class="pz-moment__description default karnak">Ready to start solving?</h3>',
+      '<div class="pz-moment__button-group"><div class="pz-moment__button-wrapper vertical">',
+      '<button type="button" class="_momentButton_e4jbe_2 _primary_e4jbe_37">Play</button>',
+      '</div></div>',
+    ].join('');
     if (splash !== 'stuck') {
-      play.addEventListener('click', () => veil.remove());
+      veil.querySelector('button').addEventListener('click', () => veil.remove());
     }
-    moment.append(heading, play);
-    veil.append(moment);
     document.body.append(veil);
   }
 

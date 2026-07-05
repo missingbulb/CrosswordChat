@@ -322,12 +322,14 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   the moment the splash clears; (3) if it never clears (~60 s), end quietly. Splash detection is
   page-adapter knowledge (REQ-PAGE-011) and MUST degrade to "no splash" on pages without one.
   Detection MUST be belt and braces (the class family drifted out from under the xwd__ nets —
-  v0.11.2 user report): the live splash is the games shell's `pz-moment` family, the legacy
-  `xwd__` modal shapes stay netted, and a text anchor on the "Ready to start solving" headline
-  catches the next rename; only VISIBLE splashes count (a moment hidden with `display:none`
-  reads as cleared). The probe (MT-01) reports a `splash` line, plus a failing
-  `splash text without button` line when the headline is rendered but no button was found —
-  the exact v0.11.2 failure mode.
+  v0.11.2 user report): the live splash is the games shell's `pz-moment` family (VERIFIED via a
+  user capture, 2026-07-05 — headline in `pz-moment__description`; the Play button's classes are
+  build-hashed CSS-module names, so the button MUST be matched by its text/aria name, the only
+  stable hook), the legacy `xwd__` modal shapes stay netted, and a text anchor on the "Ready to
+  start solving" headline catches the next rename; only VISIBLE splashes count (a moment hidden
+  with `display:none` reads as cleared). The probe (MT-01) reports a `splash` line, plus a
+  failing `splash text without button` line when the headline is rendered but no button was
+  found — the exact v0.11.2 failure mode.
 - **Accept:** Given the fake page with a splash, then Play is clicked and the session proceeds;
   given a splash that ignores synthetic clicks, then the prompt is spoken and the session starts
   once the splash is cleared by hand.

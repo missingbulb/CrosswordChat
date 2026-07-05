@@ -58,12 +58,15 @@ export const SEL = {
   // splash — REQ-LIFE-005/006/016). ⚠️ Best-effort; consumers pair this with text
   // and visibility checks.
   modal: '[class*="xwd__modal"], [class*="pz-moment"]',
-  // The pre-puzzle splash/veil containers (REQ-LIFE-016). ⚠️ Best-effort shapes. The
-  // live "Ready to start solving?" screen is rendered by the NYT *games shell*, not the
-  // crossword app — its classes are in the `pz-` family (pz-moment), so the xwd__ nets
-  // alone never matched it (user report, v0.11.2). splash.js additionally requires a
-  // Play-ish button inside, and falls back to anchoring on the headline text itself
-  // when no class net matches (markup drift must not blind us twice).
+  // The pre-puzzle splash/veil containers (REQ-LIFE-016). ✅ pz-moment VERIFIED live
+  // (user capture, 2026-07-05): the "Ready to start solving?" screen is rendered by
+  // the NYT *games shell*, not the crossword app — `pz-moment__content` holds a title
+  // (the PUZZLE NAME, e.g. "The Midi"), the headline copy in `pz-moment__description`,
+  // and a Play button whose classes are build-hashed CSS-module names
+  // (`_momentButton_e4jbe_2 _primary_e4jbe_37 …`) — NO stable class hook, which is why
+  // splash.js matches the button by its TEXT/aria name. The xwd__ shapes stay as
+  // legacy nets, and splash.js additionally anchors on the headline text itself when
+  // no class net matches (markup drift must not blind us twice — v0.11.2).
   splash: '[class*="xwd__modal"], [class*="xwd__start"], [class*="xwd__veil"], [class*="pz-moment"]',
 };
 

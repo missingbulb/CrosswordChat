@@ -29,7 +29,7 @@ describe('splash screen', () => {
     await expect(dismissSplash(document, { waitMs: 60, pollMs: 5 })).resolves.toBe(false);
     // …and waitForSplashClear resolves the moment the user clears it themselves.
     const waiting = waitForSplashClear(document, { waitMs: 500, pollMs: 5 });
-    document.querySelector('.pz-moment__container').remove();
+    document.querySelector('.pz-moment__content').remove();
     await expect(waiting).resolves.toBe(true);
   });
 
@@ -65,7 +65,7 @@ describe('splash screen', () => {
 
   test('REQ-LIFE-016: a splash hidden with display:none reads as already clear', () => {
     initFakeNyt(document, FIXTURE_PUZZLE, { splash: true });
-    document.querySelector('.pz-moment__container').style.display = 'none';
+    document.querySelector('.pz-moment__content').style.display = 'none';
     expect(findSplashPlayButton(document)).toBeNull();
   });
 });
