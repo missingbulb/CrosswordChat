@@ -8,8 +8,14 @@
 //   - The live page renders asynchronously (React), so verification POLLS the DOM
 //     instead of reading it synchronously right after the last dispatch.
 // Further fallbacks if the live page ignores untrusted events: docs/FEASIBILITY.md §3.
+//
+// Pencil mode (REQ-PAGE-012): cells may carry a `pencil` flag; letters are typed with
+// the page's pencil toggle driven to match, and the toggle is restored afterwards so
+// the user's own typing mode is never stolen. Success stays judged on letters — a page
+// whose pencil markup drifted degrades the softening (REQ-ANS-019), not answering.
 
 import { snapshot, cellElements } from './reader.js';
+import { SEL, CLS } from './selectors.js';
 
 const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -49,41 +55,88 @@ function typeKey(document, key, cellEl) {
   fire(target, 'keyup', init);
 }
 
+function pencilToggle(document) {
+  return document.querySelector(SEL.pencilToggle);
+}
+
+function pencilModeOn(document) {
+  const el = pencilToggle(document);
+  if (!el) return false;
+  const pressed = el.getAttribute('aria-pressed');
+  if (pressed != null) return pressed === 'true';
+  return (el.getAttribute('class') ?? '').split(/\s+/).includes(CLS.pencilActive);
+}
+
+/** Drive the page's pencil toggle to `on`; a no-op when absent or already there. */
+async function setPencilMode(document, on, settleMs) {
+  const el = pencilToggle(document);
+  if (!el || pencilModeOn(document) === on) return;
+  fire(el, 'mousedown', {});
+  fire(el, 'mouseup', {});
+  fire(el, 'click', {});
+  await settle(settleMs);
+}
+
 /**
- * Poll the grid until `check(cellsByIndex)` passes or the deadline expires.
- * The final snapshot is returned either way, so failures stay honest (REQ-ANS-013).
+ * Poll the grid until `want(cellsByIndex)` passes or the deadline expires; at the
+ * deadline `judge(cellsByIndex)` decides `ok`. The final snapshot is returned either
+ * way, so failures stay honest (REQ-ANS-013).
  */
-async function verify(document, check, { verifyTimeoutMs, pollMs }) {
+async function verify(document, want, judge, { verifyTimeoutMs, pollMs }) {
   const deadline = Date.now() + verifyTimeoutMs;
   for (;;) {
     const snap = snapshot(document);
     const byIndex = new Map(snap.cells.map((c) => [c.index, c]));
-    if (check(byIndex)) return { ok: true, snapshot: snap };
-    if (Date.now() >= deadline) return { ok: false, snapshot: snap };
+    if (want(byIndex)) return { ok: true, snapshot: snap };
+    if (Date.now() >= deadline) return { ok: judge(byIndex), snapshot: snap };
     await settle(pollMs);
   }
 }
 
 /**
  * @param {Document} document
- * @param {Array<{index: number, letter: string}>} cells
+ * @param {Array<{index: number, letter: string, pencil?: boolean}>} cells
  * @param {{verifyTimeoutMs?: number, pollMs?: number, keySettleMs?: number}} [opts]
  * @returns {Promise<{ok: boolean, snapshot: object}>} ok = every targeted cell now shows its letter
  */
 export async function enterAnswer(document, cells, opts = {}) {
   const { verifyTimeoutMs = 1500, pollMs = 50, keySettleMs = 15 } = opts;
   const els = cellElements(document);
-  for (const { index, letter } of cells) {
-    const el = els[index];
-    if (!el) return { ok: false, snapshot: snapshot(document) };
-    clickCell(el);
-    await settle(keySettleMs); // let the app apply the selection before we type into it
-    typeKey(document, String(letter).toUpperCase(), el);
-    await settle(keySettleMs);
+  const wasPencilOn = pencilModeOn(document);
+  // Batch by target mode (pen first) so the toggle is clicked at most three times:
+  // pen batch, pencil batch, restore.
+  const batches = [
+    cells.filter((c) => !c.pencil),
+    cells.filter((c) => c.pencil),
+  ].filter((batch) => batch.length);
+  let missingCell = false;
+  for (const batch of batches) {
+    await setPencilMode(document, Boolean(batch[0].pencil), keySettleMs);
+    for (const { index, letter } of batch) {
+      const el = els[index];
+      if (!el) {
+        missingCell = true;
+        break;
+      }
+      clickCell(el);
+      await settle(keySettleMs); // let the app apply the selection before we type into it
+      typeKey(document, String(letter).toUpperCase(), el);
+      await settle(keySettleMs);
+    }
+    if (missingCell) break;
   }
+  await setPencilMode(document, wasPencilOn, keySettleMs); // the user's toggle, not ours
+  if (missingCell) return { ok: false, snapshot: snapshot(document) };
+  const lettersLanded = (byIndex) =>
+    cells.every(({ index, letter }) => byIndex.get(index)?.letter === String(letter).toUpperCase());
+  // Pencil state is only awaited where the caller stated an intent ('pencil' present),
+  // and even then it never fails a write whose letters all landed (REQ-PAGE-012).
+  const pencilLanded = (byIndex) =>
+    cells.every((c) => !('pencil' in c) || Boolean(byIndex.get(c.index)?.penciled) === Boolean(c.pencil));
   return verify(
     document,
-    (byIndex) => cells.every(({ index, letter }) => byIndex.get(index)?.letter === String(letter).toUpperCase()),
+    (byIndex) => lettersLanded(byIndex) && pencilLanded(byIndex),
+    lettersLanded,
     { verifyTimeoutMs, pollMs },
   );
 }
@@ -103,9 +156,6 @@ export async function clearEntry(document, cellIndices, opts = {}) {
     typeKey(document, 'Backspace', el);
     await settle(keySettleMs);
   }
-  return verify(
-    document,
-    (byIndex) => cellIndices.every((i) => (byIndex.get(i)?.letter ?? '') === ''),
-    { verifyTimeoutMs, pollMs },
-  );
+  const empty = (byIndex) => cellIndices.every((i) => (byIndex.get(i)?.letter ?? '') === '');
+  return verify(document, empty, empty, { verifyTimeoutMs, pollMs });
 }

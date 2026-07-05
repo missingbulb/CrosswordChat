@@ -31,6 +31,8 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 | **Homophone set** | Words pronounced (near-)identically with different spellings: *plain/plane*, *ate/eight*. The user says "homonyms"; we implement homophones. |
 | **Utterance** | One chunk of recognized speech, delivered as an n-best list of alternative transcripts. |
 | **Command** | An utterance that controls the conversation (*next*, *hint*, *repeat*, ...) rather than answering. |
+| **Pencil mode** | NYT's "not sure" marker: letters typed with the toolbar pencil toggle on render grayed, signalling uncertainty. A *penciled* letter is one in that state. |
+| **Malformed entry** | An entry that lost one or more of its letters to an overriding answer (REQ-ANS-012/016) — what remains no longer reads as the word it was. |
 
 ## 2. Scope & assumptions
 
@@ -406,8 +408,10 @@ entities. The readout must convey what the eye would see.
   letters landing), the click is NOT followed — following would silently discard the answer.
 - **Accept:** Given a session on 1A — listening, mid-readout, or in a sub-mode — when the page
   selection changes to 3D (user click), then 3D is read; when selection events arrive for the clue
-  we already track, nothing happens.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-13.
+  we already track, nothing happens; when several clicks land in quick succession (faster than
+  readouts play), then only the LAST clicked clue is read — superseded clicks produce no readout.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (rapid clicks);
+  manual MT-13.
 
 #### REQ-NAV-009 — "back" goes to the previous clue
 - **Status:** Active · **Level:** MUST
@@ -476,7 +480,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
    (REQ-ANS-002); expand token-level homophones (REQ-ANS-003); join tokens to a candidate word
    (REQ-ANS-001, REQ-ANS-015). The unexpanded join of the top alternative is the **literal**.
    An utterance that is spoken letters throughout (bare letters, letter names, NATO) also yields
-   the joined letters as a candidate (REQ-ANS-019) — spelling without entering spelling mode.
+   the joined letters as a candidate (REQ-ANS-020) — spelling without entering spelling mode.
 3. Keep candidates that are pure A–Z; drop candidates the user already rejected (REQ-ANS-010).
 4. Gate by entry length (REQ-ANS-005). No length match → report per REQ-ANS-007.
 5. Among length-fitting candidates, check the pattern. Exactly one pattern-fitting spelling from the
@@ -626,6 +630,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   input). The bare word *anyway* MUST work: STT frequently keeps only that word from phrases like
   "say it anyway". When no candidate is pending, an *anyway* phrase MUST fall through to answer
   evaluation (ANYWAY can itself be a grid answer). Override MUST never happen implicitly.
+  Overriding leaves the crossing entries that lost letters malformed; REQ-ANS-019 softens their
+  remaining letters to pencil in the same write.
 - **Accept:** Given a collision report for HEIST, when the user says "enter it anyway", then the grid
   reads HEIST and the conversation advances.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-07.
@@ -661,7 +667,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   *yes* replaces, *no* keeps and re-prompts. Offering the identical word just confirms and advances.
 - For a fully filled entry only the length gate applies — its letters are exactly what a new
   answer would replace, so they are not collision-checked (collisions, REQ-ANS-008, are about
-  *partially* filled entries whose letters come from crossings).
+  *partially* filled entries whose letters come from crossings). A confirmed replacement that
+  changes letters malforms the crossings that held them, exactly like an override — REQ-ANS-019
+  applies here too.
 - **Accept:** Given filled HEART and utterance "heist" (fits), then the confirm question is asked and
   "yes" rewrites the entry.
 - **Verify:** unit `tests/unit/machine.test.js`.
@@ -670,7 +678,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Status:** Active · **Level:** MUST
 - *undo* (STT often hears it as "undue" — both MUST work) MUST revert the most recent answer the
   session entered: every cell of that entry returns to what it held just before the entry —
-  previously empty cells are cleared, overwritten letters are restored. The conversation MUST move
+  previously empty cells are cleared, overwritten letters are restored (with the pencil state they
+  had), and any letters the entry softened to pencil (REQ-ANS-019) are rewritten back in pen — the
+  penciling is part of the same undo step, never left behind. The conversation MUST move
   back to that clue (page highlight synced) and confirm with a single word ("Undone.") — the user
   knows what to do next. With no entry to revert (none made yet, or right after an undo), reply
   that there is nothing to undo. Undo history is one level deep — a second consecutive *undo* does
@@ -700,7 +710,29 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   spelling H-E-A-R-T still auto-evaluates to HEART at the fifth letter. Given "E, A" then done, the
   report offers 5 letters or 3 for the open squares.
 
-#### REQ-ANS-019 — Spelled-out answers need no mode
+#### REQ-ANS-019 — Overriding softens the malformed crossings to pencil
+- **Status:** Active · **Level:** MUST
+- When an answer is written over letters that disagree with it — a collision override
+  (REQ-ANS-012) or a confirmed replacement (REQ-ANS-016) — every crossing entry that loses a
+  letter to it is left malformed: some of its letters now belong to the new word, so the rest can
+  no longer be trusted. In the same write (REQ-PAGE-012), each remaining letter of every malformed
+  entry MUST be rewritten in pencil mode, EXCEPT letters that are part of *another* completely
+  filled entry (that crossing still corroborates them — they keep their pen) and letters already
+  penciled (nothing to soften). The new answer itself is always written in pen — the user just
+  asserted it. Cells the new answer occupies are never pencil candidates (after the write they
+  belong to a completely filled entry: the answer). An entry that overwrites nothing, or only
+  letters identical to its own, pencils nothing.
+- Rationale: the grid should keep signalling which letters are certain. The overridden crossing's
+  survivors are exactly as unverified as the letters the user just chose to discard.
+- **Accept:** Given A1 `HEA_T` with its crossing D3 also holding B and U further down (D3's other
+  crossings unfilled), when HEIST is entered *anyway*, then HEIST lands in pen and D3's B and U are
+  rewritten penciled. Given the same override but with the B corroborated by a completely filled
+  crossing entry, then only the U is penciled. Given HEART entered into empty cells, then nothing
+  is penciled.
+- **Verify:** unit `tests/unit/model.test.js` (plan), `tests/unit/machine.test.js` (ENTER payload,
+  undo); integration `tests/integration/page-adapter.test.js` (pencil lands); manual MT-29.
+
+#### REQ-ANS-020 — Spelled-out answers need no mode
 - **Status:** Active · **Level:** MUST
 - An utterance made up entirely of spoken letters — bare letters ("H, E, A, R, T"), letter-name
   words (aitch, bee, are, ...) or NATO words — MUST be evaluated as the joined word straight from
@@ -717,7 +749,6 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   back; given "india", then the word INDIA is evaluated, not the letter I; given "are you" on a
   2-entry, then RU fits.
 - **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/verbalizer.test.js`.
 
 ---
 
@@ -876,12 +907,19 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - The conversation MUST NOT mistake its own TTS voice for user input. Two mechanisms: (a) at the
   machine level, LISTEN is never emitted in the same action batch as SAY — the formal answer mic
   opens only after speech completes; (b) the barge-in mic that runs during speech (REQ-SPCH-009)
-  MUST discard any utterance that reads as a contiguous chunk of the words currently being spoken,
-  checked across the whole n-best list — if ANY alternative matches, the utterance is treated as
-  echo and ignored.
+  MUST discard any utterance where ANY n-best alternative reads as a *substantial* contiguous
+  chunk of the words currently being spoken (or as the entire utterance). Short fragments are
+  ambiguous — prompts deliberately solicit one-word replies that are part of the prompt text
+  ("Yes or no", "say anyway", "First or second") — so a short in-prompt fragment MUST be kept
+  when any alternative parses as a command or contextual reply, and discarded otherwise.
+  Accepted residual risk: an echo recognized as ONLY a bare command word passes the guard; in
+  practice echo carries neighboring prompt words on some alternative, which the substantial-chunk
+  check catches.
 - **Accept:** Given any machine trace, then no action batch contains both SAY and LISTEN; given a
-  mid-speech transcript repeating part of the spoken text, then it is discarded and the speech
-  continues.
+  mid-speech transcript repeating a multi-word span of the spoken text, then it is discarded and
+  the speech continues; given a short non-command fragment of the spoken text, then it is
+  discarded; given "yes" barged into a prompt ending in "Yes or no.", then it is processed as
+  the reply.
 - **Verify:** unit `tests/unit/machine.test.js` (action-order invariant),
   `tests/unit/orchestrator.test.js` (echo guard).
 
@@ -1021,6 +1059,22 @@ any time, every selector lives in one file with a self-diagnosing probe.
   tests) may reference NYT DOM specifics (the `xwd__` class family). Enforced mechanically.
 - **Accept:** Given the source tree, then a grep for `xwd__` outside the allowed paths finds nothing.
 - **Verify:** unit `tests/unit/arch.test.js`.
+
+#### REQ-PAGE-012 — Pencil-mode writing and reading
+- **Status:** Active · **Level:** MUST
+- The adapter MUST support NYT's pencil mode end to end. Writing: `enterAnswer` cells MAY carry a
+  `pencil` flag; the adapter drives the page's pencil toggle (toolbar button) around the affected
+  keystrokes so flagged letters land penciled and unflagged letters land in pen, and it MUST
+  restore the toggle to the state the user left it in afterwards. Reading: the snapshot MUST
+  report each cell's `penciled` state. Verification: entry success (`ok`, REQ-PAGE-007) stays
+  judged on letters — pencil state is polled and verified while time remains, but a write whose
+  letters all landed MUST NOT be reported failed over pencil state alone (a toolbar redesign must
+  degrade the softening, REQ-ANS-019, not answering itself). The probe (REQ-PAGE-009) MUST cover
+  the pencil toggle.
+- **Accept:** Given the fake page, when cells are entered with mixed pencil flags, then letters and
+  penciled states match per cell and the toggle returns to its prior state (both from pen and from
+  pencil); given a page without the toggle, then letters still land and `ok` reflects the letters.
+- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01, MT-29.
 
 ---
 

@@ -78,3 +78,49 @@ describe('puzzle model', () => {
     expect(model.firstUnfilled()).toBe('A6');
   });
 });
+
+describe('pencil semantics (REQ-ANS-019)', () => {
+  test('REQ-ANS-019: pencilFor mirrors per-cell pencil state, aligned with the pattern', () => {
+    const model = buildModel(heartSnapshot(['HEa.T', '.....', '.....', '.....', '.....']));
+    expect(model.patternFor('A1')).toEqual(['H', 'E', 'A', null, 'T']); // case-independent letters
+    expect(model.pencilFor('A1')).toEqual([false, false, true, false, false]);
+    expect(model.pencilFor('D3')).toEqual([true, false, false, false, false]);
+  });
+
+  test('REQ-ANS-019: the plan pencils the malformed crossing\'s surviving letters', () => {
+    // A1 reads HEA_T; its crossing D3 also holds B and U further down. HEIST loses
+    // D3's A, so B and U (corroborated by nothing full) get penciled.
+    const model = buildModel(heartSnapshot(['HEA.T', '..B..', '..U..', '.....', '.....']));
+    expect(model.pencilPlanFor('A1', 'HEIST')).toEqual([
+      { index: 7, letter: 'B' },
+      { index: 12, letter: 'U' },
+    ]);
+  });
+
+  test('REQ-ANS-019: letters that belong to another completely filled entry keep their pen', () => {
+    // Same override, but D3's B is also the B of the fully filled A6 (EMBER) — a full
+    // definition still corroborates it, so only the U is softened.
+    const model = buildModel(heartSnapshot(['HEA.T', 'EMBER', '..U..', '.....', '.....']));
+    expect(model.pencilPlanFor('A1', 'HEIST')).toEqual([{ index: 12, letter: 'U' }]);
+  });
+
+  test('REQ-ANS-019: several collisions pencil all their crossings; the plan never includes the new word\'s own cells', () => {
+    // HOIST into HEA_T collides at positions 1 (E→O) and 2 (A→I): both D2 and D3 are
+    // malformed; each contributes its surviving letter, and none of A1's cells appear.
+    const model = buildModel(heartSnapshot(['HEA.T', '.MB..', '.....', '.....', '.....']));
+    expect(model.pencilPlanFor('A1', 'HOIST')).toEqual([
+      { index: 6, letter: 'M' }, // D2's survivor
+      { index: 7, letter: 'B' }, // D3's survivor
+    ]);
+  });
+
+  test('REQ-ANS-019: nothing to soften — no conflicts, or survivors already penciled', () => {
+    expect(buildModel(heartSnapshot()).pencilPlanFor('A1', 'HEART')).toEqual([]);
+    // Existing letters agree with the word → no crossing is malformed.
+    const agreeing = buildModel(heartSnapshot(['HEA.T', '..B..', '.....', '.....', '.....']));
+    expect(agreeing.pencilPlanFor('A1', 'HEART')).toEqual([]);
+    // The B survivor is already penciled — only the pen U needs the rewrite.
+    const soft = buildModel(heartSnapshot(['HEA.T', '..b..', '..U..', '.....', '.....']));
+    expect(soft.pencilPlanFor('A1', 'HEIST')).toEqual([{ index: 12, letter: 'U' }]);
+  });
+});

@@ -73,9 +73,18 @@ function moveTo(state, clueId) {
  * excluded from re-matching, and an "I said X" correction is evaluated after the revert.
  */
 function startUndo(state, { sayKind = 'undone', rejected = [], correction = null } = {}) {
-  const { clueId, before } = state.lastEntry;
-  const cells = state.model.clue(clueId).cellIndices
-    .map((index, i) => ({ index, letter: before[i] })); // letter null → clear the cell
+  const { clueId, before, beforePencil = [], penciled = [] } = state.lastEntry;
+  const cells = [
+    // letter null → clear the cell; overwritten letters return with the pencil
+    // state they had before the entry.
+    ...state.model.clue(clueId).cellIndices
+      .map((index, i) => (before[i] && beforePencil[i]
+        ? { index, letter: before[i], pencil: true }
+        : { index, letter: before[i] })),
+    // REQ-ANS-019: letters the entry softened go back to pen — explicitly, since
+    // only the mode changes (the letters are already in the grid).
+    ...penciled.map(({ index, letter }) => ({ index, letter, pencil: false })),
+  ];
   return {
     state: {
       ...moveTo(state, clueId),
@@ -439,19 +448,31 @@ function onTtsDone(state) {
   if (state.after === 'end') return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
   if (state.after === 'enter') {
     const word = state.pendingEntry.word;
+    // REQ-ANS-019: crossings that lose a letter to this write are malformed — their
+    // surviving letters ride the same ENTER as pencil rewrites.
+    const penciled = state.model.pencilPlanFor(state.clueId, word);
     return {
       // Remember what the entry held BEFORE this write, so "undo" can revert it
-      // exactly — clearing what we added, restoring what we overwrote (REQ-ANS-017).
+      // exactly — clearing what we added, restoring what we overwrote (REQ-ANS-017),
+      // with its pencil state, and un-softening what we penciled (REQ-ANS-019).
       state: {
         ...state,
         phase: 'entering',
-        lastEntry: { clueId: state.clueId, before: state.model.patternFor(state.clueId) },
+        lastEntry: {
+          clueId: state.clueId,
+          before: state.model.patternFor(state.clueId),
+          beforePencil: state.model.pencilFor(state.clueId),
+          penciled,
+        },
       },
       actions: [{
         type: 'ENTER',
         clueId: state.clueId,
         word,
-        cells: state.model.cellsForWord(state.clueId, word),
+        cells: [
+          ...state.model.cellsForWord(state.clueId, word),
+          ...penciled.map((c) => ({ ...c, pencil: true })),
+        ],
       }],
     };
   }

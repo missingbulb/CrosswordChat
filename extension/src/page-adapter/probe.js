@@ -26,6 +26,10 @@ export function probe(document) {
   add('clue texts', clueTexts >= 2 && clueTexts === clueItems,
     `${clueTexts} text node(s) for ${clueItems} item(s)`);
 
+  const pencilToggles = count(SEL.pencilToggle);
+  add('pencil toggle', pencilToggles >= 1,
+    `${pencilToggles} match(es) for ${SEL.pencilToggle} (REQ-PAGE-012)`);
+
   let snap = null;
   try {
     snap = snapshot(document);

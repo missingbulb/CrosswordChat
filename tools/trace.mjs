@@ -40,7 +40,7 @@ for (let i = 0; i < lines.length; i++) {
     const id = heading[1];
     let status = null;
     for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
-      const m = lines[j].match(/\*\*Status:\*\*\s*(Active|Planned)/);
+      const m = lines[j].match(/\*\*Status:\*\*\s*(Active|Planned|Retired)/);
       if (m) {
         status = m[1];
         break;
@@ -101,9 +101,9 @@ for (const [a, ids] of byArea) {
   for (const id of ids) {
     const { status } = defined.get(id);
     const refs = [...(coverage.get(id) ?? [])];
-    const mark = status === 'Planned' ? '◌' : refs.length ? '✅' : '❌';
-    const detail = status === 'Planned'
-      ? 'Planned (not enforced)'
+    const mark = status !== 'Active' ? '◌' : refs.length ? '✅' : '❌';
+    const detail = status !== 'Active'
+      ? `${status} (not enforced)`
       : refs.length ? refs.join(', ') : 'NO COVERAGE';
     console.log(`  ${mark} ${id}  ${detail}`);
   }

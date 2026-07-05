@@ -119,7 +119,7 @@ describe('evaluate', () => {
       .toBe('unintelligible');
   });
 
-  test('REQ-ANS-019: an all-letters utterance is a candidate without spelling mode', () => {
+  test('REQ-ANS-020: an all-letters utterance is a candidate without spelling mode', () => {
     // Letter names, one utterance, normal pipeline — spelled back since it differs from the literal.
     expect(evaluate({ alternatives: [{ transcript: 'aitch e a are tea' }], entryLength: 5, pattern: P('.....') }))
       .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: true });
@@ -131,7 +131,7 @@ describe('evaluate', () => {
       .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: false });
   });
 
-  test('REQ-ANS-019: the spelled reading requires every token to be a letter', () => {
+  test('REQ-ANS-020: the spelled reading requires every token to be a letter', () => {
     // 'INDIA' alone is the word INDIA (a plausible answer), not the letter I.
     expect(evaluate({ alternatives: [{ transcript: 'india' }], entryLength: 5, pattern: P('.....') }))
       .toEqual({ kind: 'fit', word: 'INDIA', spelledDifferently: false });
@@ -141,7 +141,7 @@ describe('evaluate', () => {
     expect(out.variants.map((v) => v.word)).not.toContain('CHORSE');
   });
 
-  test('REQ-ANS-019: length gate picks between the literal and the spelled reading', () => {
+  test('REQ-ANS-020: length gate picks between the literal and the spelled reading', () => {
     // "are you" on a 2-cell entry: AREYOU (6) fails, spelled R-U fits.
     expect(evaluate({ alternatives: [{ transcript: 'are you' }], entryLength: 2, pattern: P('..') }))
       .toEqual({ kind: 'fit', word: 'RU', spelledDifferently: true });

@@ -81,7 +81,7 @@ export function evaluate({ alternatives, entryLength, pattern, rejected = [], li
     if (!tokens.length) return;
     if (altIndex === 0 || literalTop === null) literalTop ??= tokens.join('');
     if (!literalOnly) {
-      // REQ-ANS-019: an utterance that is spoken letters throughout (bare, letter
+      // REQ-ANS-020: an utterance that is spoken letters throughout (bare, letter
       // names, NATO) is also a candidate as the spelled word — no mode needed.
       // Strict all-or-nothing: one non-letter token and the reading is off. Pushed
       // first so mismatch reports lead with it, not the letter-name concatenation;

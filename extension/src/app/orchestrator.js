@@ -6,6 +6,12 @@ import { render } from '../conversation/phrases.js';
 import { parseCommand } from '../matching/commands.js';
 import { toLetters } from '../matching/normalize.js';
 
+// Echo guard threshold (REQ-SPCH-005): a heard chunk of this many letters found inside
+// the text we're speaking is decisive proof of our own voice. Below it, a fragment is
+// ambiguous — prompts solicit one-word replies ("Yes or no", "say anyway") that are,
+// by construction, substrings of the prompt itself.
+export const ECHO_MIN_LETTERS = 8;
+
 /**
  * @param {object} deps
  * @param {{speak(text):Promise, cancel():void}} deps.tts
@@ -55,13 +61,25 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         }
         lastActivityAt = now();
         const top = result.alternatives[0]?.transcript ?? '';
-        // Echo guard: if ANY alternative reads as a contiguous chunk of the spoken
-        // text, the whole utterance is our own voice — ignore it (REQ-SPCH-005).
-        const isEcho = result.alternatives.some((a) => {
-          const heard = toLetters(a.transcript);
-          return heard && spokenLetters.includes(heard);
-        });
-        if (isEcho || !toLetters(top)) {
+        // Echo guard (REQ-SPCH-005): alternatives that read as a contiguous chunk of
+        // the spoken text are evidence of our own voice coming back through the mic.
+        // A substantial chunk (or the whole prompt) on ANY alternative is decisive.
+        // A short fragment alone is not: prompts invite one-word replies that are
+        // part of the prompt text ("Yes or no", "say anyway", "First or second"), so
+        // a short fragment only counts as echo when NO alternative parses as a
+        // command/reply the user could be giving deliberately. Residual risk
+        // (accepted): recognition of our own voice that yields ONLY a bare command
+        // word slips through — in practice echo carries neighboring words on some
+        // alternative, which the long-chunk check catches.
+        const echoChunks = result.alternatives
+          .map((a) => toLetters(a.transcript))
+          .filter((heard) => heard && spokenLetters.includes(heard));
+        const strongEcho = echoChunks.some(
+          (heard) => heard.length >= ECHO_MIN_LETTERS || heard === spokenLetters,
+        );
+        const weakEchoOnly = echoChunks.length > 0
+          && !result.alternatives.some((a) => parseCommand(a.transcript));
+        if (strongEcho || weakEchoOnly || !toLetters(top)) {
           if (!speaking) return;
           continue;
         }
@@ -187,7 +205,13 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       lastActivityAt = now();
       if (event.kind === 'solved' || event.kind === 'selection') stt.stop();
       if (event.kind === 'selection') {
-        // REQ-NAV-008: clicking another clue takes effect NOW — cut any readout short.
+        // REQ-NAV-008: only the newest click matters. Clicks can arrive faster than
+        // readouts play; a superseded selection still waiting in the queue would
+        // produce a full readout of a clue the user has already moved past.
+        for (let i = queue.length - 1; i >= 0; i--) {
+          if (queue[i].type === 'PAGE_EVENT' && queue[i].kind === 'selection') queue.splice(i, 1);
+        }
+        // Clicking another clue takes effect NOW — cut any readout short.
         // Our own SELECT_CLUE echoes back with the clue we already track, so it never
         // cancels; neither does a click the machine won't follow (entry in flight).
         const sel = event.snapshot?.selection?.clueId;

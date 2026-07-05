@@ -148,6 +148,58 @@ describe('click mid-readout (REQ-NAV-008)', () => {
     expect(spoken[1]).toContain('Glowing coal'); // D2's clue text
     expect(spoken[2]).toContain('Goodbye');
   });
+
+  test('rapid clicks: superseded selections never produce a readout — only the last click is read', async () => {
+    const spoken = [];
+    const readout = deferred(); // the opening A1 readout, held in-flight
+    let speaks = 0;
+    let listening = false;
+    let pendingBarge = null;
+    let emitPageEvent = null;
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            speaks += 1;
+            return speaks === 1 ? readout.p : Promise.resolve();
+          },
+          cancel: () => readout.resolve(),
+        },
+        stt: {
+          listenOnce: () => {
+            if (listening) { // the real post-readout LISTEN: end the session
+              return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+            }
+            return new Promise((res) => { pendingBarge = res; }); // barge-in cycle: quiet mic
+          },
+          stop: () => {
+            pendingBarge?.({ error: 'aborted' });
+            pendingBarge = null;
+          },
+        },
+        ui: { listening: (on) => { listening = on; } },
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          watch: (cb) => { emitPageEvent = cb; },
+          unwatch: () => { emitPageEvent = null; },
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+
+    // Two clicks land back-to-back while the opening readout is still playing:
+    // first 2 Down, then 6 Across. Only the LAST click should ever be read.
+    await new Promise((r) => setTimeout(r, 0));
+    emitPageEvent('selection', heartSnapshot(undefined, { selection: { clueId: 'D2' } }));
+    emitPageEvent('selection', heartSnapshot(undefined, { selection: { clueId: 'A6' } }));
+    await ended;
+
+    expect(spoken.some((s) => s.includes('Glowing coal'))).toBe(false); // D2 was superseded
+    expect(spoken[1]).toContain('Dying fire bit'); // A6, the last click
+    expect(spoken[2]).toContain('Goodbye');
+  });
 });
 
 describe('stop-only barge-in (REQ-CMD-006)', () => {
@@ -237,6 +289,120 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
     // The echo produced no answer flow: only the full readout and the goodbye spoke.
     expect(spoken).toHaveLength(2);
     expect(spoken[1]).toContain('Goodbye');
+  });
+
+  test('REQ-SPCH-005: a short NON-command fragment of the prompt is still echo', async () => {
+    const spoken = [];
+    const readout = deferred();
+    let speaks = 0;
+    let listenCalls = 0;
+    let listening = false;
+    let pendingBarge = null;
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            speaks += 1;
+            return speaks === 1 ? readout.p : Promise.resolve();
+          },
+          cancel: () => {},
+        },
+        stt: {
+          listenOnce: () => {
+            if (listening) { // the real post-readout LISTEN: end the session
+              return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+            }
+            listenCalls += 1;
+            // 1st barge cycle: a SHORT fragment of our own readout ("organ" — 5
+            // letters, below the substantial-chunk threshold, not a command).
+            if (listenCalls === 1) {
+              return Promise.resolve({ alternatives: [{ transcript: 'organ', confidence: 0.8 }] });
+            }
+            // 2nd cycle: quiet while the readout finishes naturally.
+            return new Promise((res) => {
+              pendingBarge = res;
+              queueMicrotask(() => readout.resolve());
+            });
+          },
+          stop: () => {
+            pendingBarge?.({ error: 'aborted' });
+            pendingBarge = null;
+          },
+        },
+        ui: { listening: (on) => { listening = on; } },
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          watch: () => {},
+          unwatch: () => {},
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+    await ended;
+    // "organ" was discarded as echo — the readout played to the end, then goodbye.
+    expect(spoken).toHaveLength(2);
+    expect(spoken[1]).toContain('Goodbye');
+  });
+
+  test('REQ-SPCH-005: "yes" barged into the "Yes or no." prompt is the reply, not echo', async () => {
+    const spoken = [];
+    const confirmPrompt = deferred(); // the replace-confirm prompt, held in-flight
+    const entered = [];
+    let listening = false;
+    let formalListens = 0;
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            // Hold only the replace-confirm prompt open so the user can barge into it.
+            return text.includes('Yes or no') ? confirmPrompt.p : Promise.resolve();
+          },
+          cancel: () => confirmPrompt.resolve(),
+        },
+        stt: {
+          listenOnce: () => {
+            if (listening) { // formal LISTEN cycles
+              formalListens += 1;
+              return Promise.resolve(formalListens === 1
+                ? { alternatives: [{ transcript: 'panda', confidence: 0.9 }] } // triggers replace-confirm
+                : { alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+            }
+            // Barge-in cycle during the confirm prompt: the user answers "yes" —
+            // a word that literally appears in the prompt being spoken.
+            return Promise.resolve({ alternatives: [{ transcript: 'yes', confidence: 0.9 }] });
+          },
+          stop: () => {},
+        },
+        ui: { listening: (on) => { listening = on; } },
+        pageClient: {
+          // A1 already reads HEART, so a fitting new answer asks for confirmation.
+          snapshot: async () => heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }),
+          enterAnswer: async (cells) => {
+            entered.push(cells.map((c) => c.letter).join(''));
+            return {
+              ok: true,
+              snapshot: heartSnapshot(['PANDA', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }),
+            };
+          },
+          selectClue: async () => ({ ok: true }),
+          watch: () => {},
+          unwatch: () => {},
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+    await ended;
+
+    // The barged "yes" was honored: the replacement really landed.
+    expect(spoken[1]).toContain('Yes or no');
+    expect(spoken[2]).toContain('entering Panda');
+    expect(entered).toEqual(['PANDA']);
+    expect(spoken[3]).toContain('Dying fire bit'); // conversation moved on to 6 Across
+    expect(spoken[4]).toContain('Goodbye');
   });
 
   test('REQ-SPCH-009: an answer mid-readout cuts the speech and runs the fit flow', async () => {

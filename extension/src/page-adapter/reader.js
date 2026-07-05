@@ -26,15 +26,21 @@ function readCellTexts(cellEl) {
   if (texts.length) {
     const own = texts.map(ownText);
     const numIdx = own.findIndex((t) => /^\d+$/.test(t));
-    const letter = own.find((t, i) => i !== numIdx && t) ?? '';
-    return { letter: letter.toUpperCase(), number: numIdx >= 0 ? Number(own[numIdx]) : null };
+    const letterIdx = own.findIndex((t, i) => i !== numIdx && t);
+    const letter = letterIdx >= 0 ? own[letterIdx] : '';
+    // Pencil mode (REQ-PAGE-012): the marker sits on the letter <text> (or the cell <g>).
+    const penciled = Boolean(letter)
+      && (classHas(cellEl, CLS.cellPenciled) || (letterIdx >= 0 && classHas(texts[letterIdx], CLS.cellPenciled)));
+    return { letter: letter.toUpperCase(), penciled, number: numIdx >= 0 ? Number(own[numIdx]) : null };
   }
   // Fallback: older class-tagged markup (SEL.cellLetter / SEL.cellNumber).
   const letterEl = cellEl.querySelector(SEL.cellLetter);
   const numberEl = cellEl.querySelector(SEL.cellNumber);
   const letter = (letterEl?.textContent ?? '').trim().toUpperCase();
+  const penciled = Boolean(letter)
+    && (classHas(cellEl, CLS.cellPenciled) || (letterEl && classHas(letterEl, CLS.cellPenciled)));
   const numText = (numberEl?.textContent ?? '').trim();
-  return { letter, number: /^\d+$/.test(numText) ? Number(numText) : null };
+  return { letter, penciled, number: /^\d+$/.test(numText) ? Number(numText) : null };
 }
 
 function readGrid(document) {
@@ -47,8 +53,10 @@ function readGrid(document) {
     const y = Number(rect?.getAttribute('y') ?? 0);
     const block = classHas(el, CLS.cellBlock) || (rect && classHas(rect, CLS.cellBlock));
     const selected = classHas(el, CLS.cellSelected) || (rect && classHas(rect, CLS.cellSelected));
-    const { letter, number } = block ? { letter: '', number: null } : readCellTexts(el);
-    return { el, x, y, block, selected, letter, number };
+    const { letter, penciled, number } = block
+      ? { letter: '', penciled: false, number: null }
+      : readCellTexts(el);
+    return { el, x, y, block, selected, letter, penciled, number };
   });
 
   // Dimensions derived from geometry, not hardcoded (REQ-PAGE-002).
@@ -66,6 +74,7 @@ function readGrid(document) {
       col,
       block: c.block,
       letter: c.block ? '' : c.letter,
+      penciled: c.block ? false : c.penciled,
       number: c.number,
       _selected: c.selected,
       _el: c.el,

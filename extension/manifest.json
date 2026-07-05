@@ -4,6 +4,12 @@
   "version": "0.9.0",
   "description": "Solve the New York Times crossword conversationally: it reads clues aloud, you answer by voice.",
   "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": [
     "tts",
     "storage"
@@ -19,7 +25,13 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "CrosswordChat — start/stop voice session"
+    "default_title": "CrosswordChat — start/stop voice session",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
   "content_scripts": [
     {

@@ -26,6 +26,9 @@ export const SEL = {
   clueLabel: '.xwd__clue--label',
   clueText: '.xwd__clue--text',
   congrats: '.xwd__congrats-modal, [class*="xwd__congrats"]',
+  // The toolbar pencil-mode toggle (REQ-PAGE-012). ⚠️ UNVERIFIED against the live page —
+  // observed shape from the toolbar family; run probe()/MT-01 + MT-29 before trusting.
+  pencilToggle: 'button[aria-label="Pencil"], [class*="xwd__toolbar"] button[aria-label*="encil"]',
 };
 
 // Class *names* (no dots) checked via classList / class attribute substrings.
@@ -33,4 +36,9 @@ export const CLS = {
   cellBlock: 'xwd__cell--block',
   cellSelected: 'xwd__cell--selected',
   clueSelected: 'xwd__clue--selected',
+  // Penciled letters (REQ-PAGE-012): on the letter <text> (or the cell <g>). ⚠️ UNVERIFIED
+  // against the live page — same caveat as pencilToggle above.
+  cellPenciled: 'xwd__cell--penciled',
+  // Fallback pencil-toggle "on" signal for markup without aria-pressed.
+  pencilActive: 'xwd__toolbar--active',
 };

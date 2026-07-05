@@ -42,7 +42,8 @@ extension/src/
   page-adapter/    NYT DOM in, NYT DOM out. The ONLY place 'xwd__' may appear (REQ-PAGE-011).
     selectors.js     every selector/class, one file, probe-checked
     reader.js        DOM → Snapshot (grid cells, clue runs, selection, solved signal)
-    writer.js        enterAnswer/clearEntry via click + synthetic keydown, verified re-read
+    writer.js        enterAnswer/clearEntry via click + synthetic keydown, verified re-read;
+                     per-cell pencil mode via the toolbar toggle, user's state restored
     navigator.js     selectClue (click the clue list item)
     watcher.js       MutationObserver → {solved | selection | grid} events (session-scoped)
     probe.js         selector health report for the live page
@@ -90,7 +91,8 @@ import nothing from the impure layers. `app/orchestrator` is the only place all 
 {
   status: 'active' | 'solved' | 'not-found',
   size: { rows, cols },
-  cells: [{ index, row, col, block, letter /* '' if empty */, number /* or null */ }],
+  cells: [{ index, row, col, block, letter /* '' if empty */, penciled /* NYT pencil mode */,
+            number /* or null */ }],
   clues: [{ id: 'A1', number: 1, direction: 'across', runs: [{ text, italic }] }],
   selection: { clueId: 'A1' | null, cellIndex: number | null }
 }
@@ -105,8 +107,13 @@ DOM numbers (REQ-MODEL-001) — the page adapter stays dumb.
 `PAGE_EVENT{kind,snapshot}` · `TOGGLE_OFF`
 
 ### Machine actions (out of `machine.reduce`)
-`SAY{say:{kind,...}}` · `LISTEN` · `ENTER{clueId,word}` · `UNDO{clueId,cells}` ·
+`SAY{say:{kind,...}}` · `LISTEN` · `ENTER{clueId,word,cells}` · `UNDO{clueId,cells}` ·
 `SELECT_CLUE{clueId}` · `END`
+
+`cells` entries are `{index, letter, pencil?}` — an optional `pencil: true` writes the letter in
+NYT pencil mode, `pencil: false` explicitly rewrites it in pen (REQ-ANS-019: an override's ENTER
+carries the malformed crossings' surviving letters as pencil rewrites; the matching UNDO carries
+them back as pen rewrites).
 
 The machine is a **pure reducer**: same state + event → same actions, every time. That makes the
 entire dialog policy (the trickiest behavior in the product) unit-testable as data — every

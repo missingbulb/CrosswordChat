@@ -41,13 +41,16 @@ function entriesFromGrid(rows, cols, isBlock) {
  * Build the fake page inside `document.body` and wire up its behavior.
  * @param {Document} document
  * @param {object} puzzle  see puzzle.js
- * @param {{swallowKeys?: boolean, renderDelayMs?: number, legacyKeysOnly?: boolean}} [opts]
+ * @param {{swallowKeys?: boolean, renderDelayMs?: number, legacyKeysOnly?: boolean,
+ *          noPencilToggle?: boolean}} [opts]
  *   swallowKeys — page ignores ALL keyboard input (REQ-PAGE-007 / REQ-ANS-013 failure paths).
  *   renderDelayMs — DOM repaints lag state changes by this long, like the live React app.
  *   legacyKeysOnly — key handler ignores events whose legacy keyCode is 0, like handlers
  *     that read event.keyCode/which (bare synthetic {key} events construct those as 0).
+ *   noPencilToggle — render no pencil button, like a redesigned toolbar (REQ-PAGE-012
+ *     degradation path).
  */
-export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false } = {}) {
+export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false } = {}) {
   const { rows, cols, solution } = puzzle;
   const isBlock = (r, c) => solution[r][c] === '#';
   const entries = entriesFromGrid(rows, cols, isBlock);
@@ -58,6 +61,9 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
 
   const state = {
     letters: Array.from({ length: rows * cols }, () => ''),
+    // Pencil mode, like the live toolbar toggle: letters typed while ON render penciled.
+    penciled: Array.from({ length: rows * cols }, () => false),
+    pencilMode: false,
     selCell: entries[0]?.cells[0] ?? 0,
     selDir: 'across',
     solved: false,
@@ -66,6 +72,22 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   const SVG = 'http://www.w3.org/2000/svg';
   document.body.innerHTML = '';
   const main = document.createElement('main');
+
+  // Toolbar with the pencil toggle, like the live page (aria-pressed carries the state).
+  let pencilBtn = null;
+  if (!noPencilToggle) {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'xwd__toolbar';
+    pencilBtn = document.createElement('button');
+    pencilBtn.setAttribute('aria-label', 'Pencil');
+    pencilBtn.setAttribute('aria-pressed', 'false');
+    pencilBtn.addEventListener('click', () => {
+      state.pencilMode = !state.pencilMode;
+      pencilBtn.setAttribute('aria-pressed', String(state.pencilMode));
+    });
+    toolbar.append(pencilBtn);
+    main.append(toolbar);
+  }
 
   const boardWrap = document.createElement('div');
   boardWrap.className = 'xwd__board';
@@ -79,6 +101,7 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   const cellEls = [];
   const rectEls = [];
   const letterNodes = []; // the visible letter Text node per cell
+  const letterTextEls = []; // the letter <text> element per cell (carries the pencil class)
   const letterHiddenEls = []; // the nested aria-live copy per cell
   function cellText(x, y, anchor) {
     const t = document.createElementNS(SVG, 'text');
@@ -117,6 +140,7 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
         t.append(visible);
         g.append(t);
         letterNodes[i] = visible;
+        letterTextEls[i] = t;
         letterHiddenEls[i] = hidden;
       }
       svg.append(g);
@@ -177,6 +201,8 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
       // The live page mirrors state into the hidden aria-live copy; readers that use
       // textContent instead of own text nodes would see the letter doubled.
       letterHiddenEls[i].textContent = letter;
+      // Penciled letters render grayed; the marker class sits on the letter <text>.
+      letterTextEls[i].setAttribute('class', letter && state.penciled[i] ? 'xwd__cell--penciled' : '');
     });
     const entry = selectedEntry();
     rectEls.forEach((rect, i) => {
@@ -220,6 +246,9 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     const { key } = event;
     if (/^[a-zA-Z]$/.test(key)) {
       state.letters[state.selCell] = key.toUpperCase();
+      // Like the live app: the active toggle decides pen vs pencil, and retyping a
+      // letter in the other mode converts it.
+      state.penciled[state.selCell] = state.pencilMode;
       advanceWithin(selectedEntry());
       render();
       checkSolved();
@@ -227,11 +256,13 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
       const entry = selectedEntry();
       if (state.letters[state.selCell]) {
         state.letters[state.selCell] = '';
+        state.penciled[state.selCell] = false;
       } else {
         const pos = entry.cells.indexOf(state.selCell);
         if (pos > 0) {
           state.selCell = entry.cells[pos - 1];
           state.letters[state.selCell] = '';
+          state.penciled[state.selCell] = false;
         }
       }
       render();

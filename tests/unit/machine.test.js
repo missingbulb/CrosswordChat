@@ -428,7 +428,7 @@ describe('answers (ANS)', () => {
     expect(says(done)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
   });
 
-  test('REQ-ANS-019: a spelled-out answer works straight from normal listening — no mode', () => {
+  test('REQ-ANS-020: a spelled-out answer works straight from normal listening — no mode', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const fit = s.step(heard('aitch e a are tea')); // letter names, one utterance
     expect(says(fit)[0]).toMatchObject({ kind: 'fit', word: 'HEART', spelledDifferently: true });
@@ -522,6 +522,87 @@ describe('answers (ANS)', () => {
 
     const s2 = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     expect(says(s2.step(heard('undo')))[0].kind).toBe('nothing-to-undo');
+  });
+
+  test('REQ-ANS-019: the override\'s ENTER also pencils the malformed crossing\'s surviving letters', () => {
+    // A1 reads HEA_T; D3 also holds B (from full A6 = EMBER) and a lone U. Overriding
+    // with HEIST malforms D3: the U is softened to pencil in the SAME write; the B
+    // keeps its pen (EMBER, a full entry, still corroborates it).
+    const s = listening(heartSnapshot(['HEA.T', 'EMBER', '..U..', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heist'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('anyway'));
+    const enter = s.step({ type: 'TTS_DONE' })[0];
+    expect(enter).toMatchObject({ type: 'ENTER', clueId: 'A1', word: 'HEIST' });
+    expect(enter.cells).toEqual([
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' }, { index: 2, letter: 'I' },
+      { index: 3, letter: 'S' }, { index: 4, letter: 'T' },
+      { index: 12, letter: 'U', pencil: true },
+    ]);
+  });
+
+  test('REQ-ANS-019: a clean fit pencils nothing — the ENTER carries only the word', () => {
+    const s = listening(heartSnapshot(['HEA.T', '..B..', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heart')); // agrees with every existing letter
+    const enter = s.step({ type: 'TTS_DONE' })[0];
+    expect(enter.cells).toEqual([
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' }, { index: 2, letter: 'A' },
+      { index: 3, letter: 'R' }, { index: 4, letter: 'T' },
+    ]);
+  });
+
+  test('REQ-ANS-019/REQ-ANS-017: undo reverts the softening — penciled survivors go back to pen', () => {
+    const s = listening(heartSnapshot(['HEA.T', 'EMBER', '..U..', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heist'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('anyway'));
+    s.step({ type: 'TTS_DONE' }); // ENTER (with the pencil rewrite)
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true, // the page now shows HEIST, and D3's U penciled (lowercase)
+      snapshot: heartSnapshot(['HEIST', 'EMBER', '..u..', '.....', '.....'], { selection: { clueId: 'A7' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    const undo = s.step(heard('undo'));
+    expect(undo.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A1');
+    expect(undo.find((a) => a.type === 'UNDO').cells).toEqual([
+      // The entry's cells revert to what they held (all pen), the blank clears again…
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' }, { index: 2, letter: 'A' },
+      { index: 3, letter: null }, { index: 4, letter: 'T' },
+      // …and the survivor we penciled is explicitly rewritten in pen.
+      { index: 12, letter: 'U', pencil: false },
+    ]);
+  });
+
+  test('REQ-ANS-017/REQ-ANS-019: undo restores overwritten letters with the pencil state they had', () => {
+    // A6's E and B sit penciled (softened by an earlier override). Entering EMBER pens
+    // over them; undo must bring them back penciled, not silently promoted to pen.
+    const s = listening(heartSnapshot(['HEART', 'e.b..', '.....', '.....', '.....'], { selection: { clueId: 'A6' } }));
+    s.step(heard('ember'));
+    s.step({ type: 'TTS_DONE' }); // ENTER
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(['HEART', 'EMBER', '.....', '.....', '.....'], { selection: { clueId: 'A7' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    const undo = s.step(heard('undo'));
+    expect(undo.find((a) => a.type === 'UNDO').cells).toEqual([
+      { index: 5, letter: 'E', pencil: true }, { index: 6, letter: null },
+      { index: 7, letter: 'B', pencil: true }, { index: 8, letter: null }, { index: 9, letter: null },
+    ]);
+  });
+
+  test('REQ-ANS-019/REQ-ANS-016: a confirmed replacement softens the crossings it hurts, too', () => {
+    // A1 is fully filled with WRONG; D1 below it holds a lone E. Replacing WRONG with
+    // HEART changes A1's W (D1's first letter), malforming D1 → its E gets penciled.
+    const s = listening(heartSnapshot(['WRONG', 'E....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heart'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('yes'));
+    const enter = s.step({ type: 'TTS_DONE' })[0];
+    expect(enter).toMatchObject({ type: 'ENTER', word: 'HEART' });
+    expect(enter.cells).toContainEqual({ index: 5, letter: 'E', pencil: true });
   });
 
   test('REQ-ANS-013: failed write is announced; the clue stays current', () => {

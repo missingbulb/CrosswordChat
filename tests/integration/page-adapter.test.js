@@ -114,6 +114,62 @@ describe('writer', () => {
   });
 });
 
+describe('pencil mode (REQ-PAGE-012)', () => {
+  const pencilButton = () => document.querySelector('button[aria-label="Pencil"]');
+
+  test('REQ-PAGE-012: the reader reports each cell\'s penciled state', () => {
+    pencilButton().click(); // the user turns pencil mode on…
+    app.typeAt(0, 'across', 'HEA'); // …and pencils three letters in
+    pencilButton().click();
+    app.typeAt(3, 'across', 'RT'); // the rest in pen
+    const snap = snapshot(document);
+    expect(snap.cells.slice(0, 5).map((c) => c.penciled)).toEqual([true, true, true, false, false]);
+    expect(snap.cells[5].penciled).toBe(false); // empty cells are never penciled
+  });
+
+  test('REQ-PAGE-012: enterAnswer writes mixed pen/pencil cells and leaves the toggle as found', async () => {
+    const result = await enterAnswer(document, [
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' },
+      { index: 2, letter: 'A', pencil: true }, { index: 3, letter: 'R', pencil: true },
+      { index: 4, letter: 'T' },
+    ]);
+    expect(result.ok).toBe(true);
+    expect(result.snapshot.cells.slice(0, 5).map((c) => c.letter)).toEqual(['H', 'E', 'A', 'R', 'T']);
+    expect(result.snapshot.cells.slice(0, 5).map((c) => c.penciled)).toEqual([false, false, true, true, false]);
+    expect(app.state.pencilMode).toBe(false); // restored — it started off
+  });
+
+  test('REQ-PAGE-012: the user\'s pencil toggle survives our pen writes', async () => {
+    pencilButton().click(); // the user solves in pencil
+    const result = await enterAnswer(document, word('HEART', 0, 1)); // our answers are pen
+    expect(result.ok).toBe(true);
+    expect(result.snapshot.cells.slice(0, 5).every((c) => !c.penciled)).toBe(true);
+    expect(app.state.pencilMode).toBe(true); // their toggle is back on afterwards
+  });
+
+  test('REQ-PAGE-012/REQ-ANS-019: rewriting an existing letter flips pen↔pencil in place', async () => {
+    await enterAnswer(document, word('HEART', 0, 1));
+    const soft = await enterAnswer(document, [{ index: 2, letter: 'A', pencil: true }]);
+    expect(soft.ok).toBe(true);
+    expect(soft.snapshot.cells[2]).toMatchObject({ letter: 'A', penciled: true });
+    const hard = await enterAnswer(document, [{ index: 2, letter: 'A', pencil: false }]);
+    expect(hard.ok).toBe(true);
+    expect(hard.snapshot.cells[2]).toMatchObject({ letter: 'A', penciled: false });
+  });
+
+  test('REQ-PAGE-012: a page without the toggle still lands letters — ok is judged on letters', async () => {
+    app = initFakeNyt(document, FIXTURE_PUZZLE, { noPencilToggle: true });
+    const result = await enterAnswer(
+      document,
+      [{ index: 0, letter: 'H' }, { index: 1, letter: 'E', pencil: true }],
+      { verifyTimeoutMs: 80, pollMs: 20 },
+    );
+    expect(result.ok).toBe(true); // the softening degraded; answering did not
+    expect(result.snapshot.cells.slice(0, 2).map((c) => c.letter)).toEqual(['H', 'E']);
+    expect(result.snapshot.cells[1].penciled).toBe(false);
+  });
+});
+
 describe('probe', () => {
   test('REQ-PAGE-009: all green on the faithful page', () => {
     const report = probe(document);
