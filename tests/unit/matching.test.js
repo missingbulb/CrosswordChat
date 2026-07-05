@@ -141,6 +141,33 @@ describe('evaluate', () => {
     expect(out.variants.map((v) => v.word)).not.toContain('CHORSE');
   });
 
+  test('REQ-ANS-021: a bare letter among words reads as its spoken name ("d claw" → DECLAW)', () => {
+    expect(evaluate({ alternatives: [{ transcript: 'd claw' }], entryLength: 6, pattern: P('......') }))
+      .toEqual({ kind: 'fit', word: 'DECLAW', spelledDifferently: true });
+    expect(evaluate({ alternatives: [{ transcript: 'b hold' }], entryLength: 6, pattern: P('......') }))
+      .toEqual({ kind: 'fit', word: 'BEHOLD', spelledDifferently: true });
+    expect(evaluate({ alternatives: [{ transcript: 'x it' }], entryLength: 4, pattern: P('....') }))
+      .toEqual({ kind: 'fit', word: 'EXIT', spelledDifferently: true });
+    // The literal join stays preferred when IT fits: "d claw" on 5 cells is DCLAW.
+    expect(evaluate({ alternatives: [{ transcript: 'd claw' }], entryLength: 5, pattern: P('.....') }))
+      .toEqual({ kind: 'fit', word: 'DCLAW', spelledDifferently: false });
+    // A letter ALONE is never a word — "d" does not become DE or DEE.
+    expect(evaluate({ alternatives: [{ transcript: 'd' }], entryLength: 3, pattern: P('...') }).kind)
+      .toBe('length-mismatch');
+  });
+
+  test('REQ-ANS-018: letters matching the open-square count fill just those — no mode', () => {
+    // H E _ R _ (2 open): two spoken letters land in the holes; read back whole.
+    expect(evaluate({ alternatives: [{ transcript: 'alpha tango' }], entryLength: 5, pattern: P('HE.R.') }))
+      .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    // One hole, one letter.
+    expect(evaluate({ alternatives: [{ transcript: 't' }], entryLength: 5, pattern: P('HEAR.') }))
+      .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    // Empty entry: no open-square reading (that's plain spelling, REQ-ANS-020).
+    expect(evaluate({ alternatives: [{ transcript: 'alpha tango' }], entryLength: 5, pattern: P('.....') }).kind)
+      .toBe('length-mismatch');
+  });
+
   test('REQ-ANS-020: length gate picks between the literal and the spelled reading', () => {
     // "are you" on a 2-cell entry: AREYOU (6) fails, spelled R-U fits.
     expect(evaluate({ alternatives: [{ transcript: 'are you' }], entryLength: 2, pattern: P('..') }))
@@ -188,6 +215,14 @@ describe('commands', () => {
     expect(parseCommand('go in order')).toEqual({ command: 'strategy', arg: 'list-order' });
     expect(parseCommand('i meant plane')).toEqual({ command: 'misheard', arg: 'plane' });
     expect(parseCommand('no i said heart')).toEqual({ command: 'misheard', arg: 'heart' });
+  });
+
+  test('REQ-CMD-001: "spell" followed by letters carries them as the argument', () => {
+    expect(parseCommand('spell a b c')).toEqual({ command: 'spell', arg: ['A', 'B', 'C'] });
+    expect(parseCommand('spell bee sea dee')).toEqual({ command: 'spell', arg: ['B', 'C', 'D'] });
+    expect(parseCommand('spelling hotel echo')).toEqual({ command: 'spell', arg: ['H', 'E'] });
+    expect(parseCommand('spell it')).toEqual({ command: 'hint' }); // reads letters TO the user
+    expect(parseCommand('spell trouble')).toBeNull(); // not letters — stays an ordinary utterance
   });
 
   test('REQ-ANS-014: "answer ..." escape hatch forces literal answers', () => {

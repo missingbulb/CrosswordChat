@@ -242,15 +242,30 @@ function handleCommand(state, cmd) {
     case 'stop':
       return speak(state, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
     case 'spell': {
-      // REQ-ANS-018: the opening prompt offers the just-the-open-squares option.
       const pattern = state.model.patternFor(state.clueId);
+      const open = pattern.filter((l) => !l).length;
+      // "spell a b c" — the letters arrived with the verb (REQ-CMD-001). A complete
+      // count (full word, or exactly the open squares) evaluates right away; anything
+      // shorter seeds the buffer and continues letter by letter.
+      if (cmd.arg?.length) {
+        const s = { ...state, mode: 'spelling', spellBuffer: cmd.arg };
+        if (cmd.arg.length >= pattern.length || (open && cmd.arg.length === open)) {
+          return finishSpelling(s, cmd.arg);
+        }
+        return listenAgain(s, [{ kind: 'spell-progress', letters: cmd.arg }]);
+      }
+      // REQ-ANS-018: the opening prompt offers the just-the-open-squares option.
       return listenAgain(
         { ...state, mode: 'spelling', spellBuffer: [] },
-        [{ kind: 'spell-start', open: pattern.filter((l) => !l).length, length: pattern.length }],
+        [{ kind: 'spell-start', open, length: pattern.length }],
       );
     }
     case 'enter-anyway': // REQ-ANS-012
-      if (!state.pendingWord) return null; // nothing pending — ANYWAY might be the answer
+      if (!state.pendingWord) {
+        // Nothing is waiting to be forced in — say so plainly. If ANYWAY is genuinely
+        // the answer, the REQ-ANS-014 escape hatch ("answer anyway") still enters it.
+        return listenAgain(state, [{ kind: 'nothing-pending' }]);
+      }
       return speak(
         { ...state, mode: 'normal', pendingEntry: { word: state.pendingWord } },
         [say({ kind: 'entering-anyway', word: state.pendingWord })],
@@ -348,6 +363,12 @@ function onHeardSpelling(state, alternatives) {
       return finishSpelling({ ...state, spellBuffer }, spellBuffer);
     }
     return listenAgain({ ...state, spellBuffer }, [{ kind: 'spell-progress', letters: spellBuffer }]);
+  }
+  // Not letters, not a spelling control: every ordinary command still works here —
+  // spelling must never trap the user (minimal modes). Handling one leaves spelling.
+  if (cmd && !CONTEXTUAL.has(cmd.command)) {
+    const handled = handleCommand({ ...state, mode: 'normal', spellBuffer: [] }, cmd);
+    if (handled) return handled;
   }
   return listenAgain(state, [{ kind: 'didnt-catch' }]);
 }
@@ -548,11 +569,20 @@ function onUndoResult(state, { ok, snapshot }) {
   const { undoSay, pendingCorrection } = state;
   const s = { ...state, model: buildModel(snapshot), undoSay: null, pendingCorrection: null };
   if (!ok) return listenAgain(s, [{ kind: 'entry-failed' }]);
+  // The revert writes cell by cell, and those clicks leave the page's cursor wherever
+  // they ended — often on a CROSSING clue. Reassert the undone clue so the page's
+  // selection matches the conversation again (REQ-ANS-017: undo restores the cursor).
+  const reselect = { type: 'SELECT_CLUE', clueId: s.clueId };
   if (pendingCorrection) { // "no, I said X" across an entry: revert landed, now try X here
-    return evaluateAnswer(s, [{ transcript: pendingCorrection }])
-      ?? listenAgain(s, [{ kind: 'didnt-catch' }]);
+    const evaluated = evaluateAnswer(s, [{ transcript: pendingCorrection }]);
+    if (evaluated) return { ...evaluated, actions: [reselect, ...evaluated.actions] };
+    return speak(s, [reselect, say({ kind: 'didnt-catch' })], 'listen');
   }
-  return listenAgain(s, [{ kind: undoSay ?? 'undone' }]);
+  if (undoSay === 'undone') {
+    // A plain undo re-orients the user: confirm, then reread the clue they are back on.
+    return readClue(s, {}, [reselect, say({ kind: 'undone' })]);
+  }
+  return speak(s, [reselect, say({ kind: undoSay ?? 'undone' })], 'listen');
 }
 
 // REQ-CMD-006: "stop" heard by the barge-in listener while we were speaking.

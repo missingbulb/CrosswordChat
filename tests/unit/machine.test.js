@@ -285,11 +285,14 @@ describe('answers (ANS)', () => {
     expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEIST' });
   });
 
-  test('REQ-ANS-012: "anyway" with nothing pending falls through to answer evaluation', () => {
+  test('REQ-ANS-012: "anyway" with nothing pending says so — no absurd answer reading', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
-    const actions = s.step(heard('anyway')); // ANYWAY (6) into a 5-cell entry → plain mismatch
-    expect(says(actions)[0]).toMatchObject({ kind: 'length-mismatch', needed: 5 });
-    expect(says(actions)[0].variants[0].word).toBe('ANYWAY');
+    const actions = s.step(heard('anyway')); // no proposal exists — nothing to force in
+    expect(says(actions)[0].kind).toBe('nothing-pending');
+    s.step({ type: 'TTS_DONE' });
+    // If ANYWAY really is the answer, the REQ-ANS-014 escape hatch still applies.
+    const forced = s.step(heard('the answer is anyway'));
+    expect(says(forced)[0]).toMatchObject({ kind: 'length-mismatch', needed: 5 }); // ANYWAY is 6
   });
 
   test('REQ-ANS-009: ambiguous homophones ask; "second" picks and enters', () => {
@@ -435,6 +438,48 @@ describe('answers (ANS)', () => {
     expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
   });
 
+  test('REQ-ANS-018: open-square spelling works straight from normal listening too', () => {
+    // H E _ R _ — the user just says the two missing letters, no "spell", no mode.
+    const s = listening(heartSnapshot(['HE.R.', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    const fit = s.step(heard('alpha tango'));
+    expect(says(fit)[0]).toMatchObject({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
+  test('REQ-CMD-001: "spell h e a r t" in one breath evaluates immediately', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const fit = s.step(heard('spell h e a r t'));
+    expect(says(fit)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
+  test('REQ-CMD-001: "spell" + some letters seeds the buffer and keeps collecting', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const start = s.step(heard('spell h e'));
+    expect(says(start)[0]).toEqual({ kind: 'spell-progress', letters: ['H', 'E'] });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('a'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('are'));
+    s.step({ type: 'TTS_DONE' });
+    const done = s.step(heard('tango'));
+    expect(says(done)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
+  });
+
+  test('REQ-ANS-011: ordinary commands escape spelling mode — it never traps the user', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('spell'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('h'));
+    s.step({ type: 'TTS_DONE' });
+    const out = s.step(heard('next')); // not a letter, not a control — still a command
+    expect(says(out)[0]).toMatchObject({ kind: 'clue' }); // advanced to another clue
+    expect(says(out)[0].label).not.toBe('1 Across');
+    s.step({ type: 'TTS_DONE' });
+    // Spelling state did not leak into the new clue.
+    expect(says(s.step(heard('spell')))[0].kind).toBe('spell-start');
+  });
+
   test('REQ-ANS-014: bare "pass" is a command; "answer pass" plays the word PASS', () => {
     const blocked = makeSnapshot(['#...', '....', '....', '...#'], {
       clues: { A4: 'Walk casually' },
@@ -495,7 +540,11 @@ describe('answers (ANS)', () => {
     expect(action.cells).toEqual([0, 1, 2, 3, 4].map((index) => ({ index, letter: null })));
 
     const done = s.step({ type: 'UNDO_RESULT', ok: true, snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
-    expect(says(done)[0].kind).toBe('undone'); // a brief "Undone."
+    // The revert's cell clicks can leave the page cursor on a crossing clue — the
+    // machine reasserts the undone clue so page and conversation agree again.
+    expect(done.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A1');
+    expect(says(done)[0].kind).toBe('undone'); // a brief "Undone."…
+    expect(says(done)[1]).toMatchObject({ kind: 'clue', label: '1 Across' }); // …then the clue again
     s.step({ type: 'TTS_DONE' });
     expect(says(s.step(heard('heart')))[0]).toMatchObject({ kind: 'fit', word: 'HEART' }); // back on A1
   });

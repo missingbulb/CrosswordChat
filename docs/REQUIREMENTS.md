@@ -621,7 +621,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - When no candidate passes the length gate, the reply MUST state only what is wrong: each heard
   variant with its length, and the needed length —
   `"EIGHT is 5 letters, and ATE is 3 letters — we need 4."` Up to 3 variants are reported. No
-  "I heard ..." preamble and no commentary about what does fit. Then keep listening (same clue).
+  "I heard ..." preamble, no commentary about what does fit, and no usage coaching ("try again",
+  "say spell", "say next") — the numbers are the whole reply. Then keep listening (same clue).
 - **Accept:** Given "ocelot" for a 4-entry, then the reply contains OCELOT, 6, and 4.
 - **Verify:** unit `tests/unit/matching.test.js` (variant list), `tests/unit/verbalizer.test.js`
   (phrasing), `tests/unit/machine.test.js` (stays on clue).
@@ -680,8 +681,16 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   length auto-evaluates. Progress is echoed after each utterance. The assembled word then flows
   through the normal pipeline (pattern check, entry) as a literal. On a partially solved entry,
   *done* with exactly the open-square count fills just those squares (REQ-ANS-018).
+- Spelling MUST never trap the user (minimal modes): an utterance that is neither letters nor a
+  spelling control but parses as an ordinary command (*next*, *repeat*, *hint*, *help*, *flip*,
+  *stop*, ...) MUST be handled normally, implicitly leaving spelling. And *spell* MAY carry the
+  letters in the same breath — "spell A, B, C" seeds the buffer with A, B, C; if that count
+  already equals the entry length or the open-square count, it evaluates immediately with no
+  further prompt (the mode is skipped entirely).
 - **Accept:** Given entry length 5 and utterances "H", "echo", "are", "tango? no — undo", ... the
-  buffer behaves as specified and evaluates at length 5.
+  buffer behaves as specified and evaluates at length 5. Given "spell H E A R T" from normal
+  listening, then HEART evaluates immediately. Given spelling in progress and "next", then the
+  conversation advances to another clue.
 - **Verify:** unit `tests/unit/matching.test.js` (letter parsing), `tests/unit/machine.test.js`
   (mode flow).
 
@@ -690,8 +699,10 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - After a collision report, *"anyway"* / *"say it anyway"* / *"enter it anyway"* / *"overwrite"*
   MUST enter the candidate, replacing the colliding letters (they were themselves unverified user
   input). The bare word *anyway* MUST work: STT frequently keeps only that word from phrases like
-  "say it anyway". When no candidate is pending, an *anyway* phrase MUST fall through to answer
-  evaluation (ANYWAY can itself be a grid answer). Override MUST never happen implicitly.
+  "say it anyway". When no candidate is pending, an *anyway* phrase MUST get the honest reply that
+  no word is waiting to be entered — never a confused answer reading of the command word itself
+  (ANYWAY as a genuine grid answer still enters via the REQ-ANS-014 escape hatch,
+  "answer anyway"). Override MUST never happen implicitly.
   Overriding leaves the crossing entries that lost letters malformed; REQ-ANS-019 softens their
   remaining letters to pencil in the same write.
 - **Accept:** Given a collision report for HEIST, when the user says "enter it anyway", then the grid
@@ -743,16 +754,19 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   previously empty cells are cleared, overwritten letters are restored (with the pencil state they
   had), and any letters the entry softened to pencil (REQ-ANS-019) are rewritten back in pen — the
   penciling is part of the same undo step, never left behind. The conversation MUST move
-  back to that clue (page highlight synced) and confirm with a single word ("Undone.") — the user
-  knows what to do next. With no entry to revert (none made yet, or right after an undo), reply
-  that there is nothing to undo. Undo history is one level deep — a second consecutive *undo* does
-  not go further back. In spelling mode, *undo* keeps its spelling meaning (remove the last
-  letter, REQ-ANS-011). A misheard phrase with an entered word also runs through undo
-  (REQ-ANS-010).
+  back to that clue, and once the revert lands it MUST reassert that clue as the page's selection
+  (the revert's own cell-by-cell writes can leave the cursor on a CROSSING clue — undo restores
+  the cursor and direction too, never flips to the vertical), then confirm ("Undone.") and reread
+  the clue, so the user re-orients without asking. With no entry to revert (none made yet, or
+  right after an undo), reply that there is nothing to undo. Undo history is one level deep — a
+  second consecutive *undo* does not go further back. In spelling mode, *undo* keeps its spelling
+  meaning (remove the last letter, REQ-ANS-011). A misheard phrase with an entered word also runs
+  through undo (REQ-ANS-010) — the cursor reassertion applies there the same way.
 - **Accept:** Given HEART was entered into an empty 1 Across and the session moved on, when the
-  user says "undo", then the five cells are empty again, 1 Across is selected, and the brief
-  confirmation plays; a repeated "undo" reports nothing to undo. Given HEIST was entered over
-  crossing letters via *anyway*, then "undo" restores those letters.
+  user says "undo", then the five cells are empty again, 1 Across is reselected on the page after
+  the revert lands (not a crossing Down clue), and the confirmation plays followed by the 1 Across
+  clue again; a repeated "undo" reports nothing to undo. Given HEIST was entered over crossing
+  letters via *anyway*, then "undo" restores those letters.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`; manual MT-26.
 
 #### REQ-ANS-018 — Partial spelling fills only the open squares
@@ -767,10 +781,17 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   Spelling mode's opening prompt MUST mention the option when the entry is partially solved. A
   fully filled entry has no open squares — only a full-length spelling can replace it
   (REQ-ANS-016).
+- The open-square reading MUST also work with no mode at all (REQ-ANS-020 spirit): from normal
+  listening, an utterance of spoken letters whose count exactly matches the entry's open squares
+  reads as "fill just those" — a single letter for a single hole included. Ambiguity with a
+  same-length word reading is offered as a choice, never guessed (REQ-ANS-009). The same applies
+  to "spell" carrying letters (REQ-ANS-011): *spell A, T* on a 2-open entry fills the holes
+  immediately.
 - **Accept:** Given A1 reads `H__R_` (squares 2, 3 and 5 open) in spelling mode, when the user
   spells "E, A, T" and says done, then HEART is spelled back and entered. Given the same entry,
   spelling H-E-A-R-T still auto-evaluates to HEART at the fifth letter. Given "E, A" then done, the
-  report offers 5 letters or 3 for the open squares.
+  report offers 5 letters or 3 for the open squares. Given A1 reads `HE_R_` in NORMAL listening,
+  when the user says "A, T" (or "alpha tango"), then HEART is spelled back and entered — no mode.
 
 #### REQ-ANS-019 — Overriding softens the malformed crossings to pencil
 - **Status:** Active · **Level:** MUST
@@ -811,6 +832,23 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   back; given "india", then the word INDIA is evaluated, not the letter I; given "are you" on a
   2-entry, then RU fits.
 - **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
+
+#### REQ-ANS-021 — A bare letter among words reads as its spoken name
+- **Status:** Active · **Level:** MUST
+- When STT renders a pronounced letter name as a bare letter token inside a longer utterance
+  ("d claw" for DECLAW, "b hold" for BEHOLD, "x it" for EXIT), the letter's sound MUST also be
+  tried in its in-word spellings (D → DE/DEE, B → BE/BEE, X → EX, ...) through the homophone
+  expansion, so the intended word is reachable. The expansion applies ONLY to single-letter
+  tokens accompanied by other tokens — a letter alone is never a word (no DEE from "d"), and
+  word tokens are never letter-ified (the REQ-ANS-020 SEA HORSE guarantee stands). The literal
+  join stays preferred when it fits (fewest substitutions win, REQ-ANS-003 ordering).
+- Rationale: users spelling by voice get letter+word mixes from the recognizer constantly; the
+  all-or-nothing spelled reading (REQ-ANS-020) rightly rejects them as spellings, so without
+  this the utterance dead-ends on a length mismatch every time.
+- **Accept:** Given "d claw" on an empty 6-entry, then DECLAW fits and is spelled back; on a
+  5-entry, DCLAW (the literal join) is evaluated instead; given "d" alone on a 3-entry, then the
+  reply is a length mismatch for D, never DEE.
+- **Verify:** unit `tests/unit/matching.test.js`.
 
 ---
 
@@ -855,7 +893,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | hint | hint · hints · give me a hint · what do i have · what's there · what's filled in · read the letters · pattern · letters · the letters · spell it |
 | help | help · what can i say · commands · options |
 | stop | stop · goodbye · bye · end · end session · quit · exit · we're done · i'm done · stop listening |
-| spell | spell · let me spell · let me spell it · i'll spell it · spelling |
+| spell | spell · let me spell · let me spell it · i'll spell it · spelling · spell …letters (the letters ride along: "spell A B C", REQ-ANS-011) |
 | enter-anyway | anyway · anyways · say it anyway · do it anyway · it anyway · enter it anyway · enter anyway · force it · overwrite · put it in anyway · replace it · use it anyway |
 | misheard | you misheard · you misheard me · that's not what i said · you heard wrong · wrong word · no i said … · i meant … · i said … |
 | answer (escape) | answer … · guess … · the answer is … · the word is … · try … |
@@ -866,7 +904,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 
 - Contextual intents (yes/no/choice) apply only in their modes (confirm-replace, disambiguation);
   elsewhere they fall through to answer evaluation (YES may be an answer!). enter-anyway with no
-  candidate pending likewise falls through to answer evaluation (REQ-ANS-012).
+  candidate pending replies that nothing is waiting (REQ-ANS-012). Every non-contextual command
+  works in every listening state — including spelling mode (REQ-ANS-011): a command that doesn't
+  apply gets an honest one-liner ("nothing to undo", "no word is waiting"), never a dead end.
 - **Accept:** Given each utterance above, then the intent is recognized; given "yes" while not in a
   confirm mode, then it is evaluated as an answer.
 - **Verify:** unit `tests/unit/matching.test.js` (table-driven), `tests/unit/machine.test.js`
@@ -882,8 +922,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 #### REQ-CMD-003 — Unintelligible input re-prompts
 - **Status:** Active · **Level:** MUST
 - When an utterance yields no command and no usable candidate (e.g. empty after normalization), the
-  system MUST say it didn't catch that (with a nudge toward *help*) and listen again. It MUST NOT
-  enter anything.
+  system MUST say it didn't catch that — briefly, with no usage coaching (REQ-ANS-007 spirit; *help*
+  exists for that) — and listen again, in the same state: every command stays available after a
+  didn't-catch. It MUST NOT enter anything.
 - **Accept:** Given garbage input, then the didn't-catch utterance is spoken and no grid change occurs.
 - **Verify:** unit `tests/unit/machine.test.js`.
 

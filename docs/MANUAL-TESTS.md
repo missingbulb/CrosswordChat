@@ -199,10 +199,11 @@ Covers: REQ-CMD-006
 Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
 1. Enter a fitting answer by voice; after the session moves on, say "undo".
 2. Say "back". Then say "flip".
-3. **PASS:** undo re-selects the answered clue, empties exactly the cells that answer filled
-   (letters that were there beforehand come back), and confirms with a brief "Undone.";
-   "back" moves to the previous clue in the list — including filled ones — and reads it; "flip"
-   jumps to the crossing clue and reads it; the page highlight follows every move.
+3. **PASS:** undo re-selects the answered clue — the page cursor lands back on that clue in its
+   own direction (never the crossing/vertical one), empties exactly the cells that answer filled
+   (letters that were there beforehand come back), confirms with a brief "Undone." and rereads
+   the clue; "back" moves to the previous clue in the list — including filled ones — and reads
+   it; "flip" jumps to the crossing clue and reads it; the page highlight follows every move.
 
 ### MT-27 — Answer before the readout ends
 Covers: REQ-SPCH-009
@@ -267,3 +268,16 @@ Covers: REQ-LIFE-013 REQ-LIFE-014
    small popup opens (no session, no speech) saying CrosswordChat isn't supported on this site,
    naming the NYT Mini/Midi/daily puzzles, and offering crosswords@missingbulb.com for support
    requests; on the Mini tab the click starts the session directly, no popup.
+
+### MT-32 — Spelling without the mode; commands never trapped
+Covers: REQ-ANS-011 REQ-ANS-018 REQ-ANS-020 REQ-ANS-021 REQ-ANS-012
+1. On a partially filled entry (two open squares), from normal listening say just the two
+   missing letters ("A, T") — no "spell" first.
+2. On an empty entry whose answer starts with a letter-name sound (DECLAW-like), say the word
+   naturally and let STT mangle it ("d claw").
+3. Say "spell" plus the letters in one breath ("spell H, E, A, R, T").
+4. Say "spell", give one letter, then say "next". Then say "anyway" with nothing pending.
+5. **PASS:** step 1 — the whole merged word is spelled back and entered. Step 2 — the intended
+   word is found (or an honest numeric mismatch, never an absurd double). Step 3 — evaluates
+   immediately, no letter-by-letter prompt. Step 4 — "next" advances (spelling never traps);
+   "anyway" gets "No word is waiting to be entered", not a length report of ANYWAY itself.

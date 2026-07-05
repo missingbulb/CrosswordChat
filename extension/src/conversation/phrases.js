@@ -96,13 +96,13 @@ export function render(say) {
       // spell-out stays only when we accepted a different spelling than they voiced.
       return say.spelledDifferently ? `${spellOut(say.word)} — fits!` : 'Fits!';
     case 'length-mismatch': {
-      // REQ-ANS-007: only the problem — no "I heard ..." preamble.
+      // REQ-ANS-007: only the problem — no "I heard ..." preamble, no usage coaching.
       const list = say.variants
         .map((v) => `${sayWord(v.word)} is ${v.len} letters`)
         .join(', and ');
       // REQ-ANS-018: while spelling a partially solved entry, both counts work.
       const alsoOpen = say.open ? `, or ${say.open} for just the open squares` : '';
-      return `${list} — we need ${say.needed}${alsoOpen}. Try again, say spell, or say next.`;
+      return `${list} — we need ${say.needed}${alsoOpen}.`;
     }
     case 'collision': {
       // REQ-ANS-008: quick — the first clash in full, the rest only as a count.
@@ -133,7 +133,9 @@ export function render(say) {
     case 'help':
       return 'You can: say an answer — whole or spelled out — or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
     case 'didnt-catch':
-      return "Sorry, I didn't catch that. Say an answer, or say help.";
+      return "Sorry, I didn't catch that.";
+    case 'nothing-pending':
+      return 'No word is waiting to be entered — give an answer first.';
     case 'misheard-reprompt':
       return "My mistake. What's your answer?";
     case 'spell-start': {

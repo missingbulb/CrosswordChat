@@ -2,7 +2,7 @@
 // Implements the pipeline in REQUIREMENTS §8. Pure.
 
 import { normalizedTokens } from './normalize.js';
-import { homophonesOf, LETTER_NAMES, NATO } from './homophone-data.js';
+import { homophonesOf, spellingsOfLetter, LETTER_NAMES, NATO } from './homophone-data.js';
 
 const MAX_OPTIONS_PER_TOKEN = 6;
 const MAX_COMBOS = 64;
@@ -15,7 +15,12 @@ const MAX_EXPANDABLE_TOKENS = 6;
 export function expandCandidates(tokens) {
   if (!tokens.length) return [];
   const options = tokens.map((tok) => {
-    const alts = tokens.length <= MAX_EXPANDABLE_TOKENS ? homophonesOf(tok) : [];
+    // A bare single letter among other tokens is usually a pronounced letter NAME the
+    // recognizer shortened ("d claw" for DECLAW) — its sound's spellings are candidates
+    // too (REQ-ANS-021). Never for a letter alone: "d" is not the word DEE.
+    const alts = tokens.length <= MAX_EXPANDABLE_TOKENS
+      ? (tok.length === 1 && tokens.length > 1 ? spellingsOfLetter(tok) : homophonesOf(tok))
+      : [];
     return [tok, ...alts.slice(0, MAX_OPTIONS_PER_TOKEN - 1)];
   });
   let combos = [{ word: '', swaps: 0 }];
@@ -90,6 +95,16 @@ export function evaluate({ alternatives, entryLength, pattern, rejected = [], li
       if (!control && !ignored && letters.length >= 2) {
         const word = letters.join('');
         if (word !== tokens.join('')) candidates.push({ word, swaps: 0, altIndex });
+      }
+      // REQ-ANS-018 without the mode: exactly as many spoken letters as the entry has
+      // open squares reads as "fill just those" — the grid supplies the rest. A single
+      // letter is allowed here (one hole, one letter); ambiguity with a same-length
+      // word reading is surfaced, never guessed (REQ-ANS-009).
+      const open = pattern.filter((l) => !l).length;
+      if (!control && !ignored && letters.length && letters.length === open && open < entryLength) {
+        let next = 0;
+        const word = pattern.map((have) => have ?? letters[next++]).join('');
+        candidates.push({ word, swaps: 0, altIndex });
       }
     }
     const combos = literalOnly

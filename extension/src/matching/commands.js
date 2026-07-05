@@ -2,6 +2,7 @@
 // answers get an escape hatch via "answer ..." (REQ-ANS-014).
 
 import { normalizeUtterance } from './normalize.js';
+import { collectSpelledLetters } from './evaluate.js';
 
 const PHRASES = {
   next: ['next', 'next clue', 'next one', 'pass', 'pass on this', 'skip', 'skip it',
@@ -66,6 +67,15 @@ export function parseCommand(text) {
 
   let m = norm.match(/^(?:no )?i (?:meant|said) (.+)$/);
   if (m) return { command: 'misheard', arg: m[1] };
+
+  // "spell a b c" — the command verb with the letters in the same breath. Only a pure
+  // letter tail counts (letters, names, NATO); anything else is not a spelling start
+  // ("spell trouble" stays an ordinary utterance for the answer pipeline).
+  m = norm.match(/^(?:spell|spelling|let me spell) (.+)$/);
+  if (m) {
+    const { letters, control, ignored } = collectSpelledLetters(m[1]);
+    if (letters.length && !control && !ignored) return { command: 'spell', arg: letters };
+  }
 
   m = norm.match(/^(?:the )?(?:answer|word|guess) (?:is )?(.+)$/) || norm.match(/^try (.+)$/);
   if (m) return { command: 'answer', arg: m[1] };

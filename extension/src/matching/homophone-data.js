@@ -203,3 +203,22 @@ export const NATO = {
   TANGO: 'T', UNIFORM: 'U', VICTOR: 'V', WHISKEY: 'W', WHISKY: 'W', XRAY: 'X',
   YANKEE: 'Y', ZULU: 'Z',
 };
+
+// How a spoken letter NAME is spelled inside words (REQ-ANS-021): when STT renders a
+// pronounced letter as a bare token ("d claw" for DECLAW), the letter's sound may be
+// what the answer actually spells with these letters. Curated per letter; A and W are
+// deliberately absent (A is almost always the article; W's name is three syllables and
+// never renders as a bare token).
+const LETTER_SPELLINGS = {
+  B: ['BE', 'BEE'], C: ['CE', 'CEE', 'SEA', 'SEE'], D: ['DE', 'DEE'], E: ['EE'],
+  F: ['EF', 'EFF'], G: ['GE', 'GEE'], H: ['AITCH'], I: ['EYE', 'AYE'], J: ['JAY'],
+  K: ['KAY'], L: ['EL', 'ELL'], M: ['EM'], N: ['EN'], O: ['OH', 'OWE'],
+  P: ['PE', 'PEA', 'PEE'], Q: ['CUE', 'QUEUE'], R: ['AR', 'ARE'], S: ['ES', 'ESS'],
+  T: ['TE', 'TEA', 'TEE'], U: ['YOU', 'EWE'], V: ['VE', 'VEE'], X: ['EX'],
+  Y: ['WHY'], Z: ['ZE', 'ZEE', 'ZED'],
+};
+
+/** Orthographic realizations of a bare letter token's spoken name ('' → []). */
+export function spellingsOfLetter(letter) {
+  return LETTER_SPELLINGS[letter] ?? [];
+}
