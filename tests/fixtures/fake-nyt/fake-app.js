@@ -268,13 +268,16 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
       // The live page mirrors state into the hidden aria-live copy; readers that use
       // textContent instead of own text nodes would see the letter doubled.
       letterHiddenEls[i].textContent = letter;
-      // Penciled letters render grayed; the marker class sits on the letter <text>.
-      letterTextEls[i].setAttribute('class', letter && state.penciled[i] ? 'xwd__cell--penciled' : '');
     });
     const entry = selectedEntry();
     rectEls.forEach((rect, i) => {
       const block = rect.getAttribute('class').includes('--block');
-      const base = block ? 'xwd__cell--block xwd__cell--nested' : 'xwd__cell--cell xwd__cell--nested';
+      // Penciled letters render grayed; verified live (2026-07-05): the marker rides
+      // the <rect> — class="xwd__cell--cell xwd__cell--penciled xwd__cell--nested".
+      const pencil = !block && state.letters[i] && state.penciled[i] ? ' xwd__cell--penciled' : '';
+      const base = block
+        ? 'xwd__cell--block xwd__cell--nested'
+        : `xwd__cell--cell${pencil} xwd__cell--nested`;
       const selected = !block && i === state.selCell;
       rect.setAttribute('class', selected ? `xwd__cell--selected xwd__cell--highlighted ${base}` : base);
       rect.setAttribute('tabindex', selected ? '0' : '-1');

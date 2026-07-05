@@ -6,7 +6,7 @@
 // page (reload/navigation) — that is intended (REQ-LIFE-008).
 
 import { MSG } from '../shared/messages.js';
-import { snapshot } from '../page-adapter/reader.js';
+import { snapshot, isRuledWrong } from '../page-adapter/reader.js';
 import { enterAnswer, clearEntry } from '../page-adapter/writer.js';
 import { selectClue } from '../page-adapter/navigator.js';
 import { probe } from '../page-adapter/probe.js';
@@ -31,6 +31,12 @@ function createPageClient() {
     enterAnswer: async (cells) => enterAnswer(document, cells),
     clearEntry: async (cellIndices) => clearEntry(document, cellIndices),
     selectClue: async (clueId) => ({ ok: selectClue(document, clueId) }),
+    // Full-grid verdict (REQ-LIFE-005/006): the page rules with a popup — congrats
+    // (snapshot.status 'solved') or "Keep trying". The orchestrator waits for one and
+    // reacts; the negative one is clicked away so the board is usable again — the
+    // splash dismisser already knows how to click a modal's Keep-trying/Play button.
+    ruledWrong: async () => isRuledWrong(document),
+    dismissVerdict: async () => dismissSplash(document, { waitMs: 1500 }),
     watch: async (cb) => {
       if (watcher) return;
       watcher = createWatcher(document, cb);

@@ -12,12 +12,13 @@ import { toLetters } from '../matching/normalize.js';
 // by construction, substrings of the prompt itself.
 export const ECHO_MIN_LETTERS = 8;
 
-// A just-completed grid gets this long for the page's verdict before the machine hears
-// about it (REQ-LIFE-005/006): NYT validates asynchronously, so the congrats modal pops
-// a beat AFTER the last letter lands. Without the grace, "full but wrong" cries wolf
-// right before the win celebration (live report).
-export const VERDICT_POLLS = 8;
-export const VERDICT_POLL_MS = 150;
+// A just-completed grid is RULED by the page with a popup — congrats, or "Keep trying"
+// when something's off — a beat AFTER the last letter lands (REQ-LIFE-005/006). The
+// machine hears nothing until one of the popups shows (user feedback: react to the
+// popup, don't guess on a timer). The bound is only a safety net for page variants
+// that never pop anything; on timeout the honest "full but wrong" plays.
+export const VERDICT_POLLS = 40;
+export const VERDICT_POLL_MS = 200;
 
 const gridFull = (snap) =>
   snap?.cells?.length > 0 && snap.cells.every((c) => c.block || c.letter);
@@ -29,14 +30,16 @@ const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param {{listenOnce():Promise, stop():void}} deps.stt
  * @param {object} deps.pageClient
  *   {snapshot, enterAnswer(cells), clearEntry(cellIndices), selectClue(clueId),
- *    watch(cb), unwatch, pauseWatch, resumeWatch}
+ *    watch(cb), unwatch, pauseWatch, resumeWatch,
+ *    ruledWrong?, dismissVerdict?  (full-grid verdict popups, REQ-LIFE-005/006)}
  * @param {object} [deps.ui]  {caption(role, text), listening(bool)}
  * @param {() => void} [deps.onEnd]
  * @param {() => number} [deps.now]  clock, injectable for tests
  * @param {object} [deps.settings]  persisted user settings, e.g. {strategy} (REQ-NAV-012)
  * @param {{play():void, dispose():void}} [deps.ping]  ready/reset tick (REQ-SPCH-010)
  */
-export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {}, now = Date.now, settings = {}, ping = null }) {
+export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () => {}, now = Date.now, settings = {}, ping = null, timings = {} }) {
+  const { verdictPolls = VERDICT_POLLS, verdictPollMs = VERDICT_POLL_MS } = timings; // test hook
   let state = initialState();
   const queue = [];
   let processing = false;
@@ -148,11 +151,22 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         try {
           pageClient.pauseWatch?.(); // our own typing must not look like user activity
           let { ok, snapshot } = await pageClient.enterAnswer(action.cells);
-          // The entry filled the grid but the page hasn't ruled yet — wait out the
-          // verdict beat so a win is announced as a win, not as an error first.
-          for (let i = 0; ok && gridFull(snapshot) && snapshot.status !== 'solved' && i < VERDICT_POLLS; i++) {
-            await settle(VERDICT_POLL_MS);
-            snapshot = await pageClient.snapshot();
+          if (ok && gridFull(snapshot) && snapshot.status !== 'solved') {
+            // The entry filled the grid: wait for the page's verdict POPUP — congrats
+            // or "Keep trying" — and react to whichever shows, rather than guessing
+            // on a timer. A win is announced as a win, never as an error first.
+            for (let i = 0; i < verdictPolls; i++) {
+              if (await pageClient.ruledWrong?.()) break;
+              await settle(verdictPollMs);
+              snapshot = await pageClient.snapshot();
+              if (snapshot.status === 'solved') break;
+            }
+            if (snapshot.status !== 'solved') {
+              // Ruled wrong (or the page never ruled): clear the "Keep trying" popup
+              // off the board so navigation and rewrites work again.
+              await pageClient.dismissVerdict?.();
+              snapshot = await pageClient.snapshot();
+            }
           }
           pageClient.resumeWatch?.();
           enqueue({ type: 'ENTRY_RESULT', ok, snapshot });

@@ -80,12 +80,15 @@ Covers: REQ-LIFE-004
 2. **PASS:** one cheerful "already solved" line, session ends by itself, mic never turns on.
 
 ### MT-09 — Grid full but wrong
-Covers: REQ-LIFE-006 REQ-NAV-013
+Covers: REQ-LIFE-006 REQ-NAV-013 REQ-NAV-014
 1. Fill the last empty entry with a wrong-but-fitting word (by voice or keyboard while in session).
 2. Say "next" three times; then say a clue label ("three down").
-3. **PASS:** the extension says the grid is full but something's off, does NOT celebrate, and keeps
-   listening. Each "next" reads the following (filled) clue — the grid-full message never repeats;
-   the spoken label jumps straight to that clue and reads it.
+3. **PASS:** the extension stays quiet until NYT's own "Keep trying"-style popup appears, then
+   says the grid is full but something's off, clicks the popup away, does NOT celebrate, and
+   keeps listening. If penciled (gray) letters are on the board, the readout right after the
+   message is an entry holding one, and each "next" cycles only such entries; with no pencils,
+   each "next" reads the following (filled) clue. The grid-full message never repeats; the
+   spoken label jumps straight to that clue and reads it.
 
 ### MT-10 — Latency budgets
 Covers: REQ-NFR-003

@@ -11,24 +11,13 @@
 // Either way a splash only counts while it is VISIBLE: pages that hide the dismissed
 // moment with display:none instead of removing it must read as "clear".
 
-import { SEL } from './selectors.js';
+import { SEL, isVisible as visible } from './selectors.js';
 import { clickCell } from './writer.js';
 
 const PLAY_WORDS = /^(play|play now|continue|resume|start|keep trying|begin)/i;
 const SPLASH_TEXT = /ready to start solving/i;
 
 const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Visible in the CSS sense — walks up, since display:none does not inherit. */
-function visible(el) {
-  const view = el.ownerDocument?.defaultView;
-  for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
-    if (node.hidden) return false;
-    const style = view?.getComputedStyle?.(node);
-    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
-  }
-  return true;
-}
 
 /** The first visible Play-ish button inside `container`, or null. */
 function playButtonIn(container) {

@@ -8,6 +8,7 @@ import { describe, test, expect } from 'vitest';
 import { initFakeNyt } from '../fixtures/fake-nyt/fake-app.js';
 import { FIXTURE_PUZZLE } from '../fixtures/fake-nyt/puzzle.js';
 import { dismissSplash, findSplashPlayButton, waitForSplashClear } from '../../extension/src/page-adapter/splash.js';
+import { isRuledWrong } from '../../extension/src/page-adapter/reader.js';
 
 describe('splash screen', () => {
   test('REQ-LIFE-016: no splash → nothing to do, reports clear', async () => {
@@ -66,5 +67,38 @@ describe('splash screen', () => {
     initFakeNyt(document, FIXTURE_PUZZLE, { splash: true });
     document.querySelector('.pz-moment__container').style.display = 'none';
     expect(findSplashPlayButton(document)).toBeNull();
+  });
+});
+
+describe('the full-grid verdict popup (REQ-LIFE-006)', () => {
+  const keepTrying = () => {
+    const modal = document.createElement('div');
+    modal.className = 'xwd__modal--wrapper';
+    modal.innerHTML = '<h2>Keep trying!</h2><p>Not quite, but keep at it.</p><button>Keep trying</button>';
+    document.body.append(modal);
+    return modal;
+  };
+
+  test('a visible "Keep trying" popup reads as ruled-wrong; hidden or absent does not', () => {
+    initFakeNyt(document, FIXTURE_PUZZLE);
+    expect(isRuledWrong(document)).toBe(false); // no popup: the page has not ruled
+    const modal = keepTrying();
+    expect(isRuledWrong(document)).toBe(true);
+    modal.style.display = 'none'; // dismissed-but-kept popups do not count
+    expect(isRuledWrong(document)).toBe(false);
+    modal.remove();
+  });
+
+  test('the splash and its Play button never read as a wrong ruling', () => {
+    initFakeNyt(document, FIXTURE_PUZZLE, { splash: true });
+    expect(isRuledWrong(document)).toBe(false);
+  });
+
+  test('the "Keep trying" popup is dismissable via the splash machinery (button click)', async () => {
+    initFakeNyt(document, FIXTURE_PUZZLE);
+    const modal = keepTrying();
+    modal.querySelector('button').addEventListener('click', () => modal.remove());
+    await expect(dismissSplash(document, { waitMs: 300, pollMs: 5 })).resolves.toBe(true);
+    expect(isRuledWrong(document)).toBe(false);
   });
 });

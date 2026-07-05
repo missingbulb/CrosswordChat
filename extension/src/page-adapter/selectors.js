@@ -17,6 +17,17 @@
 //     keeps the class path as a fallback for older markup);
 //   - each visible <text> nests a hidden aria-live <text class="xwd__cell--hidden"> copy;
 //   - key handling is delegated at the app root container, NOT at document level.
+// Full cell capture (user-provided, 2026-07-05), the richest live sample so far:
+//   <g class="xwd__cell" data-testid="cell-g">
+//     <rect role="cell" tabindex="-1" id="cell-id-3"
+//           aria-label="5D: Cubes have twelve of them, Answer: 5 letters, Letter: 0"
+//           class="xwd__cell--cell xwd__cell--penciled xwd__cell--nested" …/>
+//     <text … data-testid="cell-text"><text class="xwd__cell--hidden" …></text>4</text>
+//     <text … data-testid="cell-text"><text class="xwd__cell--hidden" …>A</text>A</text>
+//   </g>
+// So: the PENCIL marker is xwd__cell--penciled ON THE RECT; the rect also offers
+// role="cell", id="cell-id-N", and an aria-label naming the clue + answer length
+// (untapped fallback hooks); the text pair carries data-testid="cell-text".
 
 export const SEL = {
   board: '.xwd__board, [class*="xwd__board"]',
@@ -43,6 +54,10 @@ export const SEL = {
   // ("Ready to start solving?") hides the board — used to tell "puzzle page, still
   // rendering" apart from "not a puzzle page at all".
   app: '[class*="xwd__"]',
+  // The modal/moment families a page verdict can arrive in (congrats, "Keep trying",
+  // splash — REQ-LIFE-005/006/016). ⚠️ Best-effort; consumers pair this with text
+  // and visibility checks.
+  modal: '[class*="xwd__modal"], [class*="pz-moment"]',
   // The pre-puzzle splash/veil containers (REQ-LIFE-016). ⚠️ Best-effort shapes. The
   // live "Ready to start solving?" screen is rendered by the NYT *games shell*, not the
   // crossword app — its classes are in the `pz-` family (pz-moment), so the xwd__ nets
@@ -56,6 +71,22 @@ export const SEL = {
 // pencil's class names for styling, so every pencil hunt below must skip it — else the
 // writer could "toggle pencil mode" by clicking the CrosswordChat button.
 export const CC_BUTTON_ID = 'crosswordchat-toggle';
+
+/**
+ * Visible in the CSS sense — walks up, since display:none does not inherit. Used by
+ * every popup detector (splash, verdicts): a dismissed moment the page merely hides
+ * must read as gone.
+ * @param {Element} el
+ */
+export function isVisible(el) {
+  const view = el.ownerDocument?.defaultView;
+  for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
+    if (node.hidden) return false;
+    const style = view?.getComputedStyle?.(node);
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+  }
+  return true;
+}
 
 /**
  * Find the toolbar's pencil-mode toggle, live-markup-defensively (REQ-PAGE-012).
@@ -83,12 +114,14 @@ export const CLS = {
   cellBlock: 'xwd__cell--block',
   cellSelected: 'xwd__cell--selected',
   clueSelected: 'xwd__clue--selected',
-  // Penciled letters (REQ-PAGE-012): on the letter <text> (or the cell <g>). ⚠️ UNVERIFIED
-  // against the live page — same caveat as pencilToggle above. The reader nets ANY
-  // pencil-flavored class or data-testid within the cell (substring match), with this
-  // exact name kept as the fixture's canonical shape. Because the live marker may not
-  // exist at all, answer evaluation additionally remembers the cells the extension
-  // itself penciled (the machine's soft-cell ledger, REQ-ANS-023).
+  // Penciled letters (REQ-PAGE-012). ✅ VERIFIED live (user capture, 2026-07-05): the
+  // marker rides the cell <rect>, alongside the base classes —
+  //   class="xwd__cell--cell xwd__cell--penciled xwd__cell--nested"
+  // The reader nets ANY pencil-flavored class or data-testid on the <g>, the <rect>, or
+  // the letter <text> (substring match, so a rename/move survives), with this exact
+  // name as the canonical shape the fixture mirrors. Answer evaluation additionally
+  // remembers the cells the extension itself penciled (the machine's soft-cell ledger,
+  // REQ-ANS-023) — belt and braces against the next drift.
   cellPenciled: 'xwd__cell--penciled',
   // Fallback pencil-toggle "on" signal for markup without aria-pressed.
   pencilActive: 'xwd__toolbar--active',

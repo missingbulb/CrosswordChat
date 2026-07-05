@@ -162,21 +162,26 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Status:** Active · **Level:** MUST
 - When the puzzle transitions to solved during a session — whether because of an answer we entered
   or the user typing manually — the session MUST celebrate ("Hooray, solved it!") and end.
-  NYT rules on a just-completed grid asynchronously (the congrats modal pops a beat AFTER the
-  last letter), so an entry that fills the grid MUST wait out a short verdict grace (~1 s,
-  polling) before the result is judged — a win must never be announced as an error first
-  (live report 2026-07).
+  NYT rules on a just-completed grid asynchronously and announces the ruling with a POPUP —
+  congrats, or "Keep trying" when something's off — a beat AFTER the last letter. An entry that
+  fills the grid MUST therefore wait for the page's verdict popup and react to whichever shows
+  (not guess on a timer — user feedback 2026-07): congrats → celebration only; "Keep trying" →
+  the REQ-LIFE-006 flow, with the popup clicked away so the board is usable again. A bounded
+  safety timeout (~8 s) covers page variants that never pop anything: it falls back to the
+  honest full-but-wrong coaching. A win must never be announced as an error first.
 - **Accept:** Given a session, when the solved signal arrives (via entry result or page event), then
   the celebration is spoken and the session ends; given the winning entry's snapshot still says
-  "active" but the page rules "solved" a beat later, then ONLY the celebration is spoken.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (verdict grace);
-  manual MT-06.
+  "active" but the congrats popup arrives a beat later, then ONLY the celebration is spoken.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (verdict
+  popups); manual MT-06.
 
 #### REQ-LIFE-006 — Grid full but not solved
 - **Status:** Active · **Level:** MUST
-- If every cell is filled but NYT has not confirmed success (after the REQ-LIFE-005 verdict
-  grace), the session MUST say so ("The grid is full, but something's not right yet") and keep the
-  conversation alive so the user can revisit entries (navigation + replace flows still work). It
+- If every cell is filled and the page ruled the grid wrong (its "Keep trying"-style popup, or
+  the REQ-LIFE-005 safety timeout with no ruling at all), the session MUST say so ("The grid is
+  full, but something's not right yet"), dismiss the ruling popup so the board is interactive
+  again, and keep the conversation alive so the user can revisit entries (navigation + replace
+  flows still work). It
   MUST NOT claim which letters are wrong (we don't know) and MUST NOT celebrate. The discrepancy
   message plays when the grid fills (and at a full-grid session start) and is NOT repeated: on a
   full grid, *next* MUST actually move — through the penciled entries when any exist
@@ -634,9 +639,9 @@ entities. The readout must convey what the eye would see.
   session starts on one) and any entry holds penciled letters, the session MUST land on a
   penciled entry immediately — the discrepancy message, then that entry's readout. And *next* on
   a full grid MUST cycle through the penciled entries only (in list order from the current clue,
-  wrapping), falling back to all filled clues in list order when nothing is penciled. Pencil
-  visibility has the REQ-PAGE-012 caveat: on the live page only the session's own soft-cell
-  ledger is readable, so hand-penciled letters from before the session may be missed.
+  wrapping), falling back to all filled clues in list order when nothing is penciled. Pencils
+  are seen two ways (REQ-ANS-023): the live rect marker (hand-penciled letters included,
+  REQ-PAGE-012) and the session's own soft-cell ledger.
 - **Accept:** Given an entry that fills the grid wrong while 3 Down holds a penciled letter, then
   the discrepancy message is followed by 3 Down's readout; when the user then says "next"
   repeatedly, then only entries holding penciled letters are visited, cycling.
@@ -993,13 +998,12 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   entries keep the replace-confirmation flow (REQ-ANS-016) regardless of pencil state. The
   open-square readings (REQ-ANS-018 partial spelling, spell-start's open count) use the same
   rule: penciled squares count among the open ones.
-- The live page exposes NO readable pencil marker (REQ-PAGE-012) — reading alone left this rule
-  dead on the real site (v0.11.2 user report: the warning still fired). The machine therefore
-  keeps a **soft-cell ledger**: every cell the session itself penciled (REQ-ANS-019 softening,
-  REQ-ANS-025 pencil-mode words), index → letter, counted as penciled in every model — valid
-  while the cell still shows that letter, restored on undo. Residual: letters hand-penciled
-  before the session (or in another tab) stay invisible until a live marker is captured (the
-  probe forensics exist for that).
+- Reading alone left this rule dead on the real site at v0.11.2 (the marker was being looked for
+  in the wrong place — it lives on the cell `<rect>`, verified 2026-07-05, REQ-PAGE-012). The
+  machine ALSO keeps a **soft-cell ledger** as belt and braces against the next markup drift:
+  every cell the session itself penciled (REQ-ANS-019 softening, REQ-ANS-025 pencil-mode words),
+  index → letter, counted as penciled in every model — valid while the cell still shows that
+  letter, restored on undo. Hand-penciled letters are read via the live marker.
 - **Accept:** Given A1 reads `_EA__` with the A penciled, when the user says "heist", then HEIST
   fits and enters (the penciled A is overwritten); given the same grid with the A in pen, then
   the collision report plays and nothing is entered. Given the session itself penciled a letter
@@ -1402,13 +1406,14 @@ any time, every selector lives in one file with a self-diagnosing probe.
   our writes in inverted modes until an ON-state marker is captured — the probe forensics exist
   to capture one). Retyping the letter a cell already shows CONVERTS it pen↔pencil in place
   (verified live) — REQ-ANS-019 softening and undo's un-softening ride on plain retypes.
-- Pencil READING has the same live caveat: no verified marker for a penciled cell exists either.
-  The reader nets ANY pencil-flavored class or data-testid on the cell `<g>`, its `<rect>`, or
-  the letter `<text>` (substring match — the fixture's `xwd__cell--penciled` is the canonical
-  shape), and everything above the adapter leans on the machine's soft-cell ledger
-  (REQ-ANS-023) rather than trusting snapshots. New probe forensics: `selected cell html` dumps
-  the selected cell's markup — hand-pencil a letter, click its cell, probe, and the live marker
-  (if any) is captured for this net to be fixed.
+- Pencil READING is ✅ VERIFIED live (user cell capture, 2026-07-05): the marker is
+  `xwd__cell--penciled` on the cell `<rect>`, alongside `xwd__cell--cell`/`--nested` (the same
+  capture shows the rect carrying `role="cell"`, `id="cell-id-N"`, and an aria-label naming the
+  clue and answer length — untapped fallback hooks, recorded in selectors.js). The reader still
+  nets ANY pencil-flavored class or data-testid on the `<g>`, the `<rect>`, or the letter
+  `<text>` (substring match) so a rename or move survives, and the machine's soft-cell ledger
+  (REQ-ANS-023) remains as belt and braces. Probe forensics: `selected cell html` dumps the
+  selected cell's markup for the next drift.
 - **Accept:** Given the fake page, when cells are entered with mixed pencil flags, then letters and
   penciled states match per cell and the toggle returns to its prior state (both from pen and from
   pencil); given a page without the toggle, then letters still land and `ok` reflects the letters.

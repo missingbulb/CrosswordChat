@@ -1,16 +1,17 @@
 // DOM → Snapshot (REQ-PAGE-001..004). Reads only; never mutates the page.
 
-import { SEL, CLS } from './selectors.js';
+import { SEL, CLS, isVisible } from './selectors.js';
 import { parseClueHtml } from './clue-html.js';
 
 function classHas(el, name) {
   return (el.getAttribute?.('class') ?? '').split(/\s+/).includes(name);
 }
 
-// Pencil marker net (REQ-PAGE-012): the canonical class is CLS.cellPenciled, but the
-// live marker is unverified — accept ANY pencil-flavored class or data-testid so a
-// rename doesn't blind us. (Cells never contain the toolbar's pencil button, so the
-// substring is safe here.)
+// Pencil marker net (REQ-PAGE-012). Verified live (2026-07-05): xwd__cell--penciled on
+// the cell <rect>, alongside xwd__cell--cell/--nested. Still a substring net over ANY
+// pencil-flavored class or data-testid so a rename or move (rect → g → text) doesn't
+// blind us. (Cells never contain the toolbar's pencil button, so the substring is safe
+// here.)
 function pencilMarked(el) {
   if (!el?.getAttribute) return false;
   return /pencil/i.test(`${el.getAttribute('class') ?? ''} ${el.getAttribute('data-testid') ?? ''}`);
@@ -37,10 +38,10 @@ function readCellTexts(cellEl) {
     const numIdx = own.findIndex((t) => /^\d+$/.test(t));
     const letterIdx = own.findIndex((t, i) => i !== numIdx && t);
     const letter = letterIdx >= 0 ? own[letterIdx] : '';
-    // Pencil mode (REQ-PAGE-012): the marker sits on the letter <text>, the cell <g>,
-    // or the <rect> — net all of them, by substring (see pencilMarked).
+    // Pencil mode (REQ-PAGE-012): the live marker sits on the <rect>; the <g> and the
+    // letter <text> are netted too, by substring (see pencilMarked).
     const penciled = Boolean(letter)
-      && (pencilMarked(cellEl) || pencilMarked(cellEl.querySelector(SEL.cellRect))
+      && (pencilMarked(cellEl.querySelector(SEL.cellRect)) || pencilMarked(cellEl)
         || (letterIdx >= 0 && pencilMarked(texts[letterIdx])));
     return { letter: letter.toUpperCase(), penciled, number: numIdx >= 0 ? Number(own[numIdx]) : null };
   }
@@ -48,7 +49,8 @@ function readCellTexts(cellEl) {
   const letterEl = cellEl.querySelector(SEL.cellLetter);
   const numberEl = cellEl.querySelector(SEL.cellNumber);
   const letter = (letterEl?.textContent ?? '').trim().toUpperCase();
-  const penciled = Boolean(letter) && (pencilMarked(cellEl) || pencilMarked(letterEl));
+  const penciled = Boolean(letter)
+    && (pencilMarked(cellEl.querySelector(SEL.cellRect)) || pencilMarked(cellEl) || pencilMarked(letterEl));
   const numText = (numberEl?.textContent ?? '').trim();
   return { letter, penciled, number: /^\d+$/.test(numText) ? Number(numText) : null };
 }
@@ -114,6 +116,19 @@ function readClueLists(document) {
 
 export function isSolved(document) {
   return Boolean(document.querySelector(SEL.congrats));
+}
+
+// The negative verdict popup's copy (REQ-LIFE-006). ⚠️ Best-effort phrases from NYT's
+// "grid full but wrong" dialog family; paired with the modal class net + visibility.
+const WRONG_VERDICT = /keep trying|not quite|almost there|something.s not right/i;
+
+/**
+ * True when the page has RULED the full grid wrong — its "Keep trying"-style popup is
+ * up (REQ-LIFE-006). The positive ruling is isSolved(); no popup yet = no ruling.
+ */
+export function isRuledWrong(document) {
+  return [...document.querySelectorAll(SEL.modal)]
+    .some((m) => isVisible(m) && WRONG_VERDICT.test(m.textContent ?? ''));
 }
 
 /** @returns {object} Snapshot (docs/ARCHITECTURE.md §3) */

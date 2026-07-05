@@ -3,7 +3,7 @@
 // no-speech error; hearing speech or user page activity resets the clock.
 
 import { describe, test, expect } from 'vitest';
-import { createOrchestrator, VERDICT_POLLS } from '../../extension/src/app/orchestrator.js';
+import { createOrchestrator } from '../../extension/src/app/orchestrator.js';
 import { SILENCE_TIMEOUT_MS } from '../../extension/src/conversation/machine.js';
 import { heartSnapshot, SOLVED_HEART_ROWS } from '../helpers/snapshots.js';
 
@@ -477,14 +477,16 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
   });
 });
 
-describe('the solve-verdict grace period (REQ-LIFE-005/REQ-LIFE-006)', () => {
+describe('the full-grid verdict popup (REQ-LIFE-005/REQ-LIFE-006)', () => {
   // Boots a session on a grid one word short, answers it, and controls what the page
-  // reports: enterAnswer returns the FULL grid still 'active' (NYT validates a beat
-  // late), and each grace poll answers with the scripted `verdict`.
-  function runFinalEntry({ verdict, script }) {
+  // reports: enterAnswer returns the FULL grid still 'active' (NYT rules a beat late,
+  // with a popup), each verdict poll answers with `verdict`, and `ruledWrong` scripts
+  // the "Keep trying" popup.
+  function runFinalEntry({ verdict, script, ruledWrong, timings }) {
     const spoken = [];
     let snapshots = 0;
     let polls = 0;
+    let dismissed = 0;
     const lastRows = ['HEART', 'EMBER', 'ABUSE', 'RESIN', 'TREN.'];
     const fullActive = () => heartSnapshot(SOLVED_HEART_ROWS, { selection: { clueId: 'A9' } });
     const ended = new Promise((resolve) => {
@@ -501,41 +503,64 @@ describe('the solve-verdict grace period (REQ-LIFE-005/REQ-LIFE-006)', () => {
         pageClient: {
           snapshot: async () => {
             snapshots += 1;
-            // Call #1 serves the session START; later calls are the grace polls.
+            // Call #1 serves the session START; later calls are the verdict polls
+            // (and the post-dismiss refresh).
             if (snapshots === 1) return heartSnapshot(lastRows, { selection: { clueId: 'A9' } });
             polls += 1;
             return verdict();
           },
           enterAnswer: async () => ({ ok: true, snapshot: fullActive() }),
           selectClue: async () => ({ ok: true }),
+          ruledWrong,
+          dismissVerdict: async () => { dismissed += 1; return true; },
           watch: () => {},
           unwatch: () => {},
         },
+        timings,
         onEnd: () => resolve(null),
       });
       void orchestrator.start();
     });
-    return ended.then(() => ({ spoken, polls: () => polls }));
+    return ended.then(() => ({ spoken, polls: () => polls, dismissed: () => dismissed }));
   }
 
-  test('a win that lands a beat late is a win — no "full but wrong" cry first', async () => {
-    const { spoken } = await runFinalEntry({
+  test('the congrats popup means a win — no "full but wrong" cry first', async () => {
+    const { spoken, dismissed } = await runFinalEntry({
       verdict: () => heartSnapshot(SOLVED_HEART_ROWS, { status: 'solved' }),
+      ruledWrong: async () => false,
+      timings: { verdictPollMs: 10 },
       script: [{ alternatives: [{ transcript: 'trend', confidence: 0.9 }] }],
     });
     expect(spoken.join(' ')).not.toContain('full');
     expect(spoken.join(' ').toLowerCase()).toContain('hooray');
+    expect(dismissed()).toBe(0); // nothing to click away — the win owns the screen
   });
 
-  test('a page that never rules still gets the honest full-but-wrong coaching', async () => {
-    const { spoken, polls } = await runFinalEntry({
+  test('the "Keep trying" popup means full-but-wrong: announced AND clicked away', async () => {
+    const { spoken, polls, dismissed } = await runFinalEntry({
       verdict: () => heartSnapshot(SOLVED_HEART_ROWS, { selection: { clueId: 'A9' } }),
+      ruledWrong: async () => true, // the popup is already up when we look
       script: [
         { alternatives: [{ transcript: 'trend', confidence: 0.9 }] },
         { alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] },
       ],
     });
     expect(spoken.join(' ')).toContain('full');
-    expect(polls()).toBe(VERDICT_POLLS); // waited the whole grace before speaking
-  }, 10_000);
+    expect(dismissed()).toBe(1); // the board is usable again for the fix-up
+    expect(polls()).toBe(1); // no timer-waiting — just the post-dismiss refresh
+  });
+
+  test('a page that never rules still gets the honest coaching after the bounded wait', async () => {
+    const { spoken, polls } = await runFinalEntry({
+      verdict: () => heartSnapshot(SOLVED_HEART_ROWS, { selection: { clueId: 'A9' } }),
+      ruledWrong: async () => false,
+      timings: { verdictPolls: 3, verdictPollMs: 10 },
+      script: [
+        { alternatives: [{ transcript: 'trend', confidence: 0.9 }] },
+        { alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] },
+      ],
+    });
+    expect(spoken.join(' ')).toContain('full');
+    expect(polls()).toBe(3 + 1); // the bounded polls, plus the post-dismiss refresh
+  });
 });
