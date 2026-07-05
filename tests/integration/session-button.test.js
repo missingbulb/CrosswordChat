@@ -20,27 +20,34 @@ describe('session button', () => {
     expect(pencil().nextElementSibling).toBe(button()); // right of the pencil
     expect(button().getAttribute('aria-pressed')).toBe('false');
     expect(button().getAttribute('aria-label')).toContain('CrosswordChat');
-    expect(button().querySelector('svg [data-cc-bubble]')).toBeTruthy(); // the speech bubble
+    // Wears the brand mark: the extension icon's tile + crossword speech bubble.
+    expect(button().querySelector('svg [data-cc-bg]')).toBeTruthy();
+    expect(button().querySelector('svg [data-cc-bubble]')).toBeTruthy();
   });
 
-  test('REQ-LIFE-012: clicks reach the toggle callback; active state fills the bubble', () => {
+  test('REQ-LIFE-012: clicks reach the toggle callback; active state inverts the tile', () => {
     initFakeNyt(document, FIXTURE_PUZZLE);
     const onToggle = vi.fn();
     const handle = mountSessionButton(document, onToggle);
+    const tileFill = () => button().querySelector('[data-cc-bg]').getAttribute('fill');
+    const bubbleFill = () => button().querySelector('[data-cc-bubble]').getAttribute('fill');
 
     button().click();
     expect(onToggle).toHaveBeenCalledTimes(1);
+    const idle = { tile: tileFill(), bubble: bubbleFill() };
 
-    handle.setActive(true); // session started
+    handle.setActive(true); // session started → inverted tile
     expect(button().getAttribute('aria-pressed')).toBe('true');
     expect(button().getAttribute('aria-label')).toContain('stop');
-    expect(button().querySelector('[data-cc-bubble]').getAttribute('fill')).not.toBe('none');
+    expect(tileFill()).not.toBe(idle.tile);
+    expect(bubbleFill()).not.toBe(idle.bubble);
 
-    handle.setActive(false); // session ended
+    handle.setActive(false); // session ended → back to the idle mark
     expect(button().getAttribute('aria-pressed')).toBe('false');
-    expect(button().querySelector('[data-cc-bubble]').getAttribute('fill')).toBe('none');
+    expect(tileFill()).toBe(idle.tile);
+    expect(bubbleFill()).toBe(idle.bubble);
 
-    button().click(); // still clickable after a session
+    button().click(); // still clickable after a session (and after icon swaps)
     expect(onToggle).toHaveBeenCalledTimes(2);
   });
 

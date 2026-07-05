@@ -7,24 +7,18 @@
 // (archive pages, a redesigned toolbar): no button, no errors, the icon still works.
 
 import { SEL } from './selectors.js';
+import { brandIconSvg, GOLD, INK } from '../shared/brand-icon.js';
 
 export const BUTTON_ID = 'crosswordchat-toggle';
 
 const LABEL_START = 'CrosswordChat — start voice session';
 const LABEL_STOP = 'CrosswordChat — stop voice session';
-const GOLD = '#f7da21'; // crossword gold: the bubble fills with it while a session runs
 
-// A speech bubble with three "someone is talking" dots, drawn in the toolbar's own line
-// style (currentColor strokes, like the pencil next door).
-const ICON_SVG = `
-<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"
-     fill="none" stroke="currentColor" stroke-width="1.8"
-     stroke-linecap="round" stroke-linejoin="round">
-  <path data-cc-bubble d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/>
-  <circle cx="8.4" cy="10" r="1" fill="currentColor" stroke="none"/>
-  <circle cx="12" cy="10" r="1" fill="currentColor" stroke="none"/>
-  <circle cx="15.6" cy="10" r="1" fill="currentColor" stroke="none"/>
-</svg>`;
+// The button wears the extension's own mark at toolbar size, so what the user installed
+// is what they find on the page. While a session runs the tile inverts — ink tile, gold
+// bubble — so "on" is unmistakable at a glance.
+const ICON_IDLE = brandIconSvg({ bg: GOLD, ink: INK, bubble: '#FFFFFF', size: 26 });
+const ICON_ACTIVE = brandIconSvg({ bg: INK, ink: INK, bubble: GOLD, size: 26 });
 
 /**
  * Inject the toggle button (now, or as soon as the toolbar renders).
@@ -53,7 +47,7 @@ export function mountSessionButton(document, onToggle, { waitMs = 30_000 } = {})
     button.setAttribute('aria-pressed', String(active));
     button.setAttribute('aria-label', label);
     button.title = label;
-    button.querySelector('[data-cc-bubble]')?.setAttribute('fill', active ? GOLD : 'none');
+    button.innerHTML = active ? ICON_ACTIVE : ICON_IDLE;
   };
 
   const tryMount = () => {
@@ -65,9 +59,9 @@ export function mountSessionButton(document, onToggle, { waitMs = 30_000 } = {})
     button.type = 'button';
     button.className = pencil.className; // borrow the toolbar's (hashed) button styling
     // Minimal own styling so the button also reads as one where no styles carry over
-    // (and NYT toolbar icon buttons are transparent anyway).
+    // (and NYT toolbar icon buttons are transparent anyway); apply() below fills in
+    // the icon for the current state.
     button.style.cssText = 'background:transparent;border:0;cursor:pointer;display:inline-flex;align-items:center;';
-    button.innerHTML = ICON_SVG;
     button.addEventListener('click', () => onToggle());
     pencil.after(button);
     apply();

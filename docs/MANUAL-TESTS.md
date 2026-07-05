@@ -240,17 +240,18 @@ Covers: REQ-ANS-019 REQ-PAGE-012
 
 ### MT-30 — The in-page toolbar button
 Covers: REQ-LIFE-012
-1. Open the Mini. Find the speech-bubble button immediately right of NYT's pencil toggle in the
-   puzzle toolbar (hover it: the tooltip names CrosswordChat).
+1. Open the Mini. Find the CrosswordChat button — the same gold crossword-bubble tile as the
+   extension icon — immediately right of NYT's pencil toggle in the puzzle toolbar (hover it:
+   the tooltip names CrosswordChat).
 2. Click it. Answer one clue by voice. While the session runs, look at the button; then click it
    again mid-readout.
 3. Reload the page and start a session from the *extension icon* instead; end it by voice
    ("goodbye").
 4. **PASS:** step 2 — the click starts the session exactly like the icon (clue read, mic on,
-   badge ON) and the bubble fills gold while the session runs; the second click cuts speech
-   instantly and silently (like MT-04) and the bubble empties. Step 3 — the button also tracks
-   sessions it didn't start: filled during, empty after. The button never doubles up, and the
-   rest of the toolbar looks and works untouched.
+   badge ON) and the tile inverts (ink tile, gold bubble) while the session runs; the second
+   click cuts speech instantly and silently (like MT-04) and the tile returns to gold. Step 3 —
+   the button also tracks sessions it didn't start: inverted during, gold after. The button
+   never doubles up, and the rest of the toolbar looks and works untouched.
 
 ### MT-31 — Icon variants and the unsupported-site popup
 Covers: REQ-LIFE-013 REQ-LIFE-014

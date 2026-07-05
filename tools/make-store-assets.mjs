@@ -18,6 +18,7 @@
 import { chromium } from 'playwright-core';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { GOLD, INK, brandIconSvg } from '../extension/src/shared/brand-icon.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const ICONS = join(ROOT, 'extension/icons');
@@ -26,10 +27,9 @@ mkdirSync(ICONS, { recursive: true });
 mkdirSync(STORE, { recursive: true });
 
 // ---------------------------------------------------------------- palette ---
+// GOLD (crossword gold) and INK (near-black) come from the shared brand module.
 
-const GOLD = '#F2C53D';       // crossword gold
 const GOLD_SOFT = '#F8DE8D';
-const INK = '#191919';        // near-black
 const PAPER = '#FAF6EC';      // warm off-white page
 const CARD = '#FFFFFF';
 const SERIF = "'Bitstream Charter', 'Liberation Serif', Georgia, serif";
@@ -37,26 +37,13 @@ const SANS = "'Liberation Sans', Arial, sans-serif";
 
 // ------------------------------------------------------------------- icon ---
 // A speech bubble that is itself a crossword grid: 3×2 cells, one black square.
+// Geometry lives in extension/src/shared/brand-icon.js — one source for the store
+// assets, the action icons, AND the in-page toolbar button (REQ-LIFE-012).
 
-const BUBBLE = 'M34 20 h60 a12 12 0 0 1 12 12 v48 a12 12 0 0 1 -12 12 H62 L40 110 V92 '
-  + 'h-6 a12 12 0 0 1 -12 -12 V32 a12 12 0 0 1 12 -12 z';
-
-const makeIconSvg = ({ bg, ink, bubble }) => `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="27" fill="${bg}"/>
-  <defs><clipPath id="b"><path d="${BUBBLE}"/></clipPath></defs>
-  <path d="${BUBBLE}" fill="${bubble}"/>
-  <g clip-path="url(#b)">
-    <rect x="78" y="20" width="30" height="36" fill="${ink}"/>
-    <path d="M50 20 V92 M78 20 V92 M22 56 H108" stroke="${ink}" stroke-width="6"/>
-  </g>
-  <path d="${BUBBLE}" fill="none" stroke="${ink}" stroke-width="8" stroke-linejoin="round"/>
-</svg>`;
-
-const iconSvg = makeIconSvg({ bg: GOLD, ink: INK, bubble: '#FFFFFF' });
+const iconSvg = brandIconSvg({ bg: GOLD, ink: INK, bubble: '#FFFFFF' });
 // Unsupported-tab variant (REQ-LIFE-013): the same mark, drained of color, so the
 // action icon itself says "CrosswordChat has nothing to do here".
-const iconSvgGray = makeIconSvg({ bg: '#D9D9D9', ink: '#7C7C7C', bubble: '#F3F3F3' });
+const iconSvgGray = brandIconSvg({ bg: '#D9D9D9', ink: '#7C7C7C', bubble: '#F3F3F3' });
 
 const iconPage = (svg, px) => `<!doctype html><html><head><style>
   html,body{margin:0;padding:0;background:transparent}
@@ -105,20 +92,17 @@ function bubble(text, { user = false, size = 26 } = {}) {
 }
 
 // ---------------------------------------------------- in-page toolbar mock ---
-// The NYT puzzle toolbar as the solver sees it, with the CrosswordChat speech-bubble
-// button sitting right of the pencil — the "here's where you turn it on" visual
-// (REQ-LIFE-012). Line icons mirror extension/src/page-adapter/session-button.js.
+// The NYT puzzle toolbar as the solver sees it, with the CrosswordChat button sitting
+// right of the pencil — the "here's where you turn it on" visual (REQ-LIFE-012). The
+// button wears the brand icon itself, exactly like the real one
+// (extension/src/page-adapter/session-button.js).
 
 const lineIcon = (inner, size = 27) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}"
   fill="none" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"
   stroke-linejoin="round">${inner}</svg>`;
 
 const PENCIL_ICON = lineIcon('<path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 3 21.5 4 17z"/>');
-const CHAT_ICON = lineIcon(
-  `<path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" fill="${GOLD}"/>`
-  + `<circle cx="8.4" cy="10" r="1" fill="${INK}" stroke="none"/>`
-  + `<circle cx="12" cy="10" r="1" fill="${INK}" stroke="none"/>`
-  + `<circle cx="15.6" cy="10" r="1" fill="${INK}" stroke="none"/>`, 30);
+const CHAT_BUTTON = brandIconSvg({ bg: GOLD, ink: INK, bubble: '#FFFFFF', size: 34 });
 
 const toolbarMock = `
   <div style="background:${CARD};border:2.5px solid ${INK};border-radius:16px;
@@ -134,7 +118,7 @@ const toolbarMock = `
     ${PENCIL_ICON}
     <div style="width:52px;height:52px;border-radius:50%;background:${GOLD_SOFT};flex:none;
                 border:3px solid ${INK};display:flex;align-items:center;
-                justify-content:center">${CHAT_ICON}</div>
+                justify-content:center">${CHAT_BUTTON}</div>
   </div>
   <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;
               margin:10px 6px 0;font-size:20px;color:#3d3d3d">

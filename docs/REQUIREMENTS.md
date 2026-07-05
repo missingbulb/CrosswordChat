@@ -225,9 +225,11 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Status:** Active · **Level:** MUST
 - The content script MUST place a start/stop button inside the puzzle page itself: in NYT's
   toolbar, immediately to the right of the pencil toggle — so the feature is discoverable where
-  the solving happens (the extension icon remains an equivalent control). The button MUST carry a
-  speech-bubble icon (the visual language of conversation), an accessible label, and MUST reflect
-  session state (`aria-pressed`; the bubble fills while a session runs). Clicking it MUST behave
+  the solving happens (the extension icon remains an equivalent control). The button MUST wear
+  the extension's own icon — the gold crossword-grid speech bubble, one mark everywhere: page
+  button, action icon, store assets (the artwork lives in a single shared module so they cannot
+  drift) — carry an accessible label, and MUST reflect session state (`aria-pressed`; while a
+  session runs the tile inverts: ink tile, gold bubble). Clicking it MUST behave
   exactly like the extension icon: no session → start one (REQ-LIFE-001); a session running in
   this tab → end it instantly and silently (REQ-LIFE-002). Sessions started from the button obey
   one-session-at-a-time (REQ-LIFE-009). Because the NYT app renders after the content script
