@@ -42,15 +42,22 @@ function entriesFromGrid(rows, cols, isBlock) {
  * @param {Document} document
  * @param {object} puzzle  see puzzle.js
  * @param {{swallowKeys?: boolean, renderDelayMs?: number, legacyKeysOnly?: boolean,
- *          noPencilToggle?: boolean}} [opts]
+ *          noPencilToggle?: boolean, pencilMarkup?: 'aria' | 'icon',
+ *          toolbarWithoutPencil?: boolean}} [opts]
  *   swallowKeys — page ignores ALL keyboard input (REQ-PAGE-007 / REQ-ANS-013 failure paths).
  *   renderDelayMs — DOM repaints lag state changes by this long, like the live React app.
  *   legacyKeysOnly — key handler ignores events whose legacy keyCode is 0, like handlers
  *     that read event.keyCode/which (bare synthetic {key} events construct those as 0).
- *   noPencilToggle — render no pencil button, like a redesigned toolbar (REQ-PAGE-012
+ *   noPencilToggle — render no toolbar at all, like a page without one (REQ-PAGE-012
  *     degradation path).
+ *   pencilMarkup — how the pencil button announces itself: 'aria' (default) carries
+ *     aria-label="Pencil" like the markup we verified; 'icon' carries NO accessible
+ *     name, only an icon child with a pencil-flavored class — the shape the live page
+ *     is suspected to use (findPencilToggle()'s fallback net).
+ *   toolbarWithoutPencil — render the toolbar with other tool buttons but no pencil,
+ *     like a redesigned toolbar (session button falls back to the end of the row).
  */
-export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false } = {}) {
+export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false, pencilMarkup = 'aria', toolbarWithoutPencil = false } = {}) {
   const { rows, cols, solution } = puzzle;
   const isBlock = (r, c) => solution[r][c] === '#';
   const entries = entriesFromGrid(rows, cols, isBlock);
@@ -78,14 +85,30 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   if (!noPencilToggle) {
     const toolbar = document.createElement('div');
     toolbar.className = 'xwd__toolbar';
-    pencilBtn = document.createElement('button');
-    pencilBtn.setAttribute('aria-label', 'Pencil');
-    pencilBtn.setAttribute('aria-pressed', 'false');
-    pencilBtn.addEventListener('click', () => {
-      state.pencilMode = !state.pencilMode;
-      pencilBtn.setAttribute('aria-pressed', String(state.pencilMode));
-    });
-    toolbar.append(pencilBtn);
+    // Neighboring tools, so the no-pencil fallback (mount after the LAST toolbar
+    // button) has a row to land in.
+    for (const label of ['Rebus', 'Check']) {
+      const b = document.createElement('button');
+      b.setAttribute('aria-label', label);
+      toolbar.append(b);
+    }
+    if (!toolbarWithoutPencil) {
+      pencilBtn = document.createElement('button');
+      pencilBtn.setAttribute('aria-pressed', 'false');
+      if (pencilMarkup === 'icon') {
+        pencilBtn.className = 'xwd__toolbar_icon';
+        const icon = document.createElement('i');
+        icon.className = 'xwd__toolbar_icon--pencil';
+        pencilBtn.append(icon);
+      } else {
+        pencilBtn.setAttribute('aria-label', 'Pencil');
+      }
+      pencilBtn.addEventListener('click', () => {
+        state.pencilMode = !state.pencilMode;
+        pencilBtn.setAttribute('aria-pressed', String(state.pencilMode));
+      });
+      toolbar.append(pencilBtn);
+    }
     main.append(toolbar);
   }
 

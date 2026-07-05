@@ -26,10 +26,46 @@ export const SEL = {
   clueLabel: '.xwd__clue--label',
   clueText: '.xwd__clue--text',
   congrats: '.xwd__congrats-modal, [class*="xwd__congrats"]',
-  // The toolbar pencil-mode toggle (REQ-PAGE-012). ⚠️ UNVERIFIED against the live page —
-  // observed shape from the toolbar family; run probe()/MT-01 + MT-29 before trusting.
-  pencilToggle: 'button[aria-label="Pencil"], [class*="xwd__toolbar"] button[aria-label*="encil"]',
+  // The puzzle toolbar container (the row with the pencil/check/reveal tools).
+  toolbar: '[class*="xwd__toolbar"]',
+  // The toolbar pencil-mode toggle (REQ-PAGE-012), by accessible name/tooltip. This is
+  // only the FIRST net — use findPencilToggle() below, which adds icon-class and
+  // button-text fallbacks, because the live markup for this button is unstable.
+  pencilToggle: 'button[aria-label*="pencil" i], button[title*="pencil" i], [role="button"][aria-label*="pencil" i]',
+  // Anything pencil-flavored at all (icon <i>/<svg> class, test id); the owning button
+  // is found via closest() in findPencilToggle().
+  pencilish: '[class*="pencil" i], [data-testid*="pencil" i]',
+  // Any element of the crossword app itself. Present even while the pre-puzzle splash
+  // ("Ready to start solving?") hides the board — used to tell "puzzle page, still
+  // rendering" apart from "not a puzzle page at all".
+  app: '[class*="xwd__"]',
 };
+
+// Our own injected toggle (session-button.js uses this as its id). It borrows the
+// pencil's class names for styling, so every pencil hunt below must skip it — else the
+// writer could "toggle pencil mode" by clicking the CrosswordChat button.
+export const CC_BUTTON_ID = 'crosswordchat-toggle';
+
+/**
+ * Find the toolbar's pencil-mode toggle, live-markup-defensively (REQ-PAGE-012).
+ * Nets, in order: accessible name/tooltip → pencil-classed descendant's owning button →
+ * toolbar button whose text says "pencil". Returns null when nothing matches.
+ * @param {Document} document
+ * @returns {Element | null}
+ */
+export function findPencilToggle(document) {
+  const ours = (el) => el.closest(`#${CC_BUTTON_ID}`) != null;
+  const direct = document.querySelector(SEL.pencilToggle);
+  if (direct && !ours(direct)) return direct;
+  for (const el of document.querySelectorAll(SEL.pencilish)) {
+    const btn = el.closest('button, [role="button"]');
+    if (btn && !ours(btn)) return btn;
+  }
+  for (const btn of document.querySelectorAll(`${SEL.toolbar} button, ${SEL.toolbar} [role="button"]`)) {
+    if (!ours(btn) && /pencil/i.test(btn.textContent ?? '')) return btn;
+  }
+  return null;
+}
 
 // Class *names* (no dots) checked via classList / class attribute substrings.
 export const CLS = {

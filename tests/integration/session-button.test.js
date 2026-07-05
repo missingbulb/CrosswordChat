@@ -23,6 +23,27 @@ describe('session button', () => {
     // Wears the brand mark: the extension icon's tile + crossword speech bubble.
     expect(button().querySelector('svg [data-cc-bg]')).toBeTruthy();
     expect(button().querySelector('svg [data-cc-bubble]')).toBeTruthy();
+    // Hardened against the host page: paints are duplicated into inline styles (page
+    // CSS outranks presentation attributes, but not these), and no url(#…) references
+    // (a rewritten base URL would silently erase them).
+    expect(button().querySelector('[data-cc-bg]').style.fill).toBeTruthy();
+    expect(button().innerHTML).not.toMatch(/clip|url\(/);
+  });
+
+  test('REQ-LIFE-012: finds a pencil that has no accessible name, only an icon class', () => {
+    initFakeNyt(document, FIXTURE_PUZZLE, { pencilMarkup: 'icon' });
+    mountSessionButton(document, () => {});
+    expect(button()).toBeTruthy();
+    const iconPencil = document.querySelector('.xwd__toolbar_icon--pencil').closest('button');
+    expect(iconPencil.nextElementSibling).toBe(button());
+  });
+
+  test('REQ-LIFE-012: toolbar without a findable pencil → mounts at the end of the tool row', () => {
+    initFakeNyt(document, FIXTURE_PUZZLE, { toolbarWithoutPencil: true });
+    mountSessionButton(document, () => {});
+    expect(button()).toBeTruthy();
+    const toolbarButtons = document.querySelectorAll('.xwd__toolbar button');
+    expect(toolbarButtons[toolbarButtons.length - 1]).toBe(button()); // after the last tool
   });
 
   test('REQ-LIFE-012: clicks reach the toggle callback; active state inverts the tile', () => {
@@ -63,12 +84,25 @@ describe('session button', () => {
     expect(button().getAttribute('aria-pressed')).toBe('true'); // remembered state applied
   });
 
-  test('REQ-LIFE-012/REQ-NFR-004: no pencil toggle → no button, no errors, clean give-up', async () => {
-    initFakeNyt(document, FIXTURE_PUZZLE, { noPencilToggle: true });
+  test('REQ-LIFE-012: app markup but no toolbar (splash screen) → keeps waiting past waitMs', async () => {
+    initFakeNyt(document, FIXTURE_PUZZLE, { noPencilToggle: true }); // board, no toolbar yet
     const handle = mountSessionButton(document, () => {}, { waitMs: 30 });
     handle.setActive(true); // must be safe with nothing mounted
-    await sleep(60); // give-up timeout passed
-    initFakeNyt(document, FIXTURE_PUZZLE); // toolbar appears AFTER the give-up…
+    await sleep(60); // waitMs passed — but the crossword app IS here, so no give-up
+    expect(button()).toBeNull();
+    initFakeNyt(document, FIXTURE_PUZZLE); // the toolbar finally renders (splash cleared)
+    await sleep(20);
+    expect(button()).toBeTruthy(); // …and the button still lands
+    expect(button().getAttribute('aria-pressed')).toBe('true');
+    handle.remove();
+  });
+
+  test('REQ-LIFE-012/REQ-NFR-004: page without crossword markup → no button, clean give-up', async () => {
+    document.body.innerHTML = '<p>an archive page, no xwd anything</p>';
+    const handle = mountSessionButton(document, () => {}, { waitMs: 30 });
+    handle.setActive(true); // must be safe with nothing mounted
+    await sleep(60); // give-up timeout passed on a non-app page
+    initFakeNyt(document, FIXTURE_PUZZLE); // the app appears AFTER the give-up…
     await sleep(20);
     expect(button()).toBeNull(); // …and is left alone: the observer is gone
     handle.remove(); // idempotent cleanup

@@ -1,7 +1,7 @@
 // Selector health probe (REQ-PAGE-009): the first thing to run when NYT changes markup.
 // Returns a report, never throws — a broken page is a *finding*, not an exception.
 
-import { SEL } from './selectors.js';
+import { SEL, findPencilToggle } from './selectors.js';
 import { snapshot } from './reader.js';
 
 export function probe(document) {
@@ -26,9 +26,13 @@ export function probe(document) {
   add('clue texts', clueTexts >= 2 && clueTexts === clueItems,
     `${clueTexts} text node(s) for ${clueItems} item(s)`);
 
-  const pencilToggles = count(SEL.pencilToggle);
-  add('pencil toggle', pencilToggles >= 1,
-    `${pencilToggles} match(es) for ${SEL.pencilToggle} (REQ-PAGE-012)`);
+  const pencil = findPencilToggle(document);
+  add('pencil toggle', pencil != null, pencil
+    ? `found: <${pencil.tagName.toLowerCase()} aria-label="${pencil.getAttribute('aria-label') ?? ''}" class="${pencil.getAttribute('class') ?? ''}"> (REQ-PAGE-012)`
+    : `no match (selector nets + fallbacks) for ${SEL.pencilToggle} (REQ-PAGE-012)`);
+
+  const toolbars = count(SEL.toolbar);
+  add('toolbar', toolbars >= 1, `${toolbars} match(es) for ${SEL.toolbar} (REQ-LIFE-012 anchor)`);
 
   let snap = null;
   try {

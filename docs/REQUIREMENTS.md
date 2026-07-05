@@ -232,15 +232,22 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   session runs the tile inverts: ink tile, gold bubble). Clicking it MUST behave
   exactly like the extension icon: no session → start one (REQ-LIFE-001); a session running in
   this tab → end it instantly and silently (REQ-LIFE-002). Sessions started from the button obey
-  one-session-at-a-time (REQ-LIFE-009). Because the NYT app renders after the content script
-  loads, injection MUST wait for the toolbar (a bounded observer that disconnects once the button
-  is placed or after a give-up timeout) and MUST degrade silently when no pencil toggle exists
-  (toolbar redesign, archive pages): no button, no errors, the extension icon still works. The
-  injection lives in the page adapter (REQ-PAGE-011 — it is NYT DOM knowledge).
+  one-session-at-a-time (REQ-LIFE-009). Pencil discovery MUST be live-markup-defensive
+  (`findPencilToggle`: accessible name → pencil-classed icon's owning button → button text);
+  when no pencil is findable but a toolbar exists, the button MUST fall back to the end of the
+  tool row rather than not appearing. Because the NYT app renders after the content script loads
+  — and can sit behind the pre-puzzle splash for minutes — injection MUST wait with an observer
+  that disconnects once the button is placed, and MUST keep waiting as long as the page carries
+  crossword app markup; only pages with no app markup at all (archive pages, section fronts) may
+  give up after the timeout: no button, no errors, the extension icon still works. The injected
+  SVG MUST survive a hostile host page (no url(#…) references; paints duplicated into inline
+  styles). The injection lives in the page adapter (REQ-PAGE-011 — it is NYT DOM knowledge).
 - **Accept:** Given a puzzle page, then exactly one labeled button sits right of the pencil
-  toggle, clicking it starts a session and clicking again ends it, with `aria-pressed` tracking;
-  given a toolbar that renders late, then the button appears once the toolbar does; given a page
-  without a pencil toggle, then no button is injected and nothing throws.
+  toggle (found by any net), clicking it starts a session and clicking again ends it, with
+  `aria-pressed` tracking; given a toolbar without a findable pencil, then the button sits at the
+  end of the tool row; given a toolbar that renders late — even after the give-up interval, while
+  app markup is present — then the button appears once the toolbar does; given a page with no
+  crossword markup, then no button is injected and nothing throws.
 - **Verify:** integration `tests/integration/session-button.test.js`; manual MT-30.
 
 #### REQ-LIFE-013 — Action icon signals supported pages

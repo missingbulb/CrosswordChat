@@ -15,7 +15,7 @@
 // whose pencil markup drifted degrades the softening (REQ-ANS-019), not answering.
 
 import { snapshot, cellElements } from './reader.js';
-import { SEL, CLS } from './selectors.js';
+import { CLS, findPencilToggle } from './selectors.js';
 
 const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -56,7 +56,7 @@ function typeKey(document, key, cellEl) {
 }
 
 function pencilToggle(document) {
-  return document.querySelector(SEL.pencilToggle);
+  return findPencilToggle(document);
 }
 
 function pencilModeOn(document) {
