@@ -1257,7 +1257,18 @@ any time, every selector lives in one file with a self-diagnosing probe.
   judged on letters — pencil state is polled and verified while time remains, but a write whose
   letters all landed MUST NOT be reported failed over pencil state alone (a toolbar redesign must
   degrade the softening, REQ-ANS-019, not answering itself). The probe (REQ-PAGE-009) MUST cover
-  the pencil toggle.
+  the pencil toggle, and MUST expose forensics (the toggle's outerHTML, the count of cells read
+  as penciled) so live drift can be diagnosed from probe output alone.
+- Live facts (captured 2026-07): the toggle is `<button><i class="xwd__toolbar_icon--pencil"
+  data-testid="tool-icon"></i></button>` — NO aria-label, NO aria-pressed, and no known class
+  change when active: its state is UNREADABLE. Two consequences the adapter MUST honor:
+  (1) **click parity** — when no state is readable, mode is derived from the assumed starting
+  state (pen, the common case) plus the adapter's own click count, guaranteeing net-zero clicks
+  over a write so the user's toggle is never stolen even blind (accepted residual: a user who
+  solves in pencil gets our writes in inverted modes until an ON-state marker is captured);
+  (2) **clear-before-retype** — the app ignores retyping the letter a cell already shows, so a
+  pure pen↔pencil conversion (REQ-ANS-019 softening, undo's un-softening) MUST Backspace the
+  cell first and retype the letter in the target mode.
 - **Accept:** Given the fake page, when cells are entered with mixed pencil flags, then letters and
   penciled states match per cell and the toggle returns to its prior state (both from pen and from
   pencil); given a page without the toggle, then letters still land and `ok` reflects the letters.

@@ -59,22 +59,28 @@ function pencilToggle(document) {
   return findPencilToggle(document);
 }
 
+// Class markers that would say "this toggle is ON" (none observed live yet — the
+// probe's pencil forensics exist to capture one when the user finds it).
+const ACTIVE_CLASS = /(^|[-_])(active|selected|pressed|on)([-_]|$)/i;
+
+/**
+ * Pencil-mode signal from the page: true/false when readable, or NULL when the markup
+ * carries no state at all — the live button is `<button><i class="xwd__toolbar_icon--
+ * pencil"></i></button>` with no aria-pressed and no class change (verified live,
+ * 2026-07), so blindness is the NORMAL case and the writer falls back to click parity.
+ */
 function pencilModeOn(document) {
   const el = pencilToggle(document);
-  if (!el) return false;
+  if (!el) return null;
   const pressed = el.getAttribute('aria-pressed');
   if (pressed != null) return pressed === 'true';
-  return (el.getAttribute('class') ?? '').split(/\s+/).includes(CLS.pencilActive);
-}
-
-/** Drive the page's pencil toggle to `on`; a no-op when absent or already there. */
-async function setPencilMode(document, on, settleMs) {
-  const el = pencilToggle(document);
-  if (!el || pencilModeOn(document) === on) return;
-  fire(el, 'mousedown', {});
-  fire(el, 'mouseup', {});
-  fire(el, 'click', {});
-  await settle(settleMs);
+  const carriers = [el, ...el.querySelectorAll('[class]'), el.closest('li')].filter(Boolean);
+  for (const c of carriers) {
+    const cls = c.getAttribute('class') ?? '';
+    if (cls.split(/\s+/).includes(CLS.pencilActive)) return true;
+    if (ACTIVE_CLASS.test(cls)) return true;
+  }
+  return null; // no readable state — derive from our own click parity
 }
 
 /**
@@ -102,7 +108,30 @@ async function verify(document, want, judge, { verifyTimeoutMs, pollMs }) {
 export async function enterAnswer(document, cells, opts = {}) {
   const { verifyTimeoutMs = 1500, pollMs = 50, keySettleMs = 15 } = opts;
   const els = cellElements(document);
-  const wasPencilOn = pencilModeOn(document);
+  // Current letters, for the same-letter conversion below.
+  const letterAt = new Map(snapshot(document).cells.map((c) => [c.index, c.letter]));
+
+  const detected = pencilModeOn(document); // true | false | null (live page: null)
+  const wasPencilOn = detected ?? false; // blind ⇒ assume the common case: pen
+  let toggleClicks = 0;
+
+  // Drive the toggle to `target`. When the page exposes no state (the live button —
+  // see pencilModeOn), the current mode is derived from the assumed start + our own
+  // click count, which guarantees a net-zero number of clicks over the whole write:
+  // even blind, the user's toggle is never stolen (REQ-PAGE-012).
+  const setPencilMode = async (target) => {
+    const el = pencilToggle(document);
+    if (!el) return;
+    const current = pencilModeOn(document)
+      ?? ((wasPencilOn ? 1 : 0) + toggleClicks) % 2 === 1;
+    if (current === Boolean(target)) return;
+    fire(el, 'mousedown', {});
+    fire(el, 'mouseup', {});
+    fire(el, 'click', {});
+    toggleClicks += 1;
+    await settle(keySettleMs);
+  };
+
   // Batch by target mode (pen first) so the toggle is clicked at most three times:
   // pen batch, pencil batch, restore.
   const batches = [
@@ -111,7 +140,7 @@ export async function enterAnswer(document, cells, opts = {}) {
   ].filter((batch) => batch.length);
   let missingCell = false;
   for (const batch of batches) {
-    await setPencilMode(document, Boolean(batch[0].pencil), keySettleMs);
+    await setPencilMode(Boolean(batch[0].pencil));
     for (const { index, letter } of batch) {
       const el = els[index];
       if (!el) {
@@ -120,12 +149,20 @@ export async function enterAnswer(document, cells, opts = {}) {
       }
       clickCell(el);
       await settle(keySettleMs); // let the app apply the selection before we type into it
-      typeKey(document, String(letter).toUpperCase(), el);
+      const target = String(letter).toUpperCase();
+      // Retyping the letter a cell already shows is a no-op to the app, so a pure
+      // pen↔pencil conversion (REQ-ANS-019 softening, undo's un-softening) would
+      // change nothing — clear first, then retype in the current mode.
+      if ((letterAt.get(index) ?? '') === target) {
+        typeKey(document, 'Backspace', el);
+        await settle(keySettleMs);
+      }
+      typeKey(document, target, el);
       await settle(keySettleMs);
     }
     if (missingCell) break;
   }
-  await setPencilMode(document, wasPencilOn, keySettleMs); // the user's toggle, not ours
+  await setPencilMode(wasPencilOn); // the user's toggle, not ours
   if (missingCell) return { ok: false, snapshot: snapshot(document) };
   const lettersLanded = (byIndex) =>
     cells.every(({ index, letter }) => byIndex.get(index)?.letter === String(letter).toUpperCase());

@@ -30,6 +30,20 @@ export function probe(document) {
   add('pencil toggle', pencil != null, pencil
     ? `found: <${pencil.tagName.toLowerCase()} aria-label="${pencil.getAttribute('aria-label') ?? ''}" class="${pencil.getAttribute('class') ?? ''}"> (REQ-PAGE-012)`
     : `no match (selector nets + fallbacks) for ${SEL.pencilToggle} (REQ-PAGE-012)`);
+  if (pencil) {
+    // Forensics for the toggle's (so far unreadable) ON state: run the probe once with
+    // pencil mode off and once with it on, and diff these two lines (informational).
+    add('pencil toggle html', true, pencil.outerHTML.slice(0, 220));
+  }
+  // How many letters the reader currently sees as penciled — hand-pencil one letter and
+  // re-probe to verify pencil READING against the live page (informational).
+  add('penciled cells seen', true, (() => {
+    try {
+      return `${snapshot(document).cells.filter((c) => c.penciled).length}`;
+    } catch {
+      return 'snapshot failed';
+    }
+  })());
 
   const toolbars = count(SEL.toolbar);
   add('toolbar', toolbars >= 1, `${toolbars} match(es) for ${SEL.toolbar} (REQ-LIFE-012 anchor)`);

@@ -6,7 +6,11 @@
 //   2. fix values HERE only,
 //   3. the fake page fixture (tests/fixtures/fake-nyt) mirrors these exactly,
 //      so integration tests define the expected shape.
-// Last verified against: a saved live Mini page (7×7, 2026-07-04). Notable live facts:
+// Last verified against: a saved live Mini page (7×7, 2026-07-04), plus a live toolbar
+// capture (2026-07-05): `.xwd__toolbar--wrapper > ul.xwd__toolbar--tools` with
+// `li.xwd__tool--button` items; the pencil is `<button><i class=
+// "xwd__toolbar_icon--pencil" data-testid="tool-icon"></i></button>` — NO aria-label,
+// NO aria-pressed, state unreadable (see REQ-PAGE-012). Notable live facts:
 //   - cell state classes (--block/--selected/--highlighted) live on the <rect>, not the <g>;
 //   - number/letter <text> elements carry NO distinguishing classes (cellLetter/cellNumber
 //     below match nothing live — reader.js reads direct-child <text> own-text instead, and

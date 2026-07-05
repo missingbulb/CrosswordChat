@@ -157,6 +157,35 @@ describe('pencil mode (REQ-PAGE-012)', () => {
     expect(hard.snapshot.cells[2]).toMatchObject({ letter: 'A', penciled: false });
   });
 
+  test('REQ-PAGE-012: LIVE markup — a state-blind toggle still pencils and is never stolen', async () => {
+    // The real button carries no aria-pressed and no class change (captured 2026-07):
+    // mode must be driven by click parity, blind.
+    app = initFakeNyt(document, FIXTURE_PUZZLE, { pencilMarkup: 'icon' });
+    const result = await enterAnswer(document, [
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' },
+      { index: 2, letter: 'A', pencil: true }, { index: 3, letter: 'R', pencil: true },
+      { index: 4, letter: 'T' },
+    ]);
+    expect(result.ok).toBe(true);
+    expect(result.snapshot.cells.slice(0, 5).map((c) => c.penciled)).toEqual([false, false, true, true, false]);
+    expect(app.state.pencilMode).toBe(false); // net-zero clicks: toggle back where it started
+  });
+
+  test('REQ-PAGE-012: LIVE markup — pen↔pencil conversion of an existing letter works blind', async () => {
+    app = initFakeNyt(document, FIXTURE_PUZZLE, { pencilMarkup: 'icon' });
+    await enterAnswer(document, word('HEART', 0, 1)); // pen
+    // Soften the A in place (REQ-ANS-019): same letter, new mode — needs clear+retype,
+    // since the app ignores retyping the letter a cell already shows.
+    const soft = await enterAnswer(document, [{ index: 2, letter: 'A', pencil: true }]);
+    expect(soft.ok).toBe(true);
+    expect(soft.snapshot.cells[2]).toMatchObject({ letter: 'A', penciled: true });
+    expect(app.state.pencilMode).toBe(false);
+    // And back to pen (undo's un-softening).
+    const hard = await enterAnswer(document, [{ index: 2, letter: 'A', pencil: false }]);
+    expect(hard.snapshot.cells[2]).toMatchObject({ letter: 'A', penciled: false });
+    expect(app.state.pencilMode).toBe(false);
+  });
+
   test('REQ-PAGE-012: a page without the toggle still lands letters — ok is judged on letters', async () => {
     app = initFakeNyt(document, FIXTURE_PUZZLE, { noPencilToggle: true });
     const result = await enterAnswer(

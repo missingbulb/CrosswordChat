@@ -238,8 +238,12 @@ Covers: REQ-ANS-019 REQ-PAGE-012
 5. **PASS:** step 2 — the new word lands in normal pen; the crossed Down entry's *remaining*
    letters turn gray (penciled), except any letter that also belongs to a fully filled entry —
    those keep their pen. Step 3 — the overriding word is removed, the Down entry's letters return
-   exactly as they were and in pen (no gray left behind). Step 4 — our letters land in pen but the
-   pencil toggle is back ON for you afterwards (the session never steals your toggle state).
+   exactly as they were and in pen (no gray left behind). Step 4 — KNOWN LIMITATION: the live
+   toggle's state is unreadable (no aria-pressed), so with your pencil ON our writes may land in
+   inverted modes; the toggle itself must still be ON afterwards (net-zero clicks — never
+   stolen). If penciling misbehaves: run the probe with pencil mode OFF and again ON, and paste
+   both `pencil toggle html` lines plus the `penciled cells seen` count (after hand-penciling one
+   letter) into the tracking issue — that captures the ON-state markup needed to fix detection.
 
 ### MT-30 — The in-page toolbar button
 Covers: REQ-LIFE-012

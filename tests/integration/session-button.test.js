@@ -42,7 +42,7 @@ describe('session button', () => {
     initFakeNyt(document, FIXTURE_PUZZLE, { toolbarWithoutPencil: true });
     mountSessionButton(document, () => {});
     expect(button()).toBeTruthy();
-    const toolbarButtons = document.querySelectorAll('.xwd__toolbar button');
+    const toolbarButtons = document.querySelectorAll('[class*="xwd__toolbar"] button');
     expect(toolbarButtons[toolbarButtons.length - 1]).toBe(button()); // after the last tool
   });
 

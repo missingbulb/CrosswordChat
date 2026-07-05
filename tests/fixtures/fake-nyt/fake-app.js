@@ -83,34 +83,52 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   document.body.innerHTML = '';
   const main = document.createElement('main');
 
-  // Toolbar with the pencil toggle, like the live page (aria-pressed carries the state).
+  // Toolbar, mirroring the live page's shape (captured 2026-07):
+  //   <div class="xwd__toolbar--wrapper"><ul class="xwd__toolbar--tools">
+  //     <li class="xwd__tool--button"><button aria-label="Rebus">Rebus</button></li> …
+  //     <li class="xwd__tool--button"><button><i class="xwd__toolbar_icon--pencil"/></button></li>
   let pencilBtn = null;
   if (!noPencilToggle) {
     const toolbar = document.createElement('div');
-    toolbar.className = 'xwd__toolbar';
+    toolbar.className = 'xwd__toolbar--wrapper';
+    const tools = document.createElement('ul');
+    tools.className = 'xwd__toolbar--tools';
+    toolbar.append(tools);
+    const addTool = (child) => {
+      const li = document.createElement('li');
+      li.className = 'xwd__tool--button';
+      li.append(child);
+      tools.append(li);
+      return child;
+    };
     // Neighboring tools, so the no-pencil fallback (mount after the LAST toolbar
     // button) has a row to land in.
     for (const label of ['Rebus', 'Check']) {
       const b = document.createElement('button');
       b.setAttribute('aria-label', label);
-      toolbar.append(b);
+      addTool(b);
     }
     if (!toolbarWithoutPencil) {
       pencilBtn = document.createElement('button');
-      pencilBtn.setAttribute('aria-pressed', 'false');
+      pencilBtn.setAttribute('type', 'button');
       if (pencilMarkup === 'icon') {
-        pencilBtn.className = 'xwd__toolbar_icon';
+        // The LIVE markup: no aria-label, no aria-pressed, no class change on toggle —
+        // the button's state is completely unreadable from the DOM.
         const icon = document.createElement('i');
         icon.className = 'xwd__toolbar_icon--pencil';
+        icon.setAttribute('data-testid', 'tool-icon');
         pencilBtn.append(icon);
       } else {
         pencilBtn.setAttribute('aria-label', 'Pencil');
+        pencilBtn.setAttribute('aria-pressed', 'false');
       }
       pencilBtn.addEventListener('click', () => {
         state.pencilMode = !state.pencilMode;
-        pencilBtn.setAttribute('aria-pressed', String(state.pencilMode));
+        if (pencilMarkup !== 'icon') {
+          pencilBtn.setAttribute('aria-pressed', String(state.pencilMode));
+        }
       });
-      toolbar.append(pencilBtn);
+      addTool(pencilBtn);
     }
     main.append(toolbar);
   }
@@ -287,9 +305,11 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     if (legacyKeysOnly && !event.keyCode) return;
     const { key } = event;
     if (/^[a-zA-Z]$/.test(key)) {
+      // Like the live app: retyping the letter a cell already shows is a NO-OP — it
+      // does not convert pen↔pencil (writers must clear first, REQ-PAGE-012).
+      if (state.letters[state.selCell] === key.toUpperCase()) return;
       state.letters[state.selCell] = key.toUpperCase();
-      // Like the live app: the active toggle decides pen vs pencil, and retyping a
-      // letter in the other mode converts it.
+      // The active toggle decides pen vs pencil for the newly typed letter.
       state.penciled[state.selCell] = state.pencilMode;
       advanceWithin(selectedEntry());
       render();
