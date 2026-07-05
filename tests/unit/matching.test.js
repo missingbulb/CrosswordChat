@@ -119,6 +119,38 @@ describe('evaluate', () => {
       .toBe('unintelligible');
   });
 
+  test('REQ-ANS-019: an all-letters utterance is a candidate without spelling mode', () => {
+    // Letter names, one utterance, normal pipeline — spelled back since it differs from the literal.
+    expect(evaluate({ alternatives: [{ transcript: 'aitch e a are tea' }], entryLength: 5, pattern: P('.....') }))
+      .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    // NATO works too, and the pattern gate still applies.
+    expect(evaluate({ alternatives: [{ transcript: 'hotel echo alpha romeo tango' }], entryLength: 5, pattern: P('H...T') }))
+      .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    // Bare letters already collapse to the literal join — same word, plain fit.
+    expect(evaluate({ alternatives: [{ transcript: 'h e a r t' }], entryLength: 5, pattern: P('.....') }))
+      .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: false });
+  });
+
+  test('REQ-ANS-019: the spelled reading requires every token to be a letter', () => {
+    // 'INDIA' alone is the word INDIA (a plausible answer), not the letter I.
+    expect(evaluate({ alternatives: [{ transcript: 'india' }], entryLength: 5, pattern: P('.....') }))
+      .toEqual({ kind: 'fit', word: 'INDIA', spelledDifferently: false });
+    // One non-letter token spoils the letter reading: no C-HORSE from "sea horse".
+    const out = evaluate({ alternatives: [{ transcript: 'sea horse' }], entryLength: 6, pattern: P('......') });
+    expect(out.kind).toBe('length-mismatch'); // SEAHORSE (8) reported, CHORSE never generated
+    expect(out.variants.map((v) => v.word)).not.toContain('CHORSE');
+  });
+
+  test('REQ-ANS-019: length gate picks between the literal and the spelled reading', () => {
+    // "are you" on a 2-cell entry: AREYOU (6) fails, spelled R-U fits.
+    expect(evaluate({ alternatives: [{ transcript: 'are you' }], entryLength: 2, pattern: P('..') }))
+      .toEqual({ kind: 'fit', word: 'RU', spelledDifferently: true });
+    // Same utterance on a 6-cell entry: the literal word wins (pattern rules out
+    // the EWE/YEW homophones so exactly one spelling remains).
+    expect(evaluate({ alternatives: [{ transcript: 'are you' }], entryLength: 6, pattern: P('....O.') }))
+      .toEqual({ kind: 'fit', word: 'AREYOU', spelledDifferently: false });
+  });
+
   test('pattern helpers behave', () => {
     expect(patternCompatible('HEART', P('H...T'))).toBe(true);
     expect(patternCompatible('HEART', P('X....'))).toBe(false);

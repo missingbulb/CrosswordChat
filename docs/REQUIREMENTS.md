@@ -475,6 +475,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 2. For each STT alternative (n-best, REQ-ANS-004): tokenize; normalize digits/ordinals to words
    (REQ-ANS-002); expand token-level homophones (REQ-ANS-003); join tokens to a candidate word
    (REQ-ANS-001, REQ-ANS-015). The unexpanded join of the top alternative is the **literal**.
+   An utterance that is spoken letters throughout (bare letters, letter names, NATO) also yields
+   the joined letters as a candidate (REQ-ANS-019) — spelling without entering spelling mode.
 3. Keep candidates that are pure A–Z; drop candidates the user already rejected (REQ-ANS-010).
 4. Gate by entry length (REQ-ANS-005). No length match → report per REQ-ANS-007.
 5. Among length-fitting candidates, check the pattern. Exactly one pattern-fitting spelling from the
@@ -494,6 +496,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | 4 | `____` | "ocelot" | `ocelot` | 6 ≠ 4 → "OCELOT is 6 letters; we need 4" |
 | 5 | `HEA_T` | "heist" | `heist` | length 5 ok; `I` vs `A` at position 3 → collision report |
 | 4 | `____` | "pass" | `pass` | command *pass* wins → skip clue (say "answer pass" to play PASS) |
+| 5 | `_____` | "H, E, A, R, T" | `aitch e a are tea` | all tokens are letters → HEART → fits, spelled back |
 
 #### REQ-ANS-001 — Answer normalization
 - **Status:** Active · **Level:** MUST
@@ -696,6 +699,24 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   spells "E, A, T" and says done, then HEART is spelled back and entered. Given the same entry,
   spelling H-E-A-R-T still auto-evaluates to HEART at the fifth letter. Given "E, A" then done, the
   report offers 5 letters or 3 for the open squares.
+
+#### REQ-ANS-019 — Spelled-out answers need no mode
+- **Status:** Active · **Level:** MUST
+- An utterance made up entirely of spoken letters — bare letters ("H, E, A, R, T"), letter-name
+  words (aitch, bee, are, ...) or NATO words — MUST be evaluated as the joined word straight from
+  normal listening, without entering spelling mode. The letter reading is all-or-nothing: one
+  non-letter token disables it (SEA HORSE is SEAHORSE, never C-HORSE), and a lone letter token is
+  never a candidate (INDIA is a word, not the letter I). Both the literal join and the letter
+  reading run through the normal pipeline (length gate, pattern, rejections) — their lengths
+  always differ, so the entry length picks. An accepted letter reading is spelled back
+  (REQ-ANS-006 exception): it differs from what was voiced.
+- Spelling mode (REQ-ANS-011) remains for what a single utterance cannot do: pausing between
+  letters (silence ends an utterance and would evaluate a fragment), per-letter undo with echoed
+  progress, and filling just the open squares (REQ-ANS-018).
+- **Accept:** Given "aitch e a are tea" on an empty 5-entry, then HEART is accepted and spelled
+  back; given "india", then the word INDIA is evaluated, not the letter I; given "are you" on a
+  2-entry, then RU fits.
+- **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/verbalizer.test.js`.
 
 ---

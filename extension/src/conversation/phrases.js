@@ -131,7 +131,7 @@ export function render(say) {
       return `${letters}. ${summary}`;
     }
     case 'help':
-      return 'You can: say an answer, or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
+      return 'You can: say an answer — whole or spelled out — or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
     case 'didnt-catch':
       return "Sorry, I didn't catch that. Say an answer, or say help.";
     case 'misheard-reprompt':

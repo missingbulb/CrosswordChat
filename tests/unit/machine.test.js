@@ -428,6 +428,13 @@ describe('answers (ANS)', () => {
     expect(says(done)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
   });
 
+  test('REQ-ANS-019: a spelled-out answer works straight from normal listening — no mode', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const fit = s.step(heard('aitch e a are tea')); // letter names, one utterance
+    expect(says(fit)[0]).toMatchObject({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
   test('REQ-ANS-014: bare "pass" is a command; "answer pass" plays the word PASS', () => {
     const blocked = makeSnapshot(['#...', '....', '....', '...#'], {
       clues: { A4: 'Walk casually' },
