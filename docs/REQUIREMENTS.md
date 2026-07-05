@@ -31,6 +31,8 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 | **Homophone set** | Words pronounced (near-)identically with different spellings: *plain/plane*, *ate/eight*. The user says "homonyms"; we implement homophones. |
 | **Utterance** | One chunk of recognized speech, delivered as an n-best list of alternative transcripts. |
 | **Command** | An utterance that controls the conversation (*next*, *hint*, *repeat*, ...) rather than answering. |
+| **Pencil mode** | NYT's "not sure" marker: letters typed with the toolbar pencil toggle on render grayed, signalling uncertainty. A *penciled* letter is one in that state. |
+| **Malformed entry** | An entry that lost one or more of its letters to an overriding answer (REQ-ANS-012/016) — what remains no longer reads as the word it was. |
 
 ## 2. Scope & assumptions
 
@@ -613,6 +615,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   input). The bare word *anyway* MUST work: STT frequently keeps only that word from phrases like
   "say it anyway". When no candidate is pending, an *anyway* phrase MUST fall through to answer
   evaluation (ANYWAY can itself be a grid answer). Override MUST never happen implicitly.
+  Overriding leaves the crossing entries that lost letters malformed; REQ-ANS-019 softens their
+  remaining letters to pencil in the same write.
 - **Accept:** Given a collision report for HEIST, when the user says "enter it anyway", then the grid
   reads HEIST and the conversation advances.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-07.
@@ -648,7 +652,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   *yes* replaces, *no* keeps and re-prompts. Offering the identical word just confirms and advances.
 - For a fully filled entry only the length gate applies — its letters are exactly what a new
   answer would replace, so they are not collision-checked (collisions, REQ-ANS-008, are about
-  *partially* filled entries whose letters come from crossings).
+  *partially* filled entries whose letters come from crossings). A confirmed replacement that
+  changes letters malforms the crossings that held them, exactly like an override — REQ-ANS-019
+  applies here too.
 - **Accept:** Given filled HEART and utterance "heist" (fits), then the confirm question is asked and
   "yes" rewrites the entry.
 - **Verify:** unit `tests/unit/machine.test.js`.
@@ -657,7 +663,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Status:** Active · **Level:** MUST
 - *undo* (STT often hears it as "undue" — both MUST work) MUST revert the most recent answer the
   session entered: every cell of that entry returns to what it held just before the entry —
-  previously empty cells are cleared, overwritten letters are restored. The conversation MUST move
+  previously empty cells are cleared, overwritten letters are restored (with the pencil state they
+  had), and any letters the entry softened to pencil (REQ-ANS-019) are rewritten back in pen — the
+  penciling is part of the same undo step, never left behind. The conversation MUST move
   back to that clue (page highlight synced) and prompt the user to say the answer again or spell
   it. With no entry to revert (none made yet, or right after an undo), reply that there is nothing
   to undo. Undo history is one level deep — a second consecutive *undo* does not go further back.
@@ -685,6 +693,28 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   spelling H-E-A-R-T still auto-evaluates to HEART at the fifth letter. Given "E, A" then done, the
   report offers 5 letters or 3 for the open squares.
 - **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/verbalizer.test.js`.
+
+#### REQ-ANS-019 — Overriding softens the malformed crossings to pencil
+- **Status:** Active · **Level:** MUST
+- When an answer is written over letters that disagree with it — a collision override
+  (REQ-ANS-012) or a confirmed replacement (REQ-ANS-016) — every crossing entry that loses a
+  letter to it is left malformed: some of its letters now belong to the new word, so the rest can
+  no longer be trusted. In the same write (REQ-PAGE-012), each remaining letter of every malformed
+  entry MUST be rewritten in pencil mode, EXCEPT letters that are part of *another* completely
+  filled entry (that crossing still corroborates them — they keep their pen) and letters already
+  penciled (nothing to soften). The new answer itself is always written in pen — the user just
+  asserted it. Cells the new answer occupies are never pencil candidates (after the write they
+  belong to a completely filled entry: the answer). An entry that overwrites nothing, or only
+  letters identical to its own, pencils nothing.
+- Rationale: the grid should keep signalling which letters are certain. The overridden crossing's
+  survivors are exactly as unverified as the letters the user just chose to discard.
+- **Accept:** Given A1 `HEA_T` with its crossing D3 also holding B and U further down (D3's other
+  crossings unfilled), when HEIST is entered *anyway*, then HEIST lands in pen and D3's B and U are
+  rewritten penciled. Given the same override but with the B corroborated by a completely filled
+  crossing entry, then only the U is penciled. Given HEART entered into empty cells, then nothing
+  is penciled.
+- **Verify:** unit `tests/unit/model.test.js` (plan), `tests/unit/machine.test.js` (ENTER payload,
+  undo); integration `tests/integration/page-adapter.test.js` (pencil lands); manual MT-29.
 
 ---
 
@@ -995,6 +1025,22 @@ any time, every selector lives in one file with a self-diagnosing probe.
   tests) may reference NYT DOM specifics (the `xwd__` class family). Enforced mechanically.
 - **Accept:** Given the source tree, then a grep for `xwd__` outside the allowed paths finds nothing.
 - **Verify:** unit `tests/unit/arch.test.js`.
+
+#### REQ-PAGE-012 — Pencil-mode writing and reading
+- **Status:** Active · **Level:** MUST
+- The adapter MUST support NYT's pencil mode end to end. Writing: `enterAnswer` cells MAY carry a
+  `pencil` flag; the adapter drives the page's pencil toggle (toolbar button) around the affected
+  keystrokes so flagged letters land penciled and unflagged letters land in pen, and it MUST
+  restore the toggle to the state the user left it in afterwards. Reading: the snapshot MUST
+  report each cell's `penciled` state. Verification: entry success (`ok`, REQ-PAGE-007) stays
+  judged on letters — pencil state is polled and verified while time remains, but a write whose
+  letters all landed MUST NOT be reported failed over pencil state alone (a toolbar redesign must
+  degrade the softening, REQ-ANS-019, not answering itself). The probe (REQ-PAGE-009) MUST cover
+  the pencil toggle.
+- **Accept:** Given the fake page, when cells are entered with mixed pencil flags, then letters and
+  penciled states match per cell and the toggle returns to its prior state (both from pen and from
+  pencil); given a page without the toggle, then letters still land and `ok` reflects the letters.
+- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01, MT-29.
 
 ---
 

@@ -1,5 +1,6 @@
 // Snapshot builders for pure-logic tests (model, strategies, machine).
-// Grid rows use: '#' block, '.' empty cell, letter = filled cell.
+// Grid rows use: '#' block, '.' empty cell, letter = filled cell —
+// UPPERCASE in pen, lowercase penciled (REQ-ANS-019).
 
 import { parseClueHtml } from '../../extension/src/page-adapter/clue-html.js';
 import { FIXTURE_PUZZLE } from '../fixtures/fake-nyt/puzzle.js';
@@ -24,6 +25,7 @@ export function makeSnapshot(rows, { clues = {}, selection = {}, status = 'activ
         col: c,
         block: ch === '#',
         letter: /[A-Za-z]/.test(ch) ? ch.toUpperCase() : '',
+        penciled: /[a-z]/.test(ch), // lowercase = penciled letter
         number: null, // model derives numbering; tests assert against hand-computed values
       });
     }

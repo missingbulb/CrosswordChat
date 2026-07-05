@@ -14,7 +14,8 @@ export function createWatcher(document, onEvent, { debounceMs = 150 } = {}) {
   let paused = false;
   let last = snapshot(document);
 
-  const lettersOf = (snap) => snap.cells.map((c) => c.letter || '.').join('');
+  // Pencil state counts as grid state: a letter flipping pen↔pencil is a change too.
+  const lettersOf = (snap) => snap.cells.map((c) => (c.letter || '.') + (c.penciled ? '*' : '')).join('');
 
   const check = () => {
     timer = null;

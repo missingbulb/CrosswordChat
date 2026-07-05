@@ -63,6 +63,8 @@ export function buildModel(snapshot) {
     const raw = (cells[i]?.letter ?? '').trim().toUpperCase();
     return raw ? raw[0] : null;
   };
+  // Missing on older snapshots → false: an unknown pencil state reads as pen.
+  const penciledAt = (i) => Boolean(cells[i]?.penciled) && letterAt(i) != null;
 
   const model = {
     snapshot,
@@ -81,6 +83,11 @@ export function buildModel(snapshot) {
     patternFor(clueId) {
       const clue = clueById.get(clueId);
       return clue ? clue.cellIndices.map(letterAt) : [];
+    },
+    /** Per-cell pencil flags in entry order, aligned with patternFor (REQ-ANS-019). */
+    pencilFor(clueId) {
+      const clue = clueById.get(clueId);
+      return clue ? clue.cellIndices.map(penciledAt) : [];
     },
     progressFor(clueId) {
       const pattern = model.patternFor(clueId);
@@ -107,6 +114,35 @@ export function buildModel(snapshot) {
     cellsForWord(clueId, word) {
       const clue = clueById.get(clueId);
       return clue.cellIndices.map((index, i) => ({ index, letter: word[i] }));
+    },
+    /**
+     * Cells to soften to pencil when `word` overwrites conflicting letters in `clueId`
+     * (REQ-ANS-019): the surviving letters of every crossing entry that loses a letter,
+     * except letters corroborated by another completely filled entry and letters
+     * already penciled. Empty when the write conflicts with nothing.
+     * @returns {Array<{index: number, letter: string}>}
+     */
+    pencilPlanFor(clueId, word) {
+      const clue = clueById.get(clueId);
+      if (!clue) return [];
+      const own = new Set(clue.cellIndices);
+      const plan = new Map(); // index → letter; deduped across malformed entries
+      clue.cellIndices.forEach((cellIndex, i) => {
+        const have = letterAt(cellIndex);
+        if (!have || have === word[i]) return; // nothing lost at this cell
+        const cross = model.crossingAt(clueId, i);
+        if (!cross) return;
+        const malformed = clueById.get(cross.clueId);
+        malformed.cellIndices.forEach((survivor, j) => {
+          if (own.has(survivor) || plan.has(survivor)) return; // the new word's cell / seen
+          const letter = letterAt(survivor);
+          if (!letter || penciledAt(survivor)) return; // empty, or already soft
+          const corroborator = model.crossingAt(cross.clueId, j);
+          if (corroborator && model.wordFor(corroborator.clueId)) return; // part of a full entry
+          plan.set(survivor, letter);
+        });
+      });
+      return [...plan.entries()].map(([index, letter]) => ({ index, letter }));
     },
     isFull() {
       return cells.every((c) => c.block || letterAt(c.index));

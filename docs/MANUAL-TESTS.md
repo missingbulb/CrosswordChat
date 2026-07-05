@@ -219,3 +219,16 @@ Covers: REQ-NAV-011 REQ-NAV-012
    clue has been skipped, "next" cycles back to the one skipped longest ago. Step 3 — the skipped
    entry whose letters just changed is offered again. Step 4 — the new session advances in plain
    list order; the setting survived the browser restart / new session.
+
+### MT-29 — Override pencils the malformed crossing; undo restores pen
+Covers: REQ-ANS-019 REQ-PAGE-012
+1. On a fresh Mini, answer one Down clue by voice so several of its letters are in the grid.
+2. Move to an Across clue that crosses it and give an answer that collides with that Down entry's
+   letter; after the collision report, say "anyway".
+3. Say "undo".
+4. Toggle NYT's pencil button ON yourself, then answer another clue by voice.
+5. **PASS:** step 2 — the new word lands in normal pen; the crossed Down entry's *remaining*
+   letters turn gray (penciled), except any letter that also belongs to a fully filled entry —
+   those keep their pen. Step 3 — the overriding word is removed, the Down entry's letters return
+   exactly as they were and in pen (no gray left behind). Step 4 — our letters land in pen but the
+   pencil toggle is back ON for you afterwards (the session never steals your toggle state).
