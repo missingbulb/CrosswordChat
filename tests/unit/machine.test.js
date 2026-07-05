@@ -96,12 +96,12 @@ describe('navigation (NAV)', () => {
     expect(types(actions)).not.toContain('ENTER');
   });
 
-  test('REQ-NAV-006: wrap-around is flagged for the readout', () => {
+  test('REQ-NAV-006 (retired): wrap-around happens without any announcement', () => {
     const snap = heartSnapshot(['.....', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], { selection: { clueId: 'D5' } });
     const s = listening(snap);
     const actions = s.step(heard('next'));
     expect(actions.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A1');
-    expect(says(actions)[0].wrapped).toBe(true);
+    expect(says(actions)[0].wrapped).toBeUndefined(); // plain clue readout, no wrap prefix
   });
 
   test('REQ-NAV-005/REQ-NAV-004: switching strategy by voice changes what "next" does', () => {
@@ -322,6 +322,40 @@ describe('answers (ANS)', () => {
     expect(says(actions)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
   });
 
+  /** Enter HEART on an empty A1 and advance to A6 — the setup for post-entry corrections. */
+  function enteredHeart() {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('heart'));
+    s.step({ type: 'TTS_DONE' }); // ENTER issued
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A6' } }),
+    }); // advanced to A6
+    s.step({ type: 'TTS_DONE' });
+    return s;
+  }
+
+  test('REQ-ANS-010: "you misheard" after the word landed undoes the entry, rejects it, reprompts', () => {
+    const s = enteredHeart();
+    const undo = s.step(heard('you misheard'));
+    expect(undo.find((a) => a.type === 'UNDO').clueId).toBe('A1'); // back to the entry's clue
+    const done = s.step({ type: 'UNDO_RESULT', ok: true, snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    expect(says(done)[0].kind).toBe('misheard-reprompt');
+    s.step({ type: 'TTS_DONE' });
+    // The undone word is rejected on this clue now.
+    expect(says(s.step(heard('heart')))[0].kind).toBe('didnt-catch');
+  });
+
+  test('REQ-ANS-010: "no I said X" after the word landed undoes the entry, then evaluates X there', () => {
+    const s = enteredHeart();
+    const undo = s.step(heard('no i said heist'));
+    expect(undo.find((a) => a.type === 'UNDO').clueId).toBe('A1');
+    const fix = s.step({ type: 'UNDO_RESULT', ok: true, snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
+    expect(says(fix)[0]).toMatchObject({ kind: 'fit', word: 'HEIST' });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', clueId: 'A1', word: 'HEIST' });
+  });
+
   test('REQ-ANS-011: spelling mode collects letters (names + NATO), auto-evaluates at length', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     expect(says(s.step(heard('spell')))[0].kind).toBe('spell-start');
@@ -394,6 +428,13 @@ describe('answers (ANS)', () => {
     expect(says(done)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
   });
 
+  test('REQ-ANS-020: a spelled-out answer works straight from normal listening — no mode', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const fit = s.step(heard('aitch e a are tea')); // letter names, one utterance
+    expect(says(fit)[0]).toMatchObject({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+  });
+
   test('REQ-ANS-014: bare "pass" is a command; "answer pass" plays the word PASS', () => {
     const blocked = makeSnapshot(['#...', '....', '....', '...#'], {
       clues: { A4: 'Walk casually' },
@@ -454,7 +495,7 @@ describe('answers (ANS)', () => {
     expect(action.cells).toEqual([0, 1, 2, 3, 4].map((index) => ({ index, letter: null })));
 
     const done = s.step({ type: 'UNDO_RESULT', ok: true, snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
-    expect(says(done)[0].kind).toBe('undone'); // "say it again, or spell it"
+    expect(says(done)[0].kind).toBe('undone'); // a brief "Undone."
     s.step({ type: 'TTS_DONE' });
     expect(says(s.step(heard('heart')))[0]).toMatchObject({ kind: 'fit', word: 'HEART' }); // back on A1
   });
@@ -586,6 +627,15 @@ describe('hints, commands, control (HINT/CMD/READ)', () => {
       filled: 3,
       length: 5,
     });
+  });
+
+  test('REQ-CMD-001: "letters" and "spell it" are hint synonyms; spelling mode still opens with "spell"', () => {
+    const s = listening(heartSnapshot(['H..RT', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    expect(says(s.step(heard('letters')))[0].kind).toBe('hint');
+    s.step({ type: 'TTS_DONE' });
+    expect(says(s.step(heard('spell it')))[0].kind).toBe('hint'); // reads letters, not spelling mode
+    s.step({ type: 'TTS_DONE' });
+    expect(says(s.step(heard('spell')))[0].kind).toBe('spell-start');
   });
 
   test('REQ-READ-009: repeat re-reads the current clue without greeting', () => {

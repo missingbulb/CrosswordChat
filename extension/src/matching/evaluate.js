@@ -80,6 +80,18 @@ export function evaluate({ alternatives, entryLength, pattern, rejected = [], li
     const tokens = normalizedTokens(alt.transcript);
     if (!tokens.length) return;
     if (altIndex === 0 || literalTop === null) literalTop ??= tokens.join('');
+    if (!literalOnly) {
+      // REQ-ANS-020: an utterance that is spoken letters throughout (bare, letter
+      // names, NATO) is also a candidate as the spelled word — no mode needed.
+      // Strict all-or-nothing: one non-letter token and the reading is off. Pushed
+      // first so mismatch reports lead with it, not the letter-name concatenation;
+      // it can never tie a same-length literal (equal length ⇒ identical ⇒ skipped).
+      const { letters, control, ignored } = collectSpelledLetters(alt.transcript);
+      if (!control && !ignored && letters.length >= 2) {
+        const word = letters.join('');
+        if (word !== tokens.join('')) candidates.push({ word, swaps: 0, altIndex });
+      }
+    }
     const combos = literalOnly
       ? [{ word: tokens.join(''), swaps: 0 }]
       : expandCandidates(tokens);

@@ -12,12 +12,13 @@ const PHRASES = {
   undo: ['undo', 'undue', 'undo that', 'undo it', 'take that back', 'take it back'],
   repeat: ['repeat', 'repeat that', 'again', 'say again', 'say that again', 'read it again',
     'what', 'come again'],
+  // "spell it" reads the letters TO the user; spelling mode is entered with "spell" etc.
   hint: ['hint', 'hints', 'give me a hint', 'what do i have', 'whats there', 'whats filled in',
-    'read the letters', 'pattern'],
+    'read the letters', 'pattern', 'letters', 'the letters', 'spell it'],
   help: ['help', 'what can i say', 'commands', 'options'],
   stop: ['stop', 'goodbye', 'bye', 'end', 'end session', 'quit', 'exit', 'were done', 'im done',
     'stop listening'],
-  spell: ['spell', 'spell it', 'let me spell', 'let me spell it', 'ill spell it', 'spelling'],
+  spell: ['spell', 'let me spell', 'let me spell it', 'ill spell it', 'spelling'],
   // Bare "anyway" matters: STT often keeps only that word from "say it anyway" (REQ-ANS-012).
   'enter-anyway': ['anyway', 'anyways', 'say it anyway', 'do it anyway', 'it anyway',
     'enter it anyway', 'enter anyway', 'force it', 'overwrite', 'put it in anyway',
