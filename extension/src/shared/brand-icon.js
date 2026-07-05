@@ -10,11 +10,13 @@ export const INK = '#191919'; // near-black
 const BUBBLE = 'M34 20 h60 a12 12 0 0 1 12 12 v48 a12 12 0 0 1 -12 12 H62 L40 110 V92 '
   + 'h-6 a12 12 0 0 1 -12 -12 V32 a12 12 0 0 1 12 -12 z';
 
-// Grid strokes (2 verticals + 1 horizontal → 3×2 cells). The left vertical (x=50) runs
-// down INTO the tail (V110) and lets the bubble clip cut it exactly on the outline —
-// stopping at the body's bottom edge (y=92) left it floating mid-air inside the tail,
-// visibly disconnected from the bubble's edge.
-const GRID = 'M50 20 V110 M78 20 V92 M22 56 H108';
+// The bottom edge continued across the tail's opening (drawn with the outline), so the
+// tail reads as a closed triangle hanging under a complete rounded rect — and the left
+// grid vertical (x=50) ends ON that edge instead of floating mid-air inside the tail.
+const CLOSE_TAIL = 'M36 92 H66';
+
+// Grid strokes (2 verticals + 1 horizontal → 3×2 cells); every end lands on an edge.
+const GRID = 'M50 20 V92 M78 20 V92 M22 56 H108';
 
 /**
  * @param {{bg: string, ink: string, bubble: string, size?: number}} opts
@@ -32,6 +34,6 @@ export function brandIconSvg({ bg, ink, bubble, size }) {
     <rect x="78" y="20" width="30" height="36" fill="${ink}"/>
     <path d="${GRID}" stroke="${ink}" stroke-width="6"/>
   </g>
-  <path d="${BUBBLE}" fill="none" stroke="${ink}" stroke-width="8" stroke-linejoin="round"/>
+  <path d="${BUBBLE} ${CLOSE_TAIL}" fill="none" stroke="${ink}" stroke-width="8" stroke-linejoin="round"/>
 </svg>`;
 }
