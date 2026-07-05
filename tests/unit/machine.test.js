@@ -343,6 +343,53 @@ describe('answers (ANS)', () => {
     expect(out.find((a) => a.type === 'ENTER')).toBeUndefined();
   });
 
+  test('REQ-ANS-023/REQ-PAGE-012: letters WE penciled never gate, even when the page cannot report pencil state', () => {
+    // Live-page reality: snapshots carry penciled:false for everything. The override
+    // softens D3's U (REQ-ANS-019); the ENTRY_RESULT snapshot comes back with a plain
+    // pen U — only the machine's own ledger knows it is soft.
+    const s = listening(heartSnapshot(['HEA.T', 'EMBER', '..U..', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heist'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('anyway'));
+    s.step({ type: 'TTS_DONE' }); // ENTER (word + pencil rewrite of D3's U)
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true, // note the UPPERCASE U: the live page shows no pencil marker
+      snapshot: heartSnapshot(['HEIST', 'EMBER', '..U..', '.....', '.....'], { selection: { clueId: 'A7' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('three down')); // D3 now reads I, B, U(soft), _, _
+    s.step({ type: 'TTS_DONE' });
+    const out = s.step(heard('ibsen')); // disagrees only with the softened U
+    expect(says(out)[0]).toMatchObject({ kind: 'fit', word: 'IBSEN' });
+  });
+
+  test('REQ-ANS-023: undo restores the soft-cell ledger along with the letters', () => {
+    const s = listening(heartSnapshot(['HEA.T', 'EMBER', '..U..', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    s.step(heard('heist'));
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('anyway'));
+    s.step({ type: 'TTS_DONE' }); // ENTER
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(['HEIST', 'EMBER', '..U..', '.....', '.....'], { selection: { clueId: 'A7' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('undo')); // un-softens the U back to pen…
+    s.step({
+      type: 'UNDO_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(['HEA.T', 'EMBER', '..U..', '.....', '.....'], { selection: { clueId: 'A1' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('three down'));
+    s.step({ type: 'TTS_DONE' });
+    // …so a clash with it (pen again, ledger restored) is a real collision once more.
+    const out = s.step(heard('abbey')); // D3 reads A,B,U,_,_ — ABBEY clashes at the U
+    expect(says(out)[0]).toMatchObject({ kind: 'collision', word: 'ABBEY' });
+  });
+
   test('REQ-ANS-009: ambiguous homophones ask; "second" picks and enters', () => {
     const s = listening(heartSnapshot(['.L...', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
     const ask = s.step(heard('plain'));
@@ -889,6 +936,122 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
     s.step({ type: 'TTS_DONE' });
     const again = s.step(heard('next'));
     expect(says(again)[0]).toMatchObject({ kind: 'clue', label: '7 Across' }); // keeps moving
+  });
+
+  // Full-but-wrong grid with penciled letters (lowercase u at index 12): the suspects
+  // are the entries holding pencil — A7 (row 2) and D3 (column 2).
+  const FULL_PENCIL_ROWS = ['HEIST', 'EMBER', 'ABuSE', 'RESIN', 'TREND'];
+
+  test('REQ-NAV-014: an entry that fills the grid wrong jumps straight to a penciled entry', () => {
+    const s = listening(heartSnapshot(['HEIST', 'EMBER', 'ABuSE', 'RESIN', 'TREN.'], { selection: { clueId: 'A9' } }));
+    s.step(heard('trend'));
+    s.step({ type: 'TTS_DONE' }); // ENTER
+    const full = s.step({
+      type: 'ENTRY_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(FULL_PENCIL_ROWS, { selection: { clueId: 'A9' } }),
+    });
+    expect(says(full).map((x) => x.kind)).toEqual(['grid-full-wrong', 'clue']);
+    // From A9, the next suspect in list order is D3 (the penciled column).
+    expect(full.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('D3');
+  });
+
+  test('REQ-NAV-014: "next" on a full grid patrols the penciled entries only', () => {
+    const s = listening(heartSnapshot(FULL_PENCIL_ROWS, { selection: { clueId: 'D3' } }));
+    const out = s.step(heard('next'));
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '7 Across' }); // wraps to A7
+    s.step({ type: 'TTS_DONE' });
+    const again = s.step(heard('next'));
+    expect(says(again)[0]).toMatchObject({ kind: 'clue', label: '3 Down' }); // …and back
+  });
+
+  test('REQ-NAV-014: a full-but-wrong session start lands on a penciled entry', () => {
+    const s = scenario();
+    const actions = s.step({ type: 'START', snapshot: heartSnapshot(FULL_PENCIL_ROWS) });
+    expect(says(actions).map((x) => x.kind)).toEqual(['grid-full-wrong', 'clue']);
+    expect(says(actions)[1].label).toBe('7 Across'); // first suspect in list order
+  });
+
+  test('REQ-NAV-010: flip crosses at the SELECTED square, not the entry\'s first letter', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1', cellIndex: 2 } }));
+    const out = s.step(heard('flip'));
+    expect(out.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('D3'); // crossing at cell 2
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '3 Down' });
+  });
+
+  test('REQ-NAV-013: a clear direction with a garbled number asks again instead of guessing', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('gibberish across'));
+    expect(says(out)[0]).toEqual({ kind: 'goto-didnt-catch' });
+    expect(out.find((a) => a.type === 'SELECT_CLUE')).toBeUndefined();
+  });
+
+  test('REQ-ANS-024: "clear" empties the current entry and "undo" brings it back, pencil states intact', () => {
+    // A1 holds H, E, A(penciled), blank, T.
+    const s = listening(heartSnapshot(['HEa.T', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('clear'));
+    expect(out.find((a) => a.type === 'UNDO').cells).toEqual([
+      { index: 0, letter: null }, { index: 1, letter: null }, { index: 2, letter: null },
+      { index: 3, letter: null }, { index: 4, letter: null },
+    ]);
+    const done = s.step({
+      type: 'UNDO_RESULT',
+      ok: true,
+      snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+    });
+    expect(done.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A1');
+    expect(says(done)[0]).toEqual({ kind: 'cleared' });
+    s.step({ type: 'TTS_DONE' });
+    const undo = s.step(heard('undo'));
+    expect(undo.find((a) => a.type === 'UNDO').cells).toEqual([
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' },
+      { index: 2, letter: 'A', pencil: true }, // restored penciled, not promoted to pen
+      { index: 3, letter: null }, { index: 4, letter: 'T' },
+    ]);
+  });
+
+  test('REQ-ANS-024: "delete" on an empty entry says so and keeps listening', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('delete'));
+    expect(says(out)[0]).toEqual({ kind: 'nothing-to-clear' });
+    expect(out.find((a) => a.type === 'UNDO')).toBeUndefined();
+  });
+
+  test('REQ-ANS-025: "pencil" makes answers land penciled — and they never gate later words', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    expect(says(s.step(heard('pencil')))[0]).toEqual({ kind: 'mode-ack', mode: 'pencil' });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('heart'));
+    const enter = s.step({ type: 'TTS_DONE' })[0];
+    expect(enter.cells).toEqual([
+      { index: 0, letter: 'H', pencil: true }, { index: 1, letter: 'E', pencil: true },
+      { index: 2, letter: 'A', pencil: true }, { index: 3, letter: 'R', pencil: true },
+      { index: 4, letter: 'T', pencil: true },
+    ]);
+    s.step({
+      type: 'ENTRY_RESULT',
+      ok: true, // the live page reports plain pen letters — only the ledger knows
+      snapshot: heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A6' } }),
+    });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('one down')); // D1 reads H(soft), _, _, _, _
+    s.step({ type: 'TTS_DONE' });
+    const out = s.step(heard('about')); // disagrees only with the penciled H
+    expect(says(out)[0]).toMatchObject({ kind: 'fit', word: 'ABOUT' });
+  });
+
+  test('REQ-ANS-025: "pen" switches back — the ENTER carries no pencil flags again', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('pencil'));
+    s.step({ type: 'TTS_DONE' });
+    expect(says(s.step(heard('pen')))[0]).toEqual({ kind: 'mode-ack', mode: 'pen' });
+    s.step({ type: 'TTS_DONE' });
+    s.step(heard('heart'));
+    const enter = s.step({ type: 'TTS_DONE' })[0];
+    expect(enter.cells).toEqual([
+      { index: 0, letter: 'H' }, { index: 1, letter: 'E' }, { index: 2, letter: 'A' },
+      { index: 3, letter: 'R' }, { index: 4, letter: 'T' },
+    ]);
   });
 
   test('REQ-NAV-013: "six across" jumps to that clue; a missing label is reported', () => {

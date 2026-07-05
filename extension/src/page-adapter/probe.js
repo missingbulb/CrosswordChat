@@ -3,6 +3,7 @@
 
 import { SEL, findPencilToggle } from './selectors.js';
 import { snapshot } from './reader.js';
+import { findSplashPlayButton } from './splash.js';
 
 export function probe(document) {
   const items = [];
@@ -44,6 +45,30 @@ export function probe(document) {
       return 'snapshot failed';
     }
   })());
+  // Live-markup forensics for the pencil marker: click the (hand-)penciled cell, then
+  // probe — this line captures whatever the live page actually puts on that cell.
+  add('selected cell html', true, (() => {
+    const marked = (el) => (el?.getAttribute('class') ?? '').includes('selected');
+    const sel = [...document.querySelectorAll(SEL.cell)]
+      .find((g) => marked(g) || marked(g.querySelector(SEL.cellRect)));
+    return sel ? sel.outerHTML.slice(0, 400) : 'none selected (informational)';
+  })());
+
+  // The pre-puzzle splash (REQ-LIFE-016): a Play button means the splash is up; the
+  // headline copy WITHOUT a recognizable button means detection is broken — the exact
+  // failure mode of the v0.11.2 report.
+  const splashBtn = findSplashPlayButton(document);
+  add('splash', true, splashBtn
+    ? `Play-ish button found: <${splashBtn.tagName.toLowerCase()} class="${splashBtn.getAttribute('class') ?? ''}">`
+    : 'none detected (normal mid-solve)');
+  const splashCopy = [...document.body.querySelectorAll('*')].some((el) =>
+    !/^(script|style|noscript|template)$/i.test(el.tagName)
+    && el.children.length === 0
+    && /ready to start solving/i.test(el.textContent ?? ''));
+  if (!splashBtn && splashCopy) {
+    add('splash text without button', false,
+      'the "Ready to start solving?" copy is rendered but no Play-ish button was found (REQ-LIFE-016)');
+  }
 
   const toolbars = count(SEL.toolbar);
   add('toolbar', toolbars >= 1, `${toolbars} match(es) for ${SEL.toolbar} (REQ-LIFE-012 anchor)`);

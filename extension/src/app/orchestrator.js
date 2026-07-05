@@ -12,6 +12,17 @@ import { toLetters } from '../matching/normalize.js';
 // by construction, substrings of the prompt itself.
 export const ECHO_MIN_LETTERS = 8;
 
+// A just-completed grid gets this long for the page's verdict before the machine hears
+// about it (REQ-LIFE-005/006): NYT validates asynchronously, so the congrats modal pops
+// a beat AFTER the last letter lands. Without the grace, "full but wrong" cries wolf
+// right before the win celebration (live report).
+export const VERDICT_POLLS = 8;
+export const VERDICT_POLL_MS = 150;
+
+const gridFull = (snap) =>
+  snap?.cells?.length > 0 && snap.cells.every((c) => c.block || c.letter);
+const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * @param {object} deps
  * @param {{speak(text):Promise, cancel():void}} deps.tts
@@ -136,7 +147,13 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       case 'ENTER': {
         try {
           pageClient.pauseWatch?.(); // our own typing must not look like user activity
-          const { ok, snapshot } = await pageClient.enterAnswer(action.cells);
+          let { ok, snapshot } = await pageClient.enterAnswer(action.cells);
+          // The entry filled the grid but the page hasn't ruled yet — wait out the
+          // verdict beat so a win is announced as a win, not as an error first.
+          for (let i = 0; ok && gridFull(snapshot) && snapshot.status !== 'solved' && i < VERDICT_POLLS; i++) {
+            await settle(VERDICT_POLL_MS);
+            snapshot = await pageClient.snapshot();
+          }
           pageClient.resumeWatch?.();
           enqueue({ type: 'ENTRY_RESULT', ok, snapshot });
         } catch {

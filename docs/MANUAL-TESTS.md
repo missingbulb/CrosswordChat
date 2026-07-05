@@ -38,9 +38,10 @@ Covers: REQ-PAGE-005 REQ-PAGE-006 REQ-PAGE-007 REQ-PAGE-008 REQ-ANS-013
 Covers: REQ-LIFE-001 REQ-LIFE-007 REQ-LIFE-010 REQ-READ-001 REQ-SPCH-001
 1. On a fresh puzzle, click clue **3 Down** in the page's clue list.
 2. Click the extension icon.
-3. **PASS:** within ~1.5 s you hear at most a couple of greeting words, then "3 Down." + the clue
-   text + "N letters." — and the mic starts listening (page console shows `[CrosswordChat] mic on`;
-   Chrome shows the tab's mic-in-use indicator). Nothing visual opens. No tutorial monologue.
+3. **PASS:** within ~1.5 s you hear at most a couple of greeting words, then the clue text — no
+   letter count (REQ-READ-008 retired) — and the mic starts listening (page console shows
+   `[CrosswordChat] mic on`; Chrome shows the tab's mic-in-use indicator). Nothing visual opens.
+   No tutorial monologue.
 
 ### MT-04 — Icon click kills the session instantly
 Covers: REQ-LIFE-002
@@ -234,24 +235,29 @@ Covers: REQ-NAV-011 REQ-NAV-012
    list order; the setting survived the browser restart / new session.
 
 ### MT-29 — Override pencils the malformed crossing; undo restores pen
-Covers: REQ-ANS-019 REQ-PAGE-012 REQ-ANS-023
+Covers: REQ-ANS-019 REQ-PAGE-012 REQ-ANS-023 REQ-ANS-024 REQ-ANS-025
 1. On a fresh Mini, answer one Down clue by voice so several of its letters are in the grid.
 2. Move to an Across clue that crosses it and give an answer that collides with that Down entry's
    letter; after the collision report, say "anyway".
 3. Say "undo".
 4. Toggle NYT's pencil button ON yourself, then answer another clue by voice.
-5. Extra (REQ-ANS-023): with a PENCILED letter in some entry's path, give an answer for that
-   entry which disagrees only with the penciled letter — it must say "Fits!" and write straight
-   over it, no collision report.
-5. **PASS:** step 2 — the new word lands in normal pen; the crossed Down entry's *remaining*
+5. Extra (REQ-ANS-023): repeat step 2's override so the crossing gets softened, then give the
+   crossed entry an answer which disagrees only with its penciled (gray) letter — it must say
+   "Fits!" and write straight over it, no collision report (the extension remembers what it
+   penciled itself, even though the page won't say).
+6. Extra (REQ-ANS-025 / REQ-ANS-024): say "pencil", answer a clue — the letters land gray; give
+   a crossing a clashing answer — "Fits!", no warning. Say "pen", then "clear" on a filled
+   entry — it empties with "Cleared."; "undo" brings the letters back, gray ones still gray.
+7. **PASS:** step 2 — the new word lands in normal pen; the crossed Down entry's *remaining*
    letters turn gray (penciled), except any letter that also belongs to a fully filled entry —
    those keep their pen. Step 3 — the overriding word is removed, the Down entry's letters return
    exactly as they were and in pen (no gray left behind). Step 4 — KNOWN LIMITATION: the live
    toggle's state is unreadable (no aria-pressed), so with your pencil ON our writes may land in
    inverted modes; the toggle itself must still be ON afterwards (net-zero clicks — never
-   stolen). If penciling misbehaves: run the probe with pencil mode OFF and again ON, and paste
-   both `pencil toggle html` lines plus the `penciled cells seen` count (after hand-penciling one
-   letter) into the tracking issue — that captures the ON-state markup needed to fix detection.
+   stolen). Steps 5–6 behave as described. If penciling misbehaves: run the probe with pencil
+   mode OFF and again ON, and paste both `pencil toggle html` lines, the `penciled cells seen`
+   count, and the `selected cell html` line (hand-pencil one letter, CLICK its cell, then probe)
+   into the tracking issue — that captures the markup needed to fix detection.
 
 ### MT-30 — The in-page toolbar button
 Covers: REQ-LIFE-012
@@ -315,4 +321,7 @@ Covers: REQ-SPCH-001 REQ-SPCH-010 REQ-LIFE-015 REQ-LIFE-016
    restart. Step 4 — Escape cuts speech and mic instantly (button back to gold) and NYT's rebus
    box does NOT open (we swallow the key during a session; outside one, Escape reaches NYT
    normally); on the splash page, Play is clicked for you (or you're asked to click it), and
-   the first clue reads once the board shows.
+   the first clue reads once the board shows. If the splash is NOT handled (session starts
+   deaf-blind or says there's no puzzle): run the probe (MT-01) while the splash is up and
+   paste its `splash` line — plus the `splash text without button` line if present — into the
+   tracking issue.

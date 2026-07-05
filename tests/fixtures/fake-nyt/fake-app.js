@@ -222,19 +222,26 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   }
   document.body.append(main);
 
-  // Pre-puzzle splash (REQ-LIFE-016): a veil with a Play button, like the live page's
-  // "Ready to start solving?" moment. Play removes it — unless it's 'stuck'.
+  // Pre-puzzle splash (REQ-LIFE-016): the live "Ready to start solving?" moment is
+  // rendered by the NYT games shell in the pz-moment class family (NOT xwd__ — that
+  // mismatch was the v0.11.2 "splash not recognized" bug), so the fixture mirrors
+  // that shape. Play removes it — unless it's 'stuck'.
   if (splash) {
     const veil = document.createElement('div');
-    veil.className = 'xwd__modal';
+    veil.className = 'pz-moment__container';
+    const moment = document.createElement('div');
+    moment.className = 'pz-moment pz-moment--start';
     const heading = document.createElement('h2');
+    heading.className = 'pz-moment__title';
     heading.textContent = 'Ready to start solving?';
     const play = document.createElement('button');
+    play.className = 'pz-moment__button primary';
     play.textContent = 'Play';
     if (splash !== 'stuck') {
       play.addEventListener('click', () => veil.remove());
     }
-    veil.append(heading, play);
+    moment.append(heading, play);
+    veil.append(moment);
     document.body.append(veil);
   }
 

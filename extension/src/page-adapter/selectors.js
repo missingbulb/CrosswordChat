@@ -43,9 +43,13 @@ export const SEL = {
   // ("Ready to start solving?") hides the board — used to tell "puzzle page, still
   // rendering" apart from "not a puzzle page at all".
   app: '[class*="xwd__"]',
-  // The pre-puzzle splash/veil containers (REQ-LIFE-016). ⚠️ Best-effort shapes from
-  // the modal family; splash.js additionally requires a Play-ish button inside.
-  splash: '[class*="xwd__modal"], [class*="xwd__start"], [class*="xwd__veil"]',
+  // The pre-puzzle splash/veil containers (REQ-LIFE-016). ⚠️ Best-effort shapes. The
+  // live "Ready to start solving?" screen is rendered by the NYT *games shell*, not the
+  // crossword app — its classes are in the `pz-` family (pz-moment), so the xwd__ nets
+  // alone never matched it (user report, v0.11.2). splash.js additionally requires a
+  // Play-ish button inside, and falls back to anchoring on the headline text itself
+  // when no class net matches (markup drift must not blind us twice).
+  splash: '[class*="xwd__modal"], [class*="xwd__start"], [class*="xwd__veil"], [class*="pz-moment"]',
 };
 
 // Our own injected toggle (session-button.js uses this as its id). It borrows the
@@ -80,7 +84,11 @@ export const CLS = {
   cellSelected: 'xwd__cell--selected',
   clueSelected: 'xwd__clue--selected',
   // Penciled letters (REQ-PAGE-012): on the letter <text> (or the cell <g>). ⚠️ UNVERIFIED
-  // against the live page — same caveat as pencilToggle above.
+  // against the live page — same caveat as pencilToggle above. The reader nets ANY
+  // pencil-flavored class or data-testid within the cell (substring match), with this
+  // exact name kept as the fixture's canonical shape. Because the live marker may not
+  // exist at all, answer evaluation additionally remembers the cells the extension
+  // itself penciled (the machine's soft-cell ledger, REQ-ANS-023).
   cellPenciled: 'xwd__cell--penciled',
   // Fallback pencil-toggle "on" signal for markup without aria-pressed.
   pencilActive: 'xwd__toolbar--active',

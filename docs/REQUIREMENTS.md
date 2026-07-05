@@ -162,22 +162,32 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Status:** Active · **Level:** MUST
 - When the puzzle transitions to solved during a session — whether because of an answer we entered
   or the user typing manually — the session MUST celebrate ("Hooray, solved it!") and end.
+  NYT rules on a just-completed grid asynchronously (the congrats modal pops a beat AFTER the
+  last letter), so an entry that fills the grid MUST wait out a short verdict grace (~1 s,
+  polling) before the result is judged — a win must never be announced as an error first
+  (live report 2026-07).
 - **Accept:** Given a session, when the solved signal arrives (via entry result or page event), then
-  the celebration is spoken and the session ends.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-06.
+  the celebration is spoken and the session ends; given the winning entry's snapshot still says
+  "active" but the page rules "solved" a beat later, then ONLY the celebration is spoken.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (verdict grace);
+  manual MT-06.
 
 #### REQ-LIFE-006 — Grid full but not solved
 - **Status:** Active · **Level:** MUST
-- If every cell is filled but NYT has not confirmed success, the session MUST say so
-  ("The grid is full, but something's not right yet") and keep the conversation alive so the user can
-  revisit entries (navigation + replace flows still work). It MUST NOT claim which letters are wrong
-  (we don't know) and MUST NOT celebrate. The discrepancy message plays when the grid fills (and at
-  a full-grid session start) and is NOT repeated: on a full grid, *next* MUST actually move — forward
-  through the filled clues in list order, reading each — never loop the same prompt back.
-- **Accept:** Given a full-but-wrong grid after an entry, then the discrepancy message is spoken and
-  the session continues listening on the current clue; when the user then says "next" repeatedly,
-  each filled clue is read in turn and the discrepancy message never replays.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-09.
+- If every cell is filled but NYT has not confirmed success (after the REQ-LIFE-005 verdict
+  grace), the session MUST say so ("The grid is full, but something's not right yet") and keep the
+  conversation alive so the user can revisit entries (navigation + replace flows still work). It
+  MUST NOT claim which letters are wrong (we don't know) and MUST NOT celebrate. The discrepancy
+  message plays when the grid fills (and at a full-grid session start) and is NOT repeated: on a
+  full grid, *next* MUST actually move — through the penciled entries when any exist
+  (REQ-NAV-014), else forward through the filled clues in list order — never loop the same prompt
+  back. When penciled letters exist, the fill moment itself also jumps straight to a penciled
+  entry (REQ-NAV-014).
+- **Accept:** Given a full-but-wrong grid after an entry with nothing penciled, then the
+  discrepancy message is spoken and the session continues listening on the current clue; when the
+  user then says "next" repeatedly, each filled clue is read in turn and the discrepancy message
+  never replays.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-09.
 
 #### REQ-LIFE-007 — First clue read = currently highlighted clue
 - **Status:** Active · **Level:** MUST
@@ -306,6 +316,13 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   clicks), say by voice that the user should click Play, keep waiting, and start the conversation
   the moment the splash clears; (3) if it never clears (~60 s), end quietly. Splash detection is
   page-adapter knowledge (REQ-PAGE-011) and MUST degrade to "no splash" on pages without one.
+  Detection MUST be belt and braces (the class family drifted out from under the xwd__ nets —
+  v0.11.2 user report): the live splash is the games shell's `pz-moment` family, the legacy
+  `xwd__` modal shapes stay netted, and a text anchor on the "Ready to start solving" headline
+  catches the next rename; only VISIBLE splashes count (a moment hidden with `display:none`
+  reads as cleared). The probe (MT-01) reports a `splash` line, plus a failing
+  `splash text without button` line when the headline is rendered but no button was found —
+  the exact v0.11.2 failure mode.
 - **Accept:** Given the fake page with a splash, then Play is clicked and the session proceeds;
   given a splash that ignores synthetic clicks, then the prompt is spoken and the session starts
   once the splash is cleared by hand.
@@ -322,17 +339,17 @@ entities. The readout must convey what the eye would see.
 
 ```
 [Greeting] <spoken clue text>.
-[<formatting annotations>] <N> letters.
+[<formatting annotations>]
 ```
 
 #### REQ-READ-001 — Readout structure
 - **Status:** Active · **Level:** MUST
-- Every clue readout MUST contain, in order: the clue text, any formatting annotations
-  (REQ-READ-002/003/006), and the letter count last (REQ-READ-008). The clue label ("17 Across")
-  MUST NOT be spoken — the page highlight already shows position (REQ-NAV-007), and the readout
-  gets straight to the clue.
-- **Accept:** Given clue 1A "Organ with four chambers" (5 letters), then the readout is
-  "Organ with four chambers. 5 letters." (modulo greeting) — no "1 Across" preamble.
+- Every clue readout MUST contain, in order: the clue text, then any formatting annotations
+  (REQ-READ-002/003/006) — and nothing else. The clue label ("17 Across") MUST NOT be spoken —
+  the page highlight already shows position (REQ-NAV-007) — and neither is the letter count
+  (REQ-READ-008, retired): the readout gets straight to the clue.
+- **Accept:** Given clue 1A "Organ with four chambers", then the readout is
+  "Organ with four chambers." (modulo greeting) — no "1 Across" preamble, no "5 letters." tail.
 - **Verify:** unit `tests/unit/verbalizer.test.js`.
 
 #### REQ-READ-002 — Italics are announced
@@ -393,10 +410,13 @@ entities. The readout must convey what the eye would see.
 - **Verify:** unit `tests/unit/clue-html.test.js`.
 
 #### REQ-READ-008 — Letter count is spoken last
-- **Status:** Active · **Level:** MUST
-- Every clue readout MUST end with the entry length: `6 letters.` The count is the number of cells
-  (rebus caveat documented in §13).
-- **Accept:** Given any clue readout, then the final sentence is `<N> letters.`
+- **Status:** Retired · **Level:** —
+- Retired (2026-07, user feedback): the readout no longer announces the entry length at all —
+  every clue got a "N letters." tail that added latency without helping most answers. The user
+  finds the length out exactly when it matters: a length-mismatch report (REQ-ANS-007), the hint
+  command (REQ-HINT-002), or spelling (REQ-ANS-011/018) all still name counts. (While it was
+  active: every readout ended with `<N> letters.`, the count being the number of cells.)
+- **Accept:** Given any clue readout, then no letter count is spoken anywhere in it.
 - **Verify:** unit `tests/unit/verbalizer.test.js`.
 
 #### REQ-READ-009 — Repeat
@@ -411,7 +431,7 @@ entities. The readout must convey what the eye would see.
 - **Status:** Active · **Level:** MUST (literal reading); following the reference is REQ-FUT-004
 - Clues like `See 17-Across` or `With 5-Down, ...` MUST be read as-is. The MVP does not navigate to
   the referenced clue automatically.
-- **Accept:** Given clue `See 17-Across`, then the spoken text is exactly that (plus length).
+- **Accept:** Given clue `See 17-Across`, then the spoken text is exactly that.
 - **Verify:** unit `tests/unit/verbalizer.test.js`.
 
 #### REQ-READ-011 — Editorial tags are read literally
@@ -463,17 +483,21 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the next two clues in order are filled, when advancing, then the third is selected.
 - **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`.
 
-#### REQ-NAV-004 — Strategy: most-filled-first (easiest = highest fill ratio)
+#### REQ-NAV-004 — Strategy: most-filled-first (easiest = most letters already placed)
 - **Status:** Active · **Level:** MUST
-- A second strategy MUST rank unfilled clues by the *percentage* of their letters already in the
-  grid (`filled ÷ length`, descending). Equal ratios are tie-broken by DISTANCE: the clue nearest
-  the current one in list order wins (smallest jump — from clue 4, an equal clue 5 beats clue 6),
-  a forward clue winning an exact-distance tie; remaining ties by list order, cycling through the
-  current clue last. Rationale: the entry with the largest share of its letters already in place
-  is the easiest to complete, and among equals the smallest jump keeps the solver oriented.
-  Ratio, not raw count: 2 of 3 letters (67%) beats 3 of 5 (60%).
+- A second strategy MUST rank unfilled clues by *how many* letters they already hold (descending),
+  with a penciled letter worth HALF a pen letter — pencil marks are the solver's own "not sure"
+  notes (REQ-ANS-023), so they help less than confirmed letters. Equal scores are tie-broken by
+  DISTANCE: the clue nearest the current one in list order wins (smallest jump — from clue 4, an
+  equal clue 5 beats clue 6), a forward clue winning an exact-distance tie; remaining ties by list
+  order, cycling through the current clue last. Rationale: every letter already in place is a
+  crossing the solver doesn't have to guess, so more letters = easier, regardless of entry length
+  (count, not ratio — this REPLACES the earlier ratio rule, user feedback 2026-07: 3 of 5 letters
+  beats 2 of 3), and among equals the smallest jump keeps the solver oriented.
 - **Accept:** Given entries with 3/5 and 2/3 letters filled, when advancing under most-filled, then
-  the 2/3 entry is chosen. Given equal ratios one and two steps ahead, then the one-step clue is
+  the 3-letter entry is chosen; given one entry with 3 penciled letters (score 1.5) and another
+  with 2 pen letters (score 2), then the pen entry is chosen. Given equal scores one and two steps
+  ahead, then the one-step clue is
   chosen.
 - **Verify:** unit `tests/unit/strategies.test.js`.
 
@@ -538,14 +562,17 @@ entities. The readout must convey what the eye would see.
   "back" twice, then it lands on A2 and then A4; a third "back" uses list order.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
 
-#### REQ-NAV-010 — "flip" switches to the crossing clue
+#### REQ-NAV-010 — "flip" switches to the crossing clue at the selected square
 - **Status:** Active · **Level:** MUST
-- *flip* MUST switch from the current clue to the perpendicular clue that crosses it (the crossing
-  at the entry's first crossed cell, REQ-MODEL-002), read it, and sync the page highlight. Flipping
-  again returns to a clue in the original direction. When the entry has no crossing at all, say so
-  briefly and keep listening.
-- **Accept:** Given the current clue is 1 Across, when the user says "flip", then 1 Down (the
-  crossing at its first cell) is selected and read.
+- *flip* MUST switch from the current clue to the perpendicular clue that crosses it AT THE
+  SELECTED CELL (the page highlight marks the square the user means — flipping from the entry's
+  first letter instead was reported as wrong, 2026-07), read it, and sync the page highlight.
+  When the selection is unknown or lies outside the current entry, the crossing at the entry's
+  first crossed cell (REQ-MODEL-002) is the fallback. Flipping again returns to a clue in the
+  original direction. When the entry has no crossing at all, say so briefly and keep listening.
+- **Accept:** Given the current clue is 1 Across with the cursor on its third cell, when the user
+  says "flip", then 3 Down (the crossing at THAT cell) is selected and read; with no cursor
+  information, then 1 Down (the first crossed cell) is.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
 
 #### REQ-NAV-011 — Skip memory under most-filled
@@ -583,13 +610,37 @@ entities. The readout must convey what the eye would see.
 - **Status:** Active · **Level:** MUST
 - Saying a clue label — a number and a direction, e.g. *"seven across"*, *"22 down"*,
   *"go to twenty two across"* — MUST select that clue on the page and read it, exactly like
-  clicking it. Numbers work as digits or number words (REQ-ANS-002 conventions). When the puzzle
-  has no such clue, reply that it doesn't exist and keep listening; utterances whose leading part
-  is not a number ("falling down") are NOT gotos and stay available to the answer pipeline.
+  clicking it. Numbers work as digits or number words (REQ-ANS-002 conventions). STT garbles
+  these short utterances constantly (live report 2026-07: "5 down" always worked while
+  "5/6/7/9 across" repeatedly failed), so the matcher MUST also accept: "a cross" and "cross"
+  as renderings of *across*; ordinal forms of the number ("sixth across", "6th across"); and the
+  frequent number homophones (won/to/for/sex/ate/nein…). When the direction was clearly *across*
+  but the number still doesn't parse, ask for the number briefly ("I didn't catch which clue")
+  instead of treating the utterance as an answer. When the puzzle has no such clue, reply that it
+  doesn't exist and keep listening; utterances whose leading part is not a number and whose tail
+  is not unambiguous navigation ("falling down", "red cross") are NOT gotos and stay available to
+  the answer pipeline.
 - **Accept:** Given "six across" on a puzzle with a 6-Across, then 6-Across is selected and read;
-  given "twelve down" with no 12-Down, then the reply says there is no 12 down.
+  given "5 a cross" or "sixth across", then the jump still happens; given "twelve down" with no
+  12-Down, then the reply says there is no 12 down; given "gibberish across", then the reply asks
+  for the clue number.
 - **Verify:** unit `tests/unit/matching.test.js` (parsing), `tests/unit/machine.test.js` (jump +
-  missing label).
+  missing label + garbled number).
+
+#### REQ-NAV-014 — A full grid patrols its penciled entries
+- **Status:** Active · **Level:** MUST
+- On a full-but-wrong grid (REQ-LIFE-006), the penciled letters are the prime suspects — they are
+  the "not sure" marks (REQ-ANS-023/REQ-ANS-025). When the grid fills without solving (or a
+  session starts on one) and any entry holds penciled letters, the session MUST land on a
+  penciled entry immediately — the discrepancy message, then that entry's readout. And *next* on
+  a full grid MUST cycle through the penciled entries only (in list order from the current clue,
+  wrapping), falling back to all filled clues in list order when nothing is penciled. Pencil
+  visibility has the REQ-PAGE-012 caveat: on the live page only the session's own soft-cell
+  ledger is readable, so hand-penciled letters from before the session may be missed.
+- **Accept:** Given an entry that fills the grid wrong while 3 Down holds a penciled letter, then
+  the discrepancy message is followed by 3 Down's readout; when the user then says "next"
+  repeatedly, then only entries holding penciled letters are visited, cycling.
+- **Verify:** unit `tests/unit/machine.test.js`.
 
 ---
 
@@ -942,10 +993,44 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   entries keep the replace-confirmation flow (REQ-ANS-016) regardless of pencil state. The
   open-square readings (REQ-ANS-018 partial spelling, spell-start's open count) use the same
   rule: penciled squares count among the open ones.
+- The live page exposes NO readable pencil marker (REQ-PAGE-012) — reading alone left this rule
+  dead on the real site (v0.11.2 user report: the warning still fired). The machine therefore
+  keeps a **soft-cell ledger**: every cell the session itself penciled (REQ-ANS-019 softening,
+  REQ-ANS-025 pencil-mode words), index → letter, counted as penciled in every model — valid
+  while the cell still shows that letter, restored on undo. Residual: letters hand-penciled
+  before the session (or in another tab) stay invisible until a live marker is captured (the
+  probe forensics exist for that).
 - **Accept:** Given A1 reads `_EA__` with the A penciled, when the user says "heist", then HEIST
   fits and enters (the penciled A is overwritten); given the same grid with the A in pen, then
-  the collision report plays and nothing is entered.
+  the collision report plays and nothing is entered. Given the session itself penciled a letter
+  and the page reports it as plain pen, then a clashing answer STILL fits and writes over it.
 - **Verify:** unit `tests/unit/machine.test.js`; manual MT-29.
+
+#### REQ-ANS-024 — "clear" empties the current entry
+- **Status:** Active · **Level:** MUST
+- Saying *clear* / *delete* / *erase* (lexicon REQ-CMD-001) MUST remove every letter of the
+  current entry — including letters shared with crossing entries (the cell belongs to both) —
+  confirm briefly ("Cleared."), and keep listening on the same clue. The clear MUST be undoable:
+  *undo* restores exactly what was removed, each letter with the pencil state it had. On an
+  already-empty entry, say so and do nothing.
+- **Accept:** Given A1 holds letters (one penciled), when the user says "clear", then A1's cells
+  are emptied and "Cleared." is spoken; when the user then says "undo", then the letters return
+  with the penciled one still penciled; given an empty entry, when the user says "delete", then
+  the reply says there is nothing to clear.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`.
+
+#### REQ-ANS-025 — Voice pencil mode
+- **Status:** Active · **Level:** MUST
+- Saying *pencil* (lexicon REQ-CMD-001) MUST switch the session's write mode so subsequent
+  accepted answers land PENCILED (per-cell pencil writes, REQ-PAGE-012 click parity — NYT's own
+  toolbar toggle is not stolen); *pen* switches back. The mode is acknowledged briefly, lasts for
+  the rest of the session (not persisted), and starts as pen. Pencil-mode words join the
+  soft-cell ledger (REQ-ANS-023), so they never gate later answers and count as suspects for the
+  full-grid patrol (REQ-NAV-014).
+- **Accept:** Given the user said "pencil", when an answer is accepted, then its cells are written
+  penciled and a later clashing answer on a crossing fits without a collision report; given
+  "pen", then the next answer writes normally.
+- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`.
 
 ---
 
@@ -984,9 +1069,12 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 |---|---|
 | next | next · next clue · next one · pass · pass on this · skip · skip it · skip this one · move on |
 | back | back · go back · previous · previous clue · previous one |
-| goto | …number across · …number down · go to …number across/down (digits or number words, REQ-NAV-013) |
+| goto | …number across · …number down · go to …number across/down (digits, number words, ordinals, common homophones; "a cross"/"cross" read as across — REQ-NAV-013) |
 | flip | flip · flip it · switch direction · change direction · other direction |
 | undo | undo · undue · undo that · undo it · take that back · take it back |
+| clear | clear · clear it · clear that · clear the word · clear this word · delete · delete it · delete that · delete the word · erase · erase it (REQ-ANS-024) |
+| pencil | pencil · pencil mode · switch to pencil · use pencil · in pencil · pencil in (REQ-ANS-025) |
+| pen | pen · pen mode · switch to pen · use pen · in pen · ink (REQ-ANS-025) |
 | repeat | repeat · repeat that · again · say again · say that again · read it again · what · come again |
 | hint | hint · hints · give me a hint · what do i have · what's there · what's filled in · read the letters · pattern · letters · the letters · spell it |
 | help | help · what can i say · commands · options |
@@ -1314,6 +1402,13 @@ any time, every selector lives in one file with a self-diagnosing probe.
   our writes in inverted modes until an ON-state marker is captured — the probe forensics exist
   to capture one). Retyping the letter a cell already shows CONVERTS it pen↔pencil in place
   (verified live) — REQ-ANS-019 softening and undo's un-softening ride on plain retypes.
+- Pencil READING has the same live caveat: no verified marker for a penciled cell exists either.
+  The reader nets ANY pencil-flavored class or data-testid on the cell `<g>`, its `<rect>`, or
+  the letter `<text>` (substring match — the fixture's `xwd__cell--penciled` is the canonical
+  shape), and everything above the adapter leans on the machine's soft-cell ledger
+  (REQ-ANS-023) rather than trusting snapshots. New probe forensics: `selected cell html` dumps
+  the selected cell's markup — hand-pencil a letter, click its cell, probe, and the live marker
+  (if any) is captured for this net to be fixed.
 - **Accept:** Given the fake page, when cells are entered with mixed pencil flags, then letters and
   penciled states match per cell and the toggle returns to its prior state (both from pen and from
   pencil); given a page without the toggle, then letters still land and `ok` reflects the letters.

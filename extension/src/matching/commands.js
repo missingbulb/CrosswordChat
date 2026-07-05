@@ -1,15 +1,25 @@
 // Command lexicon (REQ-CMD-001). Matched on the whole normalized utterance;
 // answers get an escape hatch via "answer ..." (REQ-ANS-014).
 
-import { normalizeUtterance, numberToWord } from './normalize.js';
+import { normalizeUtterance, numberToWord, ordinalToWord } from './normalize.js';
 import { collectSpelledLetters } from './evaluate.js';
 
 // Spoken clue numbers ("seven", "twenty two") → integers, for goto (REQ-NAV-013).
+// STT garbles small numbers a lot (live report: 6/7/9 repeatedly missed), so the map
+// also carries ordinals ("sixth" — a common rendering of a number before a noun) and
+// the frequent homophones.
 const NUMBER_WORDS = new Map();
 for (let n = 1; n <= 150; n++) NUMBER_WORDS.set(numberToWord(n).toLowerCase(), n);
+for (let n = 1; n <= 99; n++) NUMBER_WORDS.set(ordinalToWord(n).toLowerCase(), n);
+for (const [word, n] of Object.entries({
+  won: 1, to: 2, too: 2, tree: 3, free: 3, for: 4, fore: 4,
+  sex: 6, sick: 6, sicks: 6, six: 6, heaven: 7, ate: 8, nein: 9, nun: 9,
+})) NUMBER_WORDS.set(word, n);
 
 function parseClueNumber(text) {
   if (/^\d+$/.test(text)) return Number(text);
+  const ordinal = text.match(/^(\d+)(st|nd|rd|th)$/); // "6th across"
+  if (ordinal) return Number(ordinal[1]);
   const joined = text.split(' ').filter((t) => t !== 'and').join('');
   return NUMBER_WORDS.get(joined) ?? null;
 }
@@ -21,6 +31,12 @@ const PHRASES = {
   flip: ['flip', 'flip it', 'switch direction', 'change direction', 'other direction'],
   // "undue" is what STT usually makes of "undo" (REQ-ANS-017).
   undo: ['undo', 'undue', 'undo that', 'undo it', 'take that back', 'take it back'],
+  // Empty the current entry (REQ-ANS-024). Undoable, so the bare words are safe.
+  clear: ['clear', 'clear it', 'clear that', 'clear the word', 'clear this word',
+    'delete', 'delete it', 'delete that', 'delete the word', 'erase', 'erase it'],
+  // Write-mode switch (REQ-ANS-025): answers land penciled until "pen".
+  pencil: ['pencil', 'pencil mode', 'switch to pencil', 'use pencil', 'in pencil', 'pencil in'],
+  pen: ['pen', 'pen mode', 'switch to pen', 'use pen', 'in pen', 'ink'],
   repeat: ['repeat', 'repeat that', 'again', 'say again', 'say that again', 'read it again',
     'what', 'come again'],
   // "spell it" reads the letters TO the user; spelling mode is entered with "spell" etc.
@@ -89,10 +105,20 @@ export function parseCommand(text) {
 
   // "seven across" / "go to 22 down" — a clue label is a navigation command
   // (REQ-NAV-013). Only a real number counts; other "... down" utterances fall through.
-  m = norm.match(/^(?:go to |goto |jump to )?(.+?) (across|down)$/);
+  // STT often renders "across" as "a cross" or just "cross" (live report: "5 across"
+  // never matched while "5 down" always did) — accept all three.
+  m = norm.match(/^(?:go to |goto |jump to )?(.+?) (across|a cross|cross|down)$/);
   if (m) {
     const number = parseClueNumber(m[1]);
-    if (number != null) return { command: 'goto', arg: { number, direction: m[2] } };
+    const direction = m[2] === 'down' ? 'down' : 'across';
+    if (number != null) return { command: 'goto', arg: { number, direction } };
+    // "... across" can't be anything BUT navigation (unlike "... down" and "... cross",
+    // which real answers end with — "falling down", "red cross" stay answer
+    // candidates). A garbled number is reported instead of length-checking
+    // "SIXACROSS" as a word.
+    if (m[2] === 'across' || m[2] === 'a cross') {
+      return { command: 'goto', arg: { number: null, direction } };
+    }
   }
 
   m = norm.match(/^(?:the )?(?:answer|word|guess) (?:is )?(.+)$/) || norm.match(/^try (.+)$/);

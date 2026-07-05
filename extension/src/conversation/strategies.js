@@ -2,6 +2,10 @@
 
 export const STRATEGIES = ['list-order', 'most-filled'];
 
+// What a penciled letter is worth relative to a pen letter when ranking most-filled
+// (REQ-NAV-004): real help, but unconfirmed — half.
+const PENCIL_WORTH = 0.5;
+
 function unfilledIds(model) {
   return model.orderedClueIds.filter((id) => {
     const p = model.progressFor(id);
@@ -19,21 +23,23 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
   if (!candidates.length) return null;
 
   if (strategy === 'most-filled') {
-    // Easiest first: highest share of letters already in place (ratio, not count —
-    // 2/3 beats 3/5, REQ-NAV-004); equal ratios go to the clue NEAREST the current one
-    // in list order (smallest jump; forward wins an exact-distance tie), then list
-    // order; current clue last resort.
+    // Easiest first: the MOST letters already in place (count, not ratio — 3/5 beats
+    // 2/3, REQ-NAV-004), with penciled letters worth half a pen letter (they are the
+    // solver's own "not sure" marks, REQ-ANS-023 — help, but shaky help); equal scores
+    // go to the clue NEAREST the current one in list order (smallest jump; forward
+    // wins an exact-distance tie), then list order; current clue last resort.
     const others = candidates.filter((id) => id !== fromId);
     const order = model.orderedClueIds;
     const from = Math.max(order.indexOf(fromId), 0);
-    const ratio = (id) => {
-      const p = model.progressFor(id);
-      return p.filled / p.length;
+    const score = (id) => {
+      const pattern = model.patternFor(id);
+      const pencil = model.pencilFor(id);
+      return pattern.reduce((sum, letter, i) => sum + (letter ? (pencil[i] ? PENCIL_WORTH : 1) : 0), 0);
     };
     const dist = (id) => Math.abs(order.indexOf(id) - from);
     const fresh = others
       .filter((id) => !avoid.includes(id))
-      .sort((a, b) => ratio(b) - ratio(a)
+      .sort((a, b) => score(b) - score(a)
         || dist(a) - dist(b)
         || (order.indexOf(b) > from) - (order.indexOf(a) > from)
         || order.indexOf(a) - order.indexOf(b));

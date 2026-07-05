@@ -5,8 +5,14 @@
 
 /**
  * @param {object} snapshot  see docs/ARCHITECTURE.md §3
+ * @param {object} [overlay]
+ * @param {Record<number, string>} [overlay.softCells]  session ledger of cells the
+ *   extension itself penciled (index → letter, REQ-ANS-019). The live page exposes no
+ *   readable pencil marker (REQ-PAGE-012), so these count as penciled too — as long as
+ *   the cell still holds the letter we penciled (any other letter means the record is
+ *   stale and is ignored).
  */
-export function buildModel(snapshot) {
+export function buildModel(snapshot, { softCells = {} } = {}) {
   const { rows, cols } = snapshot.size;
   const cells = [...snapshot.cells].sort((a, b) => a.index - b.index);
   const at = (r, c) => (r < 0 || c < 0 || r >= rows || c >= cols) ? null : cells[r * cols + c];
@@ -64,7 +70,9 @@ export function buildModel(snapshot) {
     return raw ? raw[0] : null;
   };
   // Missing on older snapshots → false: an unknown pencil state reads as pen.
-  const penciledAt = (i) => Boolean(cells[i]?.penciled) && letterAt(i) != null;
+  // The soft-cell ledger fills in for the page's unreadable marker (REQ-ANS-023).
+  const penciledAt = (i) => letterAt(i) != null
+    && (Boolean(cells[i]?.penciled) || softCells[i] === letterAt(i));
 
   const model = {
     snapshot,

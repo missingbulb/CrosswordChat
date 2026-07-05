@@ -4,8 +4,8 @@ import { nextClue } from '../../extension/src/conversation/strategies.js';
 import { heartSnapshot, makeSnapshot } from '../helpers/snapshots.js';
 
 // Across-only grid (block rows kill the downs): independent entries with
-// controllable lengths/fills. A1 = 3/5 (60%), A2 = 2/3 (67%), A3 = 0/5.
-const RATIO_ROWS = ['HEA..', '#####', 'AB.#.', '#####', '.....'];
+// controllable lengths/fills. A1 = 3 letters placed (of 5), A2 = 2 (of 3), A3 = 0.
+const COUNT_ROWS = ['HEA..', '#####', 'AB.#.', '#####', '.....'];
 
 describe('next-clue strategies', () => {
   test('REQ-NAV-002: list order advances after the current clue and wraps', () => {
@@ -45,27 +45,36 @@ describe('next-clue strategies', () => {
     expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A6');
   });
 
-  test('REQ-NAV-004: equal ratios jump the least distance; forward wins an exact tie', () => {
+  test('REQ-NAV-004: equal scores jump the least distance; forward wins an exact tie', () => {
     const model = buildModel(heartSnapshot());
-    // All ratios equal. From A8: A7 and A9 are both one step away — forward wins.
+    // All scores equal. From A8: A7 and A9 are both one step away — forward wins.
     expect(nextClue(model, 'A8', 'most-filled').clueId).toBe('A9');
     // From D2 the nearest open clues are D1/D3 (one step) — never a far jump to A1.
     expect(nextClue(model, 'D2', 'most-filled').clueId).toBe('D3');
   });
 
-  test('REQ-NAV-004: most-filled ranks by fill percentage, not raw letter count', () => {
-    const model = buildModel(makeSnapshot(RATIO_ROWS));
-    // A2 at 2/3 (67%) beats A1 at 3/5 (60%) even though A1 has more letters placed.
-    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A2');
+  test('REQ-NAV-004: most-filled ranks by letter count, not fill percentage', () => {
+    const model = buildModel(makeSnapshot(COUNT_ROWS));
+    // A1 with 3 letters placed beats A2's 2, even though A2's ratio (2/3) is higher.
+    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A1');
   });
 
-  test('REQ-NAV-011: recently skipped clues are passed over for the next-best ratio', () => {
-    const model = buildModel(makeSnapshot(RATIO_ROWS));
-    expect(nextClue(model, 'A3', 'most-filled', ['A2']).clueId).toBe('A1');
+  test('REQ-NAV-004: penciled letters are worth half — solid help outranks shaky help', () => {
+    // A1 holds 3 PENCILED letters (score 1.5); A2 holds 2 pen letters (score 2).
+    const model = buildModel(makeSnapshot(['hea..', '#####', 'AB.#.', '#####', '.....']));
+    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A2');
+    // In pen, the same three letters win again (3 beats 2).
+    const pen = buildModel(makeSnapshot(COUNT_ROWS));
+    expect(nextClue(pen, 'A3', 'most-filled').clueId).toBe('A1');
+  });
+
+  test('REQ-NAV-011: recently skipped clues are passed over for the next-best score', () => {
+    const model = buildModel(makeSnapshot(COUNT_ROWS));
+    expect(nextClue(model, 'A3', 'most-filled', ['A1']).clueId).toBe('A2');
   });
 
   test('REQ-NAV-011: with every open clue skipped, the least recently skipped is revisited', () => {
-    const model = buildModel(makeSnapshot(RATIO_ROWS));
+    const model = buildModel(makeSnapshot(COUNT_ROWS));
     expect(nextClue(model, 'A3', 'most-filled', ['A2', 'A1']).clueId).toBe('A2');
     expect(nextClue(model, 'A3', 'most-filled', ['A1', 'A2']).clueId).toBe('A1');
   });

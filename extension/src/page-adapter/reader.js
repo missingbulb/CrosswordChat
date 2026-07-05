@@ -7,6 +7,15 @@ function classHas(el, name) {
   return (el.getAttribute?.('class') ?? '').split(/\s+/).includes(name);
 }
 
+// Pencil marker net (REQ-PAGE-012): the canonical class is CLS.cellPenciled, but the
+// live marker is unverified — accept ANY pencil-flavored class or data-testid so a
+// rename doesn't blind us. (Cells never contain the toolbar's pencil button, so the
+// substring is safe here.)
+function pencilMarked(el) {
+  if (!el?.getAttribute) return false;
+  return /pencil/i.test(`${el.getAttribute('class') ?? ''} ${el.getAttribute('data-testid') ?? ''}`);
+}
+
 // Only an element's OWN text nodes — excludes nested children's content.
 function ownText(el) {
   return [...el.childNodes]
@@ -28,17 +37,18 @@ function readCellTexts(cellEl) {
     const numIdx = own.findIndex((t) => /^\d+$/.test(t));
     const letterIdx = own.findIndex((t, i) => i !== numIdx && t);
     const letter = letterIdx >= 0 ? own[letterIdx] : '';
-    // Pencil mode (REQ-PAGE-012): the marker sits on the letter <text> (or the cell <g>).
+    // Pencil mode (REQ-PAGE-012): the marker sits on the letter <text>, the cell <g>,
+    // or the <rect> — net all of them, by substring (see pencilMarked).
     const penciled = Boolean(letter)
-      && (classHas(cellEl, CLS.cellPenciled) || (letterIdx >= 0 && classHas(texts[letterIdx], CLS.cellPenciled)));
+      && (pencilMarked(cellEl) || pencilMarked(cellEl.querySelector(SEL.cellRect))
+        || (letterIdx >= 0 && pencilMarked(texts[letterIdx])));
     return { letter: letter.toUpperCase(), penciled, number: numIdx >= 0 ? Number(own[numIdx]) : null };
   }
   // Fallback: older class-tagged markup (SEL.cellLetter / SEL.cellNumber).
   const letterEl = cellEl.querySelector(SEL.cellLetter);
   const numberEl = cellEl.querySelector(SEL.cellNumber);
   const letter = (letterEl?.textContent ?? '').trim().toUpperCase();
-  const penciled = Boolean(letter)
-    && (classHas(cellEl, CLS.cellPenciled) || (letterEl && classHas(letterEl, CLS.cellPenciled)));
+  const penciled = Boolean(letter) && (pencilMarked(cellEl) || pencilMarked(letterEl));
   const numText = (numberEl?.textContent ?? '').trim();
   return { letter, penciled, number: /^\d+$/.test(numText) ? Number(numText) : null };
 }

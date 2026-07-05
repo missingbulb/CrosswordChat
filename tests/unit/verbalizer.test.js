@@ -4,14 +4,13 @@ import { verbalizeClue, render, ordinal, spellOut } from '../../extension/src/co
 const clue = (runs, extra = {}) => verbalizeClue({
   label: '1 Across',
   runs: typeof runs === 'string' ? [{ text: runs, italic: false }] : runs,
-  answerLength: 5,
   ...extra,
 });
 
 describe('clue readout (READ)', () => {
-  test('REQ-READ-001: text then letter count — the clue label is never spoken', () => {
+  test('REQ-READ-001: just the clue text — neither the label nor a letter count is spoken', () => {
     expect(clue('Organ with four chambers'))
-      .toBe('Organ with four chambers. 5 letters.');
+      .toBe('Organ with four chambers.'); // REQ-READ-008 retired: no "5 letters." tail
   });
 
   test('REQ-READ-002: italic word announced after the text', () => {
@@ -50,14 +49,14 @@ describe('clue readout (READ)', () => {
     expect(clue('Word after "boo", often')).not.toContain('quotes');
   });
 
-  test('REQ-READ-008: letter count is always the final sentence', () => {
+  test('REQ-READ-008 (retired): the readout never announces a letter count', () => {
     for (const text of ['Plain clue', 'It might go viral?', '[Sigh]']) {
-      expect(clue(text).endsWith('5 letters.')).toBe(true);
+      expect(clue(text)).not.toMatch(/\d+ letters/);
     }
   });
 
   test('REQ-READ-010: cross-references read literally', () => {
-    expect(clue('See 17-Across')).toBe('See 17-Across. 5 letters.');
+    expect(clue('See 17-Across')).toBe('See 17-Across.');
   });
 
   test('REQ-READ-011: editorial tags like ": Abbr." are preserved verbatim', () => {
@@ -66,7 +65,7 @@ describe('clue readout (READ)', () => {
 
   test('REQ-LIFE-010: the greeting glues straight onto the clue text; no wrap prefix exists', () => {
     expect(clue('Plain clue', { greeting: true }).startsWith("Let's solve. Plain clue.")).toBe(true);
-    expect(clue('Plain clue', { wrapped: true })).toBe('Plain clue. 5 letters.'); // REQ-NAV-006 retired
+    expect(clue('Plain clue', { wrapped: true })).toBe('Plain clue.'); // REQ-NAV-006 retired
   });
 });
 

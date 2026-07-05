@@ -220,6 +220,9 @@ describe('commands', () => {
       ['back', 'back'], ['go back', 'back'], ['previous clue', 'back'],
       ['flip', 'flip'], ['flip it', 'flip'], ['switch direction', 'flip'],
       ['undo', 'undo'], ['undue', 'undo'], ['take it back', 'undo'], // REQ-ANS-017
+      ['clear', 'clear'], ['delete', 'clear'], ['erase it', 'clear'], // REQ-ANS-024
+      ['pencil', 'pencil'], ['pencil mode', 'pencil'], ['use pencil', 'pencil'], // REQ-ANS-025
+      ['pen', 'pen'], ['switch to pen', 'pen'], ['ink', 'pen'],
 
       ['repeat', 'repeat'], ['say that again', 'repeat'], ['what', 'repeat'],
       ['hint', 'hint'], ['what do i have', 'hint'], ["what's filled in", 'hint'], ['pattern', 'hint'],
@@ -252,6 +255,20 @@ describe('commands', () => {
     expect(parseCommand('one hundred and five down')).toEqual({ command: 'goto', arg: { number: 105, direction: 'down' } });
     // No number → not a goto; the utterance stays available to the answer pipeline.
     expect(parseCommand('falling down')).toBeNull();
+  });
+
+  test('REQ-NAV-013: STT renderings of "across" — "a cross" / "cross" — still navigate', () => {
+    // Live report: "5 across" never matched while "5 down" always did — the STT
+    // splits "across" into "a cross" (or clips it to "cross").
+    expect(parseCommand('5 a cross')).toEqual({ command: 'goto', arg: { number: 5, direction: 'across' } });
+    expect(parseCommand('five cross')).toEqual({ command: 'goto', arg: { number: 5, direction: 'across' } });
+    expect(parseCommand('go to 12 a cross')).toEqual({ command: 'goto', arg: { number: 12, direction: 'across' } });
+    // A clear "across" with a garbled number is still navigation — the machine asks
+    // for the number instead of treating SIXACROSS as a word.
+    expect(parseCommand('gibberish across')).toEqual({ command: 'goto', arg: { number: null, direction: 'across' } });
+    // Bare "... cross" with no number stays an answer candidate (RED CROSS is a word).
+    expect(parseCommand('red cross')).toBeNull();
+    expect(parseCommand('holy cross')).toBeNull();
   });
 
   test('REQ-CMD-001: "spell" followed by letters carries them as the argument', () => {

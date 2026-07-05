@@ -28,10 +28,12 @@ export function spellOut(word) {
 
 /**
  * Clue → spoken text (REQ-READ-001..011). The clue label ("17 Across") is deliberately
- * NOT spoken — the page highlight shows position (REQ-NAV-007).
- * @param {object} p {runs:[{text,italic}], answerLength, greeting?}
+ * NOT spoken — the page highlight shows position (REQ-NAV-007). The letter count is
+ * NOT spoken either (REQ-READ-008 retired): the user learns the length from a
+ * length-mismatch report or the hint command when it actually matters.
+ * @param {object} p {runs:[{text,italic}], greeting?}
  */
-export function verbalizeClue({ runs, answerLength, greeting = false }) {
+export function verbalizeClue({ runs, greeting = false }) {
   const plain = runs.map((r) => r.text).join('');
   const trimmed = plain.trim();
 
@@ -71,7 +73,6 @@ export function verbalizeClue({ runs, answerLength, greeting = false }) {
   if (greeting) parts.push("Let's solve.");
   parts.push(bracketed ? `The clue is in brackets: ${body}` : body);
   parts.push(...annotations);
-  parts.push(`${answerLength} letters.`); // REQ-READ-008: always last.
   return parts.join(' ');
 }
 
@@ -130,7 +131,7 @@ export function render(say) {
       return `${letters}. ${summary}`;
     }
     case 'help':
-      return 'You can: say an answer — whole or spelled out — or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
+      return 'You can: say an answer — whole or spelled out — or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, clear to empty the entry, pencil or pen to switch write modes, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
     case 'didnt-catch':
       return "Sorry, I didn't catch that.";
     case 'nothing-pending':
@@ -152,6 +153,14 @@ export function render(say) {
       return 'Undone.';
     case 'nothing-to-undo':
       return "There's nothing to undo yet.";
+    case 'cleared':
+      return 'Cleared.';
+    case 'mode-ack':
+      return say.mode === 'pencil' ? 'Okay — penciling from here.' : 'Okay — pen from here.';
+    case 'nothing-to-clear':
+      return 'That entry is already empty.';
+    case 'goto-didnt-catch':
+      return "I didn't catch which clue — say the number and the direction, like five across.";
     case 'no-crossing':
       return 'No crossing clue there.';
     case 'no-such-clue':

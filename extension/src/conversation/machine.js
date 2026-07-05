@@ -28,13 +28,42 @@ const CONTEXTUAL = new Set(['yes', 'no', 'choice']);
 
 function clueSay(model, clueId, extra = {}) {
   const clue = model.clue(clueId);
+  // No answerLength: the letter count is not announced up front (REQ-READ-008 retired) —
+  // the user learns it from a length-mismatch report or the hint command.
   return {
     kind: 'clue',
     label: clue.label,
     runs: clue.runs,
-    answerLength: clue.cellIndices.length,
     ...extra,
   };
+}
+
+/**
+ * The machine's soft-cell ledger (REQ-ANS-023 / REQ-PAGE-012): cells the extension
+ * itself penciled (REQ-ANS-019 softening), index → letter. The live page exposes no
+ * readable pencil marker, so models are always built WITH the ledger — a penciled-by-us
+ * letter must never gate an answer just because the page can't confirm it's soft.
+ */
+function remodel(state, snapshot) {
+  return buildModel(snapshot, { softCells: state.softCells ?? {} });
+}
+
+/** Entries currently holding penciled letters — the suspects once the grid is full (REQ-NAV-014). */
+function pencilledClueIds(model) {
+  return model.orderedClueIds.filter((id) => model.pencilFor(id).some(Boolean));
+}
+
+/** The next suspect after fromId in list order, cycling (fromId itself checked last). */
+function nextPencilled(model, fromId) {
+  const suspects = new Set(pencilledClueIds(model));
+  if (!suspects.size) return null;
+  const order = model.orderedClueIds;
+  const from = Math.max(order.indexOf(fromId), 0);
+  for (let step = 1; step <= order.length; step++) {
+    const id = order[(from + step) % order.length];
+    if (suspects.has(id)) return id;
+  }
+  return null;
 }
 
 /** Transition into speaking; `after` = what TTS_DONE should do: 'listen' | 'end' | 'enter'. */
@@ -90,6 +119,8 @@ function startUndo(state, { sayKind = 'undone', rejected = [], correction = null
       ...moveTo(state, clueId),
       phase: 'undoing',
       lastEntry: null,
+      // The revert also restores the ledger to its pre-entry state (REQ-ANS-023).
+      softCells: state.lastEntry.softBefore ?? state.softCells ?? {},
       rejected,
       undoSay: sayKind,
       pendingCorrection: correction,
@@ -150,12 +181,15 @@ function advance(from, leadSays = []) {
   const skipped = liveSkips(state);
   const next = nextClue(state.model, state.clueId, state.strategy, skipped.map((e) => e.clueId));
   if (!next) {
-    // Nothing unfilled anywhere (REQ-LIFE-006 / REQ-NAV-003): "next" still moves —
-    // forward through the FILLED clues in list order, reading each one. The grid-full
-    // coaching played once when the grid filled up; repeating it here would loop.
+    // Nothing unfilled anywhere (REQ-LIFE-006 / REQ-NAV-003): "next" still moves. The
+    // penciled entries are the suspects on a full-but-wrong grid, so "next" patrols
+    // THEM when any exist (REQ-NAV-014); otherwise forward through the filled clues in
+    // list order, reading each one. The grid-full coaching played once when the grid
+    // filled up; repeating it here would loop.
     const order = state.model.orderedClueIds;
     const at = Math.max(order.indexOf(state.clueId), 0);
-    const s = moveTo({ ...state, skipped }, order[(at + 1) % order.length]);
+    const target = nextPencilled(state.model, state.clueId) ?? order[(at + 1) % order.length];
+    const s = moveTo({ ...state, skipped }, target);
     return speak(s, [
       ...leadSays.map(say),
       { type: 'SELECT_CLUE', clueId: s.clueId },
@@ -264,9 +298,13 @@ function handleCommand(state, cmd) {
       }
       return jumpTo(state, prevClue(state.model, state.clueId).clueId);
     }
-    case 'flip': { // REQ-NAV-010: jump to the crossing clue
+    case 'flip': { // REQ-NAV-010: jump to the crossing clue AT THE SELECTED SQUARE
       const clue = state.model.clue(state.clueId);
-      let cross = null;
+      // The page highlight marks the square the user means (live report: flipping
+      // from the first letter instead of the cursor felt wrong). Only a selection
+      // inside the current entry counts; otherwise scan from the entry's start.
+      const selected = clue.cellIndices.indexOf(state.model.snapshot.selection?.cellIndex);
+      let cross = selected >= 0 ? state.model.crossingAt(state.clueId, selected) : null;
       for (let i = 0; i < clue.cellIndices.length && !cross; i++) {
         cross = state.model.crossingAt(state.clueId, i);
       }
@@ -276,7 +314,41 @@ function handleCommand(state, cmd) {
     case 'undo': // REQ-ANS-017: revert the last entry we made
       if (!state.lastEntry) return listenAgain(state, [{ kind: 'nothing-to-undo' }]);
       return startUndo(state);
+    case 'pencil': // REQ-ANS-025: answers land penciled from here on
+      return listenAgain({ ...state, writeMode: 'pencil' }, [{ kind: 'mode-ack', mode: 'pencil' }]);
+    case 'pen': // …and back to pen
+      return listenAgain({ ...state, writeMode: 'pen' }, [{ kind: 'mode-ack', mode: 'pen' }]);
+    case 'clear': { // REQ-ANS-024: empty the current entry; "undo" brings it back
+      const before = state.model.patternFor(state.clueId);
+      if (!before.some(Boolean)) return listenAgain(state, [{ kind: 'nothing-to-clear' }]);
+      const clue = state.model.clue(state.clueId);
+      return {
+        // Rides the UNDO write machinery (a null letter clears the cell) and leaves a
+        // lastEntry restore record, so a later "undo" re-enters everything the clear
+        // removed — pencil states included.
+        state: {
+          ...moveTo(state, state.clueId),
+          phase: 'undoing',
+          lastEntry: {
+            clueId: state.clueId,
+            before,
+            beforePencil: state.model.pencilFor(state.clueId),
+            penciled: [],
+            softBefore: state.softCells,
+          },
+          undoSay: 'cleared',
+        },
+        actions: [{
+          type: 'UNDO',
+          clueId: state.clueId,
+          cells: clue.cellIndices.map((index) => ({ index, letter: null })),
+        }],
+      };
+    }
     case 'goto': { // REQ-NAV-013: jump straight to a clue by its spoken label
+      // The direction was clear but the number wasn't (STT garble) — ask for it
+      // instead of dumping the utterance into the answer pipeline.
+      if (cmd.arg.number == null) return listenAgain(state, [{ kind: 'goto-didnt-catch' }]);
       const id = `${cmd.arg.direction === 'across' ? 'A' : 'D'}${cmd.arg.number}`;
       if (!state.model.clue(id)) {
         return listenAgain(state, [{
@@ -492,12 +564,20 @@ function onStart(state, { snapshot, settings }) {
   }
   const model = buildModel(snapshot);
   const selected = snapshot.selection?.clueId;
-  const clueId = (selected && model.clue(selected)) ? selected : model.firstUnfilled(); // REQ-LIFE-007
+  // REQ-NAV-014: a full-but-wrong grid opens on a penciled entry — the uncertain
+  // letters are where the fix most likely lives. Otherwise the page selection wins
+  // (REQ-LIFE-007), then the first unfilled clue.
+  const suspects = model.isFull() ? pencilledClueIds(model) : [];
+  const clueId = (selected && model.clue(selected) && (!suspects.length || suspects.includes(selected)))
+    ? selected
+    : suspects[0] ?? model.firstUnfilled(); // REQ-LIFE-007
   const s = {
     phase: 'speaking',
     after: 'listen',
     model,
     clueId,
+    softCells: {}, // REQ-ANS-023: what WE penciled this session (index → letter)
+    writeMode: 'pen', // REQ-ANS-025: flipped by the pencil/pen commands
     // REQ-NAV-012: the persisted setting seeds the strategy; anything unrecognized
     // (corrupt storage, older versions) falls back to list order.
     strategy: STRATEGIES.includes(settings?.strategy) ? settings.strategy : 'list-order',
@@ -531,6 +611,11 @@ function onTtsDone(state) {
     // REQ-ANS-019: crossings that lose a letter to this write are malformed — their
     // surviving letters ride the same ENTER as pencil rewrites.
     const penciled = state.model.pencilPlanFor(state.clueId, word);
+    // REQ-ANS-025: in pencil mode the word itself lands penciled. Pen-mode cells carry
+    // no flag at all — the writer types them in the page's current mode (pen).
+    const wordCells = state.writeMode === 'pencil'
+      ? state.model.cellsForWord(state.clueId, word).map((c) => ({ ...c, pencil: true }))
+      : state.model.cellsForWord(state.clueId, word);
     return {
       // Remember what the entry held BEFORE this write, so "undo" can revert it
       // exactly — clearing what we added, restoring what we overwrote (REQ-ANS-017),
@@ -543,6 +628,8 @@ function onTtsDone(state) {
           before: state.model.patternFor(state.clueId),
           beforePencil: state.model.pencilFor(state.clueId),
           penciled,
+          wordCells, // ledger upkeep needs the letters AND their pencil flags
+          softBefore: state.softCells, // ledger to restore on undo (REQ-ANS-023)
         },
       },
       actions: [{
@@ -550,7 +637,7 @@ function onTtsDone(state) {
         clueId: state.clueId,
         word,
         cells: [
-          ...state.model.cellsForWord(state.clueId, word),
+          ...wordCells,
           ...penciled.map((c) => ({ ...c, pencil: true })),
         ],
       }],
@@ -587,15 +674,41 @@ function onSttError(state, { code, silentMs }) {
 
 function onEntryResult(state, { ok, snapshot }) {
   if (state.phase !== 'entering') return { state, actions: [] };
-  const model = buildModel(snapshot);
-  let s = { ...state, model, pendingEntry: null, pendingWord: null, mode: 'normal' };
+  // Ledger upkeep (REQ-ANS-023): the word's cells landed in whatever mode the ENTER
+  // asked for (pen drops any stale soft record, pencil-mode words ARE soft records,
+  // REQ-ANS-025), and the plan's cells were just penciled — remember all of it
+  // ourselves, since the page can't tell us (REQ-PAGE-012).
+  let softCells = state.softCells ?? {};
+  if (ok && state.lastEntry) {
+    softCells = { ...softCells };
+    for (const { index, letter, pencil } of state.lastEntry.wordCells ?? []) {
+      if (pencil) softCells[index] = letter;
+      else delete softCells[index];
+    }
+    for (const { index, letter } of state.lastEntry.penciled) softCells[index] = letter;
+  }
+  const model = buildModel(snapshot, { softCells });
+  let s = { ...state, model, softCells, pendingEntry: null, pendingWord: null, mode: 'normal' };
   if (!ok) return listenAgain(s, [{ kind: 'entry-failed' }]); // REQ-ANS-013
   // The proposal is an entry now: from here "you misheard" means undo it (REQ-ANS-010).
   s = { ...s, lastProposed: null };
   if (model.isSolved() && !s.celebrated) { // REQ-LIFE-005
     return speak({ ...s, celebrated: true }, [say({ kind: 'celebration' })], 'end');
   }
-  if (model.isFull()) return listenAgain(s, [{ kind: 'grid-full-wrong' }]); // REQ-LIFE-006
+  if (model.isFull()) {
+    // REQ-LIFE-006 + REQ-NAV-014: full but wrong — say so, and when penciled letters
+    // exist, land straight on the first suspect entry instead of staying put.
+    const suspect = nextPencilled(model, s.clueId);
+    if (suspect) {
+      const s2 = moveTo(leaveCrumb(s), suspect);
+      return speak(s2, [
+        say({ kind: 'grid-full-wrong' }),
+        { type: 'SELECT_CLUE', clueId: suspect },
+        say(clueSay(s2.model, suspect)),
+      ], 'listen');
+    }
+    return listenAgain(s, [{ kind: 'grid-full-wrong' }]);
+  }
   return advance(s);
 }
 
@@ -604,7 +717,7 @@ function onPageEvent(state, { kind, snapshot }) {
   if (kind === 'solved') {
     if (state.celebrated) return { state, actions: [] };
     return speak(
-      { ...state, celebrated: true, model: buildModel(snapshot) },
+      { ...state, celebrated: true, model: remodel(state, snapshot) },
       [say({ kind: 'celebration' })],
       'end',
     );
@@ -616,7 +729,7 @@ function onPageEvent(state, { kind, snapshot }) {
   const interactive = state.phase === 'listening'
     || (state.phase === 'speaking' && state.after === 'listen');
   if (!interactive) return { state, actions: [] };
-  const model = buildModel(snapshot);
+  const model = remodel(state, snapshot);
   if (kind === 'selection') {
     const sel = snapshot.selection?.clueId;
     if (sel && sel !== state.clueId && model.clue(sel)) {
@@ -636,7 +749,7 @@ function onPageEvent(state, { kind, snapshot }) {
 function onUndoResult(state, { ok, snapshot }) {
   if (state.phase !== 'undoing') return { state, actions: [] };
   const { undoSay, pendingCorrection } = state;
-  const s = { ...state, model: buildModel(snapshot), undoSay: null, pendingCorrection: null };
+  const s = { ...state, model: remodel(state, snapshot), undoSay: null, pendingCorrection: null };
   if (!ok) return listenAgain(s, [{ kind: 'entry-failed' }]);
   // The revert writes cell by cell, and those clicks leave the page's cursor wherever
   // they ended — often on a CROSSING clue. Reassert the undone clue so the page's
