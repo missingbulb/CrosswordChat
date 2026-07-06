@@ -1,91 +1,31 @@
-# Builds the privacy policy into a one-page GitHub Pages site and deploys it at
-# the fixed permalink /privacy/ —
-#   https://missingbulb.github.io/CrosswordChat/privacy/
-# The Jekyll `permalink` pins that public path independent of where PRIVACY.md
-# lives in the repo (move the file → only the `cat` path below changes, never
-# the URL). The page body is dev/build/release/store_artifacts/PRIVACY.md
-# verbatim — the single source of truth, no duplicated copy.
-#
-# Runs two ways:
-#   - workflow_dispatch — deploy the page on its own (e.g. to make the URL live
-#     for a Chrome Web Store submission) WITHOUT uploading anything to the store.
-#   - workflow_call — invoked by "Release: Publish to Chrome Web Store" so the
-#     page is refreshed whenever the listing ships.
-#
-# One-time owner setup: Pages source = "GitHub Actions" (repo Settings → Pages).
-# Production deploys only from the default branch (the github-pages environment's
-# branch policy), so this must be on `main` to publish.
 name: Deploy privacy policy to GitHub Pages
 
+# Thin stub of the chrome-extension-release standard: the logic lives in the
+# Claudinite canon as a reusable workflow (referenced @main, so canon changes
+# apply here automatically; the workflow itself is platform-agnostic — any
+# publish standard's listing can use it).
+#
+# Dispatch this to make https://<owner>.github.io/<repo>/privacy/ live WITHOUT
+# uploading anything to the store (e.g. before the first store submission —
+# the store fetches the URL at every publish and fails on an unreachable
+# link). The store-publish canon workflow also refreshes the page on every
+# upload, through the canon directly — not through this stub.
+#
+# One-time owner setup: Pages source = "GitHub Actions" (repo Settings →
+# Pages).
+#
+# Per-repo substitution points (chrome-extension-release standard): none — the
+# PRIVACY.md path is the standard location (a repo that moved it passes
+# privacy_md_path).
 on:
   workflow_dispatch:
-  workflow_call:
 
-# Least privilege for a Pages deploy: read the repo, write Pages, mint the OIDC
-# token deploy-pages exchanges.
 permissions:
   contents: read
   pages: write
   id-token: write
-
-# Never run two Pages deploys at once; let an in-flight deploy finish.
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  issues: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Assemble the Pages site from PRIVACY.md
-        run: |
-          set -euo pipefail
-          mkdir -p site
-          # The policy page: a permalink pins the public path; the body is
-          # PRIVACY.md verbatim (single source of truth — no duplicated copy).
-          {
-            printf -- '---\npermalink: /privacy/\ntitle: "Privacy Policy"\n---\n\n'
-            cat dev/build/release/store_artifacts/PRIVACY.md
-          } > site/privacy.md
-          # Site root redirects to the policy (relative link → no baseurl to hardcode).
-          printf '%s\n' \
-            '<!doctype html>' \
-            '<meta charset="utf-8">' \
-            '<meta http-equiv="refresh" content="0; url=privacy/">' \
-            '<title>Privacy Policy</title>' \
-            '<a href="privacy/">Privacy Policy</a>' > site/index.html
-
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./site
-          destination: ./_site
-
-      - uses: actions/upload-pages-artifact@v3
-
   deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-
-  # A standalone (workflow_dispatch) Pages deploy is unattended — a failure just
-  # turns the run red. Surface it as a tracking issue. When this workflow is
-  # invoked via workflow_call (from publish-chrome-store), the caller grants the
-  # issues:write this job needs. The job-level permission below is what the token
-  # actually carries (the top-level block above omits issues on purpose).
-  report-failure:
-    needs: [build, deploy]
-    if: failure()
-    permissions:
-      issues: write
-    uses: ./.github/workflows/report-failure.yml
-    with:
-      workflow: "Deploy privacy policy to GitHub Pages"
+    uses: missingbulb/Claudinite/.github/workflows/deploy-privacy-page.yml@main

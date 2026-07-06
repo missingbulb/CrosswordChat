@@ -1,20 +1,16 @@
 name: "Release: Publish to Chrome Web Store"
 
-# Takes the crossword-chat.zip from a GitHub Release and uploads it to the
-# Chrome Web Store (optionally publishing it to users), via the Web Store API
-# using chrome-webstore-upload-cli.
+# Thin stub of the chrome-extension-release standard: the logic lives in the
+# Claudinite canon as a reusable workflow (referenced @main, so canon changes
+# apply here automatically). This file owns only the dispatch trigger and this
+# repo's zip name.
 #
-# Run it manually from the Actions tab ("Run workflow") once you've created the
-# release package and are ready to ship it to users. The daily auto-release
-# (daily-release.yml) also calls it (workflow_call) with the tag it just
-# released; a workflow_call caller must pass `secrets: inherit` so the four
-# store secrets below resolve.
+# Run it manually from the Actions tab ("Run workflow") once a release package
+# exists and you're ready to ship it to users. The daily auto-release also
+# publishes, but through the canon workflows directly — not through this stub.
 #
-# Required repository secrets (Settings → Secrets and variables → Actions):
-#   CHROME_EXTENSION_ID     the item/app ID from the Web Store dashboard URL
-#   CHROME_CLIENT_ID        OAuth client ID  } minted once against the
-#   CHROME_CLIENT_SECRET    OAuth client secret } Chrome Web Store API — see
-#   CHROME_REFRESH_TOKEN    OAuth refresh token } dev/build/release/releasing.md
+# secrets: inherit passes the four CHROME_* store secrets (see
+# dev/build/release/releasing.md) into the canon workflow.
 on:
   workflow_dispatch:
     inputs:
@@ -26,95 +22,18 @@ on:
         description: "Publish to users after upload (uncheck to leave it as a draft in the dashboard)"
         type: boolean
         default: true
-  workflow_call:
-    inputs:
-      tag:
-        description: "Release tag to publish (blank = latest release)"
-        required: false
-        type: string
-      auto_publish:
-        description: "Publish to users after upload (false = leave it as a draft in the dashboard)"
-        type: boolean
-        default: true
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+  issues: write
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # chrome-webstore-upload-cli reads these env vars directly.
-      EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-      CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-      CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-      REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-    steps:
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-
-      - name: Fail early if credentials are missing
-        run: |
-          missing=
-          for v in EXTENSION_ID CLIENT_ID CLIENT_SECRET REFRESH_TOKEN; do
-            [ -n "${!v}" ] || missing="$missing $v"
-          done
-          if [ -n "$missing" ]; then
-            echo "Missing required secret(s):$missing" >&2
-            echo "Add them under Settings → Secrets and variables → Actions (see dev/build/release/releasing.md)." >&2
-            exit 1
-          fi
-
-      - name: Download the release zip
-        run: |
-          mkdir -p dist
-          # An empty tag makes `gh release download` pick the latest release.
-          gh release download ${{ inputs.tag }} \
-            --repo "${{ github.repository }}" \
-            --pattern "crossword-chat.zip" \
-            --dir dist
-          ls -l dist
-
-      - name: Show the version being published
-        run: |
-          echo "Publishing $(unzip -p dist/crossword-chat.zip manifest.json | grep '"version"')"
-
-      - name: Upload to the Chrome Web Store
-        run: |
-          flags=
-          if [ "${{ inputs.auto_publish }}" = "false" ]; then
-            echo "auto_publish is off — uploading as a draft (publish it from the dashboard)."
-          else
-            flags="--auto-publish"
-          fi
-          npx --yes chrome-webstore-upload-cli@3 upload \
-            --source dist/crossword-chat.zip \
-            $flags
-
-  # Refresh the Pages-hosted privacy policy alongside the store upload, from the
-  # same PRIVACY.md the listing points at. The deploy lives in its own reusable
-  # workflow so it can ALSO be run on its own (workflow_dispatch) to make the URL
-  # live without uploading to the store — see deploy-privacy-page.yml. It reports
-  # its OWN failures, so the issues:write below lets that nested reporter run.
-  deploy-privacy-page:
-    uses: ./.github/workflows/deploy-privacy-page.yml
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-      issues: write
-
-  # This workflow is run by hand and then left alone, so a failed upload
-  # otherwise just turns the run red with nobody alerted. Open/append a tracking
-  # issue instead. Covers only `publish`; the deploy-privacy-page reusable
-  # workflow reports its own failures.
-  report-failure:
-    needs: publish
-    if: failure()
-    permissions:
-      issues: write
-    uses: ./.github/workflows/report-failure.yml
+    uses: missingbulb/Claudinite/.github/workflows/chrome-extension-publish-store.yml@main
     with:
-      workflow: "Release: Publish to Chrome Web Store"
+      tag: ${{ inputs.tag }}
+      auto_publish: ${{ inputs.auto_publish }}
+      zip_name: crossword-chat.zip
+    secrets: inherit
