@@ -1,9 +1,10 @@
 // Service worker: the "switchboard" and the mouth. Icon toggle (REQ-LIFE-001/002),
 // one session at a time (REQ-LIFE-009), badge feedback (REQ-LIFE-003), per-tab icon
-// variant + unsupported-site popup (REQ-LIFE-013/014), session end when the puzzle tab
-// loses the user's attention (REQ-LIFE-011), and the chrome.tts relay — content scripts
-// can't use chrome.tts, so the in-page session sends speak/cancel here over its port
-// (REQ-SPCH-001).
+// variant + unsupported-site popup (REQ-LIFE-013/014), the Settings… menu item that
+// anchors the settings popup under the toolbar icon (REQ-NAV-012), session end when the
+// puzzle tab loses the user's attention (REQ-LIFE-011), and the chrome.tts relay —
+// content scripts can't use chrome.tts, so the in-page session sends speak/cancel here
+// over its port (REQ-SPCH-001).
 
 import { MSG } from '../shared/messages.js';
 import { isSupportedPuzzleUrl } from '../shared/urls.js';
@@ -43,6 +44,41 @@ function presentAction(tabId, url) {
   chrome.action.setPopup({ tabId, popup: supported ? '' : 'unsupported.html' })
     .catch(() => { /* tab already gone */ });
 }
+
+// REQ-NAV-012: settings live in the action popup, not Chrome's options_ui — options_ui
+// would bounce the user through chrome://extensions and back. The right-click Settings…
+// item borrows the tab's popup slot for one click: point it at the settings page, pop it
+// open under the icon, then hand the slot straight back so the next plain click still
+// toggles the session (or shows unsupported.html).
+const SETTINGS_MENU_ID = 'cc-settings';
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: SETTINGS_MENU_ID,
+      title: 'Settings…',
+      contexts: ['action'],
+    });
+  });
+});
+
+async function openSettingsPopup(tab) {
+  try {
+    await chrome.action.setPopup({ tabId: tab.id, popup: 'options.html' });
+    await chrome.action.openPopup({ windowId: tab.windowId });
+  } catch {
+    // openPopup needs Chrome 127+; older Chrome gets a small standalone window instead.
+    await chrome.windows.create({ url: 'options.html', type: 'popup', width: 380, height: 480 })
+      .catch(() => { /* window creation blocked — nothing else to try */ });
+  } finally {
+    presentAction(tab.id, tab.url); // give the popup slot back to the session toggle
+  }
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== SETTINGS_MENU_ID || !tab?.id) return;
+  void openSettingsPopup(tab);
+});
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url || changeInfo.status === 'loading') presentAction(tabId, tab.url);

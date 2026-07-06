@@ -601,10 +601,12 @@ entities. The readout must convey what the eye would see.
 
 #### REQ-NAV-012 — Default strategy is a persisted setting
 - **Status:** Active · **Level:** MUST
-- The extension MUST offer an options page — Chrome's standard settings surface, reached by
-  right-clicking the toolbar icon → *Options* (or chrome://extensions → Details → Extension
-  options) — where the user picks between the two navigation modes (list order / most filled
-  first). The choice MUST persist in `chrome.storage.sync` and MUST be applied as the starting
+- The extension MUST offer a settings surface — a popup anchored under the toolbar icon,
+  reached by right-clicking the icon → *Settings…* (not Chrome's `options_ui`, which detours
+  through chrome://extensions) — where the user picks between the two navigation modes (list
+  order / most filled first). Edits are buffered: a *Save* button persists them and closes the
+  popup, and a *Reset to defaults* button restores the defaults in the form without saving.
+  The choice MUST persist in `chrome.storage.sync` and MUST be applied as the starting
   strategy of every new session. Voice switching (REQ-NAV-005) still changes the strategy for the
   rest of the session only; it MUST NOT write the setting back. A missing or invalid stored value
   falls back to list order (REQ-NAV-002).
@@ -1163,7 +1165,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   default voice is often the most robotic one installed, the port SHOULD speak with the first
   installed voice from a short ranked preference list (e.g. `Google UK English Female`; the Google
   network voices ship with desktop Chrome) and use the system default only when none of them is
-  installed. The speaking rate MUST be a persisted user setting — an options-page slider stored
+  installed. The speaking rate MUST be a persisted user setting — a settings-popup slider stored
   alongside the strategy setting (REQ-NAV-012 mechanics) — with a default of 1.3×
   (`DEFAULT_RATE`) and bounds of 0.5×–3.0×; a missing or invalid stored value falls back to the
   default, an out-of-range one is clamped. The service worker reads the stored rate per
@@ -1441,7 +1443,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
   (and the page console) and die with the page. The sole allowed persistence is the user's
   settings object (REQ-NAV-012) in `chrome.storage.sync`, and storage primitives (`localStorage`,
   `indexedDB`, `chrome.storage`) may appear only in the settings module
-  (`extension/src/settings/`) and the options page (`extension/src/options/`) — nowhere else in
+  (`extension/src/settings/`) and the settings popup (`extension/src/options/`) — nowhere else in
   extension source.
 - **Accept:** Given the source tree, then storage primitives appear only under the two allowed
   paths; given a session end, then extension storage holds nothing beyond the settings object.
@@ -1495,7 +1497,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - **REQ-FUT-006 — On-device STT preference.** Surface Chrome's on-device recognition
   (`processLocally`) as a privacy setting when available.
 - **REQ-FUT-007 — Settings UI.** Voice, verbosity (e.g. REQ-READ-004 announcement).
-  The strategy default, the options page, the `chrome.storage.sync` carve-out from
+  The strategy default, the settings popup, the `chrome.storage.sync` carve-out from
   REQ-NFR-002 (REQ-NAV-012), and the reading-speed slider (REQ-SPCH-001) are delivered;
   the remaining knobs stay future work.
 

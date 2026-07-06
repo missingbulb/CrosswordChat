@@ -14,6 +14,12 @@
     label small { margin-left: 22px; }
     input[type="range"] { width: 100%; margin: 4px 0 6px; }
     output { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .buttons { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; }
+    button { font: inherit; border-radius: 6px; padding: 5px 14px; cursor: pointer; }
+    #reset { background: none; border: 1px solid #ccc; color: #444; }
+    #reset:hover { background: #f3f3f3; }
+    #save { background: #191919; border: 1px solid #191919; color: #fff; font-weight: 600; }
+    #save:hover { background: #3d3d3d; }
   </style>
 </head>
 <body>
@@ -40,6 +46,10 @@
         Clues you just skipped wait their turn until their letters change.</small>
     </label>
   </fieldset>
+  <div class="buttons">
+    <button type="button" id="reset">Reset to defaults</button>
+    <button type="button" id="save">Save</button>
+  </div>
   <script src="options.js"></script>
 </body>
 </html>

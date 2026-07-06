@@ -227,10 +227,11 @@ Covers: REQ-SPCH-009
 
 ### MT-28 — Strategy setting and easiest-first skipping
 Covers: REQ-NAV-011 REQ-NAV-012
-1. Right-click the toolbar icon → Options. Pick "Most filled first (easiest)". Close the page.
+1. Right-click the toolbar icon → Settings…. The settings popup opens under the icon (no
+   chrome://extensions page). Pick "Most filled first (easiest)" and press Save — the popup closes.
 2. Start a session on a partially solved puzzle and, without answering, say "next" several times.
 3. Answer one clue that crosses an entry you skipped in step 2, then say "next" again.
-4. Reopen Options; switch back to "In list order"; start a new session and say "next".
+4. Reopen Settings…; switch back to "In list order" and Save; start a new session and say "next".
 5. **PASS:** step 2 — each "next" lands on the open clue with the highest percentage of letters
    filled that you haven't just skipped: no ping-ponging between the top two; once every open
    clue has been skipped, "next" cycles back to the one skipped longest ago. Step 3 — the skipped
@@ -310,15 +311,15 @@ Covers: REQ-ANS-011 REQ-ANS-018 REQ-ANS-020 REQ-ANS-021 REQ-ANS-012
 ### MT-33 — Speech feel: speed setting, ready ping, pause reset, Escape, splash
 Covers: REQ-SPCH-001 REQ-SPCH-010 REQ-LIFE-015 REQ-LIFE-016
 1. Start a session and listen to a readout; note the speaking speed and the tick right after it.
-   With the session still running, open Options (right-click the toolbar icon), drag the reading
-   speed slider to the maximum, return to the puzzle, and say "repeat".
+   With the session still running, open Settings… (right-click the toolbar icon), drag the
+   reading speed slider to the maximum, press Save (the popup closes), and say "repeat".
 2. Say half an answer and stop mid-word; wait ~2 s.
 3. Say an answer, wait ~2 s, then repeat the same answer.
 4. Press Escape mid-session. Then open a fresh puzzle showing "Ready to start solving?" and
    start a session from the toolbar button without clicking Play yourself.
 5. **PASS:** step 1 — speech plays at a comfortable clip (default 1.3×) and a tiny ping marks
    the mic opening; after moving the slider the very next line is dramatically faster — no
-   session restart needed — and reopening Options shows the slider where you left it.
+   session restart needed — and reopening Settings… shows the slider where you left it.
    Step 2 — a ping replays (the reset cue); nothing is spoken about it. Step 3 — the answer is
    never doubled into "X X"; either the first utterance was taken, or the reset ping told you to
    restart. Step 4 — Escape cuts speech and mic instantly (button back to gold) and NYT's rebus

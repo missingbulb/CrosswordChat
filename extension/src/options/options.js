@@ -1,34 +1,46 @@
-// Options page logic: reading speed (REQ-SPCH-001) and the default next-clue strategy
-// (REQ-NAV-012). Changes save immediately — the standard options_ui page has no OK button.
+// Settings popup logic: reading speed (REQ-SPCH-001) and the default next-clue strategy
+// (REQ-NAV-012). Edits are buffered in a draft; nothing persists until Save, which writes
+// the settings and closes the popup. Reset puts the defaults back in the form (still
+// unsaved, so a mistaken Reset costs nothing until Save is pressed).
 
 import {
-  loadSettings, saveSettings, RATE_MIN, RATE_MAX,
+  loadSettings, saveSettings, DEFAULT_SETTINGS, RATE_MIN, RATE_MAX,
 } from '../settings/settings.js';
 
 async function init() {
-  const settings = await loadSettings();
+  const draft = await loadSettings();
 
-  // Speed slider: the label tracks the drag live, but storage writes only on release —
-  // chrome.storage.sync write quotas are per-minute and a drag fires dozens of events.
   const slider = document.querySelector('#rate');
   const readout = document.querySelector('#rate-value');
-  Object.assign(slider, { min: RATE_MIN, max: RATE_MAX, step: 0.1, value: settings.rate });
-  const showRate = () => { readout.value = `${Number(slider.value).toFixed(1)}×`; };
-  showRate();
-  slider.addEventListener('input', showRate);
-  slider.addEventListener('change', () => {
-    settings.rate = Number(slider.value);
-    void saveSettings(settings);
-  });
+  Object.assign(slider, { min: RATE_MIN, max: RATE_MAX, step: 0.1 });
+  const radios = [...document.querySelectorAll('input[name="strategy"]')];
 
-  for (const input of document.querySelectorAll('input[name="strategy"]')) {
-    input.checked = input.value === settings.strategy;
+  const render = () => {
+    slider.value = draft.rate;
+    readout.value = `${Number(slider.value).toFixed(1)}×`;
+    for (const input of radios) input.checked = input.value === draft.strategy;
+  };
+  render();
+
+  slider.addEventListener('input', () => {
+    draft.rate = Number(slider.value);
+    readout.value = `${draft.rate.toFixed(1)}×`;
+  });
+  for (const input of radios) {
     input.addEventListener('change', () => {
-      if (!input.checked) return;
-      settings.strategy = input.value;
-      void saveSettings(settings); // the whole object — a partial save would reset the rate
+      if (input.checked) draft.strategy = input.value;
     });
   }
+
+  document.querySelector('#reset').addEventListener('click', () => {
+    Object.assign(draft, DEFAULT_SETTINGS);
+    render();
+  });
+
+  document.querySelector('#save').addEventListener('click', async () => {
+    await saveSettings(draft); // the whole object — a partial save would reset the other field
+    window.close();
+  });
 }
 
 void init();

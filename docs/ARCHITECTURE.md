@@ -69,14 +69,18 @@ extension/src/
     stt-port.js      webkitSpeechRecognition → listenOnce() n-best, error taxonomy, mic preflight
   settings/        Persisted user settings (REQ-NAV-012). With options/, the ONLY place
     settings.js      allowed to touch chrome.storage (REQ-NFR-002): load/save/sanitize
-  options/         The options page (right-click the toolbar icon → Options)
-    options.html     reading-speed slider + strategy picker markup (copied to dist/ by the build)
-    options.js       wires the slider and radios to settings.js; saves on change
+  options/         The settings popup (right-click the toolbar icon → Settings…), anchored
+                   under the icon via chrome.action.openPopup — no chrome://extensions detour
+    options.html     reading-speed slider + strategy picker + Reset/Save buttons (copied to
+                     dist/ by the build)
+    options.js       wires the form to settings.js; edits are buffered, Save persists and
+                     closes, Reset puts the defaults back in the form
   app/
     orchestrator.js  executes machine actions via ports/pageClient; owns the event loop
   background/
     service-worker.js  icon toggle, single-session bookkeeping, badge, chrome.tts relay,
-                       per-tab icon variant + unsupported-site popup (REQ-LIFE-013/014)
+                       per-tab icon variant + unsupported-site popup (REQ-LIFE-013/014),
+                       Settings… context-menu item → settings popup under the icon
   popup/
     unsupported.html   static popup for unsupported tabs (REQ-LIFE-014); set per tab via
                        chrome.action.setPopup — supported tabs have no popup at all

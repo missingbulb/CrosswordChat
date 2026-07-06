@@ -45,7 +45,7 @@ WHAT IT DOES WELL
   "spell it", "help", or correct it with "I said …". Interrupt it mid-sentence — it
   listens while it speaks. Say "goodbye" to end the session.
 • Picks the next clue intelligently (easiest-first, most-filled-first, or list order —
-  your choice in the options page), and celebrates when the puzzle is done.
+  your choice in the settings popup), and celebrates when the puzzle is done.
 
 PRIVATE BY DESIGN
 No servers, no accounts, no analytics. The extension makes zero network requests of its
@@ -102,7 +102,7 @@ inert everywhere else. Not affiliated with or endorsed by The New York Times.
 | Permission | Justification to paste |
 |---|---|
 | `tts` | Speaks crossword clues and feedback aloud with Chrome's text-to-speech engine. Voice output is the extension's core interface — its only visual UI is the start/stop button in the puzzle toolbar and a static informational popup on unsupported pages. |
-| `storage` | Stores the user's settings (the clue-selection strategy and reading speed chosen on the options page) in chrome.storage.sync. No other data is ever stored. |
+| `storage` | Stores the user's settings (the clue-selection strategy and reading speed chosen in the settings popup) in chrome.storage.sync. No other data is ever stored. |
 | Host permission `https://www.nytimes.com/*` | The extension works exclusively on the New York Times crossword: content scripts read the clues and grid from the puzzle page and simulate keystrokes to enter the user's spoken answers. It is inert on every other site and requests no other host. |
 
 **Remote code use:** No — all code is packaged in the extension bundle. No remote scripts,

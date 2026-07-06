@@ -42,7 +42,7 @@ stores nothing except your own settings.**
 ## What the extension stores
 
 One thing: your **settings** (for example, the clue-selection strategy chosen on the
-options page), kept in `chrome.storage.sync` so they follow your Chrome profile. Settings
+settings popup), kept in `chrome.storage.sync` so they follow your Chrome profile. Settings
 contain no personal information, no audio, and nothing about any puzzle. Uninstalling the
 extension removes them.
 
