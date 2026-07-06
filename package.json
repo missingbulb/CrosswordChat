@@ -1,6 +1,6 @@
 {
   "name": "crosswordchat",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "private": true,
   "description": "Chrome extension for solving the NYT crossword conversationally (voice in, voice out).",
   "type": "module",
@@ -16,7 +16,6 @@
   "devDependencies": {
     "esbuild": "^0.25.0",
     "jsdom": "^26.0.0",
-    "marked": "^18.0.5",
     "playwright-core": "^1.61.1",
     "vitest": "^3.0.0"
   }

@@ -39,9 +39,9 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 | `extension/src/{app,background,content}/` | Wiring: orchestrator, icon toggle, in-page session host, TTS relay. |
 | `tests/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
-| [`docs/RELEASING.md`](docs/RELEASING.md) | Versioning (current: **0.9.0**), CI workflows, release process, Chrome Web Store deployment setup. |
-| [`dev/build/store-assets/`](dev/build/store-assets) | Chrome Web Store submission kit: [`STORE-LISTING.md`](dev/build/store-assets/STORE-LISTING.md) (listing copy, permission justifications, privacy disclosures, reviewer notes), [`PRIVACY.md`](dev/build/store-assets/PRIVACY.md) (the public privacy policy, published at [missingbulb.github.io/CrosswordChat/privacy.html](https://missingbulb.github.io/CrosswordChat/privacy.html)), screenshots and promo tiles (regenerate: `node tools/make-store-assets.mjs`). |
-| `.github/workflows/` | Test (every push), Pack (installable zip artifact + rolling `latest` download), Release (bump + tag + GitHub Release), Deploy to Chrome Web Store. |
+| [`dev/build/release/releasing.md`](dev/build/release/releasing.md) | Versioning, the standard release workflows, and Chrome Web Store publication (this repo's instance of the shared chrome-extension-release standard). |
+| [`dev/build/release/store_artifacts/`](dev/build/release/store_artifacts) | Chrome Web Store submission kit: [`STORE-LISTING.md`](dev/build/release/store_artifacts/STORE-LISTING.md) (listing copy, permission justifications, privacy disclosures, reviewer notes), [`PRIVACY.md`](dev/build/release/store_artifacts/PRIVACY.md) (the public privacy policy, published at [missingbulb.github.io/CrosswordChat/privacy/](https://missingbulb.github.io/CrosswordChat/privacy/)), screenshots and promo tiles (regenerate: `node tools/make-store-assets.mjs`). |
+| `.github/workflows/` | Test (every push) + the standard release set: Release: Create Package, Release: Publish to Chrome Web Store, Release: Daily Auto-Release, the privacy-page deploy, and the failure reporter. |
 
 ## Executable requirements — how verification works
 
@@ -56,18 +56,19 @@ npm run trace     # requirement ↔ test coverage matrix (fails on gaps)
 npm run verify    # both
 ```
 
-## Try it
+## Install
 
-Grab the newest build — no checkout needed:
-[**crosswordchat-latest.zip**](https://github.com/missingbulb/CrosswordChat/releases/download/latest/crosswordchat-latest.zip)
-(stable link, repacked by CI on every push to `main`). Or build it yourself:
+*Not yet on the Chrome Web Store — the listing goes live after the first manual publish (see
+[dev/build/release/releasing.md](dev/build/release/releasing.md)).*
 
-```bash
-npm run build     # → dist/
-```
+Or load the latest development build:
 
-Load the unzipped folder (or `dist/`) via `chrome://extensions` → Developer mode →
-**Load unpacked** (Chrome ≥ 116).
+1. Download [the latest release zip](https://github.com/missingbulb/CrosswordChat/releases/latest/download/crossword-chat.zip)
+   and extract it — it unpacks to a folder with `manifest.json` at its top. (Or build it
+   yourself: `npm run build` → `dist/`, loadable directly.)
+2. Open `chrome://extensions`, enable **Developer mode** (top right), click
+   **Load unpacked**, and select that folder (Chrome ≥ 116).
+
 Open a NYT crossword (the free Mini works), click the CrosswordChat icon, allow the microphone,
 and talk: an answer, `pass`, `repeat`, `hint`, `spell`, `help`, `goodbye`.
 
@@ -77,6 +78,14 @@ No NYT subscription handy? Rehearse offline against the fake page:
 npm run build:dev   # dev build that also matches localhost
 npm run fixture     # serves the fake crossword at http://localhost:8787
 ```
+
+## Releasing
+
+The version users see is [`extension/manifest.json`](extension/manifest.json)'s `version`.
+Merging a version bump to `main` cuts GitHub Release `vX.Y.Z` with `crossword-chat.zip`
+attached, and the daily auto-release ships shipped-file changes to the Chrome Web Store on its
+own (patch-bumping as needed). Full procedure:
+[dev/build/release/releasing.md](dev/build/release/releasing.md).
 
 ## Status & next steps
 

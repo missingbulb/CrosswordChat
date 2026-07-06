@@ -8,9 +8,9 @@
 // Outputs:
 //   extension/icons/icon-{16,32,48,128}.png              — manifest icons (transparent corners)
 //   extension/icons/icon-{16,32,48,128}-gray.png         — unsupported-tab variant (REQ-LIFE-013)
-//   dev/build/store-assets/screenshot-{1,2}-1280x800.png — store screenshots
-//   dev/build/store-assets/promo-small-440x280.png       — small promo tile
-//   dev/build/store-assets/promo-marquee-1400x560.png    — marquee promo tile
+//   dev/build/release/store_artifacts/screenshot-{1,2}-1280x800.png — store screenshots
+//   dev/build/release/store_artifacts/promo-small-440x280.png      — small promo tile
+//   dev/build/release/store_artifacts/promo-marquee-1400x560.png   — marquee promo tile
 //
 // Chromium: uses Playwright's managed browser (PLAYWRIGHT_BROWSERS_PATH) when present;
 // set CHROME_BIN to point at any Chromium/Chrome binary otherwise.
@@ -22,7 +22,7 @@ import { GOLD, INK, brandIconSvg } from '../extension/src/shared/brand-icon.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const ICONS = join(ROOT, 'extension/icons');
-const STORE = join(ROOT, 'dev/build/store-assets');
+const STORE = join(ROOT, 'dev/build/release/store_artifacts');
 mkdirSync(ICONS, { recursive: true });
 mkdirSync(STORE, { recursive: true });
 
