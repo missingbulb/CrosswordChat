@@ -610,6 +610,9 @@ entities. The readout must convey what the eye would see.
   strategy of every new session. Voice switching (REQ-NAV-005) still changes the strategy for the
   rest of the session only; it MUST NOT write the setting back. A missing or invalid stored value
   falls back to list order (REQ-NAV-002).
+
+  <img src="img/settings-popup.png" alt="The settings popup: reading-speed slider, next-clue strategy picker, and Reset to defaults / Save buttons" width="352">
+
 - **Accept:** Given the stored setting is most-filled, when a session starts and the user says
   next, then the most-filled strategy picks the clue; given no stored value (or a corrupted one),
   then list order is used.
