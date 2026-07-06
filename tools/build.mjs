@@ -1,10 +1,15 @@
 #!/usr/bin/env node
-// Bundle the MV3 extension into dist/ with esbuild (no config, no framework).
+// Bundle the MV3 extension into dist/ with esbuild (no config, no framework), then zip it
+// into dist/crossword-chat.zip — the stable store-uploadable artifact (kebab-cased repo
+// name, never version-stamped, per the shared chrome-extension-release standard), so a
+// GitHub Release serves the newest build at a permanent URL:
+//   …/releases/latest/download/crossword-chat.zip
 // --dev additionally matches the local fake page (http://localhost:8787) so the whole
 // voice loop can be rehearsed without an NYT subscription (MT-23).
 
 import { build } from 'esbuild';
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -55,4 +60,10 @@ if (dev) {
 }
 writeFileSync(join(DIST, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
-console.log(`Built ${dev ? 'dev' : 'production'} bundle → dist/  (load via chrome://extensions → Load unpacked)`);
+// Zip the bundle (manifest at the zip root — store-uploadable). The entries are enumerated
+// before the archive is created, so the zip never lists itself; -X drops extra file
+// attributes for a tidy, byte-stable archive.
+const ZIP_NAME = 'crossword-chat.zip';
+execFileSync('zip', ['-rXq', ZIP_NAME, ...readdirSync(DIST)], { cwd: DIST });
+
+console.log(`Built ${dev ? 'dev' : 'production'} bundle → dist/ (+ ${ZIP_NAME})  (load dist/ via chrome://extensions → Load unpacked)`);

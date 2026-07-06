@@ -1,0 +1,154 @@
+name: "Release: Daily Auto-Release"
+
+# Ships the extension to the Chrome Web Store once a day — but only when
+# something DEPLOYABLE changed. "Deployable" is decided by what feeds the
+# bundled zip (everything under extension/), via
+# tools/filter-shipped-paths.mjs — so docs/MD/tests/dev-tooling-only days are a
+# clean no-op.
+#
+# The baseline is the LATEST PUBLISHED RELEASE TAG, not a literal 24-hour
+# window: on a daily schedule the two are normally the same set of commits, but
+# the tag baseline is self-healing — a day whose run failed (or a change older
+# than a day that never shipped) is still caught the next day instead of
+# stranded.
+#
+# When a release is due it:
+#   1. bumps a PATCH version (tools/bump-version.mjs patch — the manifest,
+#      package.json, and package-lock.json together) and pushes the bump to
+#      main, because the store rejects an upload whose version isn't strictly
+#      higher than the live one. Deliberate human bumps ("bump version",
+#      default minor) are unaffected.
+#   2. calls the existing "Release: Create Package" workflow (tests → zip →
+#      GitHub Release) on the bump commit. Called explicitly because the bump
+#      was pushed with GITHUB_TOKEN, which never fires release.yml's own push
+#      trigger.
+#   3. calls the existing "Release: Publish to Chrome Web Store" workflow with
+#      the fresh tag (auto-publishing to users, and refreshing the privacy
+#      page as that workflow always does).
+#
+# Unattended (scheduled), so failures must reach a human: the called workflows
+# report their own job failures to their standing tracking issues, and the
+# report-failure job below covers this workflow's own jobs — including a
+# called workflow failing to even start.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+# A manual dispatch overlapping the scheduled run would race the bump-push;
+# queue it instead.
+concurrency: daily-release
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.diff.outputs.release }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Full history + tags: the diff below is against the latest release tag.
+          fetch-depth: 0
+
+      - name: Look for shipped-file changes since the last release
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          latest="$(gh release view --json tagName -q .tagName 2>/dev/null || true)"
+          if [ -z "$latest" ]; then
+            echo "No published release to diff against — releasing the current tree." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "$latest" HEAD | node tools/filter-shipped-paths.mjs)"
+          if [ -z "$changed" ]; then
+            echo "No shipped-file changes since $latest — nothing to release." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            { echo "Shipped files changed since $latest — releasing:"; echo "$changed"; } | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The store needs a strictly-higher version, so the release starts with a
+  # patch bump pushed straight to main (this workflow's one deliberate
+  # exception to bumps-are-a-human-PR — see dev/build/release/releasing.md). If
+  # main moved between checkout and push the push fails non-fast-forward; that's
+  # a loud red the reporter turns into an issue, and the next day's run catches
+  # everything up.
+  bump:
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      sha: ${{ steps.bump.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The branch tip as of now, not github.sha (the tip when the schedule
+          # fired) — anything merged in between rides along in this release.
+          ref: main
+
+      - name: Bump the patch version and push it to main
+        id: bump
+        run: |
+          version="$(node tools/bump-version.mjs patch)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Bump version to $version (daily auto-release) [skip ci]"
+          git push origin HEAD:main
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Bumped to v$version." >> "$GITHUB_STEP_SUMMARY"
+
+  # Tests → zip → GitHub Release, on the bump commit (see the ref input's note
+  # in release.yml). Its internal report-failure job needs issues: write
+  # granted through this call.
+  release:
+    needs: bump
+    permissions:
+      contents: write
+      issues: write
+    uses: ./.github/workflows/release.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
+
+  # Upload the just-released zip to the Chrome Web Store and publish it to
+  # users. secrets: inherit passes the four CHROME_* store secrets through;
+  # the pages/id-token grants are for its privacy-page deploy, issues for the
+  # nested failure reporters.
+  publish:
+    needs: [bump, release]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      issues: write
+    uses: ./.github/workflows/publish-chrome-store.yml
+    with:
+      tag: v${{ needs.bump.outputs.version }}
+      auto_publish: true
+    secrets: inherit
+
+  # Scheduled + nobody watching = every failure must converge to the standing
+  # tracking issue. Covering release/publish here too can double-report (their
+  # internal reporters also fire on their own job failures) — accepted, so that
+  # a called workflow failing before its internal reporter can run (e.g. a
+  # workflow-file error) still reaches a human.
+  report-failure:
+    needs: [check, bump, release, publish]
+    if: failure()
+    permissions:
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      workflow: "Release: Daily Auto-Release"

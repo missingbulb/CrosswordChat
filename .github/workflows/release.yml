@@ -1,71 +1,124 @@
-name: Release
+name: "Release: Create Package"
 
-# Bumps the version (manifest + package + lock), verifies, builds, commits, tags
-# vX.Y.Z, and publishes a GitHub Release with the extension zip attached.
-# Publishing the release triggers the Chrome Web Store deploy workflow.
-
+# Builds and publishes a GitHub Release of the extension at the version that is
+# currently committed in extension/manifest.json. It does NOT change the version —
+# bumping is a deliberate, human step (ask Claude to "bump version"; it edits the
+# manifest, package.json, and package-lock.json via tools/bump-version.mjs on a
+# branch and lands on main via a normal PR — see dev/build/release/releasing.md).
+#
+# It runs automatically when a version bump merges to main (a push to main that
+# touches the manifest), so cutting a release is just "merge the bump PR". If
+# that version already matches the latest published release, the run is a clean
+# no-op — so manifest edits that aren't version bumps don't cut a release.
+# It's also runnable from the Actions tab.
+#
+# Pushing to the Chrome Web Store is a manual step (the "Release: Publish to
+# Chrome Web Store" workflow) — except for the daily auto-release
+# (daily-release.yml), which calls this workflow (workflow_call) after pushing
+# its patch-bump commit, because a GITHUB_TOKEN push can't fire the push
+# trigger below. The `ref` input exists for that caller: the run was triggered
+# before the bump commit existed, so the default checkout (github.sha) would
+# build the pre-bump tree and no-op on the old version.
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
+  workflow_call:
     inputs:
-      bump:
-        description: Version bump
-        type: choice
-        options: [patch, minor, major]
-        default: minor
-      version:
-        description: 'Explicit version (e.g. 1.0.0) — overrides the bump choice'
+      ref:
+        description: "Commit to release (blank = the commit that triggered the run)"
         required: false
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - extension/manifest.json
 
 permissions:
   contents: write
-
-concurrency: release
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          # Empty (every trigger but the daily-release call) = the default
+          # github.sha checkout.
+          ref: ${{ inputs.ref }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
-      - name: Install
+      - name: Install dependencies
         run: npm ci
 
-      - name: Verify (tests + requirements trace)
+      # The version to release is whatever's committed in extension/manifest.json
+      # (the store's source of truth, kept in sync with package.json). When it
+      # already matches the latest published release (or a matching tag exists),
+      # there's nothing to release: skip cleanly (release=false) rather than
+      # fail, so a non-bump manifest change doesn't turn the run red. A drift
+      # between the manifest and package.json, or a malformed version, is a real
+      # mistake and fails the run.
+      - name: Resolve and guard version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(node -p "require('./extension/manifest.json').version")"
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "extension/manifest.json version '$version' is not X.Y.Z." >&2
+            exit 1
+          fi
+          pkg_version="$(node -p "require('./package.json').version")"
+          if [ "$pkg_version" != "$version" ]; then
+            echo "package.json ($pkg_version) and extension/manifest.json ($version) disagree — bump both together." >&2
+            exit 1
+          fi
+          latest="$(gh release view --json tagName -q .tagName 2>/dev/null | sed 's/^v//' || true)"
+          if { [ -n "$latest" ] && [ "$latest" = "$version" ]; } || git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "v$version is already released; nothing to do." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$version" >> "$GITHUB_STEP_SUMMARY"
+
+      # The same gate CI runs on every PR (tests + requirements-coverage trace).
+      - name: Run the full test gate
+        if: steps.version.outputs.release == 'true'
         run: npm run verify
 
-      - name: Bump version
-        id: bump
-        run: |
-          VERSION=$(node tools/bump-version.mjs "${{ inputs.version || inputs.bump }}")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Releasing v$VERSION"
-
-      - name: Build
+      - name: Build extension zip
+        if: steps.version.outputs.release == 'true'
         run: npm run build
 
-      - name: Zip
-        run: cd dist && zip -r "../crosswordchat-${{ steps.bump.outputs.version }}.zip" .
+      # Publish the Release. action-gh-release creates the tag (vX.Y.Z) at the
+      # released commit when it doesn't exist — pinned explicitly to the commit
+      # we checked out and built, so a workflow_call `ref` is tagged rather than
+      # whatever main's HEAD is by then. That's a tag, not a push to main, so
+      # branch protection on main doesn't apply.
+      - name: Publish GitHub Release
+        if: steps.version.outputs.release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ inputs.ref || github.sha }}
+          files: dist/crossword-chat.zip
+          generate_release_notes: true
 
-      - name: Commit and tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add extension/manifest.json package.json package-lock.json
-          git commit -m "Release v${{ steps.bump.outputs.version }}"
-          git tag "v${{ steps.bump.outputs.version }}"
-          git push origin HEAD "v${{ steps.bump.outputs.version }}"
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "v${{ steps.bump.outputs.version }}" \
-            "crosswordchat-${{ steps.bump.outputs.version }}.zip" \
-            --title "v${{ steps.bump.outputs.version }}" \
-            --generate-notes
+  # Auto-runs on a bump-merge to main with no human watching, so a silent failure
+  # here means the release never gets cut and the "bump version" flow stalls
+  # unnoticed. Surface it as a tracking issue. (A clean no-op release=false run is
+  # success, not failure, so it never reaches here.)
+  report-failure:
+    needs: release
+    if: failure()
+    permissions:
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      workflow: "Release: Create Package"
