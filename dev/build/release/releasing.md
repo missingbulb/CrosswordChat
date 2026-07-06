@@ -23,25 +23,21 @@ release. Patch bumps are made automatically by the daily auto-release
 
 ## The workflows (the standard set)
 
-- **Release: Create Package** (`release.yml`) — runs on a version-bump merge to `main` (or
-  dispatch, or a `workflow_call` from the daily auto-release); clean no-op when the version is
-  already released; test gate = `npm run verify`; tags `vX.Y.Z` and attaches
-  `crossword-chat.zip`.
-- **Release: Publish to Chrome Web Store** (`publish-chrome-store.yml`) — manual dispatch
-  (blank tag = latest release) or called by the daily auto-release; uploads via
-  `chrome-webstore-upload-cli@3` with the four standard secrets `CHROME_EXTENSION_ID` /
-  `CHROME_CLIENT_ID` / `CHROME_CLIENT_SECRET` / `CHROME_REFRESH_TOKEN` (tracked in issue #4;
-  minting them is "Minting the API credentials" in the canon release guide), and refreshes the
-  privacy page.
-- **Release: Daily Auto-Release** (`daily-release.yml`) — daily at 03:00 UTC; ships only when
-  the diff since the latest release tag touches `extension/`
-  (`tools/filter-shipped-paths.mjs`), patch-bumping first.
-- **Deploy privacy policy to GitHub Pages** (`deploy-privacy-page.yml`) — publishes
-  [`store_artifacts/PRIVACY.md`](store_artifacts/PRIVACY.md) at
-  `https://missingbulb.github.io/CrosswordChat/privacy/` (standalone dispatch, and on every
-  store publish).
-- **Report workflow failure** (`report-failure.yml`) — the reusable reporter all of the above
-  escalate to (standing `workflow-failure` tracking issues).
+Four thin stubs in `.github/workflows/` call the standard's reusable workflows in the Claudinite
+canon — the set's shape, triggers, and behavior (including failure reporting to standing
+`workflow-failure` tracking issues) are the canon release guide's "Workflows" section; don't
+restate them here. Only this repo's values, passed as the stubs' `with:` inputs, live here:
+
+- Zip: `dist/crossword-chat.zip` (see [The package](#the-package)); manifest
+  `extension/manifest.json`.
+- Test gate: `npm run verify`.
+- Daily bump/filter commands (dependency-free): `node tools/bump-version.mjs patch` /
+  `node tools/filter-shipped-paths.mjs` (shipped = what feeds the bundled zip, everything under
+  `extension/`).
+- Privacy page: [`store_artifacts/PRIVACY.md`](store_artifacts/PRIVACY.md) at
+  `https://missingbulb.github.io/CrosswordChat/privacy/`.
+- The four store secrets are the standard names (tracked in issue #4) — minting them is
+  "Minting the API credentials" in the canon release guide.
 
 (The former Pack/rolling-`latest` flow is gone: with releases cut on every bump-merge and the
 daily auto-release, `releases/latest/download/` is the permanent newest-build URL. The old
