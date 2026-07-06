@@ -9,6 +9,10 @@ Graphic assets live alongside this file in `dev/build/release/store_artifacts/`;
 them with `node tools/make-store-assets.mjs` (icons land in `extension/icons/` and ship
 inside the zip automatically).
 
+Keep this file current: a PR that changes the manifest's permissions updates the justification
+table below in the same PR (canon release guide, "When a change touches the extension's
+permissions").
+
 ---
 
 ## Store listing tab
