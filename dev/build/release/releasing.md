@@ -1,67 +1,59 @@
-# CrosswordChat — Versioning, CI, Releases, Store Deployment
+# Releasing / publishing to the Chrome Web Store
 
-## Version
+This repo follows the shared Chrome-extension release standard — the canon guide
+(`.claudinite/technologies/chrome-extension-release.md`, "the canon release guide" below) owns
+the cross-repo contract, the canonical workflow files, and the manual store procedures; this
+file holds this repo's concrete names, paths, and listing facts.
 
-- **Source of truth:** `extension/manifest.json` → `version` (currently **0.9.0**).
-- `package.json` / `package-lock.json` mirror it; CI fails if they drift (Test workflow).
-- Bump with `node tools/bump-version.mjs patch|minor|major|x.y.z` — updates all three files
-  and prints the new version. The Release workflow does this for you.
+## The package
 
-## The five workflows
+`npm run build` bundles the extension with esbuild into `dist/` and zips it into
+**`dist/crossword-chat.zip`** (manifest at the zip root; see `tools/build.mjs`). The zip name is
+stable (never version-stamped), so the newest build is always at
+`https://github.com/missingbulb/CrosswordChat/releases/latest/download/crossword-chat.zip`.
 
-| Workflow | File | Trigger | What it does |
-|---|---|---|---|
-| **Test** | `.github/workflows/test.yml` | every push; PRs to `main` | `npm run verify` (118 tests + requirements-coverage trace), version-consistency check, build compiles |
-| **Pack extension** | `.github/workflows/build.yml` | push to `main`; manual | Builds `dist/`, zips it (manifest at zip root — store-uploadable), uploads as a 30-day workflow artifact; on `main` also refreshes the rolling **`latest` prerelease**, so [`releases/download/latest/crosswordchat-latest.zip`](https://github.com/missingbulb/CrosswordChat/releases/download/latest/crosswordchat-latest.zip) is a permanent URL to the newest build (no login needed, linked from the README). Marked prerelease so it never shadows real releases and the store deploy skips it |
-| **Release** | `.github/workflows/release.yml` | manual (choose patch/minor/major or an explicit version) | Verify → bump → build → commit `Release vX.Y.Z` → tag `vX.Y.Z` → GitHub Release with the zip attached |
-| **Publish privacy page** | `.github/workflows/pages.yml` | change to `PRIVACY.md` on `main`; manual | Renders the privacy policy to GitHub Pages — the store listing's privacy-policy permalink, [missingbulb.github.io/CrosswordChat/privacy.html](https://missingbulb.github.io/CrosswordChat/privacy.html) |
-| **Deploy to Chrome Web Store** | `.github/workflows/deploy-chrome-store.yml` | automatically on a published Release; or manual (with a draft-only option) | Rebuilds from the tag, uploads to the store via the official API (plain `curl`, no third-party action touches credentials), optionally submits for review |
+## Versioning
 
-Normal release path: **Actions → Release → Run workflow** (pick the bump) — everything else
-cascades, ending with a store submission.
+The version users see is `extension/manifest.json`'s `version`; `package.json` /
+`package-lock.json` mirror it (the Test workflow fails CI on drift). Minor/major bumps are
+deliberate, by a human — "bump version" runs `node tools/bump-version.mjs minor|major|x.y.z` on
+a branch and lands on `main` via a normal PR (default: next minor); merging the bump cuts the
+release. Patch bumps are made automatically by the daily auto-release
+(`node tools/bump-version.mjs patch`). The Create-Package workflow never changes the version.
 
-## Chrome Web Store deployment — one-time setup
+## The workflows (the standard set)
 
-The deploy workflow needs four repository secrets
-(**Settings → Secrets and variables → Actions → New repository secret**).
-Tracked in the issue *“Configure Chrome Web Store deployment secrets.”*
+- **Release: Create Package** (`release.yml`) — runs on a version-bump merge to `main` (or
+  dispatch, or a `workflow_call` from the daily auto-release); clean no-op when the version is
+  already released; test gate = `npm run verify`; tags `vX.Y.Z` and attaches
+  `crossword-chat.zip`.
+- **Release: Publish to Chrome Web Store** (`publish-chrome-store.yml`) — manual dispatch
+  (blank tag = latest release) or called by the daily auto-release; uploads via
+  `chrome-webstore-upload-cli@3` with the four standard secrets `CHROME_EXTENSION_ID` /
+  `CHROME_CLIENT_ID` / `CHROME_CLIENT_SECRET` / `CHROME_REFRESH_TOKEN` (tracked in issue #4;
+  minting them is "Minting the API credentials" in the canon release guide), and refreshes the
+  privacy page.
+- **Release: Daily Auto-Release** (`daily-release.yml`) — daily at 03:00 UTC; ships only when
+  the diff since the latest release tag touches `extension/`
+  (`tools/filter-shipped-paths.mjs`), patch-bumping first.
+- **Deploy privacy policy to GitHub Pages** (`deploy-privacy-page.yml`) — publishes
+  [`store_artifacts/PRIVACY.md`](store_artifacts/PRIVACY.md) at
+  `https://missingbulb.github.io/CrosswordChat/privacy/` (standalone dispatch, and on every
+  store publish).
+- **Report workflow failure** (`report-failure.yml`) — the reusable reporter all of the above
+  escalate to (standing `workflow-failure` tracking issues).
 
-| Secret | What it is |
-|---|---|
-| `CHROME_EXTENSION_ID` | The 32-letter item ID from the developer dashboard (exists after the first manual upload) |
-| `CHROME_CLIENT_ID` | OAuth 2.0 client ID from your Google Cloud project |
-| `CHROME_CLIENT_SECRET` | Its client secret |
-| `CHROME_REFRESH_TOKEN` | Long-lived refresh token minted for that client with the `chromewebstore` scope |
+(The former Pack/rolling-`latest` flow is gone: with releases cut on every bump-merge and the
+daily auto-release, `releases/latest/download/` is the permanent newest-build URL. The old
+`latest` prerelease and tag can be deleted from the GitHub UI.)
 
-### Steps
+## First publish to the Chrome Web Store
 
-1. **Create the store listing manually (once).** The API can update an existing item but the
-   listing itself — description, screenshots, privacy disclosures, the one-time $5 developer
-   fee — must be created in the [developer dashboard](https://chrome.google.com/webstore/devconsole).
-   **Every answer and asset the dashboard asks for is pre-written in
-   [`dev/build/store-assets/STORE-LISTING.md`](../dev/build/store-assets/STORE-LISTING.md)**
-   (descriptions, permission justifications, data-usage disclosures, privacy policy URL,
-   reviewer notes; graphics live in the same directory, regenerable via
-   `node tools/make-store-assets.mjs`).
-   Upload any zip from the *Pack extension* workflow (or `npm run build` + zip `dist/`).
-   Copy the item ID → `CHROME_EXTENSION_ID`.
-2. **Create API credentials.** Follow Google's guide,
-   [Using the Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using-api):
-   create/pick a Google Cloud project → enable **Chrome Web Store API** → configure the OAuth
-   consent screen → create an **OAuth client ID** (Desktop app) → `CHROME_CLIENT_ID` / `CHROME_CLIENT_SECRET`.
-3. **Mint the refresh token.** Easiest: `npx chrome-webstore-upload-keys` (walks the OAuth flow
-   and prints the refresh token); or the manual flow in the guide above. → `CHROME_REFRESH_TOKEN`.
-   Use the same Google account that owns the store listing.
-4. **Dry-run.** Actions → *Deploy to Chrome Web Store* → Run workflow with **publish = false**:
-   uploads a draft without submitting. Check the dashboard shows the new version, then re-run
-   with publish on (or just cut a Release).
-
-### Store facts worth knowing
-
-- Every upload must carry a **strictly greater version** than the last one on the dashboard —
-  the Release workflow guarantees this.
-- Publishing enters Google's review queue (hours to days); the workflow reports
-  `ITEM_PENDING_REVIEW` as success.
-- The refresh token is tied to the OAuth consent screen configuration; if the consent screen is
-  left in *Testing* mode, Google expires refresh tokens after 7 days — set it to *In production*
-  (the app is only used by you; no verification needed for the `chromewebstore` scope).
+The dashboard walkthrough is the standard procedure — "First publication" in the canon release
+guide. This repo's values are pre-written in
+[`store_artifacts/STORE-LISTING.md`](store_artifacts/STORE-LISTING.md) (listing copy,
+permission justifications, data-usage answers, reviewer notes, and the graphic-asset file map —
+regenerate assets with `node tools/make-store-assets.mjs`); the privacy policy URL is
+`https://missingbulb.github.io/CrosswordChat/privacy/` (deploy it once via the privacy
+workflow's dispatch before submitting). After the first upload, copy the item ID into the
+`CHROME_EXTENSION_ID` secret (issue #4).
