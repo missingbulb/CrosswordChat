@@ -490,22 +490,26 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the next two clues in order are filled, when advancing, then the third is selected.
 - **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`.
 
-#### REQ-NAV-004 — Strategy: most-filled-first (easiest = most letters already placed)
+#### REQ-NAV-004 — Strategy: most-filled-first (easiest = fewest open letters, closest to done)
 - **Status:** Active · **Level:** MUST
-- A second strategy MUST rank unfilled clues by *how many* letters they already hold (descending),
-  with a penciled letter worth HALF a pen letter — pencil marks are the solver's own "not sure"
-  notes (REQ-ANS-023), so they help less than confirmed letters. Equal scores are tie-broken by
-  DISTANCE: the clue nearest the current one in list order wins (smallest jump — from clue 4, an
-  equal clue 5 beats clue 6), a forward clue winning an exact-distance tie; remaining ties by list
-  order, cycling through the current clue last. Rationale: every letter already in place is a
-  crossing the solver doesn't have to guess, so more letters = easier, regardless of entry length
-  (count, not ratio — this REPLACES the earlier ratio rule, user feedback 2026-07: 3 of 5 letters
-  beats 2 of 3), and among equals the smallest jump keeps the solver oriented.
-- **Accept:** Given entries with 3/5 and 2/3 letters filled, when advancing under most-filled, then
-  the 3-letter entry is chosen; given one entry with 3 penciled letters (score 1.5) and another
-  with 2 pen letters (score 2), then the pen entry is chosen. Given equal scores one and two steps
-  ahead, then the one-step clue is
-  chosen.
+- A second strategy MUST rank unfilled clues by *how many* letters they still have OPEN (blank),
+  FEWEST first — the entry closest to being finished is offered first — with a penciled cell
+  counting as HALF-open: pencil marks are the solver's own "not sure" notes (REQ-ANS-023), real
+  progress but shaky, so a penciled cell is half-closed, not closed. Equal open counts are
+  tie-broken by DISTANCE: the clue nearest the current one in list order wins (smallest jump — from
+  clue 4, an equal clue 5 beats clue 6), a forward clue winning an exact-distance tie; remaining
+  ties by list order, cycling through the current clue last. Rationale: "easiest first" should
+  steer the solver to what they can finish NOW — the entry with the fewest gaps left — not the
+  entry that merely holds the most letters. Ranking by letters ALREADY PLACED (the earlier rule)
+  let a long entry with many blanks outrank a short one needing a single letter, so the long entry
+  was suggested over and over while the near-finished one waited (user feedback 2026-07: fewest
+  open letters beats most letters placed — a 2-of-3 entry, 1 gap, beats a 3-of-5 entry, 2 gaps).
+  Among equals the smallest jump keeps the solver oriented.
+- **Accept:** Given a 2-of-3 entry (1 open) and a 3-of-5 entry (2 open), when advancing under
+  most-filled, then the 2-of-3 entry is chosen — fewer gaps wins even though it holds fewer
+  letters; given one entry with 4 penciled + 1 blank (open 3) and another with 3 pen + 2 blank
+  (open 2), then the pen entry is chosen (shaky pencil leaves it more open). Given equal open
+  counts one and two steps ahead, then the one-step clue is chosen.
 - **Verify:** unit `tests/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
@@ -586,15 +590,16 @@ entities. The readout must convey what the eye would see.
 - **Status:** Active · **Level:** MUST
 - Under the most-filled strategy, saying *next* MUST remember the clue it just left (together with
   its filled-letter count at that moment), and remembered clues MUST NOT be offered again while
-  their letters are unchanged — so repeated *next* walks the open clues in descending fill-ratio
-  order instead of ping-ponging between the two fullest. A remembered clue becomes eligible again
-  the moment its filled letters change (e.g. a crossing answer landed — its new ratio may make it
-  the best pick once more). When every open clue is remembered-and-unchanged, advancing MUST cycle
-  back to the *least recently* skipped one rather than getting stuck. Skip memory is
+  their letters are unchanged — so repeated *next* walks the open clues fewest-open first (closest
+  to done first) instead of ping-ponging between the two nearest completion. A remembered clue
+  becomes eligible again the moment its filled letters change (e.g. a crossing answer landed — its
+  new open count may make it the best pick once more). When every open clue is
+  remembered-and-unchanged, advancing MUST cycle back to the *least recently* skipped one rather
+  than getting stuck. Skip memory is
   session-scoped; it does not constrain the list-order strategy (REQ-NAV-002), *back*
   (REQ-NAV-009), *flip* (REQ-NAV-010), or manual clicks (REQ-NAV-008).
-- **Accept:** Given four open entries with distinct fill ratios under most-filled, when the user
-  says next four times, then the entries are visited in descending-ratio order with no repeats,
+- **Accept:** Given four open entries with distinct open counts under most-filled, when the user
+  says next four times, then the entries are visited fewest-open first with no repeats,
   and a fifth next returns to the first-skipped one; given a skipped entry gains a letter from a
   crossing answer, then the following next offers it again.
 - **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`; manual MT-28.
