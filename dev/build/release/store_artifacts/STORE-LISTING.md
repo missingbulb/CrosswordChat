@@ -103,6 +103,7 @@ inert everywhere else. Not affiliated with or endorsed by The New York Times.
 |---|---|
 | `tts` | Speaks crossword clues and feedback aloud with Chrome's text-to-speech engine. Voice output is the extension's core interface — its only visual UI is the start/stop button in the puzzle toolbar and a static informational popup on unsupported pages. |
 | `storage` | Stores the user's settings (the clue-selection strategy and reading speed chosen in the settings popup) in chrome.storage.sync. No other data is ever stored. |
+| `contextMenus` | Adds one item — "Settings…" — to the extension's own toolbar-icon right-click menu, which opens the settings popup (clue-selection strategy and reading speed). The item is scoped to the action icon (`contexts: ['action']`), so it never appears on page content, text selections, links, or images, and it does nothing but open that popup. |
 | Host permission `https://www.nytimes.com/*` | The extension works exclusively on the New York Times crossword: content scripts read the clues and grid from the puzzle page and simulate keystrokes to enter the user's spoken answers. It is inert on every other site and requests no other host. |
 
 **Remote code use:** No — all code is packaged in the extension bundle. No remote scripts,

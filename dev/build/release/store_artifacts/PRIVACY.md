@@ -52,6 +52,7 @@ extension removes them.
 |---|---|
 | `tts` | Speak clues and feedback aloud. |
 | `storage` | Save your settings (and nothing else). |
+| `contextMenus` | Add a single "Settings…" item to the extension's own toolbar-icon menu, which opens your settings. It is only a menu entry — it collects, stores, and transmits nothing. |
 | Host access to `https://www.nytimes.com/*` | Read clues from, and type answers into, the NYT crossword page. The extension runs nowhere else. |
 | Microphone (requested by the page at session start) | Hear your answers. Active only during a session you started. |
 
