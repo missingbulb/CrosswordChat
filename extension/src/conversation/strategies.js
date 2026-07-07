@@ -2,9 +2,9 @@
 
 export const STRATEGIES = ['list-order', 'most-filled'];
 
-// What a penciled letter is worth relative to a pen letter when ranking most-filled
-// (REQ-NAV-004): real help, but unconfirmed — half.
-const PENCIL_WORTH = 0.5;
+// How "open" a penciled cell counts when ranking most-filled (REQ-NAV-004): a penciled
+// letter is real progress but unconfirmed, so its cell is HALF-open, not closed.
+const PENCIL_OPEN = 0.5;
 
 function unfilledIds(model) {
   return model.orderedClueIds.filter((id) => {
@@ -23,23 +23,27 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
   if (!candidates.length) return null;
 
   if (strategy === 'most-filled') {
-    // Easiest first: the MOST letters already in place (count, not ratio — 3/5 beats
-    // 2/3, REQ-NAV-004), with penciled letters worth half a pen letter (they are the
-    // solver's own "not sure" marks, REQ-ANS-023 — help, but shaky help); equal scores
-    // go to the clue NEAREST the current one in list order (smallest jump; forward
-    // wins an exact-distance tie), then list order; current clue last resort.
+    // Closest-to-done first: the FEWEST open (still-blank) letters, so the entry that
+    // needs the least work to finish is offered first (REQ-NAV-004). Open letters — not
+    // letters already placed — is the right metric: ranking by count-placed let a long
+    // entry with many blanks outrank a short one needing a single letter, so the long one
+    // got suggested over and over while the near-finished clue waited. A penciled cell is
+    // the solver's own "not sure" mark (REQ-ANS-023 — real progress, but shaky), so it
+    // counts as half-open, not closed. Equal open counts go to the clue NEAREST the
+    // current one in list order (smallest jump; forward wins an exact-distance tie), then
+    // list order; current clue last resort.
     const others = candidates.filter((id) => id !== fromId);
     const order = model.orderedClueIds;
     const from = Math.max(order.indexOf(fromId), 0);
-    const score = (id) => {
+    const openLetters = (id) => {
       const pattern = model.patternFor(id);
       const pencil = model.pencilFor(id);
-      return pattern.reduce((sum, letter, i) => sum + (letter ? (pencil[i] ? PENCIL_WORTH : 1) : 0), 0);
+      return pattern.reduce((sum, letter, i) => sum + (letter ? (pencil[i] ? PENCIL_OPEN : 0) : 1), 0);
     };
     const dist = (id) => Math.abs(order.indexOf(id) - from);
     const fresh = others
       .filter((id) => !avoid.includes(id))
-      .sort((a, b) => score(b) - score(a)
+      .sort((a, b) => openLetters(a) - openLetters(b)
         || dist(a) - dist(b)
         || (order.indexOf(b) > from) - (order.indexOf(a) > from)
         || order.indexOf(a) - order.indexOf(b));

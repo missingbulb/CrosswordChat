@@ -232,9 +232,9 @@ Covers: REQ-NAV-011 REQ-NAV-012
 2. Start a session on a partially solved puzzle and, without answering, say "next" several times.
 3. Answer one clue that crosses an entry you skipped in step 2, then say "next" again.
 4. Reopen Settings…; switch back to "In list order" and Save; start a new session and say "next".
-5. **PASS:** step 2 — each "next" lands on the open clue with the highest percentage of letters
-   filled that you haven't just skipped: no ping-ponging between the top two; once every open
-   clue has been skipped, "next" cycles back to the one skipped longest ago. Step 3 — the skipped
+5. **PASS:** step 2 — each "next" lands on the open clue closest to done (the fewest blank letters
+   left) that you haven't just skipped: no ping-ponging between the two nearest completion; once
+   every open clue has been skipped, "next" cycles back to the one skipped longest ago. Step 3 — the skipped
    entry whose letters just changed is offered again. Step 4 — the new session advances in plain
    list order; the setting survived the browser restart / new session.
 

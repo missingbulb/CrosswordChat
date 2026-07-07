@@ -4,7 +4,7 @@ import { nextClue } from '../../extension/src/conversation/strategies.js';
 import { heartSnapshot, makeSnapshot } from '../helpers/snapshots.js';
 
 // Across-only grid (block rows kill the downs): independent entries with
-// controllable lengths/fills. A1 = 3 letters placed (of 5), A2 = 2 (of 3), A3 = 0.
+// controllable lengths/fills. A1 = 3 of 5 (2 open), A2 = 2 of 3 (1 open), A3 = 0 of 5.
 const COUNT_ROWS = ['HEA..', '#####', 'AB.#.', '#####', '.....'];
 
 describe('next-clue strategies', () => {
@@ -25,18 +25,18 @@ describe('next-clue strategies', () => {
     expect(nextClue(model, 'A1', 'list-order')).toBeNull();
   });
 
-  test('REQ-NAV-004: most-filled picks the entry with the most letters already placed', () => {
-    // Column letters: D2 gets 2 letters (E,M), D4 gets 1 (R), others vary; craft explicitly:
-    // Row0 'H....' + Row1 'HE...' → D1 has H,H (2 filled), A6 has H,E (2)… keep it simple:
+  test('REQ-NAV-004: most-filled picks the entry with the fewest open letters', () => {
+    // All entries are 5 long here, so fewest-open tracks most-filled: A1 leads with 3
+    // letters placed → only 2 blanks left, closer to done than anything else.
     const model = buildModel(heartSnapshot([
-      'HEA..', // A1: 3/5 filled
-      'E....', // A6: 1/5
+      'HEA..', // A1: 3/5 filled → 2 open
+      'E....', // A6: 1/5 → 4 open
       '.....',
       '.....',
       '.....',
     ]));
     const pick = nextClue(model, 'A9', 'most-filled');
-    expect(pick.clueId).toBe('A1'); // 3 letters beats everything else
+    expect(pick.clueId).toBe('A1'); // 2 open letters, fewer than everything else
   });
 
   test('REQ-NAV-004: most-filled prefers others over the current clue; ties go nearest', () => {
@@ -45,32 +45,36 @@ describe('next-clue strategies', () => {
     expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A6');
   });
 
-  test('REQ-NAV-004: equal scores jump the least distance; forward wins an exact tie', () => {
+  test('REQ-NAV-004: equal open counts jump the least distance; forward wins an exact tie', () => {
     const model = buildModel(heartSnapshot());
-    // All scores equal. From A8: A7 and A9 are both one step away — forward wins.
+    // All open counts equal. From A8: A7 and A9 are both one step away — forward wins.
     expect(nextClue(model, 'A8', 'most-filled').clueId).toBe('A9');
     // From D2 the nearest open clues are D1/D3 (one step) — never a far jump to A1.
     expect(nextClue(model, 'D2', 'most-filled').clueId).toBe('D3');
   });
 
-  test('REQ-NAV-004: most-filled ranks by letter count, not fill percentage', () => {
+  test('REQ-NAV-004: most-filled ranks by gaps remaining, not letters placed', () => {
     const model = buildModel(makeSnapshot(COUNT_ROWS));
-    // A1 with 3 letters placed beats A2's 2, even though A2's ratio (2/3) is higher.
-    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A1');
+    // A2 has 1 blank left (2 of 3); A1 has 2 blanks (3 of 5). Closest to done wins, even
+    // though A1 holds MORE letters — the longer entry with more gaps is not offered first.
+    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A2');
   });
 
-  test('REQ-NAV-004: penciled letters are worth half — solid help outranks shaky help', () => {
-    // A1 holds 3 PENCILED letters (score 1.5); A2 holds 2 pen letters (score 2).
-    const model = buildModel(makeSnapshot(['hea..', '#####', 'AB.#.', '#####', '.....']));
+  test('REQ-NAV-004: penciled letters are half-open — shaky help leaves an entry more open', () => {
+    // A1: 4 PENCILED + 1 blank → open = 1 + 0.5×4 = 3; A2: 3 pen + 2 blank → open = 2.
+    // A2 is closer to done, so it wins — even though A1 shows more letters.
+    const model = buildModel(makeSnapshot(['hear.', '#####', 'ABU..', '#####', '.....']));
     expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A2');
-    // In pen, the same three letters win again (3 beats 2).
-    const pen = buildModel(makeSnapshot(COUNT_ROWS));
+    // Flip A1's letters to pen: now A1 (open 1) beats A2 (open 2) — the same letters, but
+    // confirmed, close the entry that shaky pencil could not.
+    const pen = buildModel(makeSnapshot(['HEAR.', '#####', 'ABU..', '#####', '.....']));
     expect(nextClue(pen, 'A3', 'most-filled').clueId).toBe('A1');
   });
 
-  test('REQ-NAV-011: recently skipped clues are passed over for the next-best score', () => {
+  test('REQ-NAV-011: recently skipped clues are passed over for the next-best pick', () => {
     const model = buildModel(makeSnapshot(COUNT_ROWS));
-    expect(nextClue(model, 'A3', 'most-filled', ['A1']).clueId).toBe('A2');
+    // A2 (1 open) is the natural pick; skip it and "next" moves on to A1 (2 open).
+    expect(nextClue(model, 'A3', 'most-filled', ['A2']).clueId).toBe('A1');
   });
 
   test('REQ-NAV-011: with every open clue skipped, the least recently skipped is revisited', () => {
