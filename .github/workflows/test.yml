@@ -20,7 +20,7 @@ jobs:
       - name: Install
         run: npm ci
 
-      # npm test + npm run trace: every Active requirement in docs/REQUIREMENTS.md
+      # npm test + npm run trace: every Active requirement in dev/docs/REQUIREMENTS.md
       # must be covered by a test or a manual-test item (REQ-NFR-006).
       - name: Verify (tests + trace)
         run: npm run verify

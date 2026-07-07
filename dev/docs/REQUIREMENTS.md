@@ -7,7 +7,7 @@ the answer against the grid, enters it, and moves on.
 **Status of this document:** Source of truth. Every requirement below carries a stable ID
 (`REQ-<AREA>-<NNN>`). This document is *executable*: the traceability tool (`npm run trace`)
 fails the build unless every requirement with `Status: Active` is referenced by at least one
-automated test (in `tests/**/*.test.js`) or one manual test (in `docs/MANUAL-TESTS.md`).
+automated test (in `extension-test/**/*.test.js`) or one manual test (in `dev/docs/MANUAL-TESTS.md`).
 See [§14 Executable requirements schema](#14-executable-requirements-schema).
 
 Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
@@ -52,7 +52,7 @@ Keywords **MUST** / **SHOULD** / **MAY** are used per RFC 2119.
 
 ## 3. Architecture constraints (why the code is split the way it is)
 
-The problem decomposes into independently testable modules (see `docs/ARCHITECTURE.md`):
+The problem decomposes into independently testable modules (see `dev/docs/ARCHITECTURE.md`):
 
 | Concern | Module | Depends on the NYT page? | Test style |
 |---|---|---|---|
@@ -81,7 +81,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   not an entry).
 - **Accept:** Given the 5×5 fixture and a 4×4 fixture with blocks, when the model is built, then every
   clue's cell list and number match the hand-computed expectation.
-- **Verify:** unit `tests/unit/model.test.js`; manual MT-01 (live-page cross-check via probe).
+- **Verify:** unit `extension-test/unit/model.test.js`; manual MT-01 (live-page cross-check via probe).
 
 #### REQ-MODEL-002 — Crossings
 - **Status:** Active · **Level:** MUST
@@ -89,7 +89,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   *3 Down*) or `null` for uncrossed cells.
 - **Accept:** Given the fixtures, when crossings are queried for known positions, then the expected
   clue labels are returned.
-- **Verify:** unit `tests/unit/model.test.js`.
+- **Verify:** unit `extension-test/unit/model.test.js`.
 
 #### REQ-MODEL-003 — Pattern and progress
 - **Status:** Active · **Level:** MUST
@@ -97,7 +97,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   (`filled` / `length`). Empty cells are `null`, never `""` or space.
 - **Accept:** Given a partially filled fixture grid, when pattern/progress are read, then they match
   the grid exactly.
-- **Verify:** unit `tests/unit/model.test.js`.
+- **Verify:** unit `extension-test/unit/model.test.js`.
 
 #### REQ-MODEL-004 — Filled vs. solved are distinct
 - **Status:** Active · **Level:** MUST
@@ -105,14 +105,14 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   reported success). A full grid MUST NOT be treated as solved (letters may be wrong).
 - **Accept:** Given a full-but-unconfirmed snapshot, then `isFull() === true` and `isSolved() === false`;
   given a snapshot with the success signal, then `isSolved() === true`.
-- **Verify:** unit `tests/unit/model.test.js`.
+- **Verify:** unit `extension-test/unit/model.test.js`.
 
 #### REQ-MODEL-005 — Canonical clue order
 - **Status:** Active · **Level:** MUST
 - The model MUST expose the NYT list order: all Across clues by ascending number, then all Down
   clues by ascending number.
 - **Accept:** Given the fixtures, then `orderedClueIds` equals the expected sequence.
-- **Verify:** unit `tests/unit/model.test.js`.
+- **Verify:** unit `extension-test/unit/model.test.js`.
 
 ---
 
@@ -126,7 +126,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   toolbar button (REQ-LIFE-012) is an equivalent start control.
 - **Accept:** Given an unsolved puzzle page, when the icon is clicked, then within the latency budget
   (REQ-NFR-003) the current clue is spoken and the mic starts listening.
-- **Verify:** unit `tests/unit/machine.test.js` (START event → clue readout → listen); manual MT-03.
+- **Verify:** unit `extension-test/unit/machine.test.js` (START event → clue readout → listen); manual MT-03.
 
 #### REQ-LIFE-002 — Icon click ends an active session immediately
 - **Status:** Active · **Level:** MUST
@@ -135,7 +135,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   The in-page toolbar button (REQ-LIFE-012) ends a session the same way.
 - **Accept:** Given a session mid-readout, when the icon is clicked, then audio stops and the mic
   indicator disappears.
-- **Verify:** unit `tests/unit/machine.test.js` (TOGGLE_OFF → END with no SAY); manual MT-04.
+- **Verify:** unit `extension-test/unit/machine.test.js` (TOGGLE_OFF → END with no SAY); manual MT-04.
 
 #### REQ-LIFE-003 — Clicking where there is no puzzle
 - **Status:** Active · **Level:** MUST
@@ -148,7 +148,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - Cases: nytimes.com article page (popup); chrome:// pages (popup); crossword archive/landing
   page (popup — unsupported URL); supported game URL whose grid fails to parse (voice).
 - **Accept:** As above for each case.
-- **Verify:** unit `tests/unit/machine.test.js` (START with status `not-found`); manual MT-12.
+- **Verify:** unit `extension-test/unit/machine.test.js` (START with status `not-found`); manual MT-12.
 
 #### REQ-LIFE-004 — Puzzle already solved at start
 - **Status:** Active · **Level:** MUST
@@ -156,7 +156,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   ("This one's already solved — hooray!") and end without listening.
 - **Accept:** Given a solved puzzle, when a session starts, then exactly one celebratory utterance is
   spoken and the session ends (no LISTEN action ever issued).
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-08.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-08.
 
 #### REQ-LIFE-005 — Puzzle becomes solved mid-session
 - **Status:** Active · **Level:** MUST
@@ -172,7 +172,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Accept:** Given a session, when the solved signal arrives (via entry result or page event), then
   the celebration is spoken and the session ends; given the winning entry's snapshot still says
   "active" but the congrats popup arrives a beat later, then ONLY the celebration is spoken.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (verdict
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js` (verdict
   popups); manual MT-06.
 
 #### REQ-LIFE-006 — Grid full but not solved
@@ -192,7 +192,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   discrepancy message is spoken and the session continues listening on the current clue; when the
   user then says "next" repeatedly, each filled clue is read in turn and the discrepancy message
   never replays.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-09.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js`; manual MT-09.
 
 #### REQ-LIFE-007 — First clue read = currently highlighted clue
 - **Status:** Active · **Level:** MUST
@@ -200,7 +200,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   determined, fall back to the first not-fully-filled clue in list order; if all are filled, follow
   REQ-LIFE-006's flow starting at the first clue.
 - **Accept:** Given 3 Down is selected on the page, when the session starts, then 3 Down is read first.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-03.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-03.
 
 #### REQ-LIFE-008 — Page disappears mid-session
 - **Status:** Active · **Level:** MUST
@@ -227,7 +227,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   Discoverability comes from the *help* command (REQ-CMD-002), not a tutorial.
 - **Accept:** Given session start, then exactly one SAY action is produced and it is the clue readout
   (with greeting folded in).
-- **Verify:** unit `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`.
 
 #### REQ-LIFE-011 — Looking away ends the session
 - **Status:** Active · **Level:** MUST
@@ -269,7 +269,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   end of the tool row; given a toolbar that renders late — even after the give-up interval, while
   app markup is present — then the button appears once the toolbar does; given a page with no
   crossword markup, then no button is injected and nothing throws.
-- **Verify:** integration `tests/integration/session-button.test.js`; manual MT-30.
+- **Verify:** integration `extension-test/integration/session-button.test.js`; manual MT-30.
 
 #### REQ-LIFE-013 — Action icon signals supported pages
 - **Status:** Active · **Level:** MUST
@@ -281,7 +281,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   before the page loads), and the icon MUST track tab navigation and tab switches.
 - **Accept:** Given a Mini/Midi/Daily tab, then the colored icon shows; given an NYT article page
   or any non-NYT tab, then the gray icon shows; navigating one tab between the two updates it.
-- **Verify:** unit `tests/unit/urls.test.js` (supported-URL matcher); manual MT-31.
+- **Verify:** unit `extension-test/unit/urls.test.js` (supported-URL matcher); manual MT-31.
 
 #### REQ-LIFE-014 — Unsupported-site popup
 - **Status:** Active · **Level:** MUST
@@ -333,7 +333,7 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Accept:** Given the fake page with a splash, then Play is clicked and the session proceeds;
   given a splash that ignores synthetic clicks, then the prompt is spoken and the session starts
   once the splash is cleared by hand.
-- **Verify:** integration `tests/integration/splash.test.js`; manual MT-33.
+- **Verify:** integration `extension-test/integration/splash.test.js`; manual MT-33.
 
 ---
 
@@ -357,7 +357,7 @@ entities. The readout must convey what the eye would see.
   (REQ-READ-008, retired): the readout gets straight to the clue.
 - **Accept:** Given clue 1A "Organ with four chambers", then the readout is
   "Organ with four chambers." (modulo greeting) — no "1 Across" preamble, no "5 letters." tail.
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-READ-002 — Italics are announced
 - **Status:** Active · **Level:** MUST
@@ -368,7 +368,7 @@ entities. The readout must convey what the eye would see.
 - Rationale: italics distinguish e.g. titles (*Little House*) from plain words — meaning-bearing.
 - **Accept:** Given clue HTML `Little <i>house</i>`, then the readout contains
   "Little house. The word 'house' is in italics."
-- **Verify:** unit `tests/unit/verbalizer.test.js`, `tests/unit/clue-html.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`, `extension-test/unit/clue-html.test.js`.
 
 #### REQ-READ-003 — Bracketed clues are announced
 - **Status:** Active · **Level:** MUST
@@ -378,7 +378,7 @@ entities. The readout must convey what the eye would see.
 - Case: brackets *inside* a clue (e.g. `Word after "boo" [not "hoo"]`) → read text as-is; only
   whole-clue brackets get the announcement (partial brackets are rare editorial asides).
 - **Accept:** Given clue `[Treat badly]`, then readout contains "The clue is in brackets: Treat badly."
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-READ-004 — Question-mark clues
 - **Status:** Active · **Level:** MUST
@@ -388,14 +388,14 @@ entities. The readout must convey what the eye would see.
   is unreliable across voices and the `?` is semantically load-bearing in crosswords.
 - **Accept:** Given clue `It might go viral?`, then the spoken text ends with `viral?` and contains
   the annotation "Question mark."
-- **Verify:** unit `tests/unit/verbalizer.test.js`; manual MT-14 (listen check).
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`; manual MT-14 (listen check).
 
 #### REQ-READ-005 — Blanks (`___`) are read as "blank"
 - **Status:** Active · **Level:** MUST
 - Every run of ≥ 2 underscores MUST be spoken as the word `blank`. (TTS engines otherwise skip it
   or read "underscore underscore...".)
 - **Accept:** Given clue `"The ___ of the Matter"`, then the spoken text contains `The blank of the Matter`.
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-READ-006 — Quoted text is announced (whole clue only)
 - **Status:** Active · **Level:** SHOULD
@@ -406,7 +406,7 @@ entities. The readout must convey what the eye would see.
   dropped).
 - **Accept:** Given `"Hooray!"`, then annotation "The clue is in quotes." is present;
   given `Word after "boo", often`, then no quotes annotation at all.
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-READ-007 — HTML entities are decoded
 - **Status:** Active · **Level:** MUST
@@ -414,7 +414,7 @@ entities. The readout must convey what the eye would see.
   decoded to their characters before speaking, and unknown tags (`<b>`, `<sub>`, ...) MUST be
   stripped while keeping their text.
 - **Accept:** Given `Tom &amp; Jerry`, then the spoken text is `Tom & Jerry` (TTS reads "and").
-- **Verify:** unit `tests/unit/clue-html.test.js`.
+- **Verify:** unit `extension-test/unit/clue-html.test.js`.
 
 #### REQ-READ-008 — Letter count is spoken last
 - **Status:** Retired · **Level:** —
@@ -424,7 +424,7 @@ entities. The readout must convey what the eye would see.
   command (REQ-HINT-002), or spelling (REQ-ANS-011/018) all still name counts. (While it was
   active: every readout ended with `<N> letters.`, the count being the number of cells.)
 - **Accept:** Given any clue readout, then no letter count is spoken anywhere in it.
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-READ-009 — Repeat
 - **Status:** Active · **Level:** MUST
@@ -432,21 +432,21 @@ entities. The readout must convey what the eye would see.
   (without greeting), then listen again.
 - **Accept:** Given a session listening on 3 Down, when the user says "repeat", then 3 Down's readout
   is spoken again.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-16.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-16.
 
 #### REQ-READ-010 — Cross-reference clues are read literally
 - **Status:** Active · **Level:** MUST (literal reading); following the reference is REQ-FUT-004
 - Clues like `See 17-Across` or `With 5-Down, ...` MUST be read as-is. The MVP does not navigate to
   the referenced clue automatically.
 - **Accept:** Given clue `See 17-Across`, then the spoken text is exactly that.
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-READ-011 — Editorial tags are read literally
 - **Status:** Active · **Level:** MUST
 - Suffix tags such as `: Abbr.`, `, for short`, `, e.g.`, `, in brief` MUST be preserved verbatim in
   the spoken text (they tell the solver the answer form). No expansion, no omission.
 - **Accept:** Given `Violinist's supply: Abbr.`, then the spoken text contains `: Abbr.` read as-is.
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 **Formatting decision table (spoken output for clue variants):**
 
@@ -472,7 +472,7 @@ entities. The readout must convey what the eye would see.
   the new clue.
 - **Accept:** Given listening on 1 Across, when the user says "pass", then no letters change and
   the next clue is read.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-06.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-06.
 
 #### REQ-NAV-002 — Default strategy: list order
 - **Status:** Active · **Level:** MUST
@@ -480,7 +480,7 @@ entities. The readout must convey what the eye would see.
   wrapping from the last Down back to the first Across.
 - **Accept:** Given current = last Down with earlier clues unfilled, when advancing, then the first
   unfilled Across is chosen.
-- **Verify:** unit `tests/unit/strategies.test.js`.
+- **Verify:** unit `extension-test/unit/strategies.test.js`.
 
 #### REQ-NAV-003 — Fully filled clues are skipped when advancing
 - **Status:** Active · **Level:** MUST
@@ -488,7 +488,7 @@ entities. The readout must convey what the eye would see.
   via the replace flow, but we don't offer them proactively). If *no* unfilled clue exists, stay on
   the current clue (REQ-LIFE-006 covers the announcement).
 - **Accept:** Given the next two clues in order are filled, when advancing, then the third is selected.
-- **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/strategies.test.js`, `extension-test/unit/machine.test.js`.
 
 #### REQ-NAV-004 — Strategy: most-filled-first (easiest = fewest open letters, closest to done)
 - **Status:** Active · **Level:** MUST
@@ -510,7 +510,7 @@ entities. The readout must convey what the eye would see.
   letters; given one entry with 4 penciled + 1 blank (open 3) and another with 3 pen + 2 blank
   (open 2), then the pen entry is chosen (shaky pencil leaves it more open). Given equal open
   counts one and two steps ahead, then the one-step clue is chosen.
-- **Verify:** unit `tests/unit/strategies.test.js`.
+- **Verify:** unit `extension-test/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
 - **Status:** Active · **Level:** SHOULD
@@ -518,7 +518,7 @@ entities. The readout must convey what the eye would see.
   strategy for the rest of the session, confirm briefly, and keep listening on the current clue.
 - **Accept:** Given a session, when the user says "switch to most filled", then the acknowledgement is
   spoken and subsequent *next* uses the new strategy.
-- **Verify:** unit `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`.
 
 #### REQ-NAV-006 — Wrap-around is announced
 - **Status:** Retired · **Level:** —
@@ -526,15 +526,15 @@ entities. The readout must convey what the eye would see.
   readout latency without aiding orientation — the page highlight (REQ-NAV-007) already shows
   where the conversation is. Could return as an opt-in setting if missed.
 - **Accept:** Given a wrap, then the readout is the plain clue readout, no prefix.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-NAV-007 — Page highlight follows the conversation
 - **Status:** Active · **Level:** MUST
 - Whenever the conversation moves to a clue, the page selection MUST be updated (as if the user
   clicked that clue) so screen and audio agree.
 - **Accept:** Given advancing to 4 Down, then the page shows 4 Down highlighted.
-- **Verify:** integration `tests/integration/page-adapter.test.js` (navigator); unit
-  `tests/unit/machine.test.js` (SELECT_CLUE action emitted); manual MT-06.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js` (navigator); unit
+  `extension-test/unit/machine.test.js` (SELECT_CLUE action emitted); manual MT-06.
 
 #### REQ-NAV-008 — Conversation follows manual selection
 - **Status:** Active · **Level:** MUST
@@ -553,7 +553,7 @@ entities. The readout must convey what the eye would see.
   we already track, nothing happens AND the mic keeps listening; when several clicks land in quick
   succession (faster than readouts play), then only the LAST clicked clue is read — superseded
   clicks produce no readout.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js` (rapid clicks);
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js` (rapid clicks);
   manual MT-13.
 
 #### REQ-NAV-009 — "back" goes to the previous clue
@@ -571,7 +571,7 @@ entities. The readout must convey what the eye would see.
   then 1 Across is selected and read; given the current clue is the first Across, then "back"
   lands on the last Down. Given most-filled took the session A4 → A2 → A1, when the user says
   "back" twice, then it lands on A2 and then A4; a third "back" uses list order.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-26.
 
 #### REQ-NAV-010 — "flip" switches to the crossing clue at the selected square
 - **Status:** Active · **Level:** MUST
@@ -584,7 +584,7 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the current clue is 1 Across with the cursor on its third cell, when the user
   says "flip", then 3 Down (the crossing at THAT cell) is selected and read; with no cursor
   information, then 1 Down (the first crossed cell) is.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-26.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-26.
 
 #### REQ-NAV-011 — Skip memory under most-filled
 - **Status:** Active · **Level:** MUST
@@ -602,7 +602,7 @@ entities. The readout must convey what the eye would see.
   says next four times, then the entries are visited fewest-open first with no repeats,
   and a fifth next returns to the first-skipped one; given a skipped entry gains a letter from a
   crossing answer, then the following next offers it again.
-- **Verify:** unit `tests/unit/strategies.test.js`, `tests/unit/machine.test.js`; manual MT-28.
+- **Verify:** unit `extension-test/unit/strategies.test.js`, `extension-test/unit/machine.test.js`; manual MT-28.
 
 #### REQ-NAV-012 — Default strategy is a persisted setting
 - **Status:** Active · **Level:** MUST
@@ -621,7 +621,7 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the stored setting is most-filled, when a session starts and the user says
   next, then the most-filled strategy picks the clue; given no stored value (or a corrupted one),
   then list order is used.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/settings.test.js`; manual MT-28.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/settings.test.js`; manual MT-28.
 
 #### REQ-NAV-013 — Jump to a clue by its spoken label
 - **Status:** Active · **Level:** MUST
@@ -641,7 +641,7 @@ entities. The readout must convey what the eye would see.
   given "5 a cross" or "sixth across", then the jump still happens; given "twelve down" with no
   12-Down, then the reply says there is no 12 down; given "gibberish across", then the reply asks
   for the clue number.
-- **Verify:** unit `tests/unit/matching.test.js` (parsing), `tests/unit/machine.test.js` (jump +
+- **Verify:** unit `extension-test/unit/matching.test.js` (parsing), `extension-test/unit/machine.test.js` (jump +
   missing label + garbled number).
 
 #### REQ-NAV-014 — A full grid patrols its penciled entries
@@ -657,7 +657,7 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given an entry that fills the grid wrong while 3 Down holds a penciled letter, then
   the discrepancy message is followed by 3 Down's readout; when the user then says "next"
   repeatedly, then only entries holding penciled letters are visited, cycling.
-- **Verify:** unit `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`.
 
 ---
 
@@ -703,7 +703,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - Candidate words MUST be normalized to uppercase A–Z only: spaces, hyphens, apostrophes, periods
   and all punctuation removed (`a lot` → `ALOT`, `don't` → `DONT`, `U.S.A.` → `USA`).
 - **Accept:** Given the examples above, then normalization output matches.
-- **Verify:** unit `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-002 — Digits and ordinals become words
 - **Status:** Active · **Level:** MUST
@@ -712,7 +712,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   2000–2009 → `TWOTHOUSAND...`), `1st` → `FIRST`. Unhandleable numbers fall back to per-digit words.
 - Rationale: STT loves emitting digits; crossword grids only hold letters.
 - **Accept:** Given the listed inputs, then the listed outputs.
-- **Verify:** unit `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-003 — Homophone expansion
 - **Status:** Active · **Level:** MUST
@@ -721,7 +721,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   candidate (cartesian product, capped, literal-first ordering). The dictionary is local data —
   no network (REQ-NFR-001).
 - **Accept:** Given "eight" with entry length 3, then candidate ATE is found and fits.
-- **Verify:** unit `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-004 — All STT alternatives are considered
 - **Status:** Active · **Level:** MUST
@@ -729,13 +729,13 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   order, preferring earlier (higher-confidence) alternatives.
 - **Accept:** Given alternatives ["playing", "plane"] for a 5-cell entry `P____`, then PLANE from the
   second alternative is used when the first yields nothing.
-- **Verify:** unit `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-005 — Length gate
 - **Status:** Active · **Level:** MUST
 - A candidate MUST match the entry length exactly to be enterable. Length is checked before pattern.
 - **Accept:** Given length-4 entry and candidates of lengths 3/5/6, then none pass the gate.
-- **Verify:** unit `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-006 — Fit → confirm → enter → advance
 - **Status:** Active · **Level:** MUST
@@ -747,7 +747,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   REQ-ANS-013.
 - **Accept:** Given a fitting answer, then actions occur in order SAY(fit) → ENTER → SELECT/SAY(next
   clue) and the grid contains the word.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js` (spelledDifferently
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/matching.test.js` (spelledDifferently
   flag); manual MT-06.
 
 #### REQ-ANS-007 — Length mismatch is reported with numbers
@@ -758,8 +758,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   "I heard ..." preamble, no commentary about what does fit, and no usage coaching ("try again",
   "say spell", "say next") — the numbers are the whole reply. Then keep listening (same clue).
 - **Accept:** Given "ocelot" for a 4-entry, then the reply contains OCELOT, 6, and 4.
-- **Verify:** unit `tests/unit/matching.test.js` (variant list), `tests/unit/verbalizer.test.js`
-  (phrasing), `tests/unit/machine.test.js` (stays on clue).
+- **Verify:** unit `extension-test/unit/matching.test.js` (variant list), `extension-test/unit/verbalizer.test.js`
+  (phrasing), `extension-test/unit/machine.test.js` (stays on clue).
 
 #### REQ-ANS-008 — Collision is reported letter-by-spot
 - **Status:** Active · **Level:** MUST
@@ -774,8 +774,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given pattern `HEA_T` and candidate HEIST, then the report names position 3 and A
   (and the crossing label when the model provides one); given three collisions, then only the
   first is detailed and the other two are counted.
-- **Verify:** unit `tests/unit/matching.test.js` (positions), `tests/unit/machine.test.js` (cross
-  label enrichment, no ENTER emitted), `tests/unit/verbalizer.test.js` (phrasing); manual MT-07.
+- **Verify:** unit `extension-test/unit/matching.test.js` (positions), `extension-test/unit/machine.test.js` (cross
+  label enrichment, no ENTER emitted), `extension-test/unit/verbalizer.test.js` (phrasing); manual MT-07.
 
 #### REQ-ANS-009 — Ambiguous homophones ask the user
 - **Status:** Active · **Level:** MUST
@@ -785,7 +785,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   a re-statement, a new answer, or *pass*.
 - **Accept:** Given the plain/plane case, then a disambiguation prompt is produced and "second"
   selects PLANE.
-- **Verify:** unit `tests/unit/matching.test.js` (ambiguous outcome), `tests/unit/machine.test.js`
+- **Verify:** unit `extension-test/unit/matching.test.js` (ambiguous outcome), `extension-test/unit/machine.test.js`
   (choice flow).
 
 #### REQ-ANS-010 — "You misheard" correction
@@ -804,7 +804,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   session moved on, when the user says "you misheard", then the entry is reverted, HEART is
   rejected on that clue, and the re-prompt plays; given "no I said heist" instead, then HEIST is
   evaluated on the reverted clue.
-- **Verify:** unit `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`.
 
 #### REQ-ANS-011 — Spelling mode
 - **Status:** Active · **Level:** MUST
@@ -825,7 +825,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   buffer behaves as specified and evaluates at length 5. Given "spell H E A R T" from normal
   listening, then HEART evaluates immediately. Given spelling in progress and "next", then the
   conversation advances to another clue.
-- **Verify:** unit `tests/unit/matching.test.js` (letter parsing), `tests/unit/machine.test.js`
+- **Verify:** unit `extension-test/unit/matching.test.js` (letter parsing), `extension-test/unit/machine.test.js`
   (mode flow).
 
 #### REQ-ANS-012 — Explicit override enters despite collisions
@@ -841,7 +841,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   remaining letters to pencil in the same write.
 - **Accept:** Given a collision report for HEIST, when the user says "enter it anyway", then the grid
   reads HEIST and the conversation advances.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-07.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-07.
 
 #### REQ-ANS-013 — Writes are verified
 - **Status:** Active · **Level:** MUST
@@ -850,7 +850,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   keep the clue current — never silently pretend success.
 - **Accept:** Given a page that swallows input, when entry completes, then `ok:false` is reported and
   the failure utterance is spoken.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; unit `tests/unit/machine.test.js`
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; unit `extension-test/unit/machine.test.js`
   (ENTRY_RESULT !ok); manual MT-02.
 
 #### REQ-ANS-014 — Command-word answers need an escape hatch
@@ -858,14 +858,14 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - A bare command word is always a command (saying "pass" skips, even into a 4-cell entry).
   Prefixing with *answer/guess/the word is* MUST force literal treatment: "answer pass" plays PASS.
 - **Accept:** Given "pass" → command; given "answer pass" on a 4-entry → PASS evaluated as a word.
-- **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`, `extension-test/unit/machine.test.js`.
 
 #### REQ-ANS-015 — Multi-word utterances join
 - **Status:** Active · **Level:** MUST
 - Multi-token utterances MUST join into one candidate (`"a lot"` → ALOT, `"ice cream"` → ICECREAM),
   after per-token digit/homophone processing.
 - **Accept:** Given "a lot" for a 4-entry, then ALOT fits.
-- **Verify:** unit `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-016 — Replacing a fully filled entry requires confirmation
 - **Status:** Active · **Level:** MUST
@@ -879,7 +879,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   applies here too.
 - **Accept:** Given filled HEART and utterance "heist" (fits), then the confirm question is asked and
   "yes" rewrites the entry.
-- **Verify:** unit `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`.
 
 #### REQ-ANS-017 — Undo the last entered answer
 - **Status:** Active · **Level:** MUST
@@ -901,7 +901,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   the revert lands (not a crossing Down clue), and the confirmation plays followed by the 1 Across
   clue again; a repeated "undo" reports nothing to undo. Given HEIST was entered over crossing
   letters via *anyway*, then "undo" restores those letters.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`; manual MT-26.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/matching.test.js`; manual MT-26.
 
 #### REQ-ANS-018 — Partial spelling fills only the open squares
 - **Status:** Active · **Level:** MUST
@@ -946,8 +946,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   rewritten penciled. Given the same override but with the B corroborated by a completely filled
   crossing entry, then only the U is penciled. Given HEART entered into empty cells, then nothing
   is penciled.
-- **Verify:** unit `tests/unit/model.test.js` (plan), `tests/unit/machine.test.js` (ENTER payload,
-  undo); integration `tests/integration/page-adapter.test.js` (pencil lands); manual MT-29.
+- **Verify:** unit `extension-test/unit/model.test.js` (plan), `extension-test/unit/machine.test.js` (ENTER payload,
+  undo); integration `extension-test/integration/page-adapter.test.js` (pencil lands); manual MT-29.
 
 #### REQ-ANS-020 — Spelled-out answers need no mode
 - **Status:** Active · **Level:** MUST
@@ -965,7 +965,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given "aitch e a are tea" on an empty 5-entry, then HEART is accepted and spelled
   back; given "india", then the word INDIA is evaluated, not the letter I; given "are you" on a
   2-entry, then RU fits.
-- **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`, `extension-test/unit/machine.test.js`.
 
 #### REQ-ANS-021 — A bare letter among words reads as its spoken name
 - **Status:** Active · **Level:** MUST
@@ -982,7 +982,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given "d claw" on an empty 6-entry, then DECLAW fits and is spelled back; on a
   5-entry, DCLAW (the literal join) is evaluated instead; given "d" alone on a 3-entry, then the
   reply is a length mismatch for D, never DEE.
-- **Verify:** unit `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-022 — Saying the word and then spelling it is one answer
 - **Status:** Active · **Level:** MUST
@@ -999,7 +999,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   back; on a 5-entry, the mismatch report leads with DOG, not DOGDOG; given "dog c a t", then no
   DOG candidate arises (the letters spell something else); given "dog dog", then DOGDOG is the
   reading (word tokens are not letters).
-- **Verify:** unit `tests/unit/matching.test.js`, `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/matching.test.js`, `extension-test/unit/machine.test.js`.
 
 #### REQ-ANS-023 — Penciled letters never gate an answer
 - **Status:** Active · **Level:** MUST
@@ -1020,7 +1020,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   fits and enters (the penciled A is overwritten); given the same grid with the A in pen, then
   the collision report plays and nothing is entered. Given the session itself penciled a letter
   and the page reports it as plain pen, then a clashing answer STILL fits and writes over it.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-29.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-29.
 
 #### REQ-ANS-024 — "clear" empties the current entry
 - **Status:** Active · **Level:** MUST
@@ -1033,7 +1033,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   are emptied and "Cleared." is spoken; when the user then says "undo", then the letters return
   with the penciled one still penciled; given an empty entry, when the user says "delete", then
   the reply says there is nothing to clear.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/matching.test.js`.
 
 #### REQ-ANS-025 — Voice pencil mode
 - **Status:** Active · **Level:** MUST
@@ -1046,7 +1046,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given the user said "pencil", when an answer is accepted, then its cells are written
   penciled and a later clashing answer on a crossing fits without a collision report; given
   "pen", then the next answer writes normally.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/matching.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/matching.test.js`.
 
 ---
 
@@ -1058,13 +1058,13 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   empty cells spoken as "blank": `"H, blank, blank, R, T."`, followed by the progress summary
   (REQ-HINT-002). Then listen again on the same clue.
 - **Accept:** Given pattern `H__RT`, then that exact readout is produced.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/verbalizer.test.js`; manual MT-16.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/verbalizer.test.js`; manual MT-16.
 
 #### REQ-HINT-002 — Progress summary
 - **Status:** Active · **Level:** SHOULD
 - The hint SHOULD end with `"3 of 5 letters filled."` (0 filled → "Nothing filled in yet.").
 - **Accept:** Given the pattern above, then the summary reads 3 of 5.
-- **Verify:** unit `tests/unit/verbalizer.test.js`.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`.
 
 #### REQ-HINT-003 — Crossing-clue hint
 - **Status:** Planned · **Level:** MAY
@@ -1111,7 +1111,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   apply gets an honest one-liner ("nothing to undo", "no word is waiting"), never a dead end.
 - **Accept:** Given each utterance above, then the intent is recognized; given "yes" while not in a
   confirm mode, then it is evaluated as an answer.
-- **Verify:** unit `tests/unit/matching.test.js` (table-driven), `tests/unit/machine.test.js`
+- **Verify:** unit `extension-test/unit/matching.test.js` (table-driven), `extension-test/unit/machine.test.js`
   (contextual behavior).
 
 #### REQ-CMD-002 — Help
@@ -1119,7 +1119,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - *help* MUST speak a one-breath summary of the core commands (answer, pass/next, back, flip,
   repeat, hint, spell, undo, stop) and keep listening.
 - **Accept:** Given "help", then the help utterance is spoken and the clue stays current.
-- **Verify:** unit `tests/unit/machine.test.js`; manual MT-16.
+- **Verify:** unit `extension-test/unit/machine.test.js`; manual MT-16.
 
 #### REQ-CMD-003 — Unintelligible input re-prompts
 - **Status:** Active · **Level:** MUST
@@ -1128,14 +1128,14 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   exists for that) — and listen again, in the same state: every command stays available after a
   didn't-catch. It MUST NOT enter anything.
 - **Accept:** Given garbage input, then the didn't-catch utterance is spoken and no grid change occurs.
-- **Verify:** unit `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`.
 
 #### REQ-CMD-004 — Stop by voice
 - **Status:** Active · **Level:** MUST
 - *stop/goodbye* MUST end the session with a short sign-off (unlike the icon toggle, which is
   instant and silent — REQ-LIFE-002).
 - **Accept:** Given "goodbye", then a sign-off is spoken and the session ends.
-- **Verify:** unit `tests/unit/machine.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`.
 
 #### REQ-CMD-005 — Silence is fine; after a minute the mic quietly closes
 - **Status:** Active · **Level:** MUST
@@ -1146,7 +1146,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   (clicking a clue, typing letters) resets the clock.
 - **Accept:** Given consecutive no-speech cycles totalling under 60 s, then nothing is spoken and
   listening continues; once accumulated silence reaches 60 s, the session ends without a word.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-20.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js`; manual MT-20.
 
 #### REQ-CMD-006 — "Stop" works during ALL speech
 - **Status:** Active · **Level:** MUST
@@ -1159,7 +1159,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   (REQ-CMD-004); a stop heard during the sign-off itself ends silently.
 - **Accept:** Given TTS mid-sign-off, when the user says "stop", then speech is cancelled and the
   session ends; given any non-stop speech during the sign-off, then nothing changes.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js`.
 
 ---
 
@@ -1186,7 +1186,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   default). Given a `speak` with no explicit rate, then its rate is 1.3; given `speak(text,
   {rate})`, then that rate reaches the engine. Given a stored rate of 9 (or `"fast"`), then
   sanitization yields 3.0 (or 1.3).
-- **Verify:** unit `tests/unit/speech-ports.test.js`, `tests/unit/settings.test.js`;
+- **Verify:** unit `extension-test/unit/speech-ports.test.js`, `extension-test/unit/settings.test.js`;
   manual MT-03, MT-33.
 
 #### REQ-SPCH-002 — Speech-to-text listen cycles
@@ -1199,7 +1199,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   maps to `no-speech`.
 - **Accept:** Given a fake recognizer emitting 3 alternatives, then all 3 reach the caller in
   order; given an interim hypothesis followed by a final result, then only the final one arrives.
-- **Verify:** unit `tests/unit/speech-ports.test.js`; manual MT-06.
+- **Verify:** unit `extension-test/unit/speech-ports.test.js`; manual MT-06.
 
 #### REQ-SPCH-003 — Microphone permission denied
 - **Status:** Active · **Level:** MUST
@@ -1208,7 +1208,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   page origin — nytimes.com — since recognition runs in the content script.)
 - **Accept:** Given a recognizer erroring `not-allowed`, then the mic-denied utterance is spoken and
   the session ends.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/speech-ports.test.js` (error mapping);
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/speech-ports.test.js` (error mapping);
   manual MT-05.
 
 #### REQ-SPCH-004 — Transient STT errors retry once
@@ -1217,7 +1217,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   consecutive failure ends the session with an explanation. `aborted` (our own cancellation) is
   silent.
 - **Accept:** Given one network error then success, the session continues; given two, it ends.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/speech-ports.test.js`; manual MT-11.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/speech-ports.test.js`; manual MT-11.
 
 #### REQ-SPCH-005 — Echo discipline
 - **Status:** Active · **Level:** MUST
@@ -1237,15 +1237,15 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   the speech continues; given a short non-command fragment of the spoken text, then it is
   discarded; given "yes" barged into a prompt ending in "Yes or no.", then it is processed as
   the reply.
-- **Verify:** unit `tests/unit/machine.test.js` (action-order invariant),
-  `tests/unit/orchestrator.test.js` (echo guard).
+- **Verify:** unit `extension-test/unit/machine.test.js` (action-order invariant),
+  `extension-test/unit/orchestrator.test.js` (echo guard).
 
 #### REQ-SPCH-006 — Question intonation passthrough
 - **Status:** Active · **Level:** MUST
 - Text handed to TTS MUST preserve terminal `?` so capable voices inflect (paired with the explicit
   announcement, REQ-READ-004).
 - **Accept:** Given a `?` clue, then the TTS input string ends with `?`.
-- **Verify:** unit `tests/unit/verbalizer.test.js`; manual MT-14.
+- **Verify:** unit `extension-test/unit/verbalizer.test.js`; manual MT-14.
 
 #### REQ-SPCH-007 — Everything spoken is also logged
 - **Status:** Active · **Level:** MUST
@@ -1276,7 +1276,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given the opening readout mid-speech and the fitting utterance "heart", then the
   readout stops and the fit flow runs; given "next" mid-readout, then the session advances; given
   input while the fit confirmation plays, then it is ignored and the entry lands.
-- **Verify:** unit `tests/unit/machine.test.js`, `tests/unit/orchestrator.test.js`; manual MT-27.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js`; manual MT-27.
 
 #### REQ-SPCH-010 — Mid-utterance pause resets; the ready ping is the cue
 - **Status:** Active · **Level:** MUST
@@ -1296,7 +1296,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given interim results then 1.2 s of stillness, then the cycle resolves `reset`, the
   next LISTEN follows immediately with a ping, and nothing is spoken; given plain silence, then
   `no-speech` (no reset); given a fake with no AudioContext, then pings are silently skipped.
-- **Verify:** unit `tests/unit/speech-ports.test.js`, `tests/unit/machine.test.js`; manual MT-33.
+- **Verify:** unit `extension-test/unit/speech-ports.test.js`, `extension-test/unit/machine.test.js`; manual MT-33.
 
 ---
 
@@ -1310,14 +1310,14 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - The adapter MUST classify the page as `active` (grid found, not solved), `solved`
   (success signal present — congratulations modal), or `not-found`.
 - **Accept:** Given the fake page in each state, then the classification is correct.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-01.
 
 #### REQ-PAGE-002 — Grid snapshot
 - **Status:** Active · **Level:** MUST
 - The adapter MUST read: grid dimensions (derived from cell geometry, not hardcoded), and per cell:
   row/col, block flag, current letter (`''` when empty), and printed number (or null).
 - **Accept:** Given the fake page, then the snapshot matches the fixture puzzle cell-for-cell.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01 (probe counts).
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-01 (probe counts).
 
 #### REQ-PAGE-003 — Clue snapshot with formatting preserved
 - **Status:** Active · **Level:** MUST
@@ -1325,21 +1325,21 @@ any time, every selector lives in one file with a self-diagnosing probe.
   text as styled runs (`[{text, italic}]`) with entities decoded — enough to satisfy READ-002..007
   without re-touching the DOM.
 - **Accept:** Given the fake page's italic clue, then its runs mark exactly the italic span.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; unit `tests/unit/clue-html.test.js`.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; unit `extension-test/unit/clue-html.test.js`.
 
 #### REQ-PAGE-004 — Read current selection
 - **Status:** Active · **Level:** MUST
 - The adapter MUST report which clue is currently selected on the page (and the selected cell), or
   nulls when indeterminate.
 - **Accept:** Given the fake page with 1A selected, then selection reports 1A.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-01.
 
 #### REQ-PAGE-005 — Programmatic clue selection
 - **Status:** Active · **Level:** MUST
 - The adapter MUST be able to select a clue (click its entry in the clue list) such that the page
   highlights it — used by REQ-NAV-007.
 - **Accept:** Given the fake page, when `selectClue('D3')` runs, then the page's selected clue is 3 Down.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-02.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-02.
 
 #### REQ-PAGE-006 — Enter a word
 - **Status:** Active · **Level:** MUST
@@ -1348,17 +1348,17 @@ any time, every selector lives in one file with a self-diagnosing probe.
   NYT's "skip filled squares" setting). Overwriting an existing letter in a targeted cell is
   allowed (that is how NYT typing behaves).
 - Risk note: synthetic events carry `isTrusted:false`; if the live page ignores them, fallbacks are
-  documented in `docs/FEASIBILITY.md` §3 and MUST be validated early via MT-02.
+  documented in `dev/docs/FEASIBILITY.md` §3 and MUST be validated early via MT-02.
 - **Accept:** Given the fake page, when `enterAnswer` types HEART into 1A, then the five cells read
   H,E,A,R,T.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-02.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-02.
 
 #### REQ-PAGE-007 — Verify after write
 - **Status:** Active · **Level:** MUST
 - `enterAnswer` MUST re-read the cells afterwards and return `{ok, snapshot}`; `ok:false` when any
   cell disagrees (feeds REQ-ANS-013).
 - **Accept:** Given a fake page rigged to drop keystrokes, then `ok:false` is returned.
-- **Verify:** integration `tests/integration/page-adapter.test.js`.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`.
 
 #### REQ-PAGE-008 — Clear an entry
 - **Status:** Active · **Level:** MUST
@@ -1367,7 +1367,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - **Accept:** Given a filled entry on the fake page, when `clearEntry` runs, then all its cells are
   empty (cells shared with *other* filled entries are still cleared — replace semantics are
   entry-scoped; crossings are the user's call via REQ-ANS-012/016).
-- **Verify:** integration `tests/integration/page-adapter.test.js`.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`.
 
 #### REQ-PAGE-009 — Selector probe
 - **Status:** Active · **Level:** MUST
@@ -1378,7 +1378,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
   NYT ships a redesign.
 - **Accept:** Given the fake page, then all probe items report ok; given an empty page, then the
   probe reports failures rather than throwing.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-01.
 
 #### REQ-PAGE-010 — Change watching
 - **Status:** Active · **Level:** MUST
@@ -1388,14 +1388,14 @@ any time, every selector lives in one file with a self-diagnosing probe.
   (REQ-NFR-004).
 - **Accept:** Given the fake page, when the grid is completed correctly, then a `solved` event fires;
   when a different clue is clicked, a `selection` event fires.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-13.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-13.
 
 #### REQ-PAGE-011 — DOM knowledge is quarantined
 - **Status:** Active · **Level:** MUST
 - No module outside `extension/src/page-adapter/` (plus the fake-page fixture and its integration
   tests) may reference NYT DOM specifics (the `xwd__` class family). Enforced mechanically.
 - **Accept:** Given the source tree, then a grep for `xwd__` outside the allowed paths finds nothing.
-- **Verify:** unit `tests/unit/arch.test.js`.
+- **Verify:** unit `extension-test/unit/arch.test.js`.
 
 #### REQ-PAGE-012 — Pencil-mode writing and reading
 - **Status:** Active · **Level:** MUST
@@ -1429,7 +1429,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - **Accept:** Given the fake page, when cells are entered with mixed pencil flags, then letters and
   penciled states match per cell and the toggle returns to its prior state (both from pen and from
   pencil); given a page without the toggle, then letters still land and `ok` reflects the letters.
-- **Verify:** integration `tests/integration/page-adapter.test.js`; manual MT-01, MT-29.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js`; manual MT-01, MT-29.
 
 ---
 
@@ -1443,7 +1443,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
   through Google's speech service; see FEASIBILITY §2 for the on-device option.
 - **Accept:** Given the source tree, then no network primitives appear in `extension/src`; given a
   live session, then DevTools shows no extension-originated requests.
-- **Verify:** unit `tests/unit/arch.test.js`; manual MT-15.
+- **Verify:** unit `extension-test/unit/arch.test.js`; manual MT-15.
 
 #### REQ-NFR-002 — Privacy: nothing about the puzzle is persisted
 - **Status:** Active · **Level:** MUST
@@ -1455,7 +1455,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
   extension source.
 - **Accept:** Given the source tree, then storage primitives appear only under the two allowed
   paths; given a session end, then extension storage holds nothing beyond the settings object.
-- **Verify:** unit `tests/unit/arch.test.js`; manual MT-15.
+- **Verify:** unit `extension-test/unit/arch.test.js`; manual MT-15.
 
 #### REQ-NFR-003 — Latency budgets
 - **Status:** Active · **Level:** SHOULD
@@ -1479,7 +1479,7 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - MVP is English: STT locale defaults to `en-US`; all phrasing is centralized in one module
   (`phrases.js`) so localization is a data change later.
 - **Accept:** Given the STT port with no overrides, then its recognizer is configured `en-US`.
-- **Verify:** unit `tests/unit/speech-ports.test.js`.
+- **Verify:** unit `extension-test/unit/speech-ports.test.js`.
 
 #### REQ-NFR-006 — Traceability is enforced
 - **Status:** Active · **Level:** MUST
@@ -1519,16 +1519,16 @@ The contract that makes this document testable:
    `**Status:** Active|Planned` line. IDs are permanent; superseded requirements keep their ID and
    get `Status: Planned` (or a strikethrough note), never deletion.
 2. **Coverage.** An Active requirement is *covered* when its ID appears in an automated test title
-   (or comment) under `tests/`, or in a `Covers:` line in `docs/MANUAL-TESTS.md`. The `Verify:`
+   (or comment) under `extension-test/`, or in a `Covers:` line in `dev/docs/MANUAL-TESTS.md`. The `Verify:`
    line in each requirement records the intended mapping for humans; the tool checks the actual one.
 3. **Enforcement.** `npm run trace` (tools/trace.mjs):
    - parses this file for requirement IDs + status;
-   - scans `tests/**/*.test.js` and `docs/MANUAL-TESTS.md` for ID mentions;
+   - scans `extension-test/**/*.test.js` and `dev/docs/MANUAL-TESTS.md` for ID mentions;
    - **fails** on: Active requirement with zero mentions; any mention of an ID not defined here;
      malformed requirement blocks.
-   - prints the coverage matrix (requirement → tests/manual items).
+   - prints the coverage matrix (requirement → extension-test/manual items).
 4. **Human assertion.** Automated: `npm test` (every test title carries the REQ IDs it proves).
-   Manual: each MT item in `docs/MANUAL-TESTS.md` is a numbered script a human can run in minutes
+   Manual: each MT item in `dev/docs/MANUAL-TESTS.md` is a numbered script a human can run in minutes
    with a binary pass/fail expectation. `npm run verify` = tests + trace.
 5. **Change discipline.** Behavior changes start in this file (edit the requirement), then tests,
    then code — the tool keeps the three honest in both directions.

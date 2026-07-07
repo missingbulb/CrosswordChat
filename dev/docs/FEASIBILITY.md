@@ -23,7 +23,7 @@ part of the browser, but audio does leave the machine). Recent Chrome (139+, Aug
 **on-device recognition** (`SpeechRecognition.available()` / `processLocally: true`) for `en-US`
 on capable hardware. Our STT wrapper feature-detects this and can prefer local processing
 (REQ-FUT-006). Either way: **no first-party server, no API keys, no accounts, nothing to deploy.**
-This is enforced mechanically — `tests/unit/arch.test.js` fails if any `fetch`/`XHR`/`WebSocket`
+This is enforced mechanically — `extension-test/unit/arch.test.js` fails if any `fetch`/`XHR`/`WebSocket`
 appears in extension source (REQ-NFR-001), and MT-15 audits the network tab live.
 
 Conclusion: the assumption in the brief is **correct**. The extension is a pure client.
@@ -120,4 +120,4 @@ What the page gives us:
 Because §3 carries the only real unknown, the manual test plan front-loads it:
 **MT-01 (selector probe)** and **MT-02 (injection spike)** are designed to be run on a live NYT
 page in under five minutes, before investing in polish. Everything else in the system is testable
-offline against the faithful fake page (`tests/fixtures/fake-nyt/`).
+offline against the faithful fake page (`extension-test/fixtures/fake-nyt/`).

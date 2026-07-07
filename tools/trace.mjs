@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Requirements traceability (REQ-NFR-006; schema in docs/REQUIREMENTS.md §14).
+// Requirements traceability (REQ-NFR-006; schema in dev/docs/REQUIREMENTS.md §14).
 //
 // Fails when:
 //   • an Active requirement has no coverage (no automated test and no manual test mentions it)
@@ -11,9 +11,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const REQ_DOC = join(ROOT, 'docs/REQUIREMENTS.md');
-const MANUAL_DOC = join(ROOT, 'docs/MANUAL-TESTS.md');
-const TESTS_DIR = join(ROOT, 'tests');
+const REQ_DOC = join(ROOT, 'dev/docs/REQUIREMENTS.md');
+const MANUAL_DOC = join(ROOT, 'dev/docs/MANUAL-TESTS.md');
+const TESTS_DIR = join(ROOT, 'extension-test');
 const ID_RE = /REQ-[A-Z]+-\d{3}/g;
 const IGNORED_AREAS = new Set(['FAKE']); // reserved for MT-22's tamper drill
 
@@ -79,7 +79,7 @@ let currentMt = null;
 for (const line of manualText.split('\n')) {
   const mt = line.match(/^###\s+(MT-\d+)/);
   if (mt) currentMt = mt[1];
-  if (/^Covers:/.test(line)) recordMentions(line, `docs/MANUAL-TESTS.md ${currentMt ?? ''}`.trim());
+  if (/^Covers:/.test(line)) recordMentions(line, `dev/docs/MANUAL-TESTS.md ${currentMt ?? ''}`.trim());
 }
 
 // ---- 3. Report ---------------------------------------------------------------
@@ -122,7 +122,7 @@ if (uncovered.length) {
 }
 if (unknownMentions.length) {
   failed = true;
-  console.error('\n✗ Mention(s) of requirement IDs not defined in docs/REQUIREMENTS.md:');
+  console.error('\n✗ Mention(s) of requirement IDs not defined in dev/docs/REQUIREMENTS.md:');
   for (const { id, where } of unknownMentions) console.error(`  ${id} in ${where}`);
 }
 

@@ -2,8 +2,8 @@
 // Bump the extension version in one shot, keeping the three version records in sync:
 // extension/manifest.json (source of truth), package.json, package-lock.json.
 //
-//   node tools/bump-version.mjs patch|minor|major   → computed from the manifest
-//   node tools/bump-version.mjs 1.2.3               → explicit version
+//   node dev/build/bump-version.mjs patch|minor|major   → computed from the manifest
+//   node dev/build/bump-version.mjs 1.2.3               → explicit version
 //
 // Prints ONLY the new version on stdout (workflows capture it).
 
@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = new URL('../..', import.meta.url).pathname;
 const MANIFEST = join(ROOT, 'extension/manifest.json');
 
 const arg = process.argv[2];

@@ -4,7 +4,7 @@
 // class family) and WILL drift when NYT redesigns. The contract is:
 //   1. run probe() (panel "Probe page" button / MT-01) after any breakage,
 //   2. fix values HERE only,
-//   3. the fake page fixture (tests/fixtures/fake-nyt) mirrors these exactly,
+//   3. the fake page fixture (extension-test/fixtures/fake-nyt) mirrors these exactly,
 //      so integration tests define the expected shape.
 // Last verified against: a saved live Mini page (7×7, 2026-07-04), plus a live toolbar
 // capture (2026-07-05): `.xwd__toolbar--wrapper > ul.xwd__toolbar--tools` with

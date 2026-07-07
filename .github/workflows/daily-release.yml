@@ -29,8 +29,8 @@ jobs:
   daily-release:
     uses: missingbulb/Claudinite/.github/workflows/chrome-extension-daily-release.yml@main
     with:
-      bump_command: node tools/bump-version.mjs patch
-      filter_command: node tools/filter-shipped-paths.mjs
+      bump_command: node dev/build/bump-version.mjs patch
+      filter_command: node dev/build/filter-shipped-paths.mjs
       zip_path: dist/crossword-chat.zip
       zip_name: crossword-chat.zip
       manifest_path: extension/manifest.json

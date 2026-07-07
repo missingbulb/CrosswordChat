@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Page adapter vs. the faithful fake NYT page (tests/fixtures/fake-nyt).
+// Page adapter vs. the faithful fake NYT page (extension-test/fixtures/fake-nyt).
 // Same selectors, same keyboard behavior, same congrats modal as the live page —
 // this is the executable stand-in until MT-01/MT-02 confirm against nytimes.com.
 

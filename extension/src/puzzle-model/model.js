@@ -4,7 +4,7 @@
 // drift is detected instead of silently trusted.
 
 /**
- * @param {object} snapshot  see docs/ARCHITECTURE.md §3
+ * @param {object} snapshot  see dev/docs/ARCHITECTURE.md §3
  * @param {object} [overlay]
  * @param {Record<number, string>} [overlay.softCells]  session ledger of cells the
  *   extension itself penciled (index → letter, REQ-ANS-019). The live page exposes no

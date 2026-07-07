@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
-const ROOT = new URL('../tests/fixtures/fake-nyt', import.meta.url).pathname;
+const ROOT = new URL('../extension-test/fixtures/fake-nyt', import.meta.url).pathname;
 const PORT = 8787;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 

@@ -3,7 +3,7 @@
 // Everything is drawn as inline SVG/HTML and rasterized with headless Chromium, so the
 // assets are reproducible: edit this file, re-run, commit the PNGs.
 //
-//   node tools/make-store-assets.mjs
+//   node dev/build/make-store-assets.mjs
 //
 // Outputs:
 //   extension/icons/icon-{16,32,48,128}.png              — manifest icons (transparent corners)
@@ -18,9 +18,9 @@
 import { chromium } from 'playwright-core';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { GOLD, INK, brandIconSvg } from '../extension/src/shared/brand-icon.js';
+import { GOLD, INK, brandIconSvg } from '../../extension/src/shared/brand-icon.js';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = new URL('../..', import.meta.url).pathname;
 const ICONS = join(ROOT, 'extension/icons');
 const STORE = join(ROOT, 'dev/build/release/store_artifacts');
 mkdirSync(ICONS, { recursive: true });
