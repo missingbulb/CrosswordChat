@@ -9,8 +9,8 @@ name: "Release: Publish to Chrome Web Store"
 # exists and you're ready to ship it to users. The daily auto-release also
 # publishes, but through the canon workflows directly — not through this stub.
 #
-# secrets: inherit passes the four CHROME_* store secrets (see
-# dev/build/release/releasing.md) into the canon workflow.
+# secrets: inherit passes the four CHROME_* store secrets (see the
+# chrome-extension release standard in Claudinite) into the canon workflow.
 on:
   workflow_dispatch:
     inputs:

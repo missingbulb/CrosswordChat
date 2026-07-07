@@ -1,0 +1,10 @@
+{
+  "packs": [
+    "chrome-extension",
+    "chrome-extension-release",
+    "github-actions",
+    "node"
+  ],
+  "rules": {},
+  "accept": []
+}

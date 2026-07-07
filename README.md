@@ -39,8 +39,7 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 | `extension/src/{app,background,content}/` | Wiring: orchestrator, icon toggle, in-page session host, TTS relay. |
 | `tests/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
-| [`dev/build/release/releasing.md`](dev/build/release/releasing.md) | Versioning, the standard release workflows, and Chrome Web Store publication (this repo's instance of the shared chrome-extension-release standard). |
-| [`dev/build/release/store_artifacts/`](dev/build/release/store_artifacts) | Chrome Web Store submission kit: [`STORE-LISTING.md`](dev/build/release/store_artifacts/STORE-LISTING.md) (listing copy, permission justifications, privacy disclosures, reviewer notes), [`PRIVACY.md`](dev/build/release/store_artifacts/PRIVACY.md) (the public privacy policy, published at [missingbulb.github.io/CrosswordChat/privacy/](https://missingbulb.github.io/CrosswordChat/privacy/)), screenshots and promo tiles (regenerate: `node tools/make-store-assets.mjs`). |
+| [`dev/build/release/store_artifacts/`](dev/build/release/store_artifacts) | Chrome Web Store assets: [`PRIVACY.md`](dev/build/release/store_artifacts/PRIVACY.md) (the public privacy policy, published at [missingbulb.github.io/CrosswordChat/privacy/](https://missingbulb.github.io/CrosswordChat/privacy/)), screenshots and promo tiles (regenerate: `node tools/make-store-assets.mjs`). |
 | `.github/workflows/` | Test (every push) + the standard release set: Release: Create Package, Release: Publish to Chrome Web Store, Release: Daily Auto-Release, the privacy-page deploy, and the failure reporter. |
 
 ## Executable requirements — how verification works
@@ -58,8 +57,7 @@ npm run verify    # both
 
 ## Install
 
-*Not yet on the Chrome Web Store — the listing goes live after the first manual publish (see
-[dev/build/release/releasing.md](dev/build/release/releasing.md)).*
+**[Install from the Chrome Web Store →](https://chromewebstore.google.com/detail/crosswordchat/ejhdleiiadnblaenljmpgfpgmhbfcgec)**
 
 Or load the latest development build:
 
@@ -84,8 +82,7 @@ npm run fixture     # serves the fake crossword at http://localhost:8787
 The version users see is [`extension/manifest.json`](extension/manifest.json)'s `version`.
 Merging a version bump to `main` cuts GitHub Release `vX.Y.Z` with `crossword-chat.zip`
 attached, and the daily auto-release ships shipped-file changes to the Chrome Web Store on its
-own (patch-bumping as needed). Full procedure:
-[dev/build/release/releasing.md](dev/build/release/releasing.md).
+own (patch-bumping as needed).
 
 ## Status & next steps
 
