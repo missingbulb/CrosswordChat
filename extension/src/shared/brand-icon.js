@@ -1,6 +1,6 @@
 // The CrosswordChat mark — a speech bubble that is itself a crossword grid — as one
 // shared SVG builder, so the in-page toolbar button (REQ-LIFE-012), the action icons,
-// and the store assets (tools/make-store-assets.mjs) can never drift apart.
+// and the store assets (dev/build/make-store-assets.mjs) can never drift apart.
 // Pure string building; no DOM, no browser APIs.
 //
 // Injection hardening: this SVG gets inlined into the NYT page (REQ-LIFE-012), so it

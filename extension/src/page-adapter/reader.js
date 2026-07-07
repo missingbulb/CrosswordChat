@@ -131,7 +131,7 @@ export function isRuledWrong(document) {
     .some((m) => isVisible(m) && WRONG_VERDICT.test(m.textContent ?? ''));
 }
 
-/** @returns {object} Snapshot (docs/ARCHITECTURE.md §3) */
+/** @returns {object} Snapshot (dev/docs/ARCHITECTURE.md §3) */
 export function snapshot(document) {
   const grid = readGrid(document);
   if (!grid) {

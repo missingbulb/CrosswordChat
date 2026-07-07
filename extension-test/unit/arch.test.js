@@ -1,4 +1,4 @@
-// Architecture rules, enforced mechanically (see docs/ARCHITECTURE.md §2).
+// Architecture rules, enforced mechanically (see dev/docs/ARCHITECTURE.md §2).
 
 import { describe, test, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';

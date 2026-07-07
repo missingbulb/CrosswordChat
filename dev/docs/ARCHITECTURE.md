@@ -179,9 +179,9 @@ Page operations need no messages anymore — the orchestrator calls the page ada
 |---|---|---|
 | `matching`, `puzzle-model`, `conversation` | vitest, pure node | REQ-ANS/MODEL/NAV/CMD/HINT/READ/LIFE policy — the bulk of the spec |
 | `speech` ports | vitest + hand-rolled fake `SpeechRecognition`/`chrome.tts` | REQ-SPCH wrapper behavior, error taxonomy |
-| `page-adapter` | vitest + jsdom against **`tests/fixtures/fake-nyt/`** — a faithful replica of the NYT crossword DOM (same classes, same keyboard behavior, congrats modal) | REQ-PAGE end to end without nytimes.com |
-| Architecture rules | `tests/unit/arch.test.js` greps the tree | REQ-PAGE-011, REQ-NFR-001/002 |
-| Live page, mic, audio | `docs/MANUAL-TESTS.md` scripts MT-01… | everything a browser can't fake honestly |
+| `page-adapter` | vitest + jsdom against **`extension-test/fixtures/fake-nyt/`** — a faithful replica of the NYT crossword DOM (same classes, same keyboard behavior, congrats modal) | REQ-PAGE end to end without nytimes.com |
+| Architecture rules | `extension-test/unit/arch.test.js` greps the tree | REQ-PAGE-011, REQ-NFR-001/002 |
+| Live page, mic, audio | `dev/docs/MANUAL-TESTS.md` scripts MT-01… | everything a browser can't fake honestly |
 | Traceability | `tools/trace.mjs` (`npm run trace`) | every Active REQ ↔ some test; no phantom IDs (REQ-NFR-006) |
 
 The fake page double-dips: it is the integration-test target **and** a local rehearsal stage —

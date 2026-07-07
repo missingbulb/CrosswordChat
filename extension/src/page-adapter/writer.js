@@ -7,7 +7,7 @@
 //     app's handlers read those, and a bare {key} event constructs them as 0.
 //   - The live page renders asynchronously (React), so verification POLLS the DOM
 //     instead of reading it synchronously right after the last dispatch.
-// Further fallbacks if the live page ignores untrusted events: docs/FEASIBILITY.md §3.
+// Further fallbacks if the live page ignores untrusted events: dev/docs/FEASIBILITY.md §3.
 //
 // Pencil mode (REQ-PAGE-012): cells may carry a `pencil` flag; letters are typed with
 // the page's pencil toggle driven to match, and the toggle is restored afterwards so

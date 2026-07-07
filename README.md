@@ -8,7 +8,7 @@ extension icon) to start; click again to stop; solve the puzzle to hear "Hooray.
 
 ## The three feasibility questions, answered
 
-Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
+Full analysis in [`dev/docs/FEASIBILITY.md`](dev/docs/FEASIBILITY.md):
 
 1. **Fully client-side?** Yes — no server, no API keys, nothing to deploy. One asterisk: Chrome's
    default speech recognition runs on Google's servers (part of the browser, not ours); recent
@@ -27,19 +27,19 @@ Full analysis in [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md):
 
 | Path | What it is |
 |---|---|
-| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | **Source of truth.** ~80 testable requirements with case analyses; every Active one is enforced to have a test (see below). |
-| [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md) | Client-side validation, speech API availability, grid-writing strategies + fallbacks. |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module map, runtime topology, data contracts, decision log. |
-| [`docs/MANUAL-TESTS.md`](docs/MANUAL-TESTS.md) | MT-01…MT-31: minutes-long scripts for everything a browser can't fake (live page, mic, audio). |
+| [`dev/docs/REQUIREMENTS.md`](dev/docs/REQUIREMENTS.md) | **Source of truth.** ~80 testable requirements with case analyses; every Active one is enforced to have a test (see below). |
+| [`dev/docs/FEASIBILITY.md`](dev/docs/FEASIBILITY.md) | Client-side validation, speech API availability, grid-writing strategies + fallbacks. |
+| [`dev/docs/ARCHITECTURE.md`](dev/docs/ARCHITECTURE.md) | Module map, runtime topology, data contracts, decision log. |
+| [`dev/docs/MANUAL-TESTS.md`](dev/docs/MANUAL-TESTS.md) | MT-01…MT-31: minutes-long scripts for everything a browser can't fake (live page, mic, audio). |
 | `extension/src/page-adapter/` | The only code that knows the NYT DOM (read grid/clues, type answers, watch changes, self-diagnosing probe). |
 | `extension/src/puzzle-model/` | Pure crossword semantics: numbering, crossings, patterns, full-vs-solved. |
 | `extension/src/matching/` | Pure speech-to-answer matching: normalization, digits→words, homophone dictionary, length/collision verdicts, command lexicon. |
 | `extension/src/conversation/` | Pure dialog policy: state machine, next-clue strategies, all English strings + clue verbalizer. |
 | `extension/src/speech/` | TTS/STT wrappers over browser APIs, injectable for tests. |
 | `extension/src/{app,background,content}/` | Wiring: orchestrator, icon toggle, in-page session host, TTS relay. |
-| `tests/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
+| `extension-test/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
-| [`dev/build/release/store_artifacts/`](dev/build/release/store_artifacts) | Chrome Web Store assets: [`PRIVACY.md`](dev/build/release/store_artifacts/PRIVACY.md) (the public privacy policy, published at [missingbulb.github.io/CrosswordChat/privacy/](https://missingbulb.github.io/CrosswordChat/privacy/)), screenshots and promo tiles (regenerate: `node tools/make-store-assets.mjs`). |
+| [`dev/build/release/store_artifacts/`](dev/build/release/store_artifacts) | Chrome Web Store assets: [`PRIVACY.md`](dev/build/release/store_artifacts/PRIVACY.md) (the public privacy policy, published at [missingbulb.github.io/CrosswordChat/privacy/](https://missingbulb.github.io/CrosswordChat/privacy/)), screenshots and promo tiles (regenerate: `node dev/build/make-store-assets.mjs`). |
 | `.github/workflows/` | Test (every push) + the standard release set: Release: Create Package, Release: Publish to Chrome Web Store, Release: Daily Auto-Release, the privacy-page deploy, and the failure reporter. |
 
 ## Executable requirements — how verification works
@@ -88,5 +88,5 @@ own (patch-bumping as needed).
 
 Scaffolding with all pure logic implemented and tested offline. Before building further, run
 **MT-01** (selector probe) and **MT-02** (injection spike) from
-[`docs/MANUAL-TESTS.md`](docs/MANUAL-TESTS.md) on the live site — they validate the only real
+[`dev/docs/MANUAL-TESTS.md`](dev/docs/MANUAL-TESTS.md) on the live site — they validate the only real
 unknowns (NYT's current markup and untrusted-event handling) in under five minutes.
