@@ -11,6 +11,7 @@ import { enterAnswer, clearEntry } from '../../extension/src/page-adapter/writer
 import { selectClue } from '../../extension/src/page-adapter/navigator.js';
 import { probe } from '../../extension/src/page-adapter/probe.js';
 import { createWatcher } from '../../extension/src/page-adapter/watcher.js';
+import { isPaused } from '../../extension/src/page-adapter/pause.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const word = (letters, startIndex, stride) =>
@@ -241,5 +242,18 @@ describe('watcher', () => {
     await sleep(40);
     watcher.stop();
     expect(events).toEqual([]); // no echo of our own activity
+  });
+
+  test('REQ-LIFE-017: the watcher resumes an auto-paused puzzle without a spurious event', async () => {
+    app.typeAt(0, 'across', 'HEART'); // an answer is on the board before the pause
+    const events = [];
+    const watcher = createWatcher(document, (kind) => events.push({ kind }), { debounceMs: 5 });
+    watcher.start();
+    app.showPause(); // NYT veils the board mid-session, blanking the entries
+    await sleep(60);
+    watcher.stop();
+    expect(isPaused(document)).toBe(false); // resumed for the user
+    expect(snapshot(document).cells.slice(0, 5).map((c) => c.letter)).toEqual(['H', 'E', 'A', 'R', 'T']);
+    expect(events).toEqual([]); // the veiled, letter-less grid was never read as a change
   });
 });

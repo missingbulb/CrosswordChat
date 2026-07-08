@@ -59,8 +59,10 @@ function entriesFromGrid(rows, cols, isBlock) {
  *   splash — cover the app with the pre-puzzle "Ready to start solving?" modal
  *     (REQ-LIFE-016); its Play button removes it. 'stuck' renders a Play button
  *     that ignores clicks, like a page that only honors trusted input.
+ *   paused — start behind the auto-pause veil ("Your puzzle is paused" + Resume,
+ *     REQ-LIFE-017); Resume lifts it. Also reachable at runtime via app.showPause().
  */
-export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false, pencilMarkup = 'aria', toolbarWithoutPencil = false, splash = false } = {}) {
+export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false, pencilMarkup = 'aria', toolbarWithoutPencil = false, splash = false, paused = false } = {}) {
   const { rows, cols, solution } = puzzle;
   const isBlock = (r, c) => solution[r][c] === '#';
   const entries = entriesFromGrid(rows, cols, isBlock);
@@ -77,6 +79,9 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     selCell: entries[0]?.cells[0] ?? 0,
     selDir: 'across',
     solved: false,
+    // Auto-pause (REQ-LIFE-017): while paused the games shell veils the board and blanks
+    // the entries, exactly what a naive reader would misread as the user erasing the grid.
+    paused: false,
   };
 
   const SVG = 'http://www.w3.org/2000/svg';
@@ -246,6 +251,31 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     document.body.append(veil);
   }
 
+  // Auto-pause veil (REQ-LIFE-017): the games shell moment shown after a stretch with no
+  // keystrokes — "Your puzzle is paused" over the (blanked) board, with a Resume button
+  // that lifts it. Same moment class family as the splash; pause.js tells them apart by
+  // the word "paused". showPause() re-mounts it on demand for the mid-session case.
+  function showPause() {
+    if (state.paused) return;
+    state.paused = true;
+    const veil = document.createElement('div');
+    veil.className = 'pz-moment__content xwd__modal--pause';
+    veil.setAttribute('data-testid', 'pause-moment');
+    veil.innerHTML = [
+      '<h2 class="pz-moment__title large karnak">Your puzzle is paused</h2>',
+      '<div class="pz-moment__button-group"><div class="pz-moment__button-wrapper vertical">',
+      '<button type="button" class="_momentButton_e4jbe_2 _primary_e4jbe_37">Resume</button>',
+      '</div></div>',
+    ].join('');
+    veil.querySelector('button').addEventListener('click', () => {
+      state.paused = false;
+      veil.remove();
+      paint(); // entries reappear
+    });
+    document.body.append(veil);
+    paint(); // blank the entries behind the veil
+  }
+
   const entryAt = (cellIndex, dir) =>
     entries.find((e) => e.direction === dir && e.cells.includes(cellIndex))
       ?? entries.find((e) => e.cells.includes(cellIndex));
@@ -265,10 +295,13 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   function paint() {
     state.letters.forEach((letter, i) => {
       if (!letterNodes[i]) return;
-      letterNodes[i].textContent = letter;
+      // Paused: the shell veils the board and shows blanks — the entries are still in
+      // state, just not on screen (REQ-LIFE-017).
+      const shown = state.paused ? '' : letter;
+      letterNodes[i].textContent = shown;
       // The live page mirrors state into the hidden aria-live copy; readers that use
       // textContent instead of own text nodes would see the letter doubled.
-      letterHiddenEls[i].textContent = letter;
+      letterHiddenEls[i].textContent = shown;
     });
     const entry = selectedEntry();
     rectEls.forEach((rect, i) => {
@@ -363,9 +396,12 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   }
 
   render();
+  if (paused) showPause(); // after paint()/entryAt are live, so the veil blanks a real grid
   return {
     state,
     entries,
+    /** Test helper: raise the auto-pause veil mid-session (REQ-LIFE-017). */
+    showPause,
     /** Test helper: type a string through the same code path as real key events. */
     typeAt(cellIndex, dir, word) {
       state.selCell = cellIndex;

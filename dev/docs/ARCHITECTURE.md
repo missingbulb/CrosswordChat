@@ -47,7 +47,10 @@ extension/src/
     writer.js        enterAnswer/clearEntry via click + synthetic keydown, verified re-read;
                      per-cell pencil mode via the toolbar toggle, user's state restored
     navigator.js     selectClue (click the clue list item)
-    watcher.js       MutationObserver → {solved | selection | grid} events (session-scoped)
+    watcher.js       MutationObserver → {solved | selection | grid} events (session-scoped);
+                     auto-resumes the NYT pause veil so a live session never freezes (REQ-LIFE-017)
+    splash.js        pre-puzzle "Ready to start solving?" veil: find + click Play (REQ-LIFE-016)
+    pause.js         auto-pause "Your puzzle is paused" veil: find + click Resume (REQ-LIFE-017)
     session-button.js  the in-page start/stop toggle, injected right of NYT's pencil
                      (REQ-LIFE-012); waits for the toolbar, degrades to no-button
     probe.js         selector health report for the live page
