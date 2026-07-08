@@ -1,0 +1,91 @@
+/*
+  A styling MODEL of the NYT crossword toolbar (spec-driven-product §6: name the
+  boundary of the stub). NYT's real toolbar CSS and its tool-icon webfont are not
+  shipped in this repo, so this reproduces the row's layout and typography, and the
+  icon-font glyphs are substituted with simple inline SVGs by render/toolbar.js.
+  The text tools, the timer, spacing, and the injected CrosswordChat button are
+  real. Inlined onto the captured DOM before satori (which has no CSS engine).
+*/
+
+.xwd__toolbar--wrapper {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #e6e6e6;
+  padding: 16px 22px;
+  font-family: 'Liberation Sans', sans-serif;
+}
+
+.xwd__toolbar--tools {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* NYT wraps some tool groups in bare <div>s inside the <ul>; keep them horizontal. */
+.xwd__toolbar--tools > div,
+.xwd__toolbar--expandedMenu {
+  display: flex;
+  align-items: center;
+}
+
+/* Wide layout: the individual Clear/Reveal/Check tools show; the condensed
+   single "Cheat" menu is hidden (it's the narrow-layout alternative). */
+.xwd__toolbar--condensedMenu {
+  display: none;
+}
+
+.xwd__tool--button {
+  display: flex;
+  align-items: center;
+  list-style: none;
+}
+
+.xwd__tool--button > button {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: 'Liberation Sans', sans-serif;
+  font-size: 17px;
+  color: #121212;
+  padding: 8px 15px;
+}
+
+/* NYT capitalizes the text tools ("clear" -> "Clear"). */
+.xwd__tool--texty > button {
+  text-transform: capitalize;
+}
+
+.timer-count {
+  font-size: 17px;
+  color: #121212;
+  padding-right: 8px;
+}
+
+/* Dropdown menus are closed until opened — hide them in the resting toolbar. */
+.xwd__menu--container {
+  display: none;
+}
+
+/* Echo the toolbar's two wide gaps: after the timer (before the text tools) and
+   after the text tools (before the support/pencil icons). */
+.xwd__timer--button {
+  margin-right: 42px;
+}
+.xwd__toolbar--expandedMenu {
+  margin-right: 42px;
+}
+
+/* Icon slots: render/toolbar.js injects a small inline SVG into each; just let it
+   size itself. */
+.xwd__toolbar_icon--settings-gear,
+.xwd__toolbar_icon--support,
+.xwd__toolbar_icon--pencil,
+.pz-icon {
+  display: block;
+}

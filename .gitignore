@@ -6,3 +6,5 @@ node_modules/
 dist/
 *.log
 dist-pages/
+
+dev/requirements/ui/render/.artifacts/

@@ -1,17 +1,16 @@
-// In-page session control (REQ-LIFE-012): a split button placed in NYT's puzzle toolbar
-// — right of the pencil toggle when one can be found, at the end of the tool row
-// otherwise — so starting a conversation is discoverable where the solving happens. The
-// main part toggles the session (start when idle, stop mid-session); a small caret opens
-// a menu with Activate, Settings, and Voice commands (help) — REQ-CMD-007. This is the ONE
-// load-time page change the extension makes (REQ-NFR-004's carve-out). The NYT app renders
-// after the content script loads (and can sit behind the pre-puzzle splash for minutes), so
-// mounting waits with a MutationObserver that disconnects the moment the button lands. The
-// give-up timer only fires for real on pages that show no crossword app markup at all
-// (archive pages, section fronts): no button, no errors, the icon still works. While app
-// markup IS present, it keeps waiting — a slow render or splash screen must not cost the
-// button.
+// In-page session control (REQ-LIFE-012): a split button placed at the right end of NYT's
+// puzzle toolbar — so starting a conversation is discoverable where the solving happens (the
+// extension icon remains an equivalent control). The main half toggles the session (start
+// when idle, stop mid-session); a small caret opens a menu with Activate, Settings, and Voice
+// commands (help) — REQ-CMD-007. This is the ONE load-time page change the extension makes
+// (REQ-NFR-004's carve-out). The NYT app renders after the content script loads (and can sit
+// behind the pre-puzzle splash for minutes), so mounting waits with a MutationObserver that
+// disconnects the moment the button lands. The give-up timer only fires on pages that show no
+// crossword app markup at all (archive pages, section fronts): no button, no errors, the icon
+// still works. While app markup IS present, it keeps waiting — a slow render or splash must
+// not cost the button. The button lives only in the toolbar: no toolbar, no on-page button.
 
-import { SEL, findPencilToggle, CC_BUTTON_ID } from './selectors.js';
+import { SEL, CC_BUTTON_ID } from './selectors.js';
 import { brandIconSvg, GOLD, INK } from '../shared/brand-icon.js';
 
 export const BUTTON_ID = CC_BUTTON_ID;
@@ -33,15 +32,13 @@ const STATIC_ITEMS = [
   { act: 'help', label: 'Voice commands' },
 ];
 
-// Where to put the button: right of the pencil toggle when one is recognizable;
-// otherwise right of the toolbar's last button (a redesigned toolbar without a
-// findable pencil still gets the feature). Returns null when there is nothing yet.
-function findAnchor(document) {
-  const pencil = findPencilToggle(document);
-  if (pencil) return pencil;
+// The toolbar's tool row — the button appends here as its last child, so it always lands at
+// the right end. Returns null when no toolbar is present yet (the page hasn't rendered one,
+// or has none at all — an archive page).
+function findToolRow(document) {
   const toolbar = document.querySelector(SEL.toolbar);
-  const buttons = toolbar?.querySelectorAll('button, [role="button"]') ?? [];
-  return buttons.length ? buttons[buttons.length - 1] : null;
+  if (!toolbar) return null;
+  return toolbar.querySelector('ul') ?? toolbar;
 }
 
 /**
@@ -50,12 +47,10 @@ function findAnchor(document) {
  * @param {{onToggle: () => void, onSettings?: () => void, onHelp?: () => void}} handlers
  *   onToggle — main click / Activate item (caller decides start vs stop);
  *   onSettings / onHelp — the dropdown items.
- * @param {{waitMs?: number, floatAfterMs?: number}} [opts]  waitMs — give-up re-check
- *   interval for non-app pages; floatAfterMs — how long to hunt for a toolbar anchor
- *   before floating the button over the board instead (0 disables floating)
+ * @param {{waitMs?: number}} [opts]  waitMs — give-up re-check interval for non-app pages.
  * @returns {{setActive(on: boolean): void, remove(): void}}
  */
-export function mountSessionButton(document, handlers, { waitMs = 30_000, floatAfterMs = 10_000 } = {}) {
+export function mountSessionButton(document, handlers, { waitMs = 30_000 } = {}) {
   const { onToggle, onSettings, onHelp } = handlers ?? {};
   const view = document.defaultView ?? globalThis;
   let wrapper = null; // the #CC_BUTTON_ID container (placement + dedupe + remove)
@@ -67,7 +62,6 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000, floatA
   let menuOpen = false;
   let observer = null;
   let giveUp = null;
-  let floatTimer = null;
   let onDocPointer = null; // outside-click / Escape closers, live only while the menu is open
 
   const settle = () => {
@@ -75,8 +69,6 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000, floatA
     observer = null;
     if (giveUp != null) view.clearTimeout(giveUp);
     giveUp = null;
-    if (floatTimer != null) view.clearTimeout(floatTimer);
-    floatTimer = null;
   };
 
   const apply = () => {
@@ -136,26 +128,17 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000, floatA
     return item;
   };
 
-  // Build the whole split button. `className` borrows the toolbar's (hashed) button
-  // styling for the main half; `floating` places the menu above (bottom-anchored button)
-  // instead of below, and rounds the main half for the over-board fallback.
-  const build = ({ className, floating }) => {
+  // Build the whole split button: a main half wearing the mark, a caret, and the menu that
+  // drops below it. Every paint is inline, and the SVG is hostile-host-hardened (brand-icon).
+  const build = () => {
     wrapper = document.createElement('span');
     wrapper.id = BUTTON_ID;
-    wrapper.style.cssText = floating
-      ? 'position:fixed;right:18px;bottom:18px;z-index:2147483647;display:inline-flex;'
-        + 'align-items:center;background:#fff;border:1px solid #c7c7c7;border-radius:22px;'
-        + 'box-shadow:0 2px 8px rgba(0,0,0,.25);'
-      : 'position:relative;display:inline-flex;align-items:center;';
+    wrapper.style.cssText = 'position:relative;display:inline-flex;align-items:center;';
 
     mainBtn = document.createElement('button');
     mainBtn.type = 'button';
     mainBtn.dataset.ccRole = 'main';
-    if (className) mainBtn.className = className; // borrow the toolbar's button styling
-    mainBtn.style.cssText = floating
-      ? 'background:transparent;border:0;cursor:pointer;display:inline-flex;align-items:center;'
-        + 'justify-content:center;width:40px;height:40px;padding:5px;'
-      : 'background:transparent;border:0;cursor:pointer;display:inline-flex;align-items:center;';
+    mainBtn.style.cssText = 'background:transparent;border:0;cursor:pointer;display:inline-flex;align-items:center;';
     mainBtn.addEventListener('click', () => onToggle?.());
 
     caretBtn = document.createElement('button');
@@ -168,7 +151,7 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000, floatA
     caretBtn.textContent = '▾';
     caretBtn.style.cssText = 'background:transparent;border:0;cursor:pointer;display:inline-flex;'
       + 'align-items:center;justify-content:center;font-size:12px;line-height:1;color:inherit;'
-      + `padding:0 4px;${floating ? 'height:40px;' : 'align-self:stretch;'}`;
+      + 'padding:0 4px;align-self:stretch;';
     caretBtn.addEventListener('click', (event) => {
       event.stopPropagation();
       event.preventDefault();
@@ -179,9 +162,10 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000, floatA
     menu.setAttribute('role', 'menu');
     menu.dataset.ccRole = 'menu';
     menu.hidden = true;
-    menu.style.cssText = 'position:absolute;right:0;min-width:150px;background:#fff;color:#191919;'
-      + 'border:1px solid #d6d6d6;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);'
-      + `padding:4px 0;z-index:2147483647;font:13px/1.4 system-ui,sans-serif;${floating ? 'bottom:100%;margin-bottom:6px;' : 'top:100%;margin-top:4px;'}`;
+    menu.style.cssText = 'position:absolute;right:0;top:100%;margin-top:4px;min-width:150px;'
+      + 'background:#fff;color:#191919;border:1px solid #d6d6d6;border-radius:8px;'
+      + 'box-shadow:0 4px 14px rgba(0,0,0,.18);padding:4px 0;z-index:2147483647;'
+      + 'font:13px/1.4 system-ui,sans-serif;';
     activateItem = makeItem('Activate', () => onToggle?.());
     activateItem.dataset.ccAct = 'activate';
     menu.append(activateItem);
@@ -197,28 +181,11 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000, floatA
 
   const tryMount = () => {
     if (document.getElementById(BUTTON_ID)) return true; // already there (duplicate mount)
-    const anchor = findAnchor(document);
-    if (!anchor) return false;
-    build({ className: anchor.className, floating: false });
-    anchor.after(wrapper);
+    const row = findToolRow(document);
+    if (!row) return false;
+    build();
+    row.append(wrapper); // last child of the tool row → the right end of the toolbar
     return true;
-  };
-
-  // Last-resort placement (REQ-LIFE-012 tier 3): when a board is visibly there but no
-  // toolbar anchor has turned up for floatAfterMs, float the button over the page —
-  // the mark must never be simply absent on a puzzle the user can see.
-  const mountFloating = () => {
-    if (document.getElementById(BUTTON_ID)) return true;
-    if (!document.querySelector(SEL.board)) return false;
-    build({ className: '', floating: true });
-    document.body.append(wrapper);
-    return true;
-  };
-
-  const tryFloat = () => {
-    floatTimer = null;
-    if (mountFloating()) settle();
-    else floatTimer = view.setTimeout(tryFloat, floatAfterMs); // no board yet — keep checking
   };
 
   // The crossword app can render (or leave the splash) minutes after us, so as long as
@@ -236,7 +203,6 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000, floatA
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
     giveUp = view.setTimeout(checkGiveUp, waitMs);
-    if (floatAfterMs > 0) floatTimer = view.setTimeout(tryFloat, floatAfterMs);
   }
 
   return {
