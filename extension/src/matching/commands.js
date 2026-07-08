@@ -24,6 +24,20 @@ function parseClueNumber(text) {
   return NUMBER_WORDS.get(joined) ?? null;
 }
 
+// A clue label ("22 down", "5 a cross") → {number, direction} (REQ-NAV-013). Either part
+// may come back null when STT garbled it — the machine asks for the label rather than
+// guessing. Used for the explicit "go to ..." prefix, where the whole tail is a label by
+// construction: a missing direction is asked for, not treated as an answer.
+function parseGotoLabel(tail) {
+  const m = tail.match(/^(.+?) (across|a cross|cross|down)$/);
+  if (m) {
+    return { number: parseClueNumber(m[1]), direction: m[2] === 'down' ? 'down' : 'across' };
+  }
+  // No trailing direction word: the tail might be a bare number ("go to seven"). Report
+  // the number when it parses; the machine asks which direction.
+  return { number: parseClueNumber(tail), direction: null };
+}
+
 const PHRASES = {
   next: ['next', 'next clue', 'next one', 'pass', 'pass on this', 'skip', 'skip it',
     'skip this one', 'move on'],
@@ -103,11 +117,18 @@ export function parseCommand(text) {
     if (letters.length && !control && !ignored) return { command: 'spell', arg: letters };
   }
 
-  // "seven across" / "go to 22 down" — a clue label is a navigation command
-  // (REQ-NAV-013). Only a real number counts; other "... down" utterances fall through.
-  // STT often renders "across" as "a cross" or just "cross" (live report: "5 across"
-  // never matched while "5 down" always did) — accept all three.
-  m = norm.match(/^(?:go to |goto |jump to )?(.+?) (across|a cross|cross|down)$/);
+  // "go to ..." is an explicit navigation prefix (REQ-NAV-013): whatever follows is meant
+  // as a clue label, even when STT mangled the direction or dropped it. Parse the tail as
+  // a label and always return a goto — a garbled number or a missing direction makes the
+  // machine ask for the label, never dumps "go to ..." into the answer pipeline.
+  m = norm.match(/^(?:go to|goto|go too|go two|go 2|jump to) (.+)$/);
+  if (m) return { command: 'goto', arg: parseGotoLabel(m[1]) };
+
+  // Bare "seven across" / "22 down" — a clue label is a navigation command (REQ-NAV-013).
+  // Only a real number counts; other "... down" utterances fall through. STT often renders
+  // "across" as "a cross" or just "cross" (live report: "5 across" never matched while
+  // "5 down" always did) — accept all three.
+  m = norm.match(/^(.+?) (across|a cross|cross|down)$/);
   if (m) {
     const number = parseClueNumber(m[1]);
     const direction = m[2] === 'down' ? 'down' : 'across';
@@ -125,4 +146,45 @@ export function parseCommand(text) {
   if (m) return { command: 'answer', arg: m[1] };
 
   return null;
+}
+
+// High-signal single words that still identify a command when buried in a longer,
+// mis-heard phrase (REQ-ANS-026). Deliberately narrow — only words unlikely to be part of
+// a real answer — and only consulted AFTER an exact parse and answer evaluation have both
+// failed on an utterance too long to be the answer. Contextual intents (yes/no/choice) are
+// never fuzzy-matched.
+const FUZZY_TRIGGERS = new Map();
+for (const [word, command] of Object.entries({
+  next: 'next', skip: 'next', pass: 'next',
+  back: 'back', previous: 'back',
+  flip: 'flip',
+  undo: 'undo', undue: 'undo',
+  clear: 'clear', delete: 'clear', erase: 'clear',
+  repeat: 'repeat', again: 'repeat',
+  hint: 'hint', hints: 'hint',
+  help: 'help',
+  stop: 'stop', goodbye: 'stop', quit: 'stop', exit: 'stop',
+  spell: 'spell',
+  pencil: 'pencil',
+  anyway: 'enter-anyway', anyways: 'enter-anyway',
+})) FUZZY_TRIGGERS.set(word, command);
+
+/**
+ * Last-resort command recognition for an utterance that was NOT a clean command and did
+ * NOT evaluate as an answer (REQ-ANS-026). Scans the tokens for a single unambiguous
+ * command word; returns null when none appear, or when two DIFFERENT commands do (a
+ * genuine ambiguity we refuse to guess through).
+ * @returns {{command: string} | null}
+ */
+export function fuzzyCommand(text) {
+  const norm = normalizeUtterance(text);
+  if (!norm) return null;
+  let found = null;
+  for (const tok of norm.split(' ')) {
+    const command = FUZZY_TRIGGERS.get(tok);
+    if (!command) continue;
+    if (found && found !== command) return null; // conflicting commands — don't guess
+    found = command;
+  }
+  return found ? { command: found } : null;
 }

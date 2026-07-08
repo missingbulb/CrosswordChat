@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { toLetters, normalizedTokens, numberToWord, ordinalToWord } from '../../extension/src/matching/normalize.js';
 import { homophonesOf } from '../../extension/src/matching/homophone-data.js';
 import { evaluate, collectSpelledLetters, patternCompatible, collisionsWith } from '../../extension/src/matching/evaluate.js';
-import { parseCommand } from '../../extension/src/matching/commands.js';
+import { parseCommand, fuzzyCommand } from '../../extension/src/matching/commands.js';
 
 const P = (s) => s.split('').map((ch) => (ch === '.' ? null : ch)); // 'HEA.T' → pattern
 
@@ -206,6 +206,30 @@ describe('evaluate', () => {
       .toEqual({ kind: 'fit', word: 'AREYOU', spelledDifferently: false });
   });
 
+  test('REQ-ANS-026: a reading more than 4 letters too long is not a wrong-length answer', () => {
+    // A whole sentence caught by the mic overshoots the 5-cell entry by far — flagged
+    // too-long, never the frustrating "... is 40 letters, we need 5".
+    const long = evaluate({
+      alternatives: [{ transcript: 'i think the answer might just possibly be love' }],
+      entryLength: 5,
+      pattern: P('.....'),
+    });
+    expect(long.kind).toBe('too-long');
+    expect(long.needed).toBe(5);
+    // Right at the boundary stays an ordinary length-mismatch: 4 over is still reported.
+    const nine = evaluate({ alternatives: [{ transcript: 'wednesday' }], entryLength: 5, pattern: P('.....') });
+    expect(nine.kind).toBe('length-mismatch'); // WEDNESDAY is 9 = 5 + 4
+    // 5 over crosses the line.
+    const ten = evaluate({ alternatives: [{ transcript: 'incredible' }], entryLength: 5, pattern: P('.....') });
+    expect(ten.kind).toBe('too-long'); // INCREDIBLE is 10 = 5 + 5
+  });
+
+  test('REQ-ANS-026: a nearer over-length reading keeps the plain length report', () => {
+    // OCELOT (6) for a 4-entry is only 2 over — still a normal, useful length report.
+    expect(evaluate({ alternatives: [{ transcript: 'ocelot' }], entryLength: 4, pattern: P('....') }).kind)
+      .toBe('length-mismatch');
+  });
+
   test('pattern helpers behave', () => {
     expect(patternCompatible('HEART', P('H...T'))).toBe(true);
     expect(patternCompatible('HEART', P('X....'))).toBe(false);
@@ -269,6 +293,32 @@ describe('commands', () => {
     // Bare "... cross" with no number stays an answer candidate (RED CROSS is a word).
     expect(parseCommand('red cross')).toBeNull();
     expect(parseCommand('holy cross')).toBeNull();
+  });
+
+  test('REQ-NAV-013: "go to" is an explicit navigation prefix, even with a shaky tail', () => {
+    // The prefix forces a label parse: number + direction come straight through.
+    expect(parseCommand('go to seven across')).toEqual({ command: 'goto', arg: { number: 7, direction: 'across' } });
+    expect(parseCommand('goto 22 down')).toEqual({ command: 'goto', arg: { number: 22, direction: 'down' } });
+    // A garbled number under the prefix still navigates — direction kept, number asked for.
+    expect(parseCommand('go to gibberish across')).toEqual({ command: 'goto', arg: { number: null, direction: 'across' } });
+    // A number with no direction is still a goto (the machine asks which way), NOT an answer.
+    expect(parseCommand('go to seven')).toEqual({ command: 'goto', arg: { number: 7, direction: null } });
+    // STT homophones of "go to" and of "across" both hold.
+    expect(parseCommand('go 2 five a cross')).toEqual({ command: 'goto', arg: { number: 5, direction: 'across' } });
+    // Without the prefix, an ordinary "... down"/"... cross" answer still falls through.
+    expect(parseCommand('falling down')).toBeNull();
+    expect(parseCommand('red cross')).toBeNull();
+  });
+
+  test('REQ-ANS-026: fuzzyCommand plucks a lone command word out of a longer phrase', () => {
+    expect(fuzzyCommand('uh lets just go with the next one')).toEqual({ command: 'next' });
+    expect(fuzzyCommand('can you please repeat that for me')).toEqual({ command: 'repeat' });
+    expect(fuzzyCommand('okay give me a hint here')).toEqual({ command: 'hint' });
+    // Two DIFFERENT command words → refuse to guess.
+    expect(fuzzyCommand('next or maybe back i cant decide')).toBeNull();
+    // No command word at all → null (stays a didnt-catch).
+    expect(fuzzyCommand('the quick brown fox')).toBeNull();
+    expect(fuzzyCommand('')).toBeNull();
   });
 
   test('REQ-CMD-001: "spell" followed by letters carries them as the argument', () => {

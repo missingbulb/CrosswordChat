@@ -239,18 +239,24 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   app, then speech and mic stop within ~1 s with no spoken goodbye and the badge clears.
 - **Verify:** manual MT-24.
 
-#### REQ-LIFE-012 — On-page toggle button in the puzzle toolbar
+#### REQ-LIFE-012 — On-page split button in the puzzle toolbar
 - **Status:** Active · **Level:** MUST
-- The content script MUST place a start/stop button inside the puzzle page itself: in NYT's
+- The content script MUST place a start/stop control inside the puzzle page itself: in NYT's
   toolbar, immediately to the right of the pencil toggle — so the feature is discoverable where
-  the solving happens (the extension icon remains an equivalent control). The button MUST wear
-  the extension's own icon — the gold crossword-grid speech bubble, one mark everywhere: page
-  button, action icon, store assets (the artwork lives in a single shared module so they cannot
-  drift) — carry an accessible label, and MUST reflect session state (`aria-pressed`; while a
-  session runs the tile inverts: ink tile, gold bubble). Clicking it MUST behave
-  exactly like the extension icon: no session → start one (REQ-LIFE-001); a session running in
-  this tab → end it instantly and silently (REQ-LIFE-002). Sessions started from the button obey
-  one-session-at-a-time (REQ-LIFE-009). Pencil discovery MUST be live-markup-defensive
+  the solving happens (the extension icon remains an equivalent control). It is a **split
+  button**: a main half that toggles the session, and a small caret that opens a menu with
+  **Activate** (the same toggle), **Settings** (REQ-NAV-012), and **Voice commands** (the command
+  reference, REQ-CMD-007). The menu opens on the caret, closes on choosing an item or on any click
+  outside (or Escape), and the Activate row tracks session state (Activate ↔ Stop session).
+  Settings and Help open extension pages, which a content script cannot do itself, so the button
+  asks the service worker (REQ-CMD-007). The main half MUST wear the extension's own icon — the
+  gold crossword-grid speech bubble, one mark everywhere: page button, action icon, store assets
+  (the artwork lives in a single shared module so they cannot drift) — carry an accessible label,
+  and MUST reflect session state (`aria-pressed`; while a session runs the tile inverts: ink tile,
+  gold bubble). Clicking the main half MUST behave exactly like the extension icon: no session →
+  start one (REQ-LIFE-001); a session running in this tab → end it instantly and silently
+  (REQ-LIFE-002). Sessions started from the button obey one-session-at-a-time (REQ-LIFE-009).
+  Pencil discovery MUST be live-markup-defensive
   (`findPencilToggle`: accessible name → pencil-classed icon's owning button → button text);
   when no pencil is findable but a toolbar exists, the button MUST fall back to the end of the
   tool row rather than not appearing; and when not even a toolbar is findable while a BOARD is
@@ -263,12 +269,13 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   give up after the timeout: no button, no errors, the extension icon still works. The injected
   SVG MUST survive a hostile host page (no url(#…) references; paints duplicated into inline
   styles). The injection lives in the page adapter (REQ-PAGE-011 — it is NYT DOM knowledge).
-- **Accept:** Given a puzzle page, then exactly one labeled button sits right of the pencil
-  toggle (found by any net), clicking it starts a session and clicking again ends it, with
-  `aria-pressed` tracking; given a toolbar without a findable pencil, then the button sits at the
-  end of the tool row; given a toolbar that renders late — even after the give-up interval, while
-  app markup is present — then the button appears once the toolbar does; given a page with no
-  crossword markup, then no button is injected and nothing throws.
+- **Accept:** Given a puzzle page, then exactly one labeled split button sits right of the pencil
+  toggle (found by any net), clicking its main half starts a session and clicking again ends it,
+  with `aria-pressed` tracking; given the caret is clicked, then a menu of Activate/Settings/Voice
+  commands opens and choosing one closes it; given a toolbar without a findable pencil, then the
+  button sits at the end of the tool row; given a toolbar that renders late — even after the
+  give-up interval, while app markup is present — then the button appears once the toolbar does;
+  given a page with no crossword markup, then no button is injected and nothing throws.
 - **Verify:** integration `extension-test/integration/session-button.test.js`; manual MT-30.
 
 #### REQ-LIFE-013 — Action icon signals supported pages
@@ -634,13 +641,20 @@ entities. The readout must convey what the eye would see.
   frequent number homophones (won/to/for/sex/ate/nein…). When the direction was clearly *across*
   but the number still doesn't parse, ask for the number briefly ("I didn't catch which clue")
   instead of treating the utterance as an answer. When the puzzle has no such clue, reply that it
-  doesn't exist and keep listening; utterances whose leading part is not a number and whose tail
-  is not unambiguous navigation ("falling down", "red cross") are NOT gotos and stay available to
-  the answer pipeline.
+  doesn't exist and keep listening; bare utterances whose leading part is not a number and whose
+  tail is not unambiguous navigation ("falling down", "red cross") are NOT gotos and stay available
+  to the answer pipeline.
+- **Explicit "go to" prefix.** *"go to …"* (and STT variants: *goto*, *go two*, *go 2*, *jump to*)
+  is an unambiguous navigation intent: whatever follows is a clue label by construction, so the
+  matcher MUST parse the tail as a label and MUST NOT fall through to the answer pipeline — even
+  when the direction was garbled or dropped. A missing/garbled number OR a missing direction makes
+  the machine ask for the label briefly ("I didn't catch which clue"), never enter an answer. This
+  is what makes navigating to a definition robust when the listener mishears the tail.
 - **Accept:** Given "six across" on a puzzle with a 6-Across, then 6-Across is selected and read;
   given "5 a cross" or "sixth across", then the jump still happens; given "twelve down" with no
   12-Down, then the reply says there is no 12 down; given "gibberish across", then the reply asks
-  for the clue number.
+  for the clue number; given "go to six across", then 6-Across is selected; given "go to seven"
+  (no direction), then the reply asks for the label instead of answering.
 - **Verify:** unit `extension-test/unit/matching.test.js` (parsing), `extension-test/unit/machine.test.js` (jump +
   missing label + garbled number).
 
@@ -1048,6 +1062,28 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   "pen", then the next answer writes normally.
 - **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/matching.test.js`.
 
+#### REQ-ANS-026 — Over-long utterances are not answers
+- **Status:** Active · **Level:** MUST
+- Ambient speech and background noise get transcribed as long runs of words. Reading each one
+  back as a wrong-length answer — *"…that whole sentence is 200 letters, we're looking for 5"* —
+  after a long wait is the single most frustrating failure mode (live report 2026-07). So when the
+  shortest reading of an utterance is more than **4 letters longer** than the entry, the system
+  MUST NOT treat it as an answer and MUST NOT read the length-mismatch report (REQ-ANS-007). It
+  MUST instead try, in order: (a) the *answer said twice* reading — an over-long string that is
+  exactly one word repeated (`HEART HEART` → `HEARTHEART` → `HEART`) is re-evaluated as the single
+  word; (b) a **fuzzy command** match that plucks a lone, unambiguous command word out of the noise
+  (`"okay let's just hit next"` → *next*); failing both, a plain *didn't-catch* re-prompt
+  (REQ-CMD-003). A reading within 4 of the needed length is still a normal length-mismatch report —
+  those are usually genuine near-miss attempts (OCELOT for a 4-entry). The margin is a gate on the
+  answer pipeline only; the *answer* escape hatch (REQ-ANS-014) and spelling (REQ-ANS-011) are
+  unaffected in spirit — a deliberately spelled or forced word is the user's call.
+- **Accept:** Given a 5-entry and a 45-letter transcription, then no length report is spoken and the
+  reply is *didn't-catch*; given "heart heart" on a 5-entry, then HEART is entered; given
+  "okay let's just hit next" on any clue, then the session moves on; given "ocelot" on a 4-entry
+  (only 2 over), then the ordinary length report still names OCELOT and 4.
+- **Verify:** unit `extension-test/unit/matching.test.js` (too-long outcome, fuzzy match),
+  `extension-test/unit/machine.test.js` (no report, double-repeat enters, buried command obeyed).
+
 ---
 
 ## 9. Hints (HINT)
@@ -1160,6 +1196,26 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given TTS mid-sign-off, when the user says "stop", then speech is cancelled and the
   session ends; given any non-stop speech during the sign-off, then nothing changes.
 - **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js`.
+
+#### REQ-CMD-007 — Command reference page
+- **Status:** Active · **Level:** SHOULD
+- Beyond the spoken *help* summary (REQ-CMD-002), the extension SHOULD offer a full written
+  **command reference** the user can open whenever they want the complete list. It is a
+  self-contained extension page (`help.html`) grouping every command family — answering, getting
+  around, fixing the grid, spelling & hints, ending the session — with the spoken wordings from
+  the lexicon (REQ-CMD-001); it MUST be pure static HTML (no scripts, no network, nothing read
+  from any page — REQ-NFR-001/002). The page MUST be reachable two ways: (1) right-clicking the
+  extension's action icon → a *Voice commands (help)* menu item, opened in a new tab; and (2) the
+  in-page split button's dropdown → *Voice commands* (REQ-LIFE-012). Because a content script
+  cannot open an extension page, the in-page entry sends the service worker an open request; the
+  worker opens the page (and, for the dropdown's *Settings*, the same settings surface the action
+  menu opens — REQ-NAV-012).
+- **Accept:** Given the action icon is right-clicked, then a Help item is offered and choosing it
+  opens the reference page; given the in-page button's caret, then the menu offers Voice commands
+  and choosing it opens the same page; given the page, then it lists every command group and loads
+  no scripts or remote resources.
+- **Verify:** unit `extension-test/unit/help-page.test.js`, integration
+  `extension-test/integration/session-button.test.js`; manual MT-34.
 
 ---
 

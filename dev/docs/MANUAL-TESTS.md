@@ -329,3 +329,17 @@ Covers: REQ-SPCH-001 REQ-SPCH-010 REQ-LIFE-015 REQ-LIFE-016
    deaf-blind or says there's no puzzle): run the probe (MT-01) while the splash is up and
    paste its `splash` line — plus the `splash text without button` line if present — into the
    tracking issue.
+
+### MT-34 — Command reference page and the in-page dropdown
+Covers: REQ-CMD-007
+1. Right-click the extension's toolbar icon and choose "Voice commands (help)".
+2. Open a Mini puzzle. Click the caret (▾) on the in-page CrosswordChat button; the menu shows
+   Activate, Settings, and Voice commands. Choose "Voice commands", then reopen the menu and
+   choose "Settings". Start a session and reopen the menu.
+3. **PASS:** step 1 — a new tab opens the command reference, grouping every command family
+   (answering, getting around, fixing the grid, spelling & hints, ending) with their spoken
+   wordings; it loads instantly with no network activity. Step 2 — the menu opens on the caret
+   and closes when an item is chosen or when you click elsewhere; "Voice commands" opens the same
+   reference page, "Settings" opens the settings surface (as right-clicking the icon does). During
+   a session the Activate row reads "Stop session"; when idle it reads "Activate", and choosing it
+   toggles the session just like the main half of the button.
