@@ -6,10 +6,10 @@
 // markup. Run `npm run refresh:ui` to regenerate after an intentional UI change and
 // commit the PNGs, so a reviewer sees the before/after in the diff.
 //
-// Rendering is deterministic (resvg / satori + bundled fonts, no browser), so a
-// golden must match EXACTLY — any differing pixel is a real change to the surface.
-// If cross-platform rasterization noise ever makes this flap, add a small tolerance
-// then rather than pre-emptively.
+// The satori/resvg cases are deterministic (bundled fonts, no browser), so they must
+// match EXACTLY — any differing pixel is a real change. The Playwright page/popup
+// cases are real browser screenshots and carry minor cross-environment antialiasing
+// variance, so each declares a small `maxDiffRatio`; a case without one demands 0.
 
 import { describe, test, expect } from 'vitest';
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from 'node:fs';
@@ -18,10 +18,10 @@ import pixelmatch from 'pixelmatch';
 import { loadCases, snapshotPath } from './cases.js';
 import { artifactPath } from './render/artifacts-dir.js';
 import { applyGallery, REQ_DOC } from './build-gallery.mjs';
-
-const MAX_DIFF_RATIO = 0;
+import { chromiumAvailable } from './render/page-to-png.js';
 
 const cases = await loadCases();
+const hasBrowser = chromiumAvailable();
 
 describe('UI visual snapshots', () => {
   test('there is at least one UI case', () => {
@@ -49,7 +49,10 @@ describe('UI visual snapshots', () => {
   });
 
   for (const testCase of cases) {
-    test(`${testCase.name} (${testCase.description}) matches its golden`, async () => {
+    // A browser case self-skips where no Chromium is present (a CI runner without it),
+    // so the satori/resvg cases still gate and the run stays green.
+    const skip = testCase.engine === 'browser' && !hasBrowser;
+    test.skipIf(skip)(`${testCase.name} (${testCase.description}) matches its golden`, async () => {
       const pngBuffer = await testCase.render();
       const snapPath = snapshotPath(testCase.name);
       const actualPath = artifactPath(`${testCase.name}.actual.png`);
@@ -72,8 +75,9 @@ describe('UI visual snapshots', () => {
       const diff = new PNG({ width, height });
       const diffPixels = pixelmatch(actual.data, expected.data, diff.data, width, height, { threshold: 0.1 });
       const ratio = diffPixels / (width * height);
+      const maxRatio = testCase.maxDiffRatio ?? 0;
 
-      if (ratio > MAX_DIFF_RATIO) {
+      if (ratio > maxRatio) {
         writeFileSync(actualPath, pngBuffer);
         writeFileSync(diffPath, PNG.sync.write(diff));
         expect.fail(

@@ -8,9 +8,15 @@
 import { writeFileSync } from 'node:fs';
 import { loadCases, snapshotPath } from './cases.js';
 import { writeGallery } from './build-gallery.mjs';
+import { chromiumAvailable } from './render/page-to-png.js';
 
+const hasBrowser = chromiumAvailable();
 const cases = await loadCases();
 for (const testCase of cases) {
+  if (testCase.engine === 'browser' && !hasBrowser) {
+    console.log(`Skipped ${testCase.name} (no Chromium — regenerate where one is present)`);
+    continue;
+  }
   const out = snapshotPath(testCase.name);
   writeFileSync(out, await testCase.render());
   console.log(`Wrote ${out}`);

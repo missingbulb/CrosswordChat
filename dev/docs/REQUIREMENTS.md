@@ -670,12 +670,20 @@ entities. The readout must convey what the eye would see.
   rest of the session only; it MUST NOT write the setting back. A missing or invalid stored value
   falls back to list order (REQ-NAV-002).
 
-  <img src="img/settings-popup.png" alt="The settings popup: reading-speed slider, next-clue strategy picker, and Reset to defaults / Save buttons" width="352">
+<!-- ui-gallery:REQ-NAV-012 -->
+
+_UI goldens — generated from the shipped code by `npm run refresh:ui`:_
+
+<strong>Settings popup (options.html) — default state</strong><br>
+<img src="../requirements/ui/cases/settings-popup.png" width="300" alt="Settings popup (options.html) — default state">
+
+<!-- /ui-gallery:REQ-NAV-012 -->
 
 - **Accept:** Given the stored setting is most-filled, when a session starts and the user says
   next, then the most-filled strategy picks the clue; given no stored value (or a corrupted one),
   then list order is used.
-- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/settings.test.js`; manual MT-28.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/settings.test.js`; UI
+  golden `dev/requirements/ui/` (visual-snapshots — the settings popup); manual MT-28.
 
 #### REQ-NAV-013 — Jump to a clue by its spoken label
 - **Status:** Active · **Level:** MUST
@@ -1268,6 +1276,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 <!-- ui-gallery:REQ-CMD-007 -->
 
 _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
+
+<strong>Voice-commands help page (help.html)</strong><br>
+<img src="../requirements/ui/cases/help-page.png" width="360" alt="Voice-commands help page (help.html)">
 
 <strong>Injected split button with its dropdown open (Activate / Settings / Voice commands)</strong><br>
 <img src="../requirements/ui/cases/implanted-button-toolbar-menu.png" width="520" alt="Injected split button with its dropdown open (Activate / Settings / Voice commands)">
