@@ -669,10 +669,20 @@ entities. The readout must convey what the eye would see.
   strategy of every new session. Voice switching (REQ-NAV-005) still changes the strategy for the
   rest of the session only; it MUST NOT write the setting back. A missing or invalid stored value
   falls back to list order (REQ-NAV-002).
+- The in-page toolbar button's *Settings* item (REQ-CMD-007) MUST open the same settings — the
+  reading speed (REQ-SPCH-001) and navigation mode — as a centred modal injected into the puzzle
+  page, styled to mirror NYT's own *Puzzle Settings* popup (a card over a dimming overlay, a Karnak
+  title, sectioned rows, and a primary *Save and close* / secondary *Restore defaults* pair). It
+  reuses NYT's already-loaded webfonts by name with generic fallbacks, so it never fetches a font
+  and still renders legibly where those fonts are absent. The same Save/Reset buffering applies;
+  the ✕, the overlay, and Escape discard unsaved edits. The extension-icon route above is unchanged.
 
 <!-- ui-gallery:REQ-NAV-012 -->
 
 _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
+
+<strong>In-page Settings modal (NYT-styled) — default state</strong><br>
+<img src="../requirements/ui/cases/settings-modal.png" width="520" alt="In-page Settings modal (NYT-styled) — default state">
 
 <strong>Settings popup (options.html) — default state</strong><br>
 <img src="../requirements/ui/cases/settings-popup.png" width="300" alt="Settings popup (options.html) — default state">

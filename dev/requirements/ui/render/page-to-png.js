@@ -60,3 +60,24 @@ export async function pageToPng(relHtmlPath, { width, height, fullPage = false, 
     await browser.close();
   }
 }
+
+/**
+ * Rasterize a self-contained HTML string (no navigation, no scripts). For an in-page
+ * surface that the extension INJECTS rather than serves as a page — e.g. the Settings
+ * modal, whose shipped CSS + markup strings the case composes so the golden tracks the
+ * real module. NYT's webfonts aren't present here, so the modal's fallback fonts render.
+ * @param {string} html  a full document body's worth of HTML (styles inline or in <style>)
+ * @param {{width: number, height?: number}} opts
+ * @returns {Promise<Buffer>} PNG bytes
+ */
+export async function contentToPng(html, { width, height } = {}) {
+  const browser = await chromium.launch({ headless: true, executablePath: chromiumExecutable() });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: height ?? 720 }, deviceScaleFactor: 1 });
+    await page.setContent(`<!doctype html><style>html,body{margin:0}</style>${html}`, { waitUntil: 'load' });
+    await page.evaluate(() => (document.fonts ? document.fonts.ready : null));
+    return await page.screenshot();
+  } finally {
+    await browser.close();
+  }
+}

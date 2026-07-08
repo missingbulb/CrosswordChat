@@ -12,6 +12,7 @@ import { selectClue } from '../page-adapter/navigator.js';
 import { probe } from '../page-adapter/probe.js';
 import { createWatcher } from '../page-adapter/watcher.js';
 import { mountSessionButton } from '../page-adapter/session-button.js';
+import { mountSettingsModal } from '../page-adapter/settings-modal.js';
 import { dismissSplash, waitForSplashClear } from '../page-adapter/splash.js';
 import { render } from '../conversation/phrases.js';
 import { createOrchestrator } from '../app/orchestrator.js';
@@ -132,14 +133,19 @@ async function startSession() {
 // The in-page split button (REQ-LIFE-012): the main half has the same semantics as the
 // extension icon — start when idle (REQ-LIFE-001), instant silent stop mid-session
 // (REQ-LIFE-002); the caret opens Settings and the voice-command reference (REQ-CMD-007).
-// Content scripts can't open extension pages, so the worker does it (REQ-CMD-007). Mounts
+// Settings opens a centred in-page modal that mirrors NYT's own Puzzle Settings popup
+// (REQ-NAV-012) — no extension window; the extension icon's Settings route is unchanged.
+// Help still opens an extension page, which only the worker can do (REQ-CMD-007). Mounts
 // as soon as the NYT toolbar renders; quietly absent when it never does.
+let settingsModal = null;
 const toggleButton = mountSessionButton(document, {
   onToggle: () => {
     if (session) session.orchestrator.stop();
     else void startSession();
   },
-  onSettings: () => chrome.runtime.sendMessage({ type: MSG.OPEN_SETTINGS }).catch(() => {}),
+  onSettings: () => {
+    settingsModal = mountSettingsModal(document, { onClose: () => { settingsModal = null; } });
+  },
   onHelp: () => chrome.runtime.sendMessage({ type: MSG.OPEN_HELP }).catch(() => {}),
 });
 

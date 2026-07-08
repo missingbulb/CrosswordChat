@@ -4,8 +4,8 @@ export const MSG = {
   // background → content (session control)
   START: 'cc:start',
   CLOSE: 'cc:close',
-  // content → background: open an extension page from the in-page dropdown button
-  OPEN_SETTINGS: 'cc:open-settings',
+  // content → background: open the voice-command reference from the in-page dropdown
+  // button (Settings is an in-page modal now, so it needs no worker round-trip).
   OPEN_HELP: 'cc:open-help',
   // debugging via the service-worker console (MT-01; no user-facing UI)
   PING: 'cc:ping',

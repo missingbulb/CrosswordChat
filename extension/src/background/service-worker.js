@@ -96,12 +96,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === SETTINGS_MENU_ID && tab?.id) void openSettingsPopup(tab);
 });
 
-// REQ-CMD-007 / REQ-LIFE-012: the in-page dropdown button reaches Settings and Help the
-// same way the action's right-click menu does — content scripts can't open extension
-// pages themselves, so they ask the worker.
-chrome.runtime.onMessage.addListener((msg, sender) => {
+// REQ-CMD-007: the in-page dropdown's Voice-commands item reaches the help page the same
+// way the action's right-click menu does — content scripts can't open extension pages
+// themselves, so they ask the worker. (The dropdown's Settings item opens an in-page
+// modal directly — REQ-NAV-012 — so it needs no worker message.)
+chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === MSG.OPEN_HELP) void openHelpPage();
-  else if (msg?.type === MSG.OPEN_SETTINGS && sender.tab) void openSettingsPopup(sender.tab);
   return false; // no async response
 });
 
