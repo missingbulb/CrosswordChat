@@ -11,12 +11,18 @@
     "verify": "npm run test && npm run trace",
     "build": "node dev/build/build.mjs",
     "build:dev": "node dev/build/build.mjs --dev",
-    "fixture": "node tools/serve-fixture.mjs"
+    "fixture": "node tools/serve-fixture.mjs",
+    "refresh:ui": "node extension-test/ui/refresh-snapshots.mjs",
+    "test:ui": "vitest run extension-test/ui"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "esbuild": "^0.25.0",
     "jsdom": "^26.0.0",
+    "pixelmatch": "^7.2.0",
     "playwright-core": "^1.61.1",
+    "pngjs": "^7.0.0",
+    "satori": "^0.26.0",
     "vitest": "^3.0.0"
   }
 }

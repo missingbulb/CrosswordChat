@@ -6,3 +6,5 @@ node_modules/
 dist/
 *.log
 dist-pages/
+
+extension-test/ui/render/.artifacts/
