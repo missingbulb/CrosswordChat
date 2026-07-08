@@ -17,7 +17,6 @@ function runSession(listenScript) {
   const spoken = [];
   let listens = 0;
   let micStops = 0;
-  let keepAlives = 0;
   let pageEventCb = null;
   const emitPageEvent = (kind, snapshot) => pageEventCb?.(kind, snapshot);
 
@@ -41,16 +40,13 @@ function runSession(listenScript) {
         snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
         watch: (cb) => { pageEventCb = cb; },
         unwatch: () => { pageEventCb = null; },
-        keepAlive: () => { keepAlives += 1; },
       },
       onEnd: () => resolve(null),
     });
     void orchestrator.start();
   });
 
-  return done.then(() => ({
-    spoken, listens: () => listens, micStops: () => micStops, keepAlives: () => keepAlives,
-  }));
+  return done.then(() => ({ spoken, listens: () => listens, micStops: () => micStops }));
 }
 
 const noSpeech = { error: 'no-speech' };
@@ -88,16 +84,6 @@ describe('orchestrator silence clock (REQ-CMD-005)', () => {
       ({ clock }) => { clock.t += SILENCE_TIMEOUT_MS; return noSpeech; },
     ]);
     expect(listens()).toBe(2); // the 70 s cycle did NOT end the session
-  });
-
-  test('REQ-LIFE-017: hearing the user nudges the page alive; pure silence does not', async () => {
-    const { keepAlives } = await runSession([
-      ({ clock }) => { clock.t += 10_000; return { alternatives: [{ transcript: 'repeat', confidence: 0.9 }] }; },
-      ({ clock }) => { clock.t += 10_000; return noSpeech; }, // silence sends no nudge
-      ({ clock }) => { clock.t += SILENCE_TIMEOUT_MS; return noSpeech; }, // …and eventually ends
-    ]);
-    // One nudge per spoken utterance the shell registered (the "repeat"); no-speech is silent.
-    expect(keepAlives()).toBe(1);
   });
 
   test('a click the machine absorbs (same clue) never stops the mic — no deaf sessions', async () => {

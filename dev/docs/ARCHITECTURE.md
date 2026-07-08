@@ -46,9 +46,9 @@ extension/src/
     reader.js        DOM → Snapshot (grid cells, clue runs, selection, solved signal)
     writer.js        enterAnswer/clearEntry via click + synthetic keydown, verified re-read;
                      per-cell pencil mode via the toolbar toggle, user's state restored;
-                     keepAlive — a keyboard-only presence nudge so NYT never auto-pauses a
-                     quiet puzzle mid-conversation (REQ-LIFE-017)
-    navigator.js     selectClue (click the clue list item; keep-alive so a move is presence)
+                     clickCell pairs each click with a keystroke so a move keeps NYT from
+                     auto-pausing a quiet puzzle mid-conversation (REQ-LIFE-017)
+    navigator.js     selectClue (click the clue list item)
     watcher.js       MutationObserver → {solved | selection | grid} events (session-scoped)
     splash.js        pre-puzzle "Ready to start solving?" veil: find + click Play (REQ-LIFE-016)
     session-button.js  the in-page start/stop toggle, injected right of NYT's pencil

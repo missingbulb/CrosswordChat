@@ -339,22 +339,20 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 - **Status:** Active · **Level:** MUST
 - The NYT games shell auto-pauses a puzzle after a stretch with no keyboard input: it veils the
   board behind a "Your puzzle is paused" overlay and freezes the timer. This is a THINKING game
-  driven by voice — long silences at the keyboard are the norm (the user is talking to us, not
-  away) — so the extension MUST PREVENT the pause rather than react to it after the board has
-  frozen. On every user action during a live session, the extension MUST signal presence to the
-  page so its inactivity timer resets: a keyboard-only keep-alive (a bare modifier keydown/keyup
-  that types no letter and moves no cursor). It MUST NOT use synthetic mouse events for this. The
-  two page-touching actions carry their own presence — "enter answer" already types real
-  keystrokes, and "move" (select a clue) sends the keep-alive alongside its selection — and any
-  spoken action (a heard command or answer) sends one too. The keep-alive is best-effort and MUST
-  NOT disturb the conversation if it fails, and MUST NOT itself change the grid or selection.
-  A genuine look-away is a different case and already ENDS the session (REQ-LIFE-011: tab
-  blur/hide), so nothing keeps a backgrounded puzzle awake.
+  driven by voice — the user isn't typing — so the extension MUST PREVENT the pause rather than
+  react to it after the board has frozen, and it MUST do so as an intrinsic part of the regular
+  page operations, not as a separate keep-alive step callers must remember. The two operations
+  that touch the puzzle carry presence themselves: "enter answer" already types real keystrokes,
+  and "move" (select a clue) clicks — and `clickCell` pairs every synthetic click with a bare
+  modifier keydown/keyup (a real keystroke the app's input handling honors, which types no letter
+  and moves no cursor), because a synthetic click alone may not register with the inactivity
+  watcher. So every click (a move, each cell of an entry) resets the timer. No synthetic MOUSE
+  events are added for this. A genuine look-away is a different case and already ENDS the session
+  (REQ-LIFE-011: tab blur/hide), so nothing keeps a backgrounded puzzle awake.
 - **Accept:** Given the fake page's inactivity model, a quiet puzzle auto-pauses when its timer
-  fires; a keep-alive keystroke (or entering a word, or moving to another clue) before the timer
-  keeps it live, and neither the keep-alive nor the checks change the grid or the selection.
-- **Verify:** integration `extension-test/integration/keepalive.test.js`; unit
-  `extension-test/unit/orchestrator.test.js` (spoken activity nudges the page alive).
+  fires; a click (or entering a word, or moving to another clue) before the timer keeps it live,
+  and the click's keep-alive keystroke types no letter — it only selects.
+- **Verify:** integration `extension-test/integration/keepalive.test.js`.
 
 ---
 
