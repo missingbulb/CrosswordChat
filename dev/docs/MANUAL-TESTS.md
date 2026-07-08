@@ -271,12 +271,10 @@ Covers: REQ-ANS-019 REQ-PAGE-012 REQ-ANS-023 REQ-ANS-024 REQ-ANS-025
 Covers: REQ-LIFE-012
 1. Open the Mini. If the splash screen ("Ready to start solving?") shows, wait well past 30 s
    before clicking Play — the button must still appear afterwards. Find the CrosswordChat
-   button — the same gold crossword-bubble tile as the extension icon — in the puzzle toolbar:
-   immediately right of NYT's pencil toggle, or at the end of the tool row when no pencil is
-   recognized, or (last resort, ~10 s after load) floating bottom-right over the page when no
-   toolbar is recognized at all (hover it: the tooltip names CrosswordChat). If it is missing
-   entirely, run the probe (MT-01) and paste its `pencil toggle`, `toolbar`, and `page buttons`
-   lines into the tracking issue.
+   button — the same gold crossword-bubble tile as the extension icon — at the right end of the
+   puzzle toolbar's tool row (hover it: the tooltip names CrosswordChat). If it is missing
+   entirely, run the probe (MT-01) and paste its `toolbar` and `page buttons` lines into the
+   tracking issue.
 2. Click it. Answer one clue by voice. While the session runs, look at the button; then click it
    again mid-readout.
 3. Reload the page and start a session from the *extension icon* instead; end it by voice

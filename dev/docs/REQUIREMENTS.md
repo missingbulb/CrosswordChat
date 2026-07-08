@@ -246,9 +246,9 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 
 #### REQ-LIFE-012 — On-page split button in the puzzle toolbar
 - **Status:** Active · **Level:** MUST
-- The content script MUST place a start/stop control inside the puzzle page itself: in NYT's
-  toolbar, immediately to the right of the pencil toggle — so the feature is discoverable where
-  the solving happens (the extension icon remains an equivalent control). It is a **split
+- The content script MUST place a start/stop control inside the puzzle page itself: at the right
+  end of NYT's toolbar — so the feature is discoverable where the solving happens (the extension
+  icon remains an equivalent control). It is a **split
   button**: a main half that toggles the session, and a small caret that opens a menu with
   **Activate** (the same toggle), **Settings** (REQ-NAV-012), and **Voice commands** (the command
   reference, REQ-CMD-007). The menu opens on the caret, closes on choosing an item or on any click
@@ -261,26 +261,23 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   gold bubble). Clicking the main half MUST behave exactly like the extension icon: no session →
   start one (REQ-LIFE-001); a session running in this tab → end it instantly and silently
   (REQ-LIFE-002). Sessions started from the button obey one-session-at-a-time (REQ-LIFE-009).
-  Pencil discovery MUST be live-markup-defensive
-  (`findPencilToggle`: accessible name → pencil-classed icon's owning button → button text);
-  when no pencil is findable but a toolbar exists, the button MUST fall back to the end of the
-  tool row rather than not appearing; and when not even a toolbar is findable while a BOARD is
-  visibly there (~10 s of hunting), the button MUST float over the page (fixed, bottom-right) —
-  on a puzzle the user can see, the mark is never simply absent. Because the NYT app renders
-  after the content script loads
-  — and can sit behind the pre-puzzle splash for minutes — injection MUST wait with an observer
-  that disconnects once the button is placed, and MUST keep waiting as long as the page carries
-  crossword app markup; only pages with no app markup at all (archive pages, section fronts) may
-  give up after the timeout: no button, no errors, the extension icon still works. The injected
-  SVG MUST survive a hostile host page (no url(#…) references; paints duplicated into inline
-  styles). The injection lives in the page adapter (REQ-PAGE-011 — it is NYT DOM knowledge).
-- **Accept:** Given a puzzle page, then exactly one labeled split button sits right of the pencil
-  toggle (found by any net), clicking its main half starts a session and clicking again ends it,
-  with `aria-pressed` tracking; given the caret is clicked, then a menu of Activate/Settings/Voice
-  commands opens and choosing one closes it; given a toolbar without a findable pencil, then the
-  button sits at the end of the tool row; given a toolbar that renders late — even after the
+  Placement MUST be at the right end of the toolbar's tool row (appended as its last child) — one
+  fixed location, no pencil-relative anchoring and no over-the-page floating fallback; when no
+  toolbar is present the on-page button is simply not shown (the extension icon still works).
+  Because the NYT app renders after the content script loads — and can sit behind the pre-puzzle
+  splash for minutes — injection MUST wait with an observer that disconnects once the button is
+  placed, and MUST keep waiting as long as the page carries crossword app markup; only pages with
+  no app markup at all (archive pages, section fronts) may give up after the timeout: no button,
+  no errors, the extension icon still works. The injected SVG MUST survive a hostile host page (no
+  url(#…) references; paints duplicated into inline styles). The injection lives in the page
+  adapter (REQ-PAGE-011 — it is NYT DOM knowledge).
+- **Accept:** Given a puzzle page, then exactly one labeled split button sits at the right end of
+  the toolbar's tool row, clicking its main half starts a session and clicking again ends it, with
+  `aria-pressed` tracking; given the caret is clicked, then a menu of Activate/Settings/Voice
+  commands opens and choosing one closes it; given a toolbar that renders late — even after the
   give-up interval, while app markup is present — then the button appears once the toolbar does;
-  given a page with no crossword markup, then no button is injected and nothing throws.
+  given a page with no crossword markup (or no toolbar), then no button is injected and nothing
+  throws.
 - **Verify:** integration `extension-test/integration/session-button.test.js`; manual MT-30.
 
 #### REQ-LIFE-013 — Action icon signals supported pages

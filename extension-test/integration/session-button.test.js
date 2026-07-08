@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// The in-page session split button (REQ-LIFE-012) vs. the fake NYT page: injected
-// right of the pencil toggle, main half toggles the session, a caret opens the
+// The in-page session split button (REQ-LIFE-012) vs. the fake NYT page: injected at
+// the right end of the toolbar, main half toggles the session, a caret opens the
 // Activate/Settings/Voice-commands menu (REQ-CMD-007), reflects session state, waits out
 // a late-rendering toolbar, and stays away from pages without one (REQ-NFR-004).
 
@@ -15,15 +15,15 @@ const main = () => button()?.querySelector('[data-cc-role="main"]');
 const caret = () => button()?.querySelector('[data-cc-role="caret"]');
 const menu = () => button()?.querySelector('[data-cc-role="menu"]');
 const item = (act) => button()?.querySelector(`[data-cc-act="${act}"]`);
-const pencil = () => document.querySelector('button[aria-label="Pencil"]');
+const toolRow = () => document.querySelector('.xwd__toolbar--tools');
 const noop = { onToggle() {} };
 
 describe('session button', () => {
-  test('REQ-LIFE-012: mounts immediately right of the pencil toggle, labeled and unpressed', () => {
+  test('REQ-LIFE-012: mounts at the right end of the toolbar tool row, labeled and unpressed', () => {
     initFakeNyt(document, FIXTURE_PUZZLE);
     mountSessionButton(document, noop);
     expect(button()).toBeTruthy();
-    expect(pencil().nextElementSibling).toBe(button()); // right of the pencil
+    expect(toolRow().lastElementChild).toBe(button()); // the right end of the tool row
     expect(main().getAttribute('aria-pressed')).toBe('false');
     expect(main().getAttribute('aria-label')).toContain('CrosswordChat');
     // Wears the brand mark: the extension icon's tile + crossword speech bubble.
@@ -84,22 +84,11 @@ describe('session button', () => {
     expect(item('activate').textContent).toBe('Activate');
   });
 
-  test('REQ-LIFE-012: finds a pencil that has no accessible name, only an icon class', () => {
-    initFakeNyt(document, FIXTURE_PUZZLE, { pencilMarkup: 'icon' });
-    mountSessionButton(document, noop);
-    expect(button()).toBeTruthy();
-    const iconPencil = document.querySelector('.xwd__toolbar_icon--pencil').closest('button');
-    expect(iconPencil.nextElementSibling).toBe(button());
-  });
-
-  test('REQ-LIFE-012: toolbar without a findable pencil → mounts at the end of the tool row', () => {
+  test('REQ-LIFE-012: lands at the end of the row regardless of which tools precede it', () => {
     initFakeNyt(document, FIXTURE_PUZZLE, { toolbarWithoutPencil: true });
     mountSessionButton(document, noop);
     expect(button()).toBeTruthy();
-    // The wrapper lands right after the last native tool button (our own buttons excluded).
-    const toolButtons = [...document.querySelectorAll('.xwd__toolbar--tools button')]
-      .filter((b) => !button().contains(b));
-    expect(button().previousElementSibling).toBe(toolButtons[toolButtons.length - 1]);
+    expect(toolRow().lastElementChild).toBe(button()); // always the last child of the tool row
   });
 
   test('REQ-LIFE-012: the main half toggles; active state inverts the tile', () => {
@@ -138,19 +127,6 @@ describe('session button', () => {
     await sleep(20); // MutationObserver delivery is async
     expect(button()).toBeTruthy();
     expect(main().getAttribute('aria-pressed')).toBe('true'); // remembered state applied
-  });
-
-  test('REQ-LIFE-012: board but no findable toolbar → floats the button over the page', async () => {
-    initFakeNyt(document, FIXTURE_PUZZLE, { noPencilToggle: true }); // board, no toolbar at all
-    const handle = mountSessionButton(document, noop, { waitMs: 1000, floatAfterMs: 20 });
-    expect(button()).toBeNull(); // still hunting for a toolbar anchor
-    await sleep(60); // floatAfterMs passed with a visible board
-    expect(button()).toBeTruthy();
-    expect(button().style.position).toBe('fixed'); // floating, not inline in a toolbar
-    expect(button().querySelector('svg [data-cc-bg]')).toBeTruthy(); // wears the mark
-    expect(caret()).toBeTruthy(); // the dropdown rides along when floating too
-    handle.remove();
-    expect(button()).toBeNull();
   });
 
   test('REQ-LIFE-012: app markup but no toolbar (splash screen) → keeps waiting past waitMs', async () => {
