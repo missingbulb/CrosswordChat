@@ -44,7 +44,7 @@ export const SETTINGS_MODAL_CSS = `
   font-size: 20px; line-height: 1; color: #757575; cursor: pointer; border-radius: 50%;
 }
 #${MODAL_ID} .cc-close:hover { background: #f0f0f0; color: #121212; }
-#${MODAL_ID} .cc-title-wrap { text-align: center; margin: 0 0 20px; }
+#${MODAL_ID} .cc-title-wrap { text-align: left; margin: 0 0 20px; }
 #${MODAL_ID} .cc-title {
   font-family: karnak, "nyt-karnak", Georgia, "Times New Roman", serif;
   font-size: 30px; font-weight: 700; margin: 0;
@@ -62,7 +62,7 @@ export const SETTINGS_MODAL_CSS = `
 #${MODAL_ID} .cc-hint { margin: 2px 0 8px; font-size: 13px; color: #666; }
 #${MODAL_ID} .cc-hint.cc-indent { padding-left: 24px; }
 #${MODAL_ID} .cc-btns {
-  display: flex; justify-content: center; gap: 12px;
+  display: flex; justify-content: space-between; gap: 16px;
   margin-top: 22px; padding-top: 20px; border-top: 1px solid #e6e6e6;
 }
 #${MODAL_ID} .cc-btn {
@@ -110,9 +110,9 @@ export function settingsModalMarkup() {
       </section>
     </form>
     <div class="cc-btns">
-      <button type="button" class="cc-btn cc-primary" data-cc-role="save">Save and close</button>
       <button type="button" class="cc-btn cc-secondary" data-cc-role="reset"
               disabled aria-disabled="true">Restore defaults</button>
+      <button type="button" class="cc-btn cc-primary" data-cc-role="save">Save and close</button>
     </div>
   </div>
 </div>`;
