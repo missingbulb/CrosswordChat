@@ -1,5 +1,9 @@
 // Next-clue selection strategies (REQ-NAV-002/003/004/011). Pure.
 
+// 'most-filled' is a PERSISTED id — saved in chrome.storage and spoken by voice
+// commands — so it is FROZEN: don't rename it even though REQ-NAV-004 now ranks by
+// FEWEST-OPEN letters (not most-placed); a rename silently breaks every user's saved
+// setting. The name still reads colloquially as "most nearly done".
 export const STRATEGIES = ['list-order', 'most-filled'];
 
 // How "open" a penciled cell counts when ranking most-filled (REQ-NAV-004): a penciled
