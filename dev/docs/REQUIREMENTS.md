@@ -634,13 +634,20 @@ entities. The readout must convey what the eye would see.
   frequent number homophones (won/to/for/sex/ate/nein…). When the direction was clearly *across*
   but the number still doesn't parse, ask for the number briefly ("I didn't catch which clue")
   instead of treating the utterance as an answer. When the puzzle has no such clue, reply that it
-  doesn't exist and keep listening; utterances whose leading part is not a number and whose tail
-  is not unambiguous navigation ("falling down", "red cross") are NOT gotos and stay available to
-  the answer pipeline.
+  doesn't exist and keep listening; bare utterances whose leading part is not a number and whose
+  tail is not unambiguous navigation ("falling down", "red cross") are NOT gotos and stay available
+  to the answer pipeline.
+- **Explicit "go to" prefix.** *"go to …"* (and STT variants: *goto*, *go two*, *go 2*, *jump to*)
+  is an unambiguous navigation intent: whatever follows is a clue label by construction, so the
+  matcher MUST parse the tail as a label and MUST NOT fall through to the answer pipeline — even
+  when the direction was garbled or dropped. A missing/garbled number OR a missing direction makes
+  the machine ask for the label briefly ("I didn't catch which clue"), never enter an answer. This
+  is what makes navigating to a definition robust when the listener mishears the tail.
 - **Accept:** Given "six across" on a puzzle with a 6-Across, then 6-Across is selected and read;
   given "5 a cross" or "sixth across", then the jump still happens; given "twelve down" with no
   12-Down, then the reply says there is no 12 down; given "gibberish across", then the reply asks
-  for the clue number.
+  for the clue number; given "go to six across", then 6-Across is selected; given "go to seven"
+  (no direction), then the reply asks for the label instead of answering.
 - **Verify:** unit `extension-test/unit/matching.test.js` (parsing), `extension-test/unit/machine.test.js` (jump +
   missing label + garbled number).
 
@@ -1047,6 +1054,28 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   penciled and a later clashing answer on a crossing fits without a collision report; given
   "pen", then the next answer writes normally.
 - **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/matching.test.js`.
+
+#### REQ-ANS-026 — Over-long utterances are not answers
+- **Status:** Active · **Level:** MUST
+- Ambient speech and background noise get transcribed as long runs of words. Reading each one
+  back as a wrong-length answer — *"…that whole sentence is 200 letters, we're looking for 5"* —
+  after a long wait is the single most frustrating failure mode (live report 2026-07). So when the
+  shortest reading of an utterance is more than **4 letters longer** than the entry, the system
+  MUST NOT treat it as an answer and MUST NOT read the length-mismatch report (REQ-ANS-007). It
+  MUST instead try, in order: (a) the *answer said twice* reading — an over-long string that is
+  exactly one word repeated (`HEART HEART` → `HEARTHEART` → `HEART`) is re-evaluated as the single
+  word; (b) a **fuzzy command** match that plucks a lone, unambiguous command word out of the noise
+  (`"okay let's just hit next"` → *next*); failing both, a plain *didn't-catch* re-prompt
+  (REQ-CMD-003). A reading within 4 of the needed length is still a normal length-mismatch report —
+  those are usually genuine near-miss attempts (OCELOT for a 4-entry). The margin is a gate on the
+  answer pipeline only; the *answer* escape hatch (REQ-ANS-014) and spelling (REQ-ANS-011) are
+  unaffected in spirit — a deliberately spelled or forced word is the user's call.
+- **Accept:** Given a 5-entry and a 45-letter transcription, then no length report is spoken and the
+  reply is *didn't-catch*; given "heart heart" on a 5-entry, then HEART is entered; given
+  "okay let's just hit next" on any clue, then the session moves on; given "ocelot" on a 4-entry
+  (only 2 over), then the ordinary length report still names OCELOT and 4.
+- **Verify:** unit `extension-test/unit/matching.test.js` (too-long outcome, fuzzy match),
+  `extension-test/unit/machine.test.js` (no report, double-repeat enters, buried command obeyed).
 
 ---
 

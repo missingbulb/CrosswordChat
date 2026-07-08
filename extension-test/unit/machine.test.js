@@ -288,6 +288,30 @@ describe('answers (ANS)', () => {
     expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['LISTEN']); // same clue, listening again
   });
 
+  test('REQ-ANS-026: a mic-caught sentence is never read back as a giant length report', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const actions = s.step(heard('i think it might possibly be something like a river'));
+    // Not the frustrating "... is 45 letters, we need 5" — just a quiet re-prompt.
+    expect(says(actions)[0]).toEqual({ kind: 'didnt-catch' });
+    expect(actions.some((a) => a.type === 'ENTER')).toBe(false);
+    expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['LISTEN']); // same clue
+  });
+
+  test('REQ-ANS-026: the answer said twice ("heart heart") enters the single word', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const actions = s.step(heard('heart heart'));
+    expect(says(actions)[0]).toMatchObject({ kind: 'fit', word: 'HEART' });
+    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', clueId: 'A1', word: 'HEART' });
+  });
+
+  test('REQ-ANS-026: a command buried in an over-long utterance is still obeyed', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const actions = s.step(heard('okay lets just hit next for now'));
+    // "next" plucked from the noise → move on, not a didnt-catch.
+    expect(says(actions)[0].kind).toBe('clue');
+    expect(actions.some((a) => a.type === 'SELECT_CLUE')).toBe(true);
+  });
+
   test('REQ-ANS-008: collision names spot, letters, and the crossing clue; nothing entered', () => {
     const s = listening(heartSnapshot(['HEA.T', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
     const actions = s.step(heard('heist'));
@@ -796,6 +820,13 @@ describe('hints, commands, control (HINT/CMD/READ)', () => {
     expect(says(actions)[0].greeting).toBeFalsy();
   });
 
+  test('REQ-READ-009: "say again" re-reads the current clue too', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A9' } }));
+    const actions = s.step(heard('say again'));
+    expect(says(actions)[0]).toMatchObject({ kind: 'clue', label: '9 Across' });
+    expect(says(actions)[0].greeting).toBeFalsy();
+  });
+
   test('REQ-CMD-002: help lists commands and stays on the clue', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     expect(says(s.step(heard('help')))[0].kind).toBe('help');
@@ -1062,6 +1093,20 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
     s.step({ type: 'TTS_DONE' });
     expect(says(s.step(heard('twelve down')))[0])
       .toEqual({ kind: 'no-such-clue', number: 12, direction: 'down' });
+  });
+
+  test('REQ-NAV-013: "go to six across" navigates via the explicit prefix', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('go to six across'));
+    expect(out.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A6');
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '6 Across' });
+  });
+
+  test('REQ-NAV-013: "go to" without a direction asks for the label, never answers', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    const out = s.step(heard('go to seven'));
+    expect(says(out)[0]).toEqual({ kind: 'goto-didnt-catch' });
+    expect(out.find((a) => a.type === 'SELECT_CLUE')).toBeUndefined();
   });
 
   test('REQ-SPCH-010: a pause reset reopens the mic immediately, no chatter', () => {

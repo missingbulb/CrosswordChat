@@ -8,6 +8,11 @@ const MAX_OPTIONS_PER_TOKEN = 6;
 const MAX_COMBOS = 64;
 const MAX_EXPANDABLE_TOKENS = 6;
 
+// REQ-ANS-026: a reading this many letters longer than the entry is not treated as a
+// wrong-length answer worth reporting — past this gap the mic almost certainly caught a
+// command, a stray sentence, or the answer said twice, not a genuine attempt.
+const OVERLONG_MARGIN = 4;
+
 /**
  * All spellings of a token list, ordered literal-first then by number of homophone
  * substitutions (REQ-ANS-003). Each: {word, swaps}.
@@ -100,6 +105,7 @@ export function collisionsWith(word, pattern) {
  *   | {kind:'ambiguous',words:string[]}
  *   | {kind:'collision',word:string,collisions:Array<{pos:number,want:string,have:string}>}
  *   | {kind:'length-mismatch',variants:Array<{word:string,len:number}>,needed:number}
+ *   | {kind:'too-long',variants:Array<{word:string,len:number}>,needed:number}
  *   | {kind:'unintelligible'}}
  */
 export function evaluate({ alternatives, entryLength, pattern, rejected = [], literalOnly = false }) {
@@ -171,6 +177,14 @@ export function evaluate({ alternatives, entryLength, pattern, rejected = [], li
       variants.push({ word: c.word, len: c.word.length });
       seenLens.add(c.word.length);
       if (variants.length >= 3) break;
+    }
+    // REQ-ANS-026: when even the shortest thing we heard overshoots the entry by more
+    // than OVERLONG_MARGIN letters, this is not a wrong-length answer to read back — it
+    // is noise, a command, or the answer said twice. Flag it so the caller recovers
+    // quietly instead of announcing "... is 200 letters, we need 5".
+    const shortest = Math.min(...unique.map((c) => c.word.length));
+    if (shortest > entryLength + OVERLONG_MARGIN) {
+      return { kind: 'too-long', variants, needed: entryLength };
     }
     return { kind: 'length-mismatch', variants, needed: entryLength };
   }

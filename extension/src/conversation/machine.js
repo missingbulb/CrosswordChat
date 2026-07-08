@@ -13,7 +13,7 @@
 import { buildModel } from '../puzzle-model/model.js';
 import { nextClue, prevClue, STRATEGIES } from './strategies.js';
 import { evaluate, collectSpelledLetters } from '../matching/evaluate.js';
-import { parseCommand } from '../matching/commands.js';
+import { parseCommand, fuzzyCommand } from '../matching/commands.js';
 
 export function initialState() {
   return { phase: 'idle' };
@@ -25,6 +25,18 @@ export const SILENCE_TIMEOUT_MS = 60_000;
 
 const say = (payload) => ({ type: 'SAY', say: payload });
 const CONTEXTUAL = new Set(['yes', 'no', 'choice']);
+
+/**
+ * REQ-ANS-026: an over-long reading that is exactly the same string twice — the answer
+ * spoken twice ("HEART HEART" → HEARTHEART). Returns the single copy, or null.
+ */
+function doubledHalf(word) {
+  if (word.length >= 2 && word.length % 2 === 0) {
+    const half = word.slice(0, word.length / 2);
+    if (half === word.slice(word.length / 2)) return half;
+  }
+  return null;
+}
 
 function clueSay(model, clueId, extra = {}) {
   const clue = model.clue(clueId);
@@ -271,6 +283,15 @@ function evaluateAnswer(state, alternatives) {
         { ...state, lastProposed: outcome.variants[0].word },
         [{ kind: 'length-mismatch', variants: outcome.variants, needed: outcome.needed }],
       );
+    case 'too-long': {
+      // REQ-ANS-026: the utterance overshoots the entry by more than four letters, so it
+      // is not the answer. Try the "said it twice" reading (HEART HEART → HEARTHEART →
+      // HEART); failing that, hand back to the caller — a fuzzy command match, then a
+      // plain didn't-catch — rather than reading the frustrating length report aloud.
+      const half = doubledHalf(outcome.variants[0]?.word ?? '');
+      if (half) return evaluateAnswer(state, [{ transcript: half }]);
+      return null;
+    }
     default:
       return null; // unintelligible — caller picks the fallback
   }
@@ -346,9 +367,11 @@ function handleCommand(state, cmd) {
       };
     }
     case 'goto': { // REQ-NAV-013: jump straight to a clue by its spoken label
-      // The direction was clear but the number wasn't (STT garble) — ask for it
-      // instead of dumping the utterance into the answer pipeline.
-      if (cmd.arg.number == null) return listenAgain(state, [{ kind: 'goto-didnt-catch' }]);
+      // Part of the label didn't parse (STT garble, or a "go to" with no direction) —
+      // ask for it instead of dumping the utterance into the answer pipeline.
+      if (cmd.arg.number == null || cmd.arg.direction == null) {
+        return listenAgain(state, [{ kind: 'goto-didnt-catch' }]);
+      }
       const id = `${cmd.arg.direction === 'across' ? 'A' : 'D'}${cmd.arg.number}`;
       if (!state.model.clue(id)) {
         return listenAgain(state, [{
@@ -549,6 +572,16 @@ function onHeardNormal(state, alternatives) {
     const altCmd = parseCommand(alt.transcript);
     if (altCmd && !CONTEXTUAL.has(altCmd.command)) {
       const handled = handleCommand(state, altCmd);
+      if (handled) return handled;
+    }
+  }
+  // Still nothing. When the utterance was too long to be an answer (REQ-ANS-026), a
+  // command word may be hiding in the noise ("uh, let's just go to the next one") — pluck
+  // it out fuzzily before giving up.
+  for (const alt of alternatives) {
+    const fuzzy = fuzzyCommand(alt.transcript);
+    if (fuzzy && !CONTEXTUAL.has(fuzzy.command)) {
+      const handled = handleCommand(state, fuzzy);
       if (handled) return handled;
     }
   }
