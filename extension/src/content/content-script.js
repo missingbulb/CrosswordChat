@@ -127,12 +127,18 @@ async function startSession() {
   }
 }
 
-// The toolbar toggle button (REQ-LIFE-012): same semantics as the extension icon —
-// start when idle (REQ-LIFE-001), instant silent stop mid-session (REQ-LIFE-002).
-// Mounts as soon as the NYT toolbar renders; quietly absent when it never does.
-const toggleButton = mountSessionButton(document, () => {
-  if (session) session.orchestrator.stop();
-  else void startSession();
+// The in-page split button (REQ-LIFE-012): the main half has the same semantics as the
+// extension icon — start when idle (REQ-LIFE-001), instant silent stop mid-session
+// (REQ-LIFE-002); the caret opens Settings and the voice-command reference (REQ-CMD-007).
+// Content scripts can't open extension pages, so the worker does it (REQ-CMD-007). Mounts
+// as soon as the NYT toolbar renders; quietly absent when it never does.
+const toggleButton = mountSessionButton(document, {
+  onToggle: () => {
+    if (session) session.orchestrator.stop();
+    else void startSession();
+  },
+  onSettings: () => chrome.runtime.sendMessage({ type: MSG.OPEN_SETTINGS }).catch(() => {}),
+  onHelp: () => chrome.runtime.sendMessage({ type: MSG.OPEN_HELP }).catch(() => {}),
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

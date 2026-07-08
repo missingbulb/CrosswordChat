@@ -41,6 +41,7 @@ for (const { in: input, out } of entries) {
 
 copyFileSync(join(SRC, 'options/options.html'), join(DIST, 'options.html'));
 copyFileSync(join(SRC, 'popup/unsupported.html'), join(DIST, 'unsupported.html'));
+copyFileSync(join(SRC, 'help/help.html'), join(DIST, 'help.html'));
 
 mkdirSync(join(DIST, 'icons'), { recursive: true });
 for (const px of [16, 32, 48, 128]) {

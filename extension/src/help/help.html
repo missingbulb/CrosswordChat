@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CrosswordChat — voice commands</title>
+  <style>
+    :root { --gold: #F2C53D; --ink: #191919; --line: #e4e4e4; --muted: #666; }
+    * { box-sizing: border-box; }
+    body {
+      font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--ink); margin: 0; background: #fff;
+    }
+    header {
+      background: var(--ink); color: #fff;
+      padding: 22px 24px; display: flex; align-items: center; gap: 14px;
+    }
+    header .mark {
+      width: 34px; height: 34px; border-radius: 8px; background: var(--gold);
+      flex: none; display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 19px; margin: 0; font-weight: 700; }
+    header p { margin: 2px 0 0; font-size: 13px; color: #cfcfcf; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px; }
+    .lead { color: var(--muted); margin: 0 0 24px; }
+    .lead strong { color: var(--ink); }
+    section { margin: 0 0 26px; }
+    h2 {
+      font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted); margin: 0 0 10px; padding-bottom: 6px;
+      border-bottom: 2px solid var(--gold);
+    }
+    dl { margin: 0; display: grid; grid-template-columns: minmax(150px, 210px) 1fr; gap: 2px 18px; }
+    dt { padding: 7px 0; font-weight: 600; }
+    dt .say { color: var(--muted); font-weight: 400; font-size: 13px; }
+    dd { margin: 0; padding: 7px 0; color: #333; border-top: 1px solid var(--line); }
+    dt { border-top: 1px solid var(--line); }
+    dl > dt:first-of-type, dl > dd:first-of-type { border-top: 0; }
+    code {
+      font: 13px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      background: #f4f4f4; border: 1px solid var(--line); border-radius: 4px;
+      padding: 1px 5px; white-space: nowrap;
+    }
+    .also { color: var(--muted); font-size: 13px; }
+    footer {
+      max-width: 760px; margin: 0 auto; padding: 4px 24px 40px;
+      color: var(--muted); font-size: 13px;
+    }
+    footer a { color: var(--ink); }
+    @media (max-width: 560px) {
+      dl { grid-template-columns: 1fr; gap: 0; }
+      dd { padding-top: 0; border-top: 0; padding-bottom: 10px; }
+      dt { border-top: 1px solid var(--line); }
+      dl > dd:first-of-type { border-top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="mark" aria-hidden="true">💬</div>
+    <div>
+      <h1>CrosswordChat voice commands</h1>
+      <p>Everything you can say once a session is listening.</p>
+    </div>
+  </header>
+
+  <main>
+    <p class="lead">Start a session from the extension icon or the in-page button, then just
+      <strong>speak</strong>. Say your answer as a whole word, or spell it out. When the
+      recognizer mishears you, the phrases below steer it — most have a few wordings, and any
+      of them work. You never have to remember the exact one.</p>
+
+    <section>
+      <h2>Answering</h2>
+      <dl>
+        <dt>Say the answer</dt>
+        <dd>Just say the word — <code>heart</code>. Multi-word answers work too: <code>a lot</code>.</dd>
+
+        <dt>Spell it out</dt>
+        <dd>Say the letters — <code>H, E, A, R, T</code> — as bare letters, letter names
+          (<code>aitch, ee, ay…</code>), or the NATO alphabet (<code>hotel, echo, alpha…</code>).</dd>
+
+        <dt>Say it, then spell it</dt>
+        <dd>Give the word and its spelling in one breath: <code>dog, D, O, G</code>.</dd>
+
+        <dt>Fill just the blanks</dt>
+        <dd>On a half-filled entry, say only the missing letters and the grid supplies the rest.</dd>
+
+        <dt>Force an answer<div class="say">answer… · guess… · the answer is… · the word is… · try…</div></dt>
+        <dd>Enter a word even if it sounds like a command — <code>answer pass</code> enters PASS.</dd>
+
+        <dt>Enter over a clash<div class="say">anyway · say it anyway · overwrite · force it</div></dt>
+        <dd>Enter a word that disagrees with letters already in the grid.</dd>
+
+        <dt>That's not what I said<div class="say">you misheard · that's not what I said · I said… · I meant…</div></dt>
+        <dd>Reject the last guess and try again; <code>I said plane</code> re-answers directly.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Getting around</h2>
+      <dl>
+        <dt>Next clue<div class="say">next · next clue · pass · skip · skip it · move on</div></dt>
+        <dd>Leave the current entry as-is and move to the next one.</dd>
+
+        <dt>Previous clue<div class="say">back · go back · previous · previous clue</div></dt>
+        <dd>Return to the clue you were just on.</dd>
+
+        <dt>Cross the current letter<div class="say">flip · flip it · switch direction · other direction</div></dt>
+        <dd>Jump to the clue crossing the selected square.</dd>
+
+        <dt>Go to a clue<div class="say">seven across · 22 down · go to twelve across</div></dt>
+        <dd>Jump straight to any clue by its number and direction. Starting with
+          <code>go to…</code> forces navigation even if the tail is misheard.</dd>
+
+        <dt>Repeat the clue<div class="say">repeat · say again · again · read it again · what</div></dt>
+        <dd>Read the current clue aloud again.</dd>
+
+        <dt>Change the order<div class="say">switch to most filled · go in order</div></dt>
+        <dd>Switch how <em>next</em> chooses clues — list order, or the most-filled first.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Fixing the grid</h2>
+      <dl>
+        <dt>Undo<div class="say">undo · undo that · take it back</div></dt>
+        <dd>Revert the last answer the session entered.</dd>
+
+        <dt>Clear the entry<div class="say">clear · clear it · delete · erase</div></dt>
+        <dd>Empty every letter of the current entry. <em>Undo</em> brings it back.</dd>
+
+        <dt>Pencil mode<div class="say">pencil · pencil mode · use pencil</div></dt>
+        <dd>Write following answers as pencil marks (uncertain).</dd>
+
+        <dt>Pen mode<div class="say">pen · pen mode · ink</div></dt>
+        <dd>Go back to writing answers in pen.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Spelling &amp; hints</h2>
+      <dl>
+        <dt>Spell a word<div class="say">spell · let me spell it · spell A B C</div></dt>
+        <dd>Enter spelling mode, letter by letter. The letters can ride along: <code>spell A B C</code>.
+          While spelling, say <code>done</code> to finish, <code>undo</code> to drop the last letter,
+          or <code>cancel</code> to back out.</dd>
+
+        <dt>Hear the letters<div class="say">hint · letters · what do I have · what's filled in · spell it</div></dt>
+        <dd>Read back the letters filled in so far, and how many of the entry remain.</dd>
+
+        <dt>List the commands<div class="say">help · what can I say · commands</div></dt>
+        <dd>Speak a quick spoken summary of the core commands.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Ending the session</h2>
+      <dl>
+        <dt>Stop<div class="say">stop · goodbye · bye · quit · we're done · I'm done</div></dt>
+        <dd>End the session with a short sign-off. You can say it even while it's talking.</dd>
+
+        <dt class="also">Other ways to stop</dt>
+        <dd class="also">Press <code>Esc</code>, click the in-page button, or click the extension icon —
+          each ends the session instantly and silently. After about a minute of silence the mic
+          closes on its own.</dd>
+      </dl>
+    </section>
+  </main>
+
+  <footer>
+    CrosswordChat works on the New York Times Mini, Midi, and daily crosswords.
+    Questions? <a href="mailto:crosswords@missingbulb.com">crosswords@missingbulb.com</a>
+  </footer>
+</body>
+</html>

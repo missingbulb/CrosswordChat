@@ -239,18 +239,24 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   app, then speech and mic stop within ~1 s with no spoken goodbye and the badge clears.
 - **Verify:** manual MT-24.
 
-#### REQ-LIFE-012 — On-page toggle button in the puzzle toolbar
+#### REQ-LIFE-012 — On-page split button in the puzzle toolbar
 - **Status:** Active · **Level:** MUST
-- The content script MUST place a start/stop button inside the puzzle page itself: in NYT's
+- The content script MUST place a start/stop control inside the puzzle page itself: in NYT's
   toolbar, immediately to the right of the pencil toggle — so the feature is discoverable where
-  the solving happens (the extension icon remains an equivalent control). The button MUST wear
-  the extension's own icon — the gold crossword-grid speech bubble, one mark everywhere: page
-  button, action icon, store assets (the artwork lives in a single shared module so they cannot
-  drift) — carry an accessible label, and MUST reflect session state (`aria-pressed`; while a
-  session runs the tile inverts: ink tile, gold bubble). Clicking it MUST behave
-  exactly like the extension icon: no session → start one (REQ-LIFE-001); a session running in
-  this tab → end it instantly and silently (REQ-LIFE-002). Sessions started from the button obey
-  one-session-at-a-time (REQ-LIFE-009). Pencil discovery MUST be live-markup-defensive
+  the solving happens (the extension icon remains an equivalent control). It is a **split
+  button**: a main half that toggles the session, and a small caret that opens a menu with
+  **Activate** (the same toggle), **Settings** (REQ-NAV-012), and **Voice commands** (the command
+  reference, REQ-CMD-007). The menu opens on the caret, closes on choosing an item or on any click
+  outside (or Escape), and the Activate row tracks session state (Activate ↔ Stop session).
+  Settings and Help open extension pages, which a content script cannot do itself, so the button
+  asks the service worker (REQ-CMD-007). The main half MUST wear the extension's own icon — the
+  gold crossword-grid speech bubble, one mark everywhere: page button, action icon, store assets
+  (the artwork lives in a single shared module so they cannot drift) — carry an accessible label,
+  and MUST reflect session state (`aria-pressed`; while a session runs the tile inverts: ink tile,
+  gold bubble). Clicking the main half MUST behave exactly like the extension icon: no session →
+  start one (REQ-LIFE-001); a session running in this tab → end it instantly and silently
+  (REQ-LIFE-002). Sessions started from the button obey one-session-at-a-time (REQ-LIFE-009).
+  Pencil discovery MUST be live-markup-defensive
   (`findPencilToggle`: accessible name → pencil-classed icon's owning button → button text);
   when no pencil is findable but a toolbar exists, the button MUST fall back to the end of the
   tool row rather than not appearing; and when not even a toolbar is findable while a BOARD is
@@ -263,12 +269,13 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   give up after the timeout: no button, no errors, the extension icon still works. The injected
   SVG MUST survive a hostile host page (no url(#…) references; paints duplicated into inline
   styles). The injection lives in the page adapter (REQ-PAGE-011 — it is NYT DOM knowledge).
-- **Accept:** Given a puzzle page, then exactly one labeled button sits right of the pencil
-  toggle (found by any net), clicking it starts a session and clicking again ends it, with
-  `aria-pressed` tracking; given a toolbar without a findable pencil, then the button sits at the
-  end of the tool row; given a toolbar that renders late — even after the give-up interval, while
-  app markup is present — then the button appears once the toolbar does; given a page with no
-  crossword markup, then no button is injected and nothing throws.
+- **Accept:** Given a puzzle page, then exactly one labeled split button sits right of the pencil
+  toggle (found by any net), clicking its main half starts a session and clicking again ends it,
+  with `aria-pressed` tracking; given the caret is clicked, then a menu of Activate/Settings/Voice
+  commands opens and choosing one closes it; given a toolbar without a findable pencil, then the
+  button sits at the end of the tool row; given a toolbar that renders late — even after the
+  give-up interval, while app markup is present — then the button appears once the toolbar does;
+  given a page with no crossword markup, then no button is injected and nothing throws.
 - **Verify:** integration `extension-test/integration/session-button.test.js`; manual MT-30.
 
 #### REQ-LIFE-013 — Action icon signals supported pages
@@ -1189,6 +1196,26 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given TTS mid-sign-off, when the user says "stop", then speech is cancelled and the
   session ends; given any non-stop speech during the sign-off, then nothing changes.
 - **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/orchestrator.test.js`.
+
+#### REQ-CMD-007 — Command reference page
+- **Status:** Active · **Level:** SHOULD
+- Beyond the spoken *help* summary (REQ-CMD-002), the extension SHOULD offer a full written
+  **command reference** the user can open whenever they want the complete list. It is a
+  self-contained extension page (`help.html`) grouping every command family — answering, getting
+  around, fixing the grid, spelling & hints, ending the session — with the spoken wordings from
+  the lexicon (REQ-CMD-001); it MUST be pure static HTML (no scripts, no network, nothing read
+  from any page — REQ-NFR-001/002). The page MUST be reachable two ways: (1) right-clicking the
+  extension's action icon → a *Voice commands (help)* menu item, opened in a new tab; and (2) the
+  in-page split button's dropdown → *Voice commands* (REQ-LIFE-012). Because a content script
+  cannot open an extension page, the in-page entry sends the service worker an open request; the
+  worker opens the page (and, for the dropdown's *Settings*, the same settings surface the action
+  menu opens — REQ-NAV-012).
+- **Accept:** Given the action icon is right-clicked, then a Help item is offered and choosing it
+  opens the reference page; given the in-page button's caret, then the menu offers Voice commands
+  and choosing it opens the same page; given the page, then it lists every command group and loads
+  no scripts or remote resources.
+- **Verify:** unit `extension-test/unit/help-page.test.js`, integration
+  `extension-test/integration/session-button.test.js`; manual MT-34.
 
 ---
 

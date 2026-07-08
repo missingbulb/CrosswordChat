@@ -49,8 +49,10 @@ function presentAction(tabId, url) {
 // would bounce the user through chrome://extensions and back. The right-click Settings…
 // item borrows the tab's popup slot for one click: point it at the settings page, pop it
 // open under the icon, then hand the slot straight back so the next plain click still
-// toggles the session (or shows unsupported.html).
+// toggles the session (or shows unsupported.html). The Help item (REQ-CMD-007) opens the
+// full command reference in a new tab.
 const SETTINGS_MENU_ID = 'cc-settings';
+const HELP_MENU_ID = 'cc-help';
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
@@ -59,8 +61,19 @@ chrome.runtime.onInstalled.addListener(() => {
       title: 'Settings…',
       contexts: ['action'],
     });
+    chrome.contextMenus.create({
+      id: HELP_MENU_ID,
+      title: 'Voice commands (help)',
+      contexts: ['action'],
+    });
   });
 });
+
+// REQ-CMD-007: the command reference is a plain extension page opened in its own tab.
+function openHelpPage() {
+  return chrome.tabs.create({ url: chrome.runtime.getURL('help.html') })
+    .catch(() => { /* tab creation blocked — nothing else to try */ });
+}
 
 async function openSettingsPopup(tab) {
   try {
@@ -76,8 +89,20 @@ async function openSettingsPopup(tab) {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId !== SETTINGS_MENU_ID || !tab?.id) return;
-  void openSettingsPopup(tab);
+  if (info.menuItemId === HELP_MENU_ID) {
+    void openHelpPage();
+    return;
+  }
+  if (info.menuItemId === SETTINGS_MENU_ID && tab?.id) void openSettingsPopup(tab);
+});
+
+// REQ-CMD-007 / REQ-LIFE-012: the in-page dropdown button reaches Settings and Help the
+// same way the action's right-click menu does — content scripts can't open extension
+// pages themselves, so they ask the worker.
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg?.type === MSG.OPEN_HELP) void openHelpPage();
+  else if (msg?.type === MSG.OPEN_SETTINGS && sender.tab) void openSettingsPopup(sender.tab);
+  return false; // no async response
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
