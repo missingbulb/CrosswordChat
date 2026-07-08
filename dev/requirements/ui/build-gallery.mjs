@@ -21,8 +21,14 @@ export const REQ_DOC = join(HERE, '..', '..', 'docs', 'REQUIREMENTS.md');
 
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// The brand-mark cases are 128px squares (show small); the toolbar cases are wide.
-const widthFor = (name) => (name.startsWith('extension-button') ? 72 : 520);
+// Display width per surface: brand marks small, the settings popup at ~its real
+// width, the tall help page scaled down, toolbars wide.
+const widthFor = (name) => {
+  if (name.startsWith('extension-button')) return 72;
+  if (name === 'settings-popup') return 300;
+  if (name === 'help-page') return 360;
+  return 520;
+};
 
 // The generated markdown for one requirement id's cases (empty string if none).
 function galleryBlock(id, cases) {
