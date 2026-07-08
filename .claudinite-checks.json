@@ -3,7 +3,8 @@
     "chrome-extension",
     "chrome-extension-release",
     "github-actions",
-    "node"
+    "node",
+    "spec-driven-product"
   ],
   "rules": {},
   "accept": []
