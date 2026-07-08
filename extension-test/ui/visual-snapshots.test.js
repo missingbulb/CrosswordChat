@@ -17,6 +17,7 @@ import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { loadCases, snapshotPath } from './cases.js';
 import { artifactPath } from './render/artifacts-dir.js';
+import { applyGallery, REQ_DOC } from './build-gallery.mjs';
 
 const MAX_DIFF_RATIO = 0;
 
@@ -38,6 +39,13 @@ describe('UI visual snapshots', () => {
       `UI goldens are authored in en-US, but this environment resolves to "${locale}". ` +
         'Unset LANG/LC_ALL (or set LANG=C.UTF-8) when running/regenerating the UI snapshots.',
     ).toBe('en-US');
+  });
+
+  // §7: the requirements doc embeds these goldens under managed markers. It's derived
+  // output — fail if it drifts from the generator (run `npm run refresh:ui` to fix).
+  test('the requirements-doc UI gallery is up to date', () => {
+    const doc = readFileSync(REQ_DOC, 'utf8');
+    expect(applyGallery(doc, cases), 'dev/docs/REQUIREMENTS.md UI gallery is stale — run "npm run refresh:ui"').toBe(doc);
   });
 
   for (const testCase of cases) {
