@@ -15,7 +15,7 @@
 // whose pencil markup drifted degrades the softening (REQ-ANS-019), not answering.
 
 import { snapshot, cellElements } from './reader.js';
-import { CLS, findPencilToggle } from './selectors.js';
+import { SEL, CLS, findPencilToggle } from './selectors.js';
 
 const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -39,19 +39,38 @@ function keyEventInit(key) {
   return { key, code: letter ? `Key${key}` : key, keyCode, which: keyCode };
 }
 
-function typeKey(document, key, cellEl) {
-  // Key events must bubble THROUGH the app's root container: the live page delegates
-  // key handling near its own root (React-style), and that root is a DESCENDANT of
-  // <body> — an event dispatched on body bubbles up past document without ever
-  // passing through it. Prefer the element the app focused (the selected cell's rect
-  // carries tabindex=0); otherwise dispatch on the cell itself.
+// Key events must bubble THROUGH the app's root container: the live page delegates key
+// handling near its own root (React-style), and that root is a DESCENDANT of <body> — an
+// event dispatched on body bubbles up past document without ever passing through it.
+// Prefer the element the app focused (the selected cell's rect carries tabindex=0); else
+// aim at a board cell so the event still traverses the app root (and, failing that, body).
+function keyTarget(document, cellEl) {
   const active = document.activeElement;
-  const target = active && active !== document.body && active !== document.documentElement
-    ? active
-    : (cellEl ?? document.body);
+  if (active && active !== document.body && active !== document.documentElement) return active;
+  return cellEl ?? document.querySelector(SEL.cell) ?? document.querySelector(SEL.board) ?? document.body;
+}
+
+function typeKey(document, key, cellEl) {
+  const target = keyTarget(document, cellEl);
   const init = keyEventInit(key);
   fire(target, 'keydown', init);
   if (/^[A-Z]$/.test(key)) fire(target, 'keypress', { ...init, charCode: init.keyCode });
+  fire(target, 'keyup', init);
+}
+
+/**
+ * Tell the page a user is present WITHOUT touching the puzzle (REQ-LIFE-017). A bare
+ * Shift types no letter and moves no cursor, but it is a real keydown/keyup — so the NYT
+ * inactivity timer that auto-pauses a quiet puzzle mid-conversation resets. Keyboard
+ * only, never mouse: the selection and the app's click handlers are left untouched.
+ * Every actual write (enterAnswer/clearEntry) already sends real keystrokes and so keeps
+ * the puzzle alive on its own; this is the keep-alive for actions that don't type —
+ * a spoken command, or selecting a clue.
+ */
+export function keepAlive(document) {
+  const target = keyTarget(document);
+  const init = { key: 'Shift', code: 'ShiftLeft', keyCode: 16, which: 16 };
+  fire(target, 'keydown', init);
   fire(target, 'keyup', init);
 }
 

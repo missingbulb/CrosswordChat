@@ -2,7 +2,6 @@
 // session end, so the extension is inert when off (REQ-NFR-004).
 
 import { snapshot } from './reader.js';
-import { isPaused, resumePuzzle } from './pause.js';
 
 /**
  * @param {Document} document
@@ -21,15 +20,6 @@ export function createWatcher(document, onEvent, { debounceMs = 150 } = {}) {
   const check = () => {
     timer = null;
     if (paused) return;
-    // NYT auto-pauses (REQ-LIFE-017): it veils the board — and blanks the entries — behind
-    // a Resume overlay after a stretch of no keystrokes. During a live session that freeze
-    // is spurious (the user is talking, not away), so resume it for them. Bail BEFORE the
-    // diff so the veiled, letter-less grid is never read as the user clearing their answers;
-    // the resume's repaint re-baselines against the entries that were always there.
-    if (isPaused(document)) {
-      resumePuzzle(document);
-      return;
-    }
     const snap = snapshot(document);
     const prev = last;
     last = snap;

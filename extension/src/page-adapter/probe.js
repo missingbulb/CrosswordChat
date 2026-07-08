@@ -4,7 +4,6 @@
 import { SEL, findPencilToggle } from './selectors.js';
 import { snapshot } from './reader.js';
 import { findSplashPlayButton } from './splash.js';
-import { findResumeButton } from './pause.js';
 
 export function probe(document) {
   const items = [];
@@ -70,13 +69,6 @@ export function probe(document) {
     add('splash text without button', false,
       'the "Ready to start solving?" copy is rendered but no Play-ish button was found (REQ-LIFE-016)');
   }
-
-  // The auto-pause veil (REQ-LIFE-017): a Resume button means the puzzle is paused; a
-  // live session resumes it. Informational — normal mid-solve is "not paused".
-  const resumeBtn = findResumeButton(document);
-  add('paused', true, resumeBtn
-    ? `Resume button found — puzzle paused: <${resumeBtn.tagName.toLowerCase()} class="${resumeBtn.getAttribute('class') ?? ''}">`
-    : 'not paused (normal mid-solve)');
 
   const toolbars = count(SEL.toolbar);
   add('toolbar', toolbars >= 1, `${toolbars} match(es) for ${SEL.toolbar} (REQ-LIFE-012 anchor)`);

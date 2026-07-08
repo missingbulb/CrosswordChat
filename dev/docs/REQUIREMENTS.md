@@ -335,29 +335,26 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   once the splash is cleared by hand.
 - **Verify:** integration `extension-test/integration/splash.test.js`; manual MT-33.
 
-#### REQ-LIFE-017 — The auto-pause veil is resumed, not dead-ended
+#### REQ-LIFE-017 — Keep the puzzle alive so it never auto-pauses mid-conversation
 - **Status:** Active · **Level:** MUST
-- The NYT games shell auto-pauses a puzzle after a stretch with no keystrokes: it veils the
-  board behind a "Your puzzle is paused" overlay with a Resume button, and blanks the entries
-  while veiled. This is a THINKING game driven by voice — long silences at the keyboard are the
-  norm (the user is talking to us, not away) — so an active session that meets that veil MUST NOT
-  freeze. While a session is live and the veil appears, the extension MUST resume the puzzle for
-  the user by clicking Resume like a real click, so the conversation keeps working against a live
-  board. A genuine look-away is a different case and already ENDS the session (REQ-LIFE-011: tab
-  blur/hide), which stops the watcher — so auto-resume only ever fires while the tab is in front
-  of the user, never overriding a pause the user actually wants. The veiled, letter-less grid MUST
-  NOT be read as the user clearing their answers (no spurious grid/selection event): pause is
-  detected and resolved before the change diff. Detection is page-adapter knowledge (REQ-PAGE-011)
-  and MUST degrade to "not paused" on pages without the veil. It MUST be belt and braces like the
-  splash (REQ-LIFE-016): the games shell moment / `xwd__modal` class nets gated to a VISIBLE
-  overlay whose copy says "paused" (the word that tells a pause veil apart from the splash or a
-  verdict popup), plus a text anchor that survives the next class rename; a veil hidden with
-  `display:none` reads as already cleared.
-- **Accept:** Given a live session and the fake page's pause veil raised, then Resume is clicked,
-  the veil clears, and no grid/selection event is emitted for the blanked board; given a page with
-  no veil, detection reports "not paused" and nothing happens.
-- **Verify:** integration `extension-test/integration/pause.test.js` and the watcher case in
-  `extension-test/integration/page-adapter.test.js`.
+- The NYT games shell auto-pauses a puzzle after a stretch with no keyboard input: it veils the
+  board behind a "Your puzzle is paused" overlay and freezes the timer. This is a THINKING game
+  driven by voice — long silences at the keyboard are the norm (the user is talking to us, not
+  away) — so the extension MUST PREVENT the pause rather than react to it after the board has
+  frozen. On every user action during a live session, the extension MUST signal presence to the
+  page so its inactivity timer resets: a keyboard-only keep-alive (a bare modifier keydown/keyup
+  that types no letter and moves no cursor). It MUST NOT use synthetic mouse events for this. The
+  two page-touching actions carry their own presence — "enter answer" already types real
+  keystrokes, and "move" (select a clue) sends the keep-alive alongside its selection — and any
+  spoken action (a heard command or answer) sends one too. The keep-alive is best-effort and MUST
+  NOT disturb the conversation if it fails, and MUST NOT itself change the grid or selection.
+  A genuine look-away is a different case and already ENDS the session (REQ-LIFE-011: tab
+  blur/hide), so nothing keeps a backgrounded puzzle awake.
+- **Accept:** Given the fake page's inactivity model, a quiet puzzle auto-pauses when its timer
+  fires; a keep-alive keystroke (or entering a word, or moving to another clue) before the timer
+  keeps it live, and neither the keep-alive nor the checks change the grid or the selection.
+- **Verify:** integration `extension-test/integration/keepalive.test.js`; unit
+  `extension-test/unit/orchestrator.test.js` (spoken activity nudges the page alive).
 
 ---
 

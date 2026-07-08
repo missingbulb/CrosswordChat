@@ -50,6 +50,13 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
 
   const caption = (role, text) => ui.caption?.(role, text);
 
+  // REQ-LIFE-017: prevent NYT auto-pausing a quiet puzzle. When the user is present but
+  // not touching the keyboard — thinking aloud, giving a spoken command — the page sees
+  // no input and, after a stretch, veils the board. So on every spoken activity we send
+  // the page a keyboard keep-alive (page writes already type real keys). Best-effort:
+  // a keep-alive that throws must never disturb the conversation.
+  const keepPuzzleAlive = () => { try { pageClient.keepAlive?.(); } catch { /* page gone */ } };
+
   // Barge-in (REQ-SPCH-009): while TTS speaks, keep a mic cycle open. Utterances
   // that read as a chunk of what we're saying are our own voice coming back through
   // the mic — discarded (echo guard, REQ-SPCH-005). Anything else cuts the speech
@@ -77,6 +84,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
           return; // mic trouble — the post-speech LISTEN will surface it properly
         }
         lastActivityAt = now();
+        keepPuzzleAlive();
         const top = result.alternatives[0]?.transcript ?? '';
         // Echo guard (REQ-SPCH-005): alternatives that read as a contiguous chunk of
         // the spoken text are evidence of our own voice coming back through the mic.
@@ -138,10 +146,11 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         if (ended) break;
         if (result.error) {
           // A pause reset means the user WAS speaking — that's activity, not silence.
-          if (result.error === 'reset') lastActivityAt = now();
+          if (result.error === 'reset') { lastActivityAt = now(); keepPuzzleAlive(); }
           enqueue({ type: 'STT_ERROR', code: result.error, silentMs: now() - lastActivityAt });
         } else {
           lastActivityAt = now();
+          keepPuzzleAlive();
           caption('heard', result.alternatives[0]?.transcript ?? ''); // REQ-SPCH-008
           enqueue({ type: 'HEARD', alternatives: result.alternatives });
         }
