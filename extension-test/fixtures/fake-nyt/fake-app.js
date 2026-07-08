@@ -59,13 +59,10 @@ function entriesFromGrid(rows, cols, isBlock) {
  *   splash — cover the app with the pre-puzzle "Ready to start solving?" modal
  *     (REQ-LIFE-016); its Play button removes it. 'stuck' renders a Play button
  *     that ignores clicks, like a page that only honors trusted input.
- *   paused — start behind the auto-pause veil ("Your puzzle is paused" + Resume,
- *     REQ-LIFE-017); Resume lifts it. Also reachable at runtime via app.showPause().
- *   autoPause — model NYT's inactivity auto-pause: any keydown counts as user presence,
- *     and app.idleTick() (the inactivity timer firing) veils the board UNLESS a keydown
- *     was seen since the previous tick. Lets a test prove a keep-alive prevents the pause.
+ * The returned app exposes showPause() to raise NYT's "Your puzzle is paused" veil on
+ * demand (REQ-LIFE-017) — the state the reader's isPaused() and the watcher react to.
  */
-export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false, pencilMarkup = 'aria', toolbarWithoutPencil = false, splash = false, paused = false, autoPause = false } = {}) {
+export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelayMs = 0, legacyKeysOnly = false, noPencilToggle = false, pencilMarkup = 'aria', toolbarWithoutPencil = false, splash = false } = {}) {
   const { rows, cols, solution } = puzzle;
   const isBlock = (r, c) => solution[r][c] === '#';
   const entries = entriesFromGrid(rows, cols, isBlock);
@@ -254,10 +251,10 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     document.body.append(veil);
   }
 
-  // Auto-pause veil (REQ-LIFE-017): the games shell moment shown after a stretch with no
-  // keystrokes — "Your puzzle is paused" over the (blanked) board, with a Resume button
-  // that lifts it. This is the outcome the keep-alive PREVENTS: idleTick() raises it only
-  // when an interval saw no keyboard presence. showPause() also mounts it on demand.
+  // Auto-pause veil (REQ-LIFE-017): the games shell moment NYT shows after ~30 s with no
+  // keystroke — "Your puzzle is paused" over the (blanked) board, with a Resume button.
+  // The reader's isPaused() detects it and the session ends; showPause() mounts it so a
+  // test can drive that path.
   function showPause() {
     if (state.paused) return;
     state.paused = true;
@@ -376,15 +373,6 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
     }
   });
 
-  // Inactivity auto-pause model (REQ-LIFE-017): the real games shell watches for input
-  // and, after a quiet stretch, veils the board. Here ANY keydown reaching the app root
-  // counts as presence — real typing and the extension's keyboard keep-alive alike — and
-  // idleTick() (the timer firing) pauses only when the last interval saw none.
-  let sawKeyActivity = false;
-  if (autoPause) {
-    main.addEventListener('keydown', () => { sawKeyActivity = true; });
-  }
-
   cellEls.forEach((g, i) => {
     if (rectEls[i].getAttribute('class').includes('--block')) return;
     g.addEventListener('click', () => {
@@ -408,22 +396,11 @@ export function initFakeNyt(document, puzzle, { swallowKeys = false, renderDelay
   }
 
   render();
-  if (paused) showPause(); // after paint()/entryAt are live, so the veil blanks a real grid
   return {
     state,
     entries,
-    /** Test helper: raise the auto-pause veil mid-session (REQ-LIFE-017). */
+    /** Test helper: raise NYT's "Your puzzle is paused" veil mid-session (REQ-LIFE-017). */
     showPause,
-    /**
-     * Test helper (autoPause): fire the inactivity timer. Veils the board unless a
-     * keydown was seen since the last tick, and reports whether it paused (REQ-LIFE-017).
-     */
-    idleTick() {
-      if (!autoPause) return false;
-      if (sawKeyActivity) { sawKeyActivity = false; return false; } // user present → stay live
-      showPause();
-      return true;
-    },
     /** Test helper: type a string through the same code path as real key events. */
     typeAt(cellIndex, dir, word) {
       state.selCell = cellIndex;

@@ -362,8 +362,9 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   fires; a keep-alive keystroke (or a heard command) before the timer keeps it live and changes
   neither the grid nor the selection; and when the veil appears the watcher reports `paused` once
   and the session ends with the blip.
-- **Verify:** integration `extension-test/integration/keepalive.test.js`; unit
-  `extension-test/unit/orchestrator.test.js` (command keeps alive; pause ends with the blip).
+- **Verify:** integration `extension-test/integration/page-adapter.test.js` (keepAlive,
+  isPaused, and the watcher's `paused` event); unit `extension-test/unit/orchestrator.test.js`
+  (command keeps alive; pause ends with the blip).
 
 ---
 
