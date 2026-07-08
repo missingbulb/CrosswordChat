@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { JSDOM } from 'jsdom';
-import { mountSessionButton } from '../../../extension/src/page-adapter/session-button.js';
+import { mountSessionButton, BUTTON_ID } from '../../../extension/src/page-adapter/session-button.js';
 import { domToPng } from './dom-to-png.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -46,10 +46,16 @@ const ICON_SVGS = {
   'xwd__toolbar_icon--pencil': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="21" height="21"><path d="M4 20h4L18.5 9.5l-4-4L4 16v4z" fill="none" stroke="#121212" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 6.5l4 4" fill="none" stroke="#121212" stroke-width="1.6"/></svg>',
 };
 
+// The split button's caret glyph (▾) isn't in the bundled font — draw it as a
+// small SVG triangle so it renders instead of tofu.
+const CARET_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6" width="10" height="6"><path d="M0 0 L5 6 L10 0 Z" fill="#121212"/></svg>';
+
 function substituteIcons(rootEl) {
   for (const [cls, svg] of Object.entries(ICON_SVGS)) {
     for (const el of rootEl.querySelectorAll(`.${cls}`)) el.innerHTML = svg;
   }
+  const caret = rootEl.querySelector('[data-cc-role="caret"]');
+  if (caret) caret.innerHTML = CARET_SVG;
 }
 
 // Fold the stylesheet onto the subtree as inline styles. Each element's own inline
@@ -69,23 +75,30 @@ function inlineCss(rootEl) {
 }
 
 /**
- * @param {{active?: boolean}} [opts]  active — render the session as running
+ * @param {{active?: boolean, menuOpen?: boolean}} [opts]
+ *   active — render the session as running (inverted tile);
+ *   menuOpen — open the caret dropdown (Activate/Settings/Voice commands)
  * @returns {Promise<Buffer>} PNG bytes of the toolbar row with the button injected
  */
-export async function renderToolbar({ active = false } = {}) {
+export async function renderToolbar({ active = false, menuOpen = false } = {}) {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>${TOOLBAR_HTML}</body></html>`, {
     url: 'https://www.nytimes.com/crosswords/game/mini',
   });
   const doc = dom.window.document;
   try {
-    // The shipped injector finds the pencil and mounts the button right after it.
-    const handle = mountSessionButton(doc, () => {}, { floatAfterMs: 0 });
+    // The shipped injector finds the pencil and mounts the split button right after
+    // it. Handlers are no-ops here — the golden asserts appearance, not behavior.
+    const handle = mountSessionButton(doc, { onToggle() {}, onSettings() {}, onHelp() {} }, { floatAfterMs: 0 });
     if (active) handle.setActive(true);
+    // Drive the real open path so the golden shows the menu the shipped code builds.
+    if (menuOpen) doc.querySelector(`#${BUTTON_ID} [data-cc-role="caret"]`).click();
 
     const wrapper = doc.querySelector('.xwd__toolbar--wrapper');
     substituteIcons(wrapper);
     inlineCss(wrapper);
-    return await domToPng(wrapper, { width: WIDTH, background: '#ffffff' });
+    // The open dropdown is absolutely positioned below the row (out of flow), so
+    // give that render enough canvas height for the menu to show unclipped.
+    return await domToPng(wrapper, { width: WIDTH, height: menuOpen ? 190 : undefined, background: '#ffffff' });
   } finally {
     dom.window.close();
   }

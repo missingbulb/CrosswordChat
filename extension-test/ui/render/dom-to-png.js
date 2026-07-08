@@ -33,6 +33,11 @@ const STRING_SHORTHANDS = new Set([
   'border', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'outline',
 ]);
 
+// Properties satori cannot consume: the `font` shorthand it fails to parse
+// outright, and `z-index` it warns is unsupported. Neither affects the flat,
+// single-layer renders here, so drop them.
+const DROP_PROPS = new Set(['font', 'zIndex']);
+
 function coerceValue(key, v) {
   v = v.trim();
   if (STRING_SHORTHANDS.has(key)) return v;
@@ -58,6 +63,7 @@ function styleObject(styleAttr) {
     if (!prop || !value) continue;
     const key = camel(prop);
     if (key === 'display' && !SATORI_DISPLAY.has(value)) continue;
+    if (DROP_PROPS.has(key)) continue; // satori can't use these; it errors or warns
     out[key] = coerceValue(key, value);
   }
   return out;
@@ -82,10 +88,20 @@ function svgToImgNode(el) {
   return { type: 'img', props: { src, width, height, style } };
 }
 
+// Not painted: a [hidden] element or one styled display:none (e.g. the split
+// button's closed dropdown). Skip it so it contributes no boxes.
+function isHidden(el) {
+  if (el.hasAttribute && el.hasAttribute('hidden')) return true;
+  const s = (el.getAttribute && el.getAttribute('style')) || '';
+  return /(^|;)\s*display\s*:\s*none\b/i.test(s);
+}
+
 // jsdom element -> satori element tree. Tag is irrelevant to satori (it lays out
 // boxes from styles), so a general element becomes a div; an <svg> becomes an
-// <img>; text nodes become string children (whitespace collapsed).
+// <img>; text nodes become string children (whitespace collapsed). Returns null
+// for a hidden element (the caller filters it out).
 function toVDom(el) {
+  if (isHidden(el)) return null;
   const tag = (el.tagName || '').toLowerCase();
   if (tag === 'svg') return svgToImgNode(el);
   if (tag === 'img') {
@@ -103,17 +119,21 @@ function toVDom(el) {
       const t = node.textContent.replace(/\s+/g, ' ').trim();
       if (t) children.push(t);
     } else if (node.nodeType === 1) {
-      children.push(toVDom(node));
+      const child = toVDom(node);
+      if (child) children.push(child);
     }
   }
   // satori's one structural requirement: any box laying out child BOXES (an
-  // element child, or >1 child) needs an explicit flex/none/contents display. A
-  // toolbar is a horizontal row, so default those to a flex row; the captured
-  // computed styles usually already carry an explicit display and win.
+  // element child, or >1 child) needs an explicit flex/none/contents display. Give
+  // it flex — a row when the element's own display asked for flex (e.g. the toolbar
+  // row, the split-button wrapper), a column otherwise (normal block flow, e.g. the
+  // dropdown menu's stacked items). Elements with an explicit flex from CSS already
+  // carry their own direction and win.
   const loneTextChild = children.length === 1 && typeof children[0] === 'string';
   if (children.length > 0 && !loneTextChild && !FLEXY.includes(style.display)) {
+    const rawDisplay = /(?:^|;)\s*display\s*:\s*([^;]+)/i.exec(el.getAttribute('style') || '');
     style.display = 'flex';
-    if (!style.flexDirection) style.flexDirection = 'row';
+    if (!style.flexDirection) style.flexDirection = /flex/i.test(rawDisplay?.[1] || '') ? 'row' : 'column';
   }
   const childProp = children.length === 0 ? undefined : children.length === 1 ? children[0] : children;
   return { type: 'div', props: { style, children: childProp } };
@@ -127,10 +147,10 @@ function toVDom(el) {
  *   background — fill for any area the boxes don't cover (default transparent)
  * @returns {Promise<Buffer>} PNG bytes
  */
-export async function domToPng(rootEl, { width, background }) {
+export async function domToPng(rootEl, { width, height, background }) {
   const vdom = toVDom(rootEl);
   vdom.props.style = { fontFamily: FONT_FAMILY, ...vdom.props.style };
-  const svg = await satori(vdom, { width, fonts: FONTS });
+  const svg = await satori(vdom, { width, ...(height ? { height } : {}), fonts: FONTS });
   const resvg = new Resvg(svg, {
     font: { loadSystemFonts: false },
     ...(background ? { background } : {}),
