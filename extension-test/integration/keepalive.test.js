@@ -1,54 +1,76 @@
 // @vitest-environment jsdom
-// The puzzle stays alive as an intrinsic part of the regular operations (REQ-LIFE-017) —
-// prevention, not cure. NYT auto-pauses a quiet puzzle after a stretch with no keyboard
-// input; a voice solver isn't typing, so the two page-touching actions carry presence
-// themselves: "enter answer" types real keystrokes, and "move" clicks — and clickCell
-// pairs every click with a keystroke the page honors, since a synthetic click alone may
-// not register with the inactivity watcher. Verified against the fake page's inactivity
-// model (autoPause / idleTick), which pauses only when an interval saw no keydown.
+// The keep-alive / auto-pause lifecycle (REQ-LIFE-017, REQ-LIFE-011). NYT pauses a quiet
+// puzzle ~30s after the last keydown; a voice solver isn't typing, so:
+//   - a heard command sends a keystroke that resets NYT's timer (keepAlive), and
+//   - when the puzzle DOES pause, the watcher reports it so the session can end.
+// Verified against the fake page's inactivity model (autoPause / idleTick, which pauses
+// only when an interval saw no keydown) and its "Your puzzle is paused" veil.
 
 import { describe, test, expect } from 'vitest';
 import { initFakeNyt } from '../fixtures/fake-nyt/fake-app.js';
 import { FIXTURE_PUZZLE } from '../fixtures/fake-nyt/puzzle.js';
-import { clickCell, enterAnswer } from '../../extension/src/page-adapter/writer.js';
-import { selectClue } from '../../extension/src/page-adapter/navigator.js';
-import { snapshot, cellElements } from '../../extension/src/page-adapter/reader.js';
+import { keepAlive } from '../../extension/src/page-adapter/writer.js';
+import { snapshot, isPaused } from '../../extension/src/page-adapter/reader.js';
+import { createWatcher } from '../../extension/src/page-adapter/watcher.js';
 
-const word = (letters, startIndex, stride) =>
-  letters.split('').map((letter, i) => ({ index: startIndex + i * stride, letter }));
-const paused = () => document.querySelector('.xwd__modal--pause') != null;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('keep-alive (REQ-LIFE-017)', () => {
-  test('a quiet puzzle auto-pauses when nothing signals presence', () => {
+  test('a quiet puzzle auto-pauses when no command comes', () => {
     const app = initFakeNyt(document, FIXTURE_PUZZLE, { autoPause: true });
-    expect(app.idleTick()).toBe(true); // the inactivity timer fires with no activity…
-    expect(paused()).toBe(true); // …and the board is veiled
+    expect(app.idleTick()).toBe(true); // the inactivity timer fires with no keystroke…
+    expect(isPaused(document)).toBe(true); // …and the board is veiled
   });
 
-  test('a click carries the puzzle across the inactivity timer', () => {
+  test('a command keep-alive carries the puzzle across the inactivity timer', () => {
     const app = initFakeNyt(document, FIXTURE_PUZZLE, { autoPause: true });
-    clickCell(cellElements(document)[6]); // the mouse events alone would not count…
-    expect(app.idleTick()).toBe(false); // …but the paired keystroke registers as presence
-    expect(paused()).toBe(false);
+    keepAlive(document); // what the orchestrator sends on each heard command
+    expect(app.idleTick()).toBe(false); // presence seen → no pause
+    expect(isPaused(document)).toBe(false);
   });
 
-  test('the click keep-alive types no letter and only selects', () => {
+  test('keepAlive changes neither the grid nor the selection', () => {
     initFakeNyt(document, FIXTURE_PUZZLE);
-    clickCell(cellElements(document)[6]);
-    expect(snapshot(document).cells[6].letter).toBe(''); // the Shift nudge added nothing
+    const before = snapshot(document);
+    keepAlive(document);
+    keepAlive(document);
+    const after = snapshot(document);
+    expect(after.cells).toEqual(before.cells); // no letter typed
+    expect(after.selection).toEqual(before.selection); // no cursor moved
+  });
+});
+
+describe('pause detection (REQ-LIFE-017 / REQ-LIFE-011)', () => {
+  test('isPaused sees the veil, and reads clear when it is absent or only in JSON', () => {
+    const app = initFakeNyt(document, FIXTURE_PUZZLE);
+    expect(isPaused(document)).toBe(false);
+    app.showPause();
+    expect(isPaused(document)).toBe(true);
+    // Hidden veils and the phrase in server-rendered JSON must not count.
+    document.querySelector('.xwd__modal--pause').style.display = 'none';
+    expect(isPaused(document)).toBe(false);
   });
 
-  test('moving to another clue keeps the puzzle alive (REQ-LIFE-017 + REQ-NAV-007)', () => {
-    const app = initFakeNyt(document, FIXTURE_PUZZLE, { autoPause: true });
-    expect(selectClue(document, 'D2')).toBe(true);
-    expect(app.idleTick()).toBe(false); // the move registered as presence
-    expect(snapshot(document).selection.clueId).toBe('D2'); // …and it still selected the clue
+  test('the phrase in a server-rendered script is not a pause', () => {
+    initFakeNyt(document, FIXTURE_PUZZLE);
+    const s = document.createElement('script');
+    s.type = 'application/json';
+    s.textContent = '{"moment":"Your puzzle is paused"}';
+    document.body.append(s);
+    expect(isPaused(document)).toBe(false);
+    s.remove();
   });
 
-  test('entering an answer keeps the puzzle alive — real keystrokes, no mouse hack', async () => {
-    const app = initFakeNyt(document, FIXTURE_PUZZLE, { autoPause: true });
-    await enterAnswer(document, word('HEART', 0, 1));
-    expect(app.idleTick()).toBe(false); // the typed keys were presence
-    expect(snapshot(document).cells.slice(0, 5).map((c) => c.letter)).toEqual(['H', 'E', 'A', 'R', 'T']);
+  test('the watcher reports paused once when NYT veils the board — not as a grid change', async () => {
+    const app = initFakeNyt(document, FIXTURE_PUZZLE);
+    app.typeAt(0, 'across', 'HEART'); // an answer is on the board before the pause
+    const events = [];
+    const watcher = createWatcher(document, (kind) => events.push(kind), { debounceMs: 5 });
+    watcher.start();
+    app.showPause(); // NYT veils the board mid-session, blanking the entries
+    await sleep(40);
+    watcher.stop();
+    expect(events.filter((k) => k === 'paused')).toHaveLength(1); // reported exactly once
+    expect(events).not.toContain('grid'); // the blanked entries were NOT read as a change
   });
 });

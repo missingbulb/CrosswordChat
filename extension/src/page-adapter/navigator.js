@@ -4,8 +4,7 @@ import { SEL } from './selectors.js';
 import { clickCell } from './writer.js';
 
 /**
- * Click the clue-list item for clueId (e.g. 'D3') so the page highlights it. The click
- * keeps the puzzle alive on its own (REQ-LIFE-017 — see clickCell).
+ * Click the clue-list item for clueId (e.g. 'D3') so the page highlights it.
  * @returns {boolean} found & clicked
  */
 export function selectClue(document, clueId) {

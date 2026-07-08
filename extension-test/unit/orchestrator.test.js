@@ -17,6 +17,8 @@ function runSession(listenScript) {
   const spoken = [];
   let listens = 0;
   let micStops = 0;
+  let keepAlives = 0;
+  let offs = 0;
   let pageEventCb = null;
   const emitPageEvent = (kind, snapshot) => pageEventCb?.(kind, snapshot);
 
@@ -36,17 +38,22 @@ function runSession(listenScript) {
         },
         stop: () => { micStops += 1; },
       },
+      ping: { play: () => {}, off: () => { offs += 1; }, dispose: () => {} },
       pageClient: {
         snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
         watch: (cb) => { pageEventCb = cb; },
         unwatch: () => { pageEventCb = null; },
+        keepAlive: () => { keepAlives += 1; },
       },
       onEnd: () => resolve(null),
     });
     void orchestrator.start();
   });
 
-  return done.then(() => ({ spoken, listens: () => listens, micStops: () => micStops }));
+  return done.then(() => ({
+    spoken, listens: () => listens, micStops: () => micStops,
+    keepAlives: () => keepAlives, offs: () => offs,
+  }));
 }
 
 const noSpeech = { error: 'no-speech' };
@@ -84,6 +91,27 @@ describe('orchestrator silence clock (REQ-CMD-005)', () => {
       ({ clock }) => { clock.t += SILENCE_TIMEOUT_MS; return noSpeech; },
     ]);
     expect(listens()).toBe(2); // the 70 s cycle did NOT end the session
+  });
+
+  test('REQ-LIFE-017: a heard command keeps the puzzle alive; silence sends no nudge', async () => {
+    const { keepAlives } = await runSession([
+      ({ clock }) => { clock.t += 10_000; return { alternatives: [{ transcript: 'repeat', confidence: 0.9 }] }; },
+      ({ clock }) => { clock.t += 10_000; return noSpeech; }, // no command → no nudge
+      ({ clock }) => { clock.t += SILENCE_TIMEOUT_MS; return noSpeech; },
+    ]);
+    expect(keepAlives()).toBe(1); // one nudge for the one heard command; no-speech is silent
+  });
+
+  test('REQ-LIFE-017/011: NYT pausing the puzzle ends the session with a tiny blip', async () => {
+    const { offs, listens } = await runSession([
+      ({ emitPageEvent }) => {
+        // The in-page watcher reports NYT's pause (idle-out or look-away).
+        emitPageEvent('paused', heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+        return noSpeech;
+      },
+    ]);
+    expect(offs()).toBe(1); // the blip played…
+    expect(listens()).toBe(1); // …and the session ended — no further mic cycles
   });
 
   test('a click the machine absorbs (same clue) never stops the mic — no deaf sessions', async () => {

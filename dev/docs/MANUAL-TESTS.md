@@ -190,11 +190,15 @@ Covers: REQ-NFR-006
    rehearsing every MT above without an NYT subscription.
 
 ### MT-24 — Looking away ends the session
-Covers: REQ-LIFE-011
+Covers: REQ-LIFE-011, REQ-LIFE-017
 1. Mid-session: switch to another tab in the same window. Start again, then switch to a different
    application (or another Chrome window) without changing tabs.
-2. **PASS:** in each case speech and mic stop within ~1 s, silently — no goodbye, badge clears,
-   no zombie session when you come back.
+2. **PASS:** in each case NYT pauses the puzzle and the session ends within ~1–2 s — a tiny
+   descending blip, then speech and mic stop, no spoken goodbye, badge clears, no zombie session
+   when you come back.
+3. Also: mid-session, stop talking and don't touch the grid for ~30 s. **PASS:** NYT pauses, the
+   blip plays, and the session ends. Conversely, keep giving voice commands and the puzzle never
+   pauses (each command keeps it alive).
 
 ### MT-25 — "Stop" cuts any speech short
 Covers: REQ-CMD-006

@@ -26,6 +26,29 @@ export function createPing({
         osc.stop(t + 0.09);
       } catch { /* audio unavailable — the ping is best-effort */ }
     },
+    // A tiny descending two-step blip: "the session is stopping" (REQ-LIFE-017), played
+    // when NYT pauses the puzzle out from under a live session. Runs in its OWN
+    // short-lived context that self-closes, so it still sounds even as teardown disposes
+    // the ready-tick context above. Best-effort: no audio, no blip, never an error.
+    off() {
+      if (!AudioContextCtor) return;
+      try {
+        const c = new AudioContextCtor();
+        if (c.state === 'suspended') void c.resume?.();
+        const t = c.currentTime;
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(660, t);
+        osc.frequency.exponentialRampToValueAtTime(330, t + 0.16); // downward = "off"
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        osc.connect(gain).connect(c.destination);
+        osc.start(t);
+        osc.stop(t + 0.18);
+        setTimeout(() => { try { void c.close?.(); } catch { /* already closed */ } }, 400);
+      } catch { /* audio unavailable — the blip is best-effort */ }
+    },
     dispose() {
       try {
         void ctx?.close?.();

@@ -7,7 +7,7 @@
 
 import { MSG } from '../shared/messages.js';
 import { snapshot, isRuledWrong } from '../page-adapter/reader.js';
-import { enterAnswer, clearEntry } from '../page-adapter/writer.js';
+import { enterAnswer, clearEntry, keepAlive } from '../page-adapter/writer.js';
 import { selectClue } from '../page-adapter/navigator.js';
 import { probe } from '../page-adapter/probe.js';
 import { createWatcher } from '../page-adapter/watcher.js';
@@ -49,6 +49,8 @@ function createPageClient() {
     // Our own typing must not look like user activity (REQ-NAV-008).
     pauseWatch: () => watcher?.pause(),
     resumeWatch: () => watcher?.resume(),
+    // A heard user command keeps NYT from auto-pausing a quiet puzzle (REQ-LIFE-017).
+    keepAlive: () => keepAlive(document),
   };
 }
 
