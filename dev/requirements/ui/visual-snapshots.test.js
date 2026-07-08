@@ -1,5 +1,5 @@
 // The single visual-comparison engine for every pixel-asserted UI requirement.
-// Each case (extension-test/ui/cases/*.case.js) renders the SHIPPED code for one
+// Each case (dev/requirements/ui/cases/*.case.js) renders the SHIPPED code for one
 // UI state to a PNG; the result is compared pixel-by-pixel (pixelmatch) against the
 // committed golden beside it (cases/<name>.png). So the goldens track the shipped
 // code directly — there is no hand-maintained copy of the button art or the toolbar

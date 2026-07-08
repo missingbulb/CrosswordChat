@@ -12,8 +12,8 @@
     "build": "node dev/build/build.mjs",
     "build:dev": "node dev/build/build.mjs --dev",
     "fixture": "node tools/serve-fixture.mjs",
-    "refresh:ui": "node extension-test/ui/refresh-snapshots.mjs",
-    "test:ui": "vitest run extension-test/ui"
+    "refresh:ui": "node dev/requirements/ui/refresh-snapshots.mjs",
+    "test:ui": "vitest run dev/requirements/ui"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

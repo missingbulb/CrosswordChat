@@ -3,7 +3,7 @@
 // button share, straight from the shipped builder (brand-icon.js). This is the
 // "start a session" appearance the user sees before a conversation begins.
 
-import { brandIconSvg, GOLD, INK } from '../../../extension/src/shared/brand-icon.js';
+import { brandIconSvg, GOLD, INK } from '../../../../extension/src/shared/brand-icon.js';
 import { svgToPng } from '../render/svg-to-png.js';
 
 export default {

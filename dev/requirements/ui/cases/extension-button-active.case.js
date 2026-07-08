@@ -3,7 +3,7 @@
 // glance. Same shipped builder (brand-icon.js), the exact colors session-button.js
 // uses for ICON_ACTIVE.
 
-import { brandIconSvg, GOLD, INK } from '../../../extension/src/shared/brand-icon.js';
+import { brandIconSvg, GOLD, INK } from '../../../../extension/src/shared/brand-icon.js';
 import { svgToPng } from '../render/svg-to-png.js';
 
 export default {

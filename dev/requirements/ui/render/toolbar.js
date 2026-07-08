@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { JSDOM } from 'jsdom';
-import { mountSessionButton, BUTTON_ID } from '../../../extension/src/page-adapter/session-button.js';
+import { mountSessionButton, BUTTON_ID } from '../../../../extension/src/page-adapter/session-button.js';
 import { domToPng } from './dom-to-png.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));

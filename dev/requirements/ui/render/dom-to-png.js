@@ -2,7 +2,7 @@
 // SVG) + resvg (SVG -> PNG), with bundled fonts — no browser, so the output is
 // deterministic and a golden can demand an exact match. Used for the in-page
 // surface: the REAL mountSessionButton injected into a committed, inline-styled
-// snapshot of the NYT toolbar (extension-test/ui/fixtures/nyt-toolbar.html).
+// snapshot of the NYT toolbar (dev/requirements/ui/fixtures/nyt-toolbar.html).
 //
 // satori has NO CSS engine: it ignores <style>/<link> and reads only inline
 // styles. That is exactly why the toolbar fixture is captured with computed styles

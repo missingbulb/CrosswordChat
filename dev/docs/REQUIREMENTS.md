@@ -279,23 +279,23 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   given a page with no crossword markup (or no toolbar), then no button is injected and nothing
   throws.
 - **Verify:** integration `extension-test/integration/session-button.test.js`; UI goldens
-  `extension-test/ui/` (visual-snapshots — the mark and the injected toolbar button); manual MT-30.
+  `dev/requirements/ui/` (visual-snapshots — the mark and the injected toolbar button); manual MT-30.
 
 <!-- ui-gallery:REQ-LIFE-012 -->
 
 _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 
 <strong>Extension button — active (ink tile, session running)</strong><br>
-<img src="../../extension-test/ui/cases/extension-button-active.png" width="72" alt="Extension button — active (ink tile, session running)">
+<img src="../requirements/ui/cases/extension-button-active.png" width="72" alt="Extension button — active (ink tile, session running)">
 
 <strong>Extension button — idle (gold tile)</strong><br>
-<img src="../../extension-test/ui/cases/extension-button-idle.png" width="72" alt="Extension button — idle (gold tile)">
+<img src="../requirements/ui/cases/extension-button-idle.png" width="72" alt="Extension button — idle (gold tile)">
 
 <strong>Injected session button in the NYT toolbar — active (session running)</strong><br>
-<img src="../../extension-test/ui/cases/implanted-button-toolbar-active.png" width="520" alt="Injected session button in the NYT toolbar — active (session running)">
+<img src="../requirements/ui/cases/implanted-button-toolbar-active.png" width="520" alt="Injected session button in the NYT toolbar — active (session running)">
 
 <strong>Injected session button in the NYT toolbar — idle</strong><br>
-<img src="../../extension-test/ui/cases/implanted-button-toolbar-idle.png" width="520" alt="Injected session button in the NYT toolbar — idle">
+<img src="../requirements/ui/cases/implanted-button-toolbar-idle.png" width="520" alt="Injected session button in the NYT toolbar — idle">
 
 <!-- /ui-gallery:REQ-LIFE-012 -->
 
@@ -1262,7 +1262,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   and choosing it opens the same page; given the page, then it lists every command group and loads
   no scripts or remote resources.
 - **Verify:** unit `extension-test/unit/help-page.test.js`, integration
-  `extension-test/integration/session-button.test.js`; UI golden `extension-test/ui/`
+  `extension-test/integration/session-button.test.js`; UI golden `dev/requirements/ui/`
   (visual-snapshots — the open dropdown); manual MT-34.
 
 <!-- ui-gallery:REQ-CMD-007 -->
@@ -1270,7 +1270,7 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 
 <strong>Injected split button with its dropdown open (Activate / Settings / Voice commands)</strong><br>
-<img src="../../extension-test/ui/cases/implanted-button-toolbar-menu.png" width="520" alt="Injected split button with its dropdown open (Activate / Settings / Voice commands)">
+<img src="../requirements/ui/cases/implanted-button-toolbar-menu.png" width="520" alt="Injected split button with its dropdown open (Activate / Settings / Voice commands)">
 
 <!-- /ui-gallery:REQ-CMD-007 -->
 

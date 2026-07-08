@@ -1,4 +1,4 @@
-// Regenerate the committed UI goldens (extension-test/ui/cases/<name>.png) from
+// Regenerate the committed UI goldens (dev/requirements/ui/cases/<name>.png) from
 // the cases, using the SAME rendering the visual-snapshots test uses. Run after an
 // intentional change to the shipped UI (brand-icon.js, session-button.js, or the
 // toolbar fixture) and commit the PNGs so the before/after shows up in the PR diff.

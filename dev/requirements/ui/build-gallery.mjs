@@ -7,7 +7,7 @@
 //   <!-- /ui-gallery:REQ-LIFE-012 -->
 //
 // and this rewrites ONLY the text between them, to the <img> embeds for the cases
-// whose `req` matches that id (extension-test/ui/cases/*.case.js). Run by
+// whose `req` matches that id (dev/requirements/ui/cases/*.case.js). Run by
 // refresh-snapshots.mjs after the PNGs are (re)generated; a drift test
 // (visual-snapshots.test.js) fails if the committed doc doesn't match this output.
 
@@ -17,7 +17,7 @@ import { dirname, join } from 'node:path';
 import { loadCases } from './cases.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const REQ_DOC = join(HERE, '..', '..', 'dev', 'docs', 'REQUIREMENTS.md');
+export const REQ_DOC = join(HERE, '..', '..', 'docs', 'REQUIREMENTS.md');
 
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -31,7 +31,7 @@ function galleryBlock(id, cases) {
   const out = ['', '_UI goldens — generated from the shipped code by `npm run refresh:ui`:_', ''];
   for (const c of forId) {
     out.push(`<strong>${escapeHtml(c.description)}</strong><br>`);
-    out.push(`<img src="../../extension-test/ui/cases/${c.name}.png" width="${widthFor(c.name)}" alt="${escapeHtml(c.description)}">`);
+    out.push(`<img src="../requirements/ui/cases/${c.name}.png" width="${widthFor(c.name)}" alt="${escapeHtml(c.description)}">`);
     out.push('');
   }
   return out.join('\n');

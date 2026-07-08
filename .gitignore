@@ -7,4 +7,4 @@ dist/
 *.log
 dist-pages/
 
-extension-test/ui/render/.artifacts/
+dev/requirements/ui/render/.artifacts/
