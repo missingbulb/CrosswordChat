@@ -27,8 +27,15 @@ const FONTS = [
 
 const camel = (p) => p.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
-function coerceValue(v) {
+// Shorthands satori expands by string-parsing (it calls .trim() on the value), so
+// a coerced number like `border: 0` crashes its expander. Keep these as strings.
+const STRING_SHORTHANDS = new Set([
+  'border', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'outline',
+]);
+
+function coerceValue(key, v) {
   v = v.trim();
+  if (STRING_SHORTHANDS.has(key)) return v;
   if (/^-?\d+(\.\d+)?px$/.test(v)) return parseFloat(v);
   if (/^-?\d+(\.\d+)?$/.test(v)) return parseFloat(v);
   return v;
@@ -51,7 +58,7 @@ function styleObject(styleAttr) {
     if (!prop || !value) continue;
     const key = camel(prop);
     if (key === 'display' && !SATORI_DISPLAY.has(value)) continue;
-    out[key] = coerceValue(value);
+    out[key] = coerceValue(key, value);
   }
   return out;
 }
