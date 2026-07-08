@@ -172,25 +172,13 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-// REQ-LIFE-011: the mic never stays open on a puzzle the user isn't looking at.
-// Switching to another tab, another Chrome window, or another app ends the
-// session — silently, like the icon toggle.
-async function endSessionIfHidden() {
-  if (!session) return;
-  const { tabId } = session;
-  try {
-    const tab = await chrome.tabs.get(tabId);
-    const win = await chrome.windows.get(tab.windowId);
-    if (session?.tabId === tabId && (!tab.active || !win.focused)) closeSession();
-  } catch {
-    if (session?.tabId === tabId) closeSession(); // tab already gone
-  }
-}
+// REQ-LIFE-011: the mic never stays open on a puzzle the user isn't looking at. We don't
+// track tab/window focus here — instead we piggyback on NYT itself: looking away pauses
+// the puzzle (as does ~30 s idle), the in-page watcher sees the pause, and the session
+// ends with a tiny blip (REQ-LIFE-017). One signal — NYT's pause — covers both cases.
 
 chrome.tabs.onActivated.addListener(({ tabId }) => {
   // Keep the newly focused tab's icon/popup honest even if the worker slept through
   // its navigation (REQ-LIFE-013/014).
   chrome.tabs.get(tabId).then((tab) => presentAction(tabId, tab.url)).catch(() => {});
-  void endSessionIfHidden();
 });
-chrome.windows.onFocusChanged.addListener(() => { void endSessionIfHidden(); });

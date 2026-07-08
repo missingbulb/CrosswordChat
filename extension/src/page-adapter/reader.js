@@ -118,6 +118,32 @@ export function isSolved(document) {
   return Boolean(document.querySelector(SEL.congrats));
 }
 
+// NYT's auto-pause veil copy (REQ-LIFE-017). Verified live: after ~30 s with no keydown
+// the games shell dispatches crossword/timer/PAUSE_TIMER and covers the board with a
+// "Your puzzle is paused" overlay (it also pauses this way on tab/window blur).
+const PAUSED_TEXT = /your puzzle is paused/i;
+
+/**
+ * True when NYT has paused the puzzle — its "Your puzzle is paused" veil is up
+ * (REQ-LIFE-017). The session ends on this, piggybacking on NYT's own pause instead of
+ * tracking tab focus (REQ-LIFE-011). Text-anchored and gated to a VISIBLE overlay, so
+ * the phrase sitting in server-rendered JSON never counts; class-net first, then a
+ * bounded scan so a moment-class rename can't blind us.
+ */
+export function isPaused(document) {
+  if (!PAUSED_TEXT.test(document.body?.textContent ?? '')) return false; // cheap gate
+  for (const el of document.querySelectorAll(`${SEL.modal}, ${SEL.splash}`)) {
+    if (isVisible(el) && PAUSED_TEXT.test(el.textContent ?? '')) return true;
+  }
+  for (const el of document.body.querySelectorAll('*')) {
+    if (/^(script|style|noscript|template)$/i.test(el.tagName)) continue;
+    if (!PAUSED_TEXT.test(el.textContent ?? '')) continue;
+    if ([...el.children].some((c) => PAUSED_TEXT.test(c.textContent ?? ''))) continue;
+    if (isVisible(el)) return true;
+  }
+  return false;
+}
+
 // The negative verdict popup's copy (REQ-LIFE-006). ⚠️ Best-effort phrases from NYT's
 // "grid full but wrong" dialog family; paired with the modal class net + visibility.
 const WRONG_VERDICT = /keep trying|not quite|almost there|something.s not right/i;

@@ -50,6 +50,12 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
 
   const caption = (role, text) => ui.caption?.(role, text);
 
+  // REQ-LIFE-017: a heard user command keeps NYT from auto-pausing a quiet puzzle. A voice
+  // solver isn't touching the keyboard, so on every spoken command we nudge the page
+  // (a keystroke that resets NYT's ~30 s inactivity timer). Go quiet and no nudge is sent,
+  // NYT pauses, and the session ends (below). Best-effort — never disturb the conversation.
+  const keepPuzzleAlive = () => { try { pageClient.keepAlive?.(); } catch { /* page gone */ } };
+
   // Barge-in (REQ-SPCH-009): while TTS speaks, keep a mic cycle open. Utterances
   // that read as a chunk of what we're saying are our own voice coming back through
   // the mic — discarded (echo guard, REQ-SPCH-005). Anything else cuts the speech
@@ -77,6 +83,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
           return; // mic trouble — the post-speech LISTEN will surface it properly
         }
         lastActivityAt = now();
+        keepPuzzleAlive(); // a barge-in is a command too — keep the puzzle awake
         const top = result.alternatives[0]?.transcript ?? '';
         // Echo guard (REQ-SPCH-005): alternatives that read as a contiguous chunk of
         // the spoken text are evidence of our own voice coming back through the mic.
@@ -138,10 +145,11 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         if (ended) break;
         if (result.error) {
           // A pause reset means the user WAS speaking — that's activity, not silence.
-          if (result.error === 'reset') lastActivityAt = now();
+          if (result.error === 'reset') { lastActivityAt = now(); keepPuzzleAlive(); }
           enqueue({ type: 'STT_ERROR', code: result.error, silentMs: now() - lastActivityAt });
         } else {
           lastActivityAt = now();
+          keepPuzzleAlive(); // heard a command — keep NYT from pausing the puzzle
           caption('heard', result.alternatives[0]?.transcript ?? ''); // REQ-SPCH-008
           enqueue({ type: 'HEARD', alternatives: result.alternatives });
         }
@@ -239,6 +247,15 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       tts.cancel();
       stt.stop();
     } else if (event.type === 'PAGE_EVENT') {
+      if (event.kind === 'paused') {
+        // NYT paused the puzzle out from under us (REQ-LIFE-017): the user idled out
+        // (~30 s with no command) or looked away, which is also how we notice a tab/window
+        // switch (REQ-LIFE-011) — we piggyback on NYT's own pause instead of tracking
+        // focus. End the session, with a tiny blip so the silence is explained.
+        ping?.off?.();
+        enqueue({ type: 'TOGGLE_OFF' });
+        return;
+      }
       // Clicking or typing on the puzzle is user presence — reset the silence clock.
       lastActivityAt = now();
       if (event.kind === 'solved') stt.stop();

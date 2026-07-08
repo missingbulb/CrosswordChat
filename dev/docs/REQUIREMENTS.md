@@ -231,12 +231,17 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
 
 #### REQ-LIFE-011 — Looking away ends the session
 - **Status:** Active · **Level:** MUST
-- The session MUST end — instantly and silently, like the icon toggle (REQ-LIFE-002) — when the
-  puzzle tab stops being the active tab, or when the Chrome window loses focus (the user switched
-  to another window or another app). The microphone never stays open on a puzzle the user is not
-  looking at.
+- The microphone never stays open on a puzzle the user is not looking at: the session MUST end
+  when the user switches to another tab, another Chrome window, or another app. This is NOT
+  tracked by watching tab/window focus in the background — instead the extension piggybacks on
+  NYT, which pauses the puzzle whenever it loses visibility or window focus (verified live: the
+  same "Your puzzle is paused" veil as the ~30 s idle pause). The in-page watcher sees that pause
+  and ends the session via REQ-LIFE-017's pause path (a tiny blip, then teardown), so one signal
+  — NYT's pause — covers both looking away and going idle. The end is otherwise silent (no spoken
+  goodbye) and the badge clears.
 - **Accept:** Given a running session, when the user switches to another tab or to a different
-  app, then speech and mic stop within ~1 s with no spoken goodbye and the badge clears.
+  app, then NYT pauses, and speech and mic stop within ~1–2 s with no spoken goodbye and the badge
+  clears.
 - **Verify:** manual MT-24.
 
 #### REQ-LIFE-012 — On-page split button in the puzzle toolbar
@@ -341,6 +346,32 @@ The model is the pure, in-memory representation built from a page snapshot. Ever
   given a splash that ignores synthetic clicks, then the prompt is spoken and the session starts
   once the splash is cleared by hand.
 - **Verify:** integration `extension-test/integration/splash.test.js`; manual MT-33.
+
+#### REQ-LIFE-017 — Keep the puzzle alive so it never auto-pauses mid-conversation
+- **Status:** Active · **Level:** MUST
+- The NYT games shell auto-pauses a puzzle ~30 s after the last keyboard input (verified live: it
+  dispatches `crossword/timer/PAUSE_TIMER` and veils the board with "Your puzzle is paused"; a
+  keydown resets that timer). This is a THINKING game driven by voice — the user isn't typing —
+  so two things MUST happen:
+  1. **User commands keep the puzzle alive.** On every heard user command the extension sends the
+     page a keep-alive keystroke (a bare modifier keydown/keyup that types no letter and moves no
+     cursor) so NYT's inactivity timer resets. There is NO background heartbeat — presence is
+     driven only by the conversation. (Page writes — entering an answer — also type real keys and
+     so keep it alive on their own.)
+  2. **When NYT does pause, the session ends.** If the user goes quiet (no command for ~30 s) the
+     puzzle pauses; the in-page watcher detects the "Your puzzle is paused" veil and ends the
+     session, playing one tiny descending blip so the user knows why it went silent. The veiled,
+     letter-less grid MUST NOT be read as the user clearing the grid — pause is detected before
+     the change diff, and reported at most once per veil. This same pause path is what ends the
+     session on tab/window switch (REQ-LIFE-011): NYT pauses on look-away too, and we piggyback on
+     that rather than tracking focus ourselves.
+- **Accept:** Given the fake page's inactivity model, a quiet puzzle auto-pauses when its timer
+  fires; a keep-alive keystroke (or a heard command) before the timer keeps it live and changes
+  neither the grid nor the selection; and when the veil appears the watcher reports `paused` once
+  and the session ends with the blip.
+- **Verify:** integration `extension-test/integration/page-adapter.test.js` (keepAlive,
+  isPaused, and the watcher's `paused` event); unit `extension-test/unit/orchestrator.test.js`
+  (command keeps alive; pause ends with the blip).
 
 ---
 

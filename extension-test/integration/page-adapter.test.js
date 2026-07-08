@@ -6,8 +6,8 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { initFakeNyt } from '../fixtures/fake-nyt/fake-app.js';
 import { FIXTURE_PUZZLE } from '../fixtures/fake-nyt/puzzle.js';
-import { snapshot } from '../../extension/src/page-adapter/reader.js';
-import { enterAnswer, clearEntry } from '../../extension/src/page-adapter/writer.js';
+import { snapshot, isPaused } from '../../extension/src/page-adapter/reader.js';
+import { enterAnswer, clearEntry, keepAlive } from '../../extension/src/page-adapter/writer.js';
 import { selectClue } from '../../extension/src/page-adapter/navigator.js';
 import { probe } from '../../extension/src/page-adapter/probe.js';
 import { createWatcher } from '../../extension/src/page-adapter/watcher.js';
@@ -67,6 +67,19 @@ describe('reader', () => {
     const snap = snapshot(document);
     expect(snap.selection).toEqual({ clueId: 'A1', cellIndex: 0 });
   });
+
+  test('REQ-LIFE-017: isPaused sees NYT\'s veil; clear when absent, hidden, or only in JSON', () => {
+    expect(isPaused(document)).toBe(false);
+    app.showPause();
+    expect(isPaused(document)).toBe(true);
+    document.querySelector('.xwd__modal--pause').style.display = 'none'; // dismissed-but-hidden
+    expect(isPaused(document)).toBe(false);
+    const script = document.createElement('script'); // the phrase in server JSON is not a pause
+    script.type = 'application/json';
+    script.textContent = '{"moment":"Your puzzle is paused"}';
+    document.body.append(script);
+    expect(isPaused(document)).toBe(false);
+  });
 });
 
 describe('navigator', () => {
@@ -111,6 +124,19 @@ describe('writer', () => {
     const result = await clearEntry(document, [0, 1, 2, 3, 4]);
     expect(result.ok).toBe(true);
     expect(result.snapshot.cells.slice(0, 5).map((c) => c.letter)).toEqual(['', '', '', '', '']);
+  });
+
+  test('REQ-LIFE-017: keepAlive fires a keystroke and changes neither grid nor selection', () => {
+    let keydowns = 0;
+    const onKey = () => { keydowns += 1; };
+    document.addEventListener('keydown', onKey, true);
+    const before = snapshot(document);
+    keepAlive(document);
+    document.removeEventListener('keydown', onKey, true);
+    expect(keydowns).toBeGreaterThan(0); // a real keydown NYT's inactivity timer can hear
+    const after = snapshot(document);
+    expect(after.cells).toEqual(before.cells); // no letter typed
+    expect(after.selection).toEqual(before.selection); // no cursor moved
   });
 });
 
@@ -241,5 +267,17 @@ describe('watcher', () => {
     await sleep(40);
     watcher.stop();
     expect(events).toEqual([]); // no echo of our own activity
+  });
+
+  test('REQ-LIFE-017: a NYT pause reports `paused` once — never as a grid change', async () => {
+    app.typeAt(0, 'across', 'HEART'); // an answer on the board before the pause
+    const events = [];
+    const watcher = createWatcher(document, (kind) => events.push(kind), { debounceMs: 5 });
+    watcher.start();
+    app.showPause(); // NYT veils the board mid-session, blanking the entries
+    await sleep(40);
+    watcher.stop();
+    expect(events.filter((k) => k === 'paused')).toHaveLength(1); // reported exactly once
+    expect(events).not.toContain('grid'); // the blanked grid was NOT read as the user clearing it
   });
 });

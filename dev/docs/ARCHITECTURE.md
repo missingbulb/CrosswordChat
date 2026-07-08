@@ -43,11 +43,16 @@ plumbing are five different problems; none imports another's internals.
 extension/src/
   page-adapter/    NYT DOM in, NYT DOM out. The ONLY place 'xwd__' may appear (REQ-PAGE-011).
     selectors.js     every selector/class, one file, probe-checked
-    reader.js        DOM → Snapshot (grid cells, clue runs, selection, solved signal)
+    reader.js        DOM → Snapshot (grid cells, clue runs, selection, solved signal);
+                     isPaused — NYT's "Your puzzle is paused" veil (REQ-LIFE-017)
     writer.js        enterAnswer/clearEntry via click + synthetic keydown, verified re-read;
-                     per-cell pencil mode via the toolbar toggle, user's state restored
+                     per-cell pencil mode via the toolbar toggle, user's state restored;
+                     keepAlive — a keystroke sent on each heard command so NYT doesn't
+                     auto-pause a quiet puzzle (REQ-LIFE-017)
     navigator.js     selectClue (click the clue list item)
-    watcher.js       MutationObserver → {solved | selection | grid} events (session-scoped)
+    watcher.js       MutationObserver → {solved | selection | grid | paused} events
+                     (session-scoped); paused ends the session (REQ-LIFE-017/011)
+    splash.js        pre-puzzle "Ready to start solving?" veil: find + click Play (REQ-LIFE-016)
     session-button.js  the in-page start/stop toggle, injected right of NYT's pencil
                      (REQ-LIFE-012); waits for the toolbar, degrades to no-button
     probe.js         selector health report for the live page
