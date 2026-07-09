@@ -70,12 +70,6 @@ const PHRASES = {
   no: ['no', 'nope', 'cancel', 'never mind', 'keep it', 'leave it'],
 };
 
-const STRATEGY_PHRASES = {
-  'most-filled': ['switch to most filled', 'most filled first', 'switch to most solved',
-    'most solved first'],
-  'list-order': ['go in order', 'switch to list order', 'read in order', 'in order'],
-};
-
 const CHOICE_PHRASES = {
   0: ['first', 'the first one', 'first one', 'number one'],
   1: ['second', 'the second one', 'second one', 'number two'],
@@ -85,9 +79,6 @@ const CHOICE_PHRASES = {
 const EXACT = new Map();
 for (const [command, phrases] of Object.entries(PHRASES)) {
   for (const p of phrases) EXACT.set(p, { command });
-}
-for (const [arg, phrases] of Object.entries(STRATEGY_PHRASES)) {
-  for (const p of phrases) EXACT.set(p, { command: 'strategy', arg });
 }
 for (const [idx, phrases] of Object.entries(CHOICE_PHRASES)) {
   for (const p of phrases) EXACT.set(p, { command: 'choice', arg: Number(idx) });
@@ -107,7 +98,7 @@ export function commandPhrases() {
 /**
  * @returns {{command: string, arg?: string|number} | null}
  *   Commands: next repeat hint help stop spell enter-anyway misheard(arg?) answer(arg)
- *             strategy(arg) yes no choice(arg). Contextual meaning is the machine's business.
+ *             yes no choice(arg). Contextual meaning is the machine's business.
  */
 export function parseCommand(text) {
   const norm = normalizeUtterance(text);

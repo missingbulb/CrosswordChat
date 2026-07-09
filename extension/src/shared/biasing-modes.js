@@ -7,7 +7,7 @@ export const BIASING_MODES = ['off', 'commands', 'spelling', 'full'];
 // The default is an actual experiment (commands) — "off" is a deliberate opt-out the user
 // selects, not the default. Biasing only does anything on Chrome's on-device path, so this is
 // inert for cloud-path users regardless (REQ-SPCH-011).
-export const DEFAULT_BIASING = 'commands';
+export const DEFAULT_BIASING = 'full';
 
 // Optional one-line note shown above the group ('' = no note).
 export const BIASING_NOTE = '';

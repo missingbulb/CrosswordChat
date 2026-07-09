@@ -131,7 +131,7 @@ export function render(say) {
       return `${letters}. ${summary}`;
     }
     case 'help':
-      return 'You can: say an answer — whole or spelled out — or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, clear to empty the entry, pencil or pen to switch write modes, anyway to enter over a clash, switch to most filled to change order, or goodbye to stop.';
+      return 'You can: say an answer — whole or spelled out — or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, clear to empty the entry, pencil or pen to switch write modes, anyway to enter over a clash, or goodbye to stop.';
     case 'didnt-catch':
       return "Sorry, I didn't catch that.";
     case 'nothing-pending':
@@ -165,8 +165,6 @@ export function render(say) {
       return 'No crossing clue there.';
     case 'no-such-clue':
       return `There's no ${say.number} ${say.direction} in this puzzle.`;
-    case 'strategy-ack':
-      return say.strategy === 'most-filled' ? 'Okay — most filled first.' : 'Okay — in list order.';
     case 'goodbye':
       return 'Goodbye — happy solving!';
     case 'mic-denied':

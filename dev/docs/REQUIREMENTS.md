@@ -567,12 +567,11 @@ entities. The readout must convey what the eye would see.
 - **Verify:** unit `extension-test/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
-- **Status:** Active · **Level:** SHOULD
-- Saying *"switch to most filled"* / *"go in order"* (lexicon REQ-CMD-001) SHOULD switch the active
-  strategy for the rest of the session, confirm briefly, and keep listening on the current clue.
-- **Accept:** Given a session, when the user says "switch to most filled", then the acknowledgement is
-  spoken and subsequent *next* uses the new strategy.
-- **Verify:** unit `extension-test/unit/machine.test.js`.
+- **Status:** Planned · **Level:** SHOULD
+- Removed for now — voice control of settings is out of scope. The next-clue strategy is set only
+  through the settings surface (REQ-NAV-012), never by voice. Kept as a tracked ID so voice switching
+  can return. (Previously: saying *"switch to most filled"* / *"go in order"* switched the active
+  strategy for the rest of the session and confirmed briefly.)
 
 #### REQ-NAV-006 — Wrap-around is announced
 - **Status:** Retired · **Level:** —
@@ -666,9 +665,9 @@ entities. The readout must convey what the eye would see.
   order / most filled first). Edits are buffered: a *Save* button persists them and closes the
   popup, and a *Reset to defaults* button restores the defaults in the form without saving.
   The choice MUST persist in `chrome.storage.sync` and MUST be applied as the starting
-  strategy of every new session. Voice switching (REQ-NAV-005) still changes the strategy for the
-  rest of the session only; it MUST NOT write the setting back. A missing or invalid stored value
-  falls back to list order (REQ-NAV-002).
+  strategy of every new session. (Voice switching of the strategy is removed for now — REQ-NAV-005;
+  the setting is the only way to change it.) A missing or invalid stored value falls back to list
+  order (REQ-NAV-002).
 - The in-page toolbar button's *Settings* item (REQ-CMD-007) MUST open the same settings — the
   reading speed (REQ-SPCH-001) and navigation mode — as a centred modal injected into the puzzle
   page, styled to mirror NYT's own *Puzzle Settings* popup (a card over a dimming overlay, a Karnak
@@ -1200,7 +1199,6 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | enter-anyway | anyway · anyways · say it anyway · do it anyway · it anyway · enter it anyway · enter anyway · force it · overwrite · put it in anyway · replace it · use it anyway |
 | misheard | you misheard · you misheard me · that's not what i said · you heard wrong · wrong word · no i said … · i meant … · i said … |
 | answer (escape) | answer … · guess … · the answer is … · the word is … · try … |
-| strategy | switch to most filled · most filled first · switch to most solved · go in order · switch to list order · read in order |
 | yes (contextual) | yes · yeah · yep · sure · correct · right · do it |
 | no (contextual) | no · nope · cancel · never mind · keep it · leave it |
 | choice (contextual) | first · the first one · second · the second one · third · the third one |
@@ -1443,13 +1441,13 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   `available`) and only then set `processLocally = true` and populate `phrases`; when unavailable it
   MUST run the ordinary cloud path unchanged — no error, no behavior change (this realizes, for
   biasing, the on-device path noted in REQ-FUT-006). The phrase set is mode-scoped and selected by a
-  persisted experimental setting (REQ-NAV-012) with four values: `commands` (default — the command
-  lexicon + the loaded puzzle's real clue labels, graduated so the current entry's crossings are
-  boosted highest), `spelling` (the 26 single letters + NATO + letter-names, applied in spelling mode
-  and on 1–2 open-square entries), `full` (both, plus yes/no/first-second during confirmation and
+  persisted experimental setting (REQ-NAV-012) with four values: `commands` (the command lexicon + the
+  loaded puzzle's real clue labels, graduated so the current entry's crossings are boosted highest),
+  `spelling` (the 26 single letters + NATO + letter-names, applied in spelling mode and on 1–2
+  open-square entries), `full` (default — both, plus yes/no/first-second during confirmation and
   disambiguation), and `off` (a deliberate opt-out — no biasing). Biasing is inert on the cloud path
-  regardless of the setting, so `commands` as the default changes nothing for cloud-path users. No
-  answer word is ever biased — the answer is unknown by design (§2). Biasing changes only recognition
+  regardless of the setting, so the default changes nothing for cloud-path users. No answer word is
+  ever biased — the answer is unknown by design (§2). Biasing changes only recognition
   inputs; matching (REQ-ANS-*) is unaffected.
 - **Accept:** Given a recognizer whose on-device biasing is available and a `commands` setting, then
   the listen cycle sets `processLocally = true` and pushes the command + clue-label phrases; given a

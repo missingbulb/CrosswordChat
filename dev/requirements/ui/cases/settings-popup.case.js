@@ -16,7 +16,7 @@ function prep() {
   slider.value = 1.3;
   document.querySelector('#rate-value').value = '1.3×';
   for (const r of document.querySelectorAll('input[name="strategy"]')) r.checked = r.value === 'list-order';
-  for (const r of document.querySelectorAll('input[name="biasing"]')) r.checked = r.value === 'commands';
+  for (const r of document.querySelectorAll('input[name="biasing"]')) r.checked = r.value === 'full';
 }
 
 export default {

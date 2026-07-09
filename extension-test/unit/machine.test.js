@@ -21,10 +21,10 @@ const heard = (transcript) => ({ type: 'HEARD', alternatives: [{ transcript, con
 const says = (actions) => actions.filter((a) => a.type === 'SAY').map((a) => a.say);
 const types = (actions) => actions.map((a) => a.type);
 
-/** START + first TTS_DONE → phase 'listening'. */
-function listening(snap) {
+/** START + first TTS_DONE → phase 'listening'. Pass settings, e.g. { strategy: 'most-filled' }. */
+function listening(snap, settings) {
   const s = scenario();
-  s.step({ type: 'START', snapshot: snap });
+  s.step({ type: 'START', snapshot: snap, settings });
   s.step({ type: 'TTS_DONE' });
   return s;
 }
@@ -104,12 +104,9 @@ describe('navigation (NAV)', () => {
     expect(says(actions)[0].wrapped).toBeUndefined(); // plain clue readout, no wrap prefix
   });
 
-  test('REQ-NAV-005/REQ-NAV-004: switching strategy by voice changes what "next" does', () => {
+  test('REQ-NAV-004: under most-filled (set in settings), "next" prefers the fuller clue', () => {
     const snap = heartSnapshot(['.....', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], { selection: { clueId: 'A1' } });
-    const s = listening(snap);
-    const ack = s.step(heard('switch to most filled'));
-    expect(says(ack)[0]).toEqual({ kind: 'strategy-ack', strategy: 'most-filled' });
-    s.step({ type: 'TTS_DONE' });
+    const s = listening(snap, { strategy: 'most-filled' });
     const nav = s.step(heard('next'));
     expect(nav.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('D1'); // 4/5 filled beats empty A1
   });
@@ -120,9 +117,7 @@ describe('navigation (NAV)', () => {
   const picked = (actions) => actions.find((a) => a.type === 'SELECT_CLUE')?.clueId;
 
   test('REQ-NAV-011: repeated "next" under most-filled walks ratios down, no ping-pong, then cycles', () => {
-    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }));
-    s.step(heard('switch to most filled'));
-    s.step({ type: 'TTS_DONE' });
+    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }), { strategy: 'most-filled' });
     const walk = [];
     for (let i = 0; i < 5; i++) {
       walk.push(picked(s.step(heard('next'))));
@@ -134,9 +129,7 @@ describe('navigation (NAV)', () => {
   });
 
   test('REQ-NAV-011: a skipped clue whose letters changed is back in the running', () => {
-    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }));
-    s.step(heard('switch to most filled'));
-    s.step({ type: 'TTS_DONE' });
+    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }), { strategy: 'most-filled' });
     expect(picked(s.step(heard('next')))).toBe('A2'); // skips A4
     s.step({ type: 'TTS_DONE' });
     expect(picked(s.step(heard('next')))).toBe('A1'); // skips A2 (3/5)
@@ -147,9 +140,7 @@ describe('navigation (NAV)', () => {
   });
 
   test('REQ-NAV-009: under most-filled, "back" retraces the visited trail, then falls back to list order', () => {
-    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }));
-    s.step(heard('switch to most filled'));
-    s.step({ type: 'TTS_DONE' });
+    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }), { strategy: 'most-filled' });
     expect(picked(s.step(heard('next')))).toBe('A2'); // highest ratio; trail: A4
     s.step({ type: 'TTS_DONE' });
     expect(picked(s.step(heard('next')))).toBe('A1'); // trail: A4, A2
