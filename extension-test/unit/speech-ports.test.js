@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import { createTtsPort, DEFAULT_RATE } from '../../extension/src/speech/tts-port.js';
 import { createRemoteTtsPort } from '../../extension/src/speech/remote-tts-port.js';
-import { createSttPort, mapSttError, DEFAULT_LANG } from '../../extension/src/speech/stt-port.js';
+import { createSttPort, mapSttError, DEFAULT_LANG, AUDIO_CONSTRAINTS } from '../../extension/src/speech/stt-port.js';
 import { createPing } from '../../extension/src/speech/ping.js';
 import { MSG } from '../../extension/src/shared/messages.js';
 
@@ -341,5 +341,97 @@ describe('stt port', () => {
     const stt = createSttPort({ Recognition: undefined });
     expect(stt.available).toBe(false);
     expect(await stt.listenOnce()).toEqual({ error: 'other' });
+  });
+});
+
+// ---- Mic permission preflight + audio-processing constraints -------------------
+
+describe('stt port — mic permission preflight (REQ-SPCH-003/005)', () => {
+  // A track that reports back which processing actually engaged on the device.
+  const fakeStream = (settings = {}) => {
+    const track = { getSettings: () => settings, stop: vi.fn() };
+    return { getAudioTracks: () => [track], getTracks: () => [track], _track: track };
+  };
+
+  test('REQ-SPCH-003/005: preflight requests echoCancellation, noiseSuppression, autoGainControl', async () => {
+    // The whole point of the exercise: the one capture we own asks the browser to fight
+    // self-echo at the source, not just default audio.
+    expect(AUDIO_CONSTRAINTS).toMatchObject({
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    });
+    const requested = [];
+    const stream = fakeStream({ echoCancellation: true, noiseSuppression: true, autoGainControl: true });
+    const nav = {
+      mediaDevices: {
+        getUserMedia: (c) => { requested.push(c); return Promise.resolve(stream); },
+        getSupportedConstraints: () => ({ echoCancellation: true, noiseSuppression: true, autoGainControl: true }),
+      },
+    };
+    const stt = createSttPort({ Recognition: undefined });
+    expect(await stt.ensureMicPermission({ nav, log: { info() {} } })).toBe('granted');
+    expect(requested).toEqual([{ audio: AUDIO_CONSTRAINTS }]);
+    expect(stream._track.stop).toHaveBeenCalled(); // preflight releases the device
+  });
+
+  test('REQ-SPCH-003: a browser that balks at the constraint shape retries bare, still granted', async () => {
+    const requested = [];
+    const stream = fakeStream({});
+    const nav = {
+      mediaDevices: {
+        getUserMedia: (c) => {
+          requested.push(c);
+          // First (constrained) call is rejected as if the shape were unsupported.
+          return requested.length === 1 ? Promise.reject(new Error('OverconstrainedError')) : Promise.resolve(stream);
+        },
+      },
+    };
+    const stt = createSttPort({ Recognition: undefined });
+    expect(await stt.ensureMicPermission({ nav, log: { info() {} } })).toBe('granted');
+    expect(requested).toEqual([{ audio: AUDIO_CONSTRAINTS }, { audio: true }]);
+  });
+
+  test('REQ-SPCH-003: a genuine denial (both attempts fail) maps to denied', async () => {
+    const nav = {
+      mediaDevices: { getUserMedia: () => Promise.reject(new Error('NotAllowedError')) },
+    };
+    const stt = createSttPort({ Recognition: undefined });
+    expect(await stt.ensureMicPermission({ nav, log: { info() {} } })).toBe('denied');
+  });
+
+  test('REQ-SPCH-003: an already-granted permission short-circuits before any capture', async () => {
+    const getUserMedia = vi.fn();
+    const nav = {
+      permissions: { query: () => Promise.resolve({ state: 'granted' }) },
+      mediaDevices: { getUserMedia },
+    };
+    const stt = createSttPort({ Recognition: undefined });
+    expect(await stt.ensureMicPermission({ nav })).toBe('granted');
+    expect(getUserMedia).not.toHaveBeenCalled();
+  });
+
+  test('REQ-SPCH-005/007: logs whether echo cancellation actually engaged (diagnostic, never throws)', async () => {
+    const lines = [];
+    const stream = fakeStream({ echoCancellation: false, noiseSuppression: true, autoGainControl: true });
+    const nav = {
+      mediaDevices: {
+        getUserMedia: () => Promise.resolve(stream),
+        getSupportedConstraints: () => ({ echoCancellation: true }),
+      },
+    };
+    const stt = createSttPort({ Recognition: undefined });
+    await stt.ensureMicPermission({ nav, log: { info: (m) => lines.push(m) } });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('echoCancellation=false'); // surfaces a device with AEC off
+    // A log sink that throws must not break the (already-granted) preflight.
+    const nav2 = { mediaDevices: { getUserMedia: () => Promise.resolve(fakeStream({})) } };
+    const boom = { info() { throw new Error('console gone'); } };
+    expect(await stt.ensureMicPermission({ nav: nav2, log: boom })).toBe('granted');
+  });
+
+  test('REQ-SPCH-003: no mediaDevices at all (headless) maps to denied without throwing', async () => {
+    const stt = createSttPort({ Recognition: undefined });
+    expect(await stt.ensureMicPermission({ nav: {} })).toBe('denied');
   });
 });

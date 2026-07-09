@@ -1345,10 +1345,22 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 - On `not-allowed`/`service-not-allowed`, the session MUST explain by voice how to grant mic
   access, then end. It MUST NOT retry-loop the permission prompt. (The mic grant belongs to the
   page origin — nytimes.com — since recognition runs in the content script.)
+- The permission preflight (`getUserMedia`, which surfaces the prompt) MUST request the
+  audio-processing constraints that fight self-echo — `echoCancellation`, `noiseSuppression`,
+  `autoGainControl` (`AUDIO_CONSTRAINTS`, REQ-SPCH-005) — rather than a bare `{audio:true}`. A
+  browser that rejects that constraint shape MUST fall back to a bare request once, so a
+  constraint quirk never reads as a denial; only a second failure is a genuine `denied`. On
+  success the preflight MUST log (console, REQ-SPCH-007) whether echo cancellation actually
+  engaged on the device (`track.getSettings()`), the single most useful fact for diagnosing
+  self-echo. This preflight capture is released immediately; it does **not** feed the recognizer
+  (see REQ-SPCH-005 for why the recognizer's own capture can't be constrained).
 - **Accept:** Given a recognizer erroring `not-allowed`, then the mic-denied utterance is spoken and
-  the session ends.
-- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/speech-ports.test.js` (error mapping);
-  manual MT-05.
+  the session ends. Given `getUserMedia` available, then the preflight requests
+  `{echoCancellation, noiseSuppression, autoGainControl}`; given a browser that rejects that shape,
+  then it retries `{audio:true}` and still resolves `granted`; given both attempts fail, then
+  `denied`; given a device reporting `echoCancellation:false`, then a diagnostic line says so.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/speech-ports.test.js`
+  (error mapping + preflight constraints/diagnostics); manual MT-05.
 
 #### REQ-SPCH-004 — Transient STT errors retry once
 - **Status:** Active · **Level:** MUST
@@ -1371,6 +1383,22 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   Accepted residual risk: an echo recognized as ONLY a bare command word passes the guard; in
   practice echo carries neighboring prompt words on some alternative, which the substantial-chunk
   check catches.
+- **Browser-level layer this guard sits on top of.** The recognizer
+  (`webkitSpeechRecognition`) owns its own microphone capture and exposes **no** hook to set
+  media-track constraints on it, so echo cancellation cannot be switched on for the STT stream
+  from our code. Chrome nonetheless applies its **default** acoustic echo cancellation to that
+  capture (a software canceller that references playout audio via an internal loopback), so TTS
+  that plays through Chrome's audio path is already attenuated before recognition. The app-level
+  echo guard above exists precisely for the residual the browser's AEC misses — notably
+  `chrome.tts` output, which on some platforms is rendered by the OS outside Chrome's monitored
+  mix and so is not in the loopback the canceller sees. The preflight capture we *do* own
+  requests `echoCancellation`/`noiseSuppression`/`autoGainControl` (`AUDIO_CONSTRAINTS`,
+  REQ-SPCH-003) to warm the device with the processing on. **Scope of related APIs (why not the
+  others):** `MediaTrackConstraints.echoCancellation` and `MediaTrackSettings.noiseSuppression`
+  are `getUserMedia` *microphone* constraints and are the ones in play here;
+  `suppressLocalAudioPlayback` and `restrictOwnAudio` are `getDisplayMedia` *screen-capture*
+  constraints (they filter a captured tab's own audio out of a screen recording, not a
+  microphone) and therefore do not apply to a microphone-plus-TTS conflict at all.
 - **Accept:** Given any machine trace, then no action batch contains both SAY and LISTEN; given a
   mid-speech transcript repeating a multi-word span of the spoken text, then it is discarded and
   the speech continues; given a short non-command fragment of the spoken text, then it is

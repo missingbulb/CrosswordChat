@@ -157,6 +157,11 @@ Covers: REQ-SPCH-007 REQ-SPCH-008
 2. **PASS:** every spoken system line appears as a `[CrosswordChat]` console line, and each of your
    utterances appears as `heard: "..."` — nothing spoken-but-unlogged, and nothing rendered into
    the page itself.
+3. At session start (mic granted), a `[CrosswordChat] mic ready — echoCancellation=…` line reports
+   whether the browser's acoustic echo cancellation actually engaged on this device (REQ-SPCH-003/005).
+   **PASS:** the line is present; on desktop Chrome `echoCancellation=true` is expected. If it reads
+   `false`, that device is a candidate for stronger self-echo, and the app-level echo guard
+   (REQ-SPCH-005) is doing the heavier lifting — worth noting if barge-in mis-hears our own voice.
 
 ### MT-19 — Tab disappears mid-session
 Covers: REQ-LIFE-008
