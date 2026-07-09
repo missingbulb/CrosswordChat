@@ -1,30 +1,81 @@
-name: "Release: Create Package"
+name: Release
 
-# Thin stub of the chrome-extension-release standard: the logic lives in the
-# Claudinite canon as a reusable workflow (referenced @main, so canon changes
-# apply here automatically). This file owns only the triggers and this repo's
-# values: the zip, the manifest path, and the verify gate.
+# The ONE thin stub of the chrome-extension-release standard. All the logic —
+# create-package, daily auto-release, and Chrome Web Store publish — lives in the
+# Claudinite canon as reusable workflows (referenced @main, so canon changes
+# apply here automatically). This file owns only the triggers; it passes NO repo
+# values. Everything repo-specific is read from the standard's defaults plus an
+# OPTIONAL `.github/release.config` — this repo carries one only to point the test
+# gate at `npm run verify` (vitest + the requirements-coverage trace); everything
+# else is on the defaults. Copied verbatim from the pack stub.
 #
-# Cutting a release is merging a version bump to main (the push trigger below);
-# it's also runnable from the Actions tab. What the workflow does — the version
-# guard (clean no-op if already released), the full test gate, the build, the
-# GitHub Release — is documented in the called workflow.
+# Three operations, one file:
+#   * push to main            → create-package (a clean no-op unless the manifest
+#                               version was bumped, so ordinary pushes don't cut a
+#                               release — no per-repo manifest path in the trigger)
+#   * schedule (03:00 UTC)    → daily auto-release (ship a store update if a
+#                               shipped file changed since the last release)
+#   * "Run workflow" dispatch → pick a mode: publish (default), package, or daily
+#
+# The Actions-tab entry is named "Release"; the failure reporter keys its
+# tracking issues on the per-operation names ("Release: Create Package", etc.)
+# baked into the canon reusable workflows, so collapsing to one file loses no
+# per-operation triage.
+#
+# secrets: inherit passes the four CHROME_* store secrets through to the canon
+# workflows.
 on:
-  workflow_dispatch: {}
   push:
-    branches:
-      - main
-    paths:
-      - extension/manifest.json
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to run"
+        type: choice
+        options: [publish, package, daily]
+        default: publish
+      tag:
+        description: "publish: release tag to publish (blank = latest release)"
+        required: false
+        type: string
+      auto_publish:
+        description: "publish: publish to users after upload (uncheck = dashboard draft)"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
   issues: write
 
+# Daily runs (scheduled, or a mode=daily dispatch) share one queue so a manual
+# dispatch can't race the scheduled bump-push; every other run gets its own group.
+concurrency: >-
+  ${{ (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' && inputs.mode == 'daily'))
+      && 'daily-release' || github.run_id }}
+
 jobs:
-  release:
+  create-package:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'package')
     uses: missingbulb/Claudinite/.github/workflows/chrome-extension-release.yml@main
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
+    uses: missingbulb/Claudinite/.github/workflows/chrome-extension-publish-store.yml@main
     with:
-      zip_path: dist/crossword-chat.zip
-      manifest_path: extension/manifest.json
-      test_command: npm run verify
+      tag: ${{ inputs.tag }}
+      auto_publish: ${{ inputs.auto_publish }}
+    secrets: inherit
+
+  daily:
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'daily')
+    uses: missingbulb/Claudinite/.github/workflows/chrome-extension-daily-release.yml@main
+    secrets: inherit

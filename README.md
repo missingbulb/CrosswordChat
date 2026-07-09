@@ -40,7 +40,7 @@ Full analysis in [`dev/docs/FEASIBILITY.md`](dev/docs/FEASIBILITY.md):
 | `extension-test/fixtures/fake-nyt/` | A faithful miniature of the NYT crossword page (same classes, same keyboard model) — integration-test target and offline demo stage. |
 | `tools/trace.mjs` | Requirements-coverage enforcer (`npm run trace`). |
 | [`dev/build/release/store_artifacts/`](dev/build/release/store_artifacts) | Chrome Web Store assets: [`PRIVACY.md`](dev/build/release/store_artifacts/PRIVACY.md) (the public privacy policy, published at [missingbulb.github.io/CrosswordChat/privacy/](https://missingbulb.github.io/CrosswordChat/privacy/)), screenshots and promo tiles (regenerate: `node dev/build/make-store-assets.mjs`). |
-| `.github/workflows/` | Test (every push) + the standard release set: Release: Create Package, Release: Publish to Chrome Web Store, Release: Daily Auto-Release, the privacy-page deploy, and the failure reporter. |
+| `.github/workflows/` | Test (every push) + the single `Release` stub — its three jobs (create-package, publish, daily) call the Claudinite canon reusable workflows, which own the logic, versioning, store upload, privacy-page deploy, and failure reporting. |
 
 ## Executable requirements — how verification works
 
