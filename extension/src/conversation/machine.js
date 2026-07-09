@@ -13,7 +13,7 @@
 import { buildModel } from '../puzzle-model/model.js';
 import { nextClue, prevClue, STRATEGIES } from './strategies.js';
 import { evaluate, collectSpelledLetters } from '../matching/evaluate.js';
-import { parseCommand, fuzzyCommand } from '../matching/commands.js';
+import { parseCommand, fuzzyCommand, bareClueNumber } from '../matching/commands.js';
 
 export function initialState() {
   return { phase: 'idle' };
@@ -105,6 +105,7 @@ function moveTo(state, clueId) {
     disambigWords: [],
     undoSay: null,
     pendingCorrection: null,
+    pendingGotoDir: null,
   };
 }
 
@@ -367,8 +368,18 @@ function handleCommand(state, cmd) {
       };
     }
     case 'goto': { // REQ-NAV-013: jump straight to a clue by its spoken label
-      // Part of the label didn't parse (STT garble, or a "go to" with no direction) —
-      // ask for it instead of dumping the utterance into the answer pipeline.
+      // The direction came through but the number didn't (STT drops the short number far
+      // more than the direction word) — don't throw the understood half away. Hold the
+      // direction and ask for the number alone; a bare number then finishes the jump
+      // (goto-number sub-mode, onHeardGotoNumber).
+      if (cmd.arg.direction != null && cmd.arg.number == null) {
+        return listenAgain(
+          { ...state, mode: 'goto-number', pendingGotoDir: cmd.arg.direction },
+          [{ kind: 'goto-need-number', direction: cmd.arg.direction }],
+        );
+      }
+      // Neither part parsed, or a "go to" with no direction at all — ask for the whole label
+      // instead of dumping the utterance into the answer pipeline.
       if (cmd.arg.number == null || cmd.arg.direction == null) {
         return listenAgain(state, [{ kind: 'goto-didnt-catch' }]);
       }
@@ -556,6 +567,28 @@ function onHeardConfirm(state, alternatives) {
     return listenAgain({ ...state, mode: 'normal', pendingWord: null }, [{ kind: 'kept' }]);
   }
   return onHeardNormal({ ...state, mode: 'normal', pendingWord: null }, alternatives);
+}
+
+// REQ-NAV-013: after "<garbled> across", the direction is held (pendingGotoDir) and we
+// asked for the number alone. Like every sub-mode, it never traps the user.
+function onHeardGotoNumber(state, alternatives) {
+  const reset = { ...state, mode: 'normal', pendingGotoDir: null };
+  const top = alternatives[0]?.transcript ?? '';
+  const cmd = parseCommand(top);
+  // A full label ("seven down") supersedes the remembered direction.
+  if (cmd?.command === 'goto') return handleCommand(reset, cmd);
+  // The number alone, in the direction we already understood, completes the jump.
+  const number = bareClueNumber(top);
+  if (number != null) {
+    return handleCommand(reset, { command: 'goto', arg: { number, direction: state.pendingGotoDir } });
+  }
+  // Any other ordinary command still works — leaving the sub-mode behind.
+  if (cmd && !CONTEXTUAL.has(cmd.command)) {
+    const handled = handleCommand(reset, cmd);
+    if (handled) return handled;
+  }
+  // No usable number — drop back to normal listening with the generic reprompt.
+  return listenAgain(reset, [{ kind: 'goto-didnt-catch' }]);
 }
 
 function onHeardNormal(state, alternatives) {
@@ -821,6 +854,7 @@ function onHeard(state, { alternatives }) {
     case 'spelling': return onHeardSpelling(s, alternatives);
     case 'disambiguating': return onHeardDisambig(s, alternatives);
     case 'confirm-replace': return onHeardConfirm(s, alternatives);
+    case 'goto-number': return onHeardGotoNumber(s, alternatives);
     default: return onHeardNormal(s, alternatives);
   }
 }

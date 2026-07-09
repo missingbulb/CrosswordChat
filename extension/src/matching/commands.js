@@ -24,6 +24,16 @@ function parseClueNumber(text) {
   return NUMBER_WORDS.get(joined) ?? null;
 }
 
+// A bare spoken number ("nine", "twenty two", "9") → integer, or null (REQ-NAV-013).
+// Exposed for the goto-number recovery: after "<garbled> across", the machine holds the
+// understood direction and asks for the number alone, which STT hears far more reliably
+// than the whole label — a lone number heard next finishes the jump.
+export function bareClueNumber(text) {
+  const norm = normalizeUtterance(text);
+  if (!norm) return null;
+  return parseClueNumber(norm);
+}
+
 // A clue label ("22 down", "5 a cross") → {number, direction} (REQ-NAV-013). Either part
 // may come back null when STT garbled it — the machine asks for the label rather than
 // guessing. Used for the explicit "go to ..." prefix, where the whole tail is a label by
