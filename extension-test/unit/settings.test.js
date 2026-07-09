@@ -1,6 +1,6 @@
 import { describe, test, expect, afterEach } from 'vitest';
 import {
-  DEFAULT_SETTINGS, sanitizeSettings, loadSettings, saveSettings, RATE_MIN, RATE_MAX,
+  DEFAULT_SETTINGS, sanitizeSettings, loadSettings, saveSettings, RATE_MIN, RATE_MAX, ECHO_MODES,
 } from '../../extension/src/settings/settings.js';
 
 function fakeChromeStorage(initial = {}) {
@@ -23,15 +23,27 @@ afterEach(() => {
 describe('persisted settings (REQ-NAV-012)', () => {
   test('REQ-NAV-012: settings round-trip through chrome.storage.sync', async () => {
     fakeChromeStorage();
-    await saveSettings({ strategy: 'most-filled', rate: 1.7 });
-    expect(await loadSettings()).toEqual({ strategy: 'most-filled', rate: 1.7, biasing: 'full' });
+    await saveSettings({ strategy: 'most-filled', rate: 1.7, echoMode: 'native', biasing: 'commands' });
+    expect(await loadSettings()).toEqual({
+      strategy: 'most-filled', rate: 1.7, echoMode: 'native', biasing: 'commands',
+    });
   });
 
   test('REQ-NAV-012: unknown stored values are sanitized to the defaults', async () => {
-    fakeChromeStorage({ strategy: 'bogus', rate: 'fast', junk: 42 });
-    expect(await loadSettings()).toEqual({ strategy: 'list-order', rate: 1.3, biasing: 'full' });
+    fakeChromeStorage({ strategy: 'bogus', rate: 'fast', echoMode: 'sideways', biasing: 'nope', junk: 42 });
+    expect(await loadSettings()).toEqual({
+      strategy: 'list-order', rate: 1.3, echoMode: 'guard', biasing: 'full',
+    });
     expect(sanitizeSettings({})).toEqual(DEFAULT_SETTINGS);
     expect(sanitizeSettings(null)).toEqual(DEFAULT_SETTINGS);
+  });
+
+  test('REQ-SPCH-005: echo mode is a persisted setting, guard by default', () => {
+    expect(ECHO_MODES).toEqual(['guard', 'native']);
+    expect(DEFAULT_SETTINGS.echoMode).toBe('guard');
+    expect(sanitizeSettings({ echoMode: 'native' }).echoMode).toBe('native');
+    expect(sanitizeSettings({ echoMode: 'bogus' }).echoMode).toBe('guard'); // unknown → default
+    expect(sanitizeSettings({}).echoMode).toBe('guard'); // missing → default
   });
 
   test('REQ-SPCH-011: the biasing mode round-trips; default is full; off is an explicit choice', async () => {

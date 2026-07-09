@@ -668,10 +668,15 @@ entities. The readout must convey what the eye would see.
   strategy of every new session. (Voice switching of the strategy is removed for now — REQ-NAV-005;
   the setting is the only way to change it.) A missing or invalid stored value falls back to list
   order (REQ-NAV-002).
+- Both settings surfaces MUST also carry the echo-mode choice (`echoMode`, REQ-SPCH-005) — a
+  persisted field with the same Save/Reset buffering, alongside the reading speed, the navigation
+  mode, and the experimental biasing mode (REQ-SPCH-011).
 - The in-page toolbar button's *Settings* item (REQ-CMD-007) MUST open the same settings — the
-  reading speed (REQ-SPCH-001) and navigation mode — as a centred modal injected into the puzzle
-  page, styled to mirror NYT's own *Puzzle Settings* popup (a card over a dimming overlay, a Karnak
-  title, sectioned rows, and a primary *Save and close* / secondary *Restore defaults* pair). It
+  reading speed (REQ-SPCH-001), navigation mode, echo mode (REQ-SPCH-005), and biasing mode
+  (REQ-SPCH-011) — as a centred modal
+  injected into the puzzle page, styled to mirror NYT's own *Puzzle Settings* popup (a card over a
+  dimming overlay, a Karnak title, sectioned rows, and a primary *Save and close* / secondary
+  *Restore defaults* pair). It
   reuses NYT's already-loaded webfonts by name with generic fallbacks, so it never fetches a font
   and still renders legibly where those fonts are absent. The same Save/Reset buffering applies;
   the ✕, the overlay, and Escape discard unsaved edits. The extension-icon route above is unchanged.
@@ -1343,10 +1348,22 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 - On `not-allowed`/`service-not-allowed`, the session MUST explain by voice how to grant mic
   access, then end. It MUST NOT retry-loop the permission prompt. (The mic grant belongs to the
   page origin — nytimes.com — since recognition runs in the content script.)
+- The permission preflight (`getUserMedia`, which surfaces the prompt) MUST request the
+  audio-processing constraints that fight self-echo — `echoCancellation`, `noiseSuppression`,
+  `autoGainControl` (`AUDIO_CONSTRAINTS`, REQ-SPCH-005) — rather than a bare `{audio:true}`. A
+  browser that rejects that constraint shape MUST fall back to a bare request once, so a
+  constraint quirk never reads as a denial; only a second failure is a genuine `denied`. On
+  success the preflight MUST log (console, REQ-SPCH-007) whether echo cancellation actually
+  engaged on the device (`track.getSettings()`), the single most useful fact for diagnosing
+  self-echo. This preflight capture is released immediately; it does **not** feed the recognizer
+  (see REQ-SPCH-005 for why the recognizer's own capture can't be constrained).
 - **Accept:** Given a recognizer erroring `not-allowed`, then the mic-denied utterance is spoken and
-  the session ends.
-- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/speech-ports.test.js` (error mapping);
-  manual MT-05.
+  the session ends. Given `getUserMedia` available, then the preflight requests
+  `{echoCancellation, noiseSuppression, autoGainControl}`; given a browser that rejects that shape,
+  then it retries `{audio:true}` and still resolves `granted`; given both attempts fail, then
+  `denied`; given a device reporting `echoCancellation:false`, then a diagnostic line says so.
+- **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/speech-ports.test.js`
+  (error mapping + preflight constraints/diagnostics); manual MT-05.
 
 #### REQ-SPCH-004 — Transient STT errors retry once
 - **Status:** Active · **Level:** MUST
@@ -1369,13 +1386,43 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   Accepted residual risk: an echo recognized as ONLY a bare command word passes the guard; in
   practice echo carries neighboring prompt words on some alternative, which the substantial-chunk
   check catches.
+- **User setting — echo mode (`echoMode`, default `guard`).** Mechanism (b) — the barge-in
+  filter — is user-selectable, persisted alongside the other settings (REQ-NAV-012 mechanics) and
+  offered in both settings surfaces. `guard` (default) runs the filter described above and is the
+  right choice on **speakers**, where the readout acoustically reaches the mic. `native` skips the
+  filter and trusts the browser/OS echo cancellation instead — for **headphones**, where TTS never
+  reaches the mic, so the filter is pure downside (it can occasionally swallow a legitimate command
+  that overlaps the prompt); barge-in is snappier as a result. Mechanism (a) is **unconditional**
+  in both modes — the formal answer mic never opens in the same batch as a SAY regardless — so
+  `native` only ever affects mid-readout barge-in, never the formal listen. (The two are layers,
+  not alternatives: `native` does not make the browser cancel `chrome.tts` on speakers; it is
+  a deliberate opt-out for setups where no acoustic echo path exists.)
+- **Browser-level layer this guard sits on top of.** The recognizer
+  (`webkitSpeechRecognition`) owns its own microphone capture and exposes **no** hook to set
+  media-track constraints on it, so echo cancellation cannot be switched on for the STT stream
+  from our code. Chrome nonetheless applies its **default** acoustic echo cancellation to that
+  capture (a software canceller that references playout audio via an internal loopback), so TTS
+  that plays through Chrome's audio path is already attenuated before recognition. The app-level
+  echo guard above exists precisely for the residual the browser's AEC misses — notably
+  `chrome.tts` output, which on some platforms is rendered by the OS outside Chrome's monitored
+  mix and so is not in the loopback the canceller sees. The preflight capture we *do* own
+  requests `echoCancellation`/`noiseSuppression`/`autoGainControl` (`AUDIO_CONSTRAINTS`,
+  REQ-SPCH-003) to warm the device with the processing on. **Scope of related APIs (why not the
+  others):** `MediaTrackConstraints.echoCancellation` and `MediaTrackSettings.noiseSuppression`
+  are `getUserMedia` *microphone* constraints and are the ones in play here;
+  `suppressLocalAudioPlayback` and `restrictOwnAudio` are `getDisplayMedia` *screen-capture*
+  constraints (they filter a captured tab's own audio out of a screen recording, not a
+  microphone) and therefore do not apply to a microphone-plus-TTS conflict at all.
 - **Accept:** Given any machine trace, then no action batch contains both SAY and LISTEN; given a
-  mid-speech transcript repeating a multi-word span of the spoken text, then it is discarded and
-  the speech continues; given a short non-command fragment of the spoken text, then it is
-  discarded; given "yes" barged into a prompt ending in "Yes or no.", then it is processed as
-  the reply.
+  mid-speech transcript repeating a multi-word span of the spoken text (in `guard` mode), then it is
+  discarded and the speech continues; given a short non-command fragment of the spoken text, then it
+  is discarded; given "yes" barged into a prompt ending in "Yes or no.", then it is processed as
+  the reply; given the SAME echo-like utterance in `native` mode, then it is NOT discarded but barges
+  in as heard input; given `echoMode` unset or invalid in storage, then it defaults to `guard`.
 - **Verify:** unit `extension-test/unit/machine.test.js` (action-order invariant),
-  `extension-test/unit/orchestrator.test.js` (echo guard).
+  `extension-test/unit/orchestrator.test.js` (echo guard + native barge-in),
+  `extension-test/unit/settings.test.js` (echoMode persistence),
+  `extension-test/integration/settings-modal.test.js` (the toggle).
 
 #### REQ-SPCH-006 — Question intonation passthrough
 - **Status:** Active · **Level:** MUST

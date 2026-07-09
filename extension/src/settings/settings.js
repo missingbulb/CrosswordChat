@@ -10,7 +10,19 @@ import { BIASING_MODES, DEFAULT_BIASING } from '../shared/biasing-modes.js';
 export const RATE_MIN = 0.5;
 export const RATE_MAX = 3;
 
-export const DEFAULT_SETTINGS = { strategy: 'list-order', rate: DEFAULT_RATE, biasing: DEFAULT_BIASING };
+// Self-echo handling (REQ-SPCH-005): how the barge-in mic keeps our own TTS voice from
+// being read as user input.
+//   'guard'  — the app-level echo guard filters our spoken words back out (works on speakers,
+//              where TTS acoustically reaches the mic; the default and the safe choice).
+//   'native' — skip that filter and trust the browser/OS echo cancellation instead (for
+//              headphones, where TTS never reaches the mic — snappier interruptions).
+// Either way the formal answer mic still never opens while TTS speaks (REQ-SPCH-005(a));
+// only the barge-in filter is toggled.
+export const ECHO_MODES = ['guard', 'native'];
+
+export const DEFAULT_SETTINGS = {
+  strategy: 'list-order', rate: DEFAULT_RATE, echoMode: 'guard', biasing: DEFAULT_BIASING,
+};
 
 function sanitizeRate(raw) {
   if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_RATE;
@@ -23,6 +35,7 @@ export function sanitizeSettings(raw) {
   return {
     strategy: STRATEGIES.includes(raw?.strategy) ? raw.strategy : DEFAULT_SETTINGS.strategy,
     rate: sanitizeRate(raw?.rate),
+    echoMode: ECHO_MODES.includes(raw?.echoMode) ? raw.echoMode : DEFAULT_SETTINGS.echoMode,
     // REQ-SPCH-011: the experimental biasing mode; unknown values (older storage) → 'off'.
     biasing: BIASING_MODES.includes(raw?.biasing) ? raw.biasing : DEFAULT_SETTINGS.biasing,
   };

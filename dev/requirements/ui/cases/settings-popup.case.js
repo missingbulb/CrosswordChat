@@ -1,7 +1,8 @@
-// REQ-NAV-012 — the Settings popup (options.html), opened as a 380×480 popup window
+// REQ-NAV-012 — the Settings popup (options.html), opened as a 380-wide popup window
 // (or the action popup) from the in-page dropdown's Settings item. Native form
 // widgets (a range slider, radio buttons) that satori can't draw — rendered by
-// headless Chromium in its default state.
+// headless Chromium in its default state. The canvas is tall enough to show the whole
+// form (the real popup scrolls); the width matches the shipped popup.
 
 import { pageToPng } from '../render/page-to-png.js';
 
@@ -16,6 +17,7 @@ function prep() {
   slider.value = 1.3;
   document.querySelector('#rate-value').value = '1.3×';
   for (const r of document.querySelectorAll('input[name="strategy"]')) r.checked = r.value === 'list-order';
+  for (const r of document.querySelectorAll('input[name="echoMode"]')) r.checked = r.value === 'guard';
   for (const r of document.querySelectorAll('input[name="biasing"]')) r.checked = r.value === 'full';
 }
 
@@ -26,6 +28,8 @@ export default {
   engine: 'browser', // headless Chromium — self-skips where one isn't present
   maxDiffRatio: 0.02, // browser screenshot: small cross-env antialiasing tolerance
   async render() {
-    return pageToPng('extension/src/options/options.html', { width: 380, height: 660, prep }); // taller: + biasing group
+    // Taller than the shipped popup so the whole form shows (rate + strategy + echo + biasing
+    // groups + buttons); the real popup scrolls. Width matches the shipped popup.
+    return pageToPng('extension/src/options/options.html', { width: 380, height: 920, prep });
   },
 };

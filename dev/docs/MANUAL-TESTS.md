@@ -157,6 +157,11 @@ Covers: REQ-SPCH-007 REQ-SPCH-008
 2. **PASS:** every spoken system line appears as a `[CrosswordChat]` console line, and each of your
    utterances appears as `heard: "..."` — nothing spoken-but-unlogged, and nothing rendered into
    the page itself.
+3. At session start (mic granted), a `[CrosswordChat] mic ready — echoCancellation=…` line reports
+   whether the browser's acoustic echo cancellation actually engaged on this device (REQ-SPCH-003/005).
+   **PASS:** the line is present; on desktop Chrome `echoCancellation=true` is expected. If it reads
+   `false`, that device is a candidate for stronger self-echo, and the app-level echo guard
+   (REQ-SPCH-005) is doing the heavier lifting — worth noting if barge-in mis-hears our own voice.
 
 ### MT-19 — Tab disappears mid-session
 Covers: REQ-LIFE-008
@@ -228,6 +233,20 @@ Covers: REQ-SPCH-009
 4. **PASS:** steps 1–2 — the readout stops within ~a second and the answer/command is handled
    exactly as if spoken after the readout. Step 3 — the extension never reacts to its own voice
    (the echo guard discards it); no self-triggered replies, ever.
+
+### MT-34 — Echo mode toggle (speakers vs headphones)
+Covers: REQ-SPCH-005
+1. In Settings, under "Hearing you over its own voice", leave "Filter out its own voice" selected
+   (the default). On **speakers**, repeat MT-27 step 3: **PASS** — the extension never reacts to its
+   own voice.
+2. Switch to "Trust your device's echo cancellation", Save, and start a fresh session wearing
+   **headphones**. Barge in mid-readout with a fitting answer. **PASS** — interruptions feel at least
+   as responsive as in guard mode, and since TTS is in your ears (not the mic) the extension still
+   never triggers on itself.
+3. Sanity check the footgun the label warns about: with "Trust your device's echo cancellation"
+   selected and back on **speakers**, a readout *may* occasionally trip the mic on its own voice —
+   which is exactly why "Filter out its own voice" is the default. No data loss either way; only
+   barge-in is affected (the formal post-readout mic is unchanged).
 
 ### MT-28 — Strategy setting and easiest-first skipping
 Covers: REQ-NAV-011 REQ-NAV-012

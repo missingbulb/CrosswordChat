@@ -335,6 +335,56 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
     expect(spoken[1]).toContain('Goodbye');
   });
 
+  test('REQ-SPCH-005(b): native echo mode lets an echo-like utterance barge in, not filtered', async () => {
+    // The SAME utterance the guard test above discards as our own voice must, in 'native'
+    // mode, be treated as real barge-in input — the toggle's whole point (headphone users
+    // rely on the browser's echo cancellation, so the app-level filter is off).
+    const spoken = [];
+    const readout = deferred();
+    let speaks = 0;
+    let listening = false;
+    let cancels = 0;
+    const heard = [];
+    const ended = new Promise((resolve) => {
+      const orchestrator = createOrchestrator({
+        settings: { echoMode: 'native' },
+        tts: {
+          speak: (text) => {
+            spoken.push(text);
+            speaks += 1;
+            return speaks === 1 ? readout.p : Promise.resolve(); // only the readout is held open
+          },
+          cancel: () => { cancels += 1; readout.resolve(); }, // a real cancel ends the utterance
+        },
+        stt: {
+          listenOnce: () => {
+            if (listening) { // the real post-barge LISTEN: end the session
+              return Promise.resolve({ alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
+            }
+            // Barge cycle during the readout: the mic hears a chunk of our own words.
+            return Promise.resolve({ alternatives: [{ transcript: 'organ with four chambers', confidence: 0.8 }] });
+          },
+          stop: () => {},
+        },
+        ui: {
+          listening: (on) => { listening = on; },
+          caption: (role, text) => { if (role === 'heard') heard.push(text); },
+        },
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          watch: () => {},
+          unwatch: () => {},
+        },
+        onEnd: () => resolve(null),
+      });
+      void orchestrator.start();
+    });
+    await ended;
+    // Not filtered: it cut the readout short and was surfaced as heard input.
+    expect(cancels).toBeGreaterThan(0);
+    expect(heard).toContain('organ with four chambers');
+  });
+
   test('REQ-SPCH-005: a short NON-command fragment of the prompt is still echo', async () => {
     const spoken = [];
     const readout = deferred();
