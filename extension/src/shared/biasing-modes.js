@@ -9,19 +9,14 @@ export const BIASING_MODES = ['off', 'commands', 'spelling', 'full'];
 // inert for cloud-path users regardless (REQ-SPCH-011).
 export const DEFAULT_BIASING = 'commands';
 
-// One line the settings UIs show above the group: biasing only does anything on Chrome's
-// on-device recognition path, so on the default cloud path these are inert (REQ-SPCH-011).
-export const BIASING_NOTE = 'Requires Chrome’s on-device recognition (Chrome 139+). '
-  + 'On the standard cloud path these have no effect.';
+// Optional one-line note shown above the group ('' = no note).
+export const BIASING_NOTE = '';
 
 // value → { label, hint } for the radio group. Kept next to the ids so the two never drift.
+// A '' hint renders no description line.
 export const BIASING_CHOICES = [
-  { value: 'off', label: 'No biasing experiments',
-    hint: 'Turn the experiments off — recognition runs exactly as it does today.' },
-  { value: 'commands', label: 'Experimental 1 — Commands & clue labels',
-    hint: 'Default. Nudges recognition toward voice commands and this puzzle’s clue numbers (“12 across”).' },
-  { value: 'spelling', label: 'Experimental 2 — Letters & spelling',
-    hint: 'Nudges toward single letters and the NATO alphabet when spelling or entering 1–2 letters.' },
-  { value: 'full', label: 'Experimental 3 — Full adaptive',
-    hint: 'Both of the above, switched to match what you’re doing (answering, navigating, spelling).' },
+  { value: 'off', label: 'No biasing experiments', hint: '' },
+  { value: 'commands', label: 'Experiment 1 — Bias to Commands', hint: '' },
+  { value: 'spelling', label: 'Experiment 2 — Bias to Letters & spelling', hint: '' },
+  { value: 'full', label: 'Experiment 1 + 2', hint: '' },
 ];

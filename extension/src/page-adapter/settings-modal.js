@@ -98,7 +98,6 @@ export function settingsModalMarkup() {
             <output class="cc-rate-value" data-cc-role="rate-value">1.3×</output></label>
           <input type="range" id="cc-rate" class="cc-rate" data-cc-role="rate"
                  min="${RATE_MIN}" max="${RATE_MAX}" step="0.1" value="1.3">
-          <p class="cc-hint">Applies from the next spoken line — even mid-session.</p>
         </div>
       </section>
       <section class="cc-section">
@@ -106,20 +105,20 @@ export function settingsModalMarkup() {
         <div class="cc-inset">
           <label><input type="radio" name="cc-strategy" value="list-order" checked>
             <span>In list order</span></label>
-          <p class="cc-hint cc-indent">The next unsolved clue, top to bottom — Across then Down.</p>
+          <p class="cc-hint cc-indent">6 -&gt; 7, 7 -&gt; 8, you get it...</p>
           <label><input type="radio" name="cc-strategy" value="most-filled">
-            <span>Most filled first (easiest)</span></label>
-          <p class="cc-hint cc-indent">The open clue closest to done — the one with the fewest
-            blank letters left.</p>
+            <span>Smart Next</span></label>
+          <p class="cc-hint cc-indent">We guess what you'd solve next. The clue with the
+            fewest blank letters left.</p>
         </div>
       </section>
       <section class="cc-section">
         <header class="cc-heading">Experimental: speech biasing</header>
         <div class="cc-inset">
-          <p class="cc-hint">${esc(BIASING_NOTE)}</p>${BIASING_CHOICES.map(({ value, label, hint }) => `
+          ${BIASING_NOTE ? `<p class="cc-hint">${esc(BIASING_NOTE)}</p>` : ''}${BIASING_CHOICES.map(({ value, label, hint }) => `
           <label><input type="radio" name="cc-biasing" value="${value}"${value === DEFAULT_BIASING ? ' checked' : ''}>
-            <span>${esc(label)}</span></label>
-          <p class="cc-hint cc-indent">${esc(hint)}</p>`).join('')}
+            <span>${esc(label)}</span></label>${hint ? `
+          <p class="cc-hint cc-indent">${esc(hint)}</p>` : ''}`).join('')}
         </div>
       </section>
     </form>

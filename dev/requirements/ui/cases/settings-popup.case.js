@@ -26,6 +26,6 @@ export default {
   engine: 'browser', // headless Chromium — self-skips where one isn't present
   maxDiffRatio: 0.02, // browser screenshot: small cross-env antialiasing tolerance
   async render() {
-    return pageToPng('extension/src/options/options.html', { width: 380, height: 920, prep }); // taller: + biasing group
+    return pageToPng('extension/src/options/options.html', { width: 380, height: 660, prep }); // taller: + biasing group
   },
 };
