@@ -16,8 +16,13 @@
 import {
   loadSettings, saveSettings, DEFAULT_SETTINGS, RATE_MIN, RATE_MAX,
 } from '../settings/settings.js';
+import { BIASING_CHOICES, BIASING_NOTE, DEFAULT_BIASING } from '../shared/biasing-modes.js';
 
 export const MODAL_ID = 'cc-settings-modal';
+
+// Minimal HTML-escape for the biasing labels/hints injected into the markup below (our own
+// constants, but they carry `&`/`—`, so escape defensively).
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Scoped under #cc-settings-modal so nothing leaks into the host page. Fonts name NYT's
 // families first (already loaded on the puzzle page) and fall back to generics.
@@ -76,8 +81,8 @@ export const SETTINGS_MODAL_CSS = `
 #${MODAL_ID} .cc-secondary[disabled] { opacity: 0.35; cursor: default; }
 `;
 
-// The dialog markup in its fresh-install default state (list-order, 1.3×) — the state
-// the golden captures and the state mount() starts from before loadSettings resolves.
+// The dialog markup in its fresh-install default state (list-order, 1.3×, commands biasing) —
+// the state the golden captures and the state mount() starts from before loadSettings resolves.
 export function settingsModalMarkup() {
   return `
 <div id="${MODAL_ID}" role="dialog" aria-modal="true" aria-label="CrosswordChat settings">
@@ -93,7 +98,6 @@ export function settingsModalMarkup() {
             <output class="cc-rate-value" data-cc-role="rate-value">1.3×</output></label>
           <input type="range" id="cc-rate" class="cc-rate" data-cc-role="rate"
                  min="${RATE_MIN}" max="${RATE_MAX}" step="0.1" value="1.3">
-          <p class="cc-hint">Applies from the next spoken line — even mid-session.</p>
         </div>
       </section>
       <section class="cc-section">
@@ -101,11 +105,20 @@ export function settingsModalMarkup() {
         <div class="cc-inset">
           <label><input type="radio" name="cc-strategy" value="list-order" checked>
             <span>In list order</span></label>
-          <p class="cc-hint cc-indent">The next unsolved clue, top to bottom — Across then Down.</p>
+          <p class="cc-hint cc-indent">6 -&gt; 7, 7 -&gt; 8, you get it...</p>
           <label><input type="radio" name="cc-strategy" value="most-filled">
-            <span>Most filled first (easiest)</span></label>
-          <p class="cc-hint cc-indent">The open clue closest to done — the one with the fewest
-            blank letters left.</p>
+            <span>Smart Next</span></label>
+          <p class="cc-hint cc-indent">We guess what you'd solve next. The clue with the
+            fewest blank letters left.</p>
+        </div>
+      </section>
+      <section class="cc-section">
+        <header class="cc-heading">Experimental: speech biasing</header>
+        <div class="cc-inset">
+          ${BIASING_NOTE ? `<p class="cc-hint">${esc(BIASING_NOTE)}</p>` : ''}${BIASING_CHOICES.map(({ value, label, hint }) => `
+          <label><input type="radio" name="cc-biasing" value="${value}"${value === DEFAULT_BIASING ? ' checked' : ''}>
+            <span>${esc(label)}</span></label>${hint ? `
+          <p class="cc-hint cc-indent">${esc(hint)}</p>` : ''}`).join('')}
         </div>
       </section>
       <section class="cc-section">
@@ -133,7 +146,8 @@ export function settingsModalMarkup() {
 
 const atDefaults = (draft) =>
   draft.strategy === DEFAULT_SETTINGS.strategy && draft.rate === DEFAULT_SETTINGS.rate
-  && draft.echoMode === DEFAULT_SETTINGS.echoMode;
+  && draft.echoMode === DEFAULT_SETTINGS.echoMode
+  && draft.biasing === DEFAULT_SETTINGS.biasing;
 
 /**
  * Mount the Settings dialog into the page (one at a time). Loads the persisted settings,
@@ -172,6 +186,7 @@ export function mountSettingsModal(document, { onClose } = {}) {
   const resetBtn = $('[data-cc-role="reset"]');
   const radios = [...dialog.querySelectorAll('input[name="cc-strategy"]')];
   const echoRadios = [...dialog.querySelectorAll('input[name="cc-echo"]')];
+  const biasingRadios = [...dialog.querySelectorAll('input[name="cc-biasing"]')];
 
   let draft = { ...DEFAULT_SETTINGS };
   let removed = false;
@@ -181,6 +196,7 @@ export function mountSettingsModal(document, { onClose } = {}) {
     readout.value = `${Number(slider.value).toFixed(1)}×`;
     for (const input of radios) input.checked = input.value === draft.strategy;
     for (const input of echoRadios) input.checked = input.value === draft.echoMode;
+    for (const input of biasingRadios) input.checked = input.value === draft.biasing;
     resetBtn.disabled = atDefaults(draft);
     resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
   };
@@ -216,6 +232,13 @@ export function mountSettingsModal(document, { onClose } = {}) {
   for (const input of echoRadios) {
     input.addEventListener('change', () => {
       if (input.checked) draft.echoMode = input.value;
+      resetBtn.disabled = atDefaults(draft);
+      resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
+    });
+  }
+  for (const input of biasingRadios) {
+    input.addEventListener('change', () => {
+      if (input.checked) draft.biasing = input.value;
       resetBtn.disabled = atDefaults(draft);
       resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
     });

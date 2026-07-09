@@ -26,10 +26,12 @@ const ICON_IDLE = brandIconSvg({ bg: GOLD, ink: INK, bubble: '#FFFFFF', size: 26
 const ICON_ACTIVE = brandIconSvg({ bg: INK, ink: INK, bubble: GOLD, size: 26 });
 
 // The dropdown entries (REQ-CMD-007). "activate" is state-labelled (Activate/Deactivate);
-// the other two open extension pages via the caller's handlers.
+// the others open extension surfaces via the caller's handlers. "Send session data" opens the
+// in-page diagnostics dialog (REQ-DIAG-001).
 const STATIC_ITEMS = [
   { act: 'settings', label: 'Settings' },
   { act: 'help', label: 'Voice commands' },
+  { act: 'send-data', label: 'Send session data' },
 ];
 
 // The toolbar's tool row — the button appends here as its last child, so it always lands at
@@ -44,14 +46,15 @@ function findToolRow(document) {
 /**
  * Inject the split session button (now, or as soon as the toolbar renders).
  * @param {Document} document
- * @param {{onToggle: () => void, onSettings?: () => void, onHelp?: () => void}} handlers
+ * @param {{onToggle: () => void, onSettings?: () => void, onHelp?: () => void,
+ *   onSendData?: () => void}} handlers
  *   onToggle — main click / Activate item (caller decides start vs stop);
- *   onSettings / onHelp — the dropdown items.
+ *   onSettings / onHelp / onSendData — the dropdown items.
  * @param {{waitMs?: number}} [opts]  waitMs — give-up re-check interval for non-app pages.
  * @returns {{setActive(on: boolean): void, remove(): void}}
  */
 export function mountSessionButton(document, handlers, { waitMs = 30_000 } = {}) {
-  const { onToggle, onSettings, onHelp } = handlers ?? {};
+  const { onToggle, onSettings, onHelp, onSendData } = handlers ?? {};
   const view = document.defaultView ?? globalThis;
   let wrapper = null; // the #CC_BUTTON_ID container (placement + dedupe + remove)
   let mainBtn = null; // the toggle half (icon + session state)
@@ -169,8 +172,9 @@ export function mountSessionButton(document, handlers, { waitMs = 30_000 } = {})
     activateItem = makeItem('Activate', () => onToggle?.());
     activateItem.dataset.ccAct = 'activate';
     menu.append(activateItem);
+    const handlerFor = { settings: onSettings, help: onHelp, 'send-data': onSendData };
     for (const { act, label } of STATIC_ITEMS) {
-      const item = makeItem(label, act === 'settings' ? onSettings : onHelp);
+      const item = makeItem(label, handlerFor[act]);
       item.dataset.ccAct = act;
       menu.append(item);
     }

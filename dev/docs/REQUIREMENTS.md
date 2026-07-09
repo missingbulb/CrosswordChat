@@ -567,12 +567,11 @@ entities. The readout must convey what the eye would see.
 - **Verify:** unit `extension-test/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
-- **Status:** Active · **Level:** SHOULD
-- Saying *"switch to most filled"* / *"go in order"* (lexicon REQ-CMD-001) SHOULD switch the active
-  strategy for the rest of the session, confirm briefly, and keep listening on the current clue.
-- **Accept:** Given a session, when the user says "switch to most filled", then the acknowledgement is
-  spoken and subsequent *next* uses the new strategy.
-- **Verify:** unit `extension-test/unit/machine.test.js`.
+- **Status:** Planned · **Level:** SHOULD
+- Removed for now — voice control of settings is out of scope. The next-clue strategy is set only
+  through the settings surface (REQ-NAV-012), never by voice. Kept as a tracked ID so voice switching
+  can return. (Previously: saying *"switch to most filled"* / *"go in order"* switched the active
+  strategy for the rest of the session and confirmed briefly.)
 
 #### REQ-NAV-006 — Wrap-around is announced
 - **Status:** Retired · **Level:** —
@@ -666,14 +665,15 @@ entities. The readout must convey what the eye would see.
   order / most filled first). Edits are buffered: a *Save* button persists them and closes the
   popup, and a *Reset to defaults* button restores the defaults in the form without saving.
   The choice MUST persist in `chrome.storage.sync` and MUST be applied as the starting
-  strategy of every new session. Voice switching (REQ-NAV-005) still changes the strategy for the
-  rest of the session only; it MUST NOT write the setting back. A missing or invalid stored value
-  falls back to list order (REQ-NAV-002).
-- Both settings surfaces MUST also carry the echo-mode choice (`echoMode`, REQ-SPCH-005) — a third
-  persisted field with the same Save/Reset buffering — so the three stored settings are the reading
-  speed, the navigation mode, and the echo mode.
+  strategy of every new session. (Voice switching of the strategy is removed for now — REQ-NAV-005;
+  the setting is the only way to change it.) A missing or invalid stored value falls back to list
+  order (REQ-NAV-002).
+- Both settings surfaces MUST also carry the echo-mode choice (`echoMode`, REQ-SPCH-005) — a
+  persisted field with the same Save/Reset buffering, alongside the reading speed, the navigation
+  mode, and the experimental biasing mode (REQ-SPCH-011).
 - The in-page toolbar button's *Settings* item (REQ-CMD-007) MUST open the same settings — the
-  reading speed (REQ-SPCH-001), navigation mode, and echo mode (REQ-SPCH-005) — as a centred modal
+  reading speed (REQ-SPCH-001), navigation mode, echo mode (REQ-SPCH-005), and biasing mode
+  (REQ-SPCH-011) — as a centred modal
   injected into the puzzle page, styled to mirror NYT's own *Puzzle Settings* popup (a card over a
   dimming overlay, a Karnak title, sectioned rows, and a primary *Save and close* / secondary
   *Restore defaults* pair). It
@@ -1209,7 +1209,6 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | enter-anyway | anyway · anyways · say it anyway · do it anyway · it anyway · enter it anyway · enter anyway · force it · overwrite · put it in anyway · replace it · use it anyway |
 | misheard | you misheard · you misheard me · that's not what i said · you heard wrong · wrong word · no i said … · i meant … · i said … |
 | answer (escape) | answer … · guess … · the answer is … · the word is … · try … |
-| strategy | switch to most filled · most filled first · switch to most solved · go in order · switch to list order · read in order |
 | yes (contextual) | yes · yeah · yep · sure · correct · right · do it |
 | no (contextual) | no · nope · cancel · never mind · keep it · leave it |
 | choice (contextual) | first · the first one · second · the second one · third · the third one |
@@ -1299,8 +1298,8 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 <strong>Voice-commands help page (help.html)</strong><br>
 <img src="../requirements/ui/cases/help-page.png" width="360" alt="Voice-commands help page (help.html)">
 
-<strong>Injected split button with its dropdown open (Activate / Settings / Voice commands)</strong><br>
-<img src="../requirements/ui/cases/implanted-button-toolbar-menu.png" width="520" alt="Injected split button with its dropdown open (Activate / Settings / Voice commands)">
+<strong>Injected split button with its dropdown open (Activate / Settings / Voice commands / Send session data)</strong><br>
+<img src="../requirements/ui/cases/implanted-button-toolbar-menu.png" width="520" alt="Injected split button with its dropdown open (Activate / Settings / Voice commands / Send session data)">
 
 <!-- /ui-gallery:REQ-CMD-007 -->
 
@@ -1483,6 +1482,32 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   `no-speech` (no reset); given a fake with no AudioContext, then pings are silently skipped.
 - **Verify:** unit `extension-test/unit/speech-ports.test.js`, `extension-test/unit/machine.test.js`; manual MT-33.
 
+#### REQ-SPCH-011 — Experimental contextual biasing (on-device)
+- **Status:** Active · **Level:** MAY
+- The STT port MAY bias recognition toward an expected vocabulary using the Web Speech API's
+  contextual-biasing surface (`SpeechRecognition.phrases`, a list of `SpeechRecognitionPhrase`
+  `{phrase, boost}` with boost 0.0–10.0). Biasing is a per-listen input, never a filter: phrases
+  raise the likelihood of matching transcripts; nothing is excluded. Because Chrome offers biasing
+  only on the on-device path, the port MUST feature-detect availability (`SpeechRecognitionPhrase`
+  present AND `SpeechRecognition.available({langs:['en-US'], processLocally:true})` reporting
+  `available`) and only then set `processLocally = true` and populate `phrases`; when unavailable it
+  MUST run the ordinary cloud path unchanged — no error, no behavior change (this realizes, for
+  biasing, the on-device path noted in REQ-FUT-006). The phrase set is mode-scoped and selected by a
+  persisted experimental setting (REQ-NAV-012) with four values: `commands` (the command lexicon + the
+  loaded puzzle's real clue labels, graduated so the current entry's crossings are boosted highest),
+  `spelling` (the 26 single letters + NATO + letter-names, applied in spelling mode and on 1–2
+  open-square entries), `full` (default — both, plus yes/no/first-second during confirmation and
+  disambiguation), and `off` (a deliberate opt-out — no biasing). Biasing is inert on the cloud path
+  regardless of the setting, so the default changes nothing for cloud-path users. No answer word is
+  ever biased — the answer is unknown by design (§2). Biasing changes only recognition
+  inputs; matching (REQ-ANS-*) is unaffected.
+- **Accept:** Given a recognizer whose on-device biasing is available and a `commands` setting, then
+  the listen cycle sets `processLocally = true` and pushes the command + clue-label phrases; given a
+  recognizer without the phrases API (or on-device unavailable), then no phrases are set and the
+  transcript path is identical to `off`; given `off`, then no phrases are ever set.
+- **Verify:** unit `extension-test/unit/biasing.test.js`, `extension-test/unit/speech-ports.test.js`,
+  `extension-test/unit/settings.test.js`.
+
 ---
 
 ## 12. Page adapter (PAGE)
@@ -1641,6 +1666,28 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - **Accept:** Given the source tree, then storage primitives appear only under the two allowed
   paths; given a session end, then extension storage holds nothing beyond the settings object.
 - **Verify:** unit `extension-test/unit/arch.test.js`; manual MT-15.
+
+#### REQ-DIAG-001 — In-session diagnostics log and user-invoked export
+- **Status:** Active · **Level:** SHOULD
+- For tuning recognition (e.g. the REQ-SPCH-011 experiments), the extension SHOULD keep an in-memory
+  transcript of the current page's voice sessions — per session: the chosen settings (including the
+  biasing mode) and, per turn, the spoken lines and the heard n-best (transcript + confidence). This
+  log lives only in the content script's memory and dies with the page; it MUST NOT be persisted
+  (REQ-NFR-002 stands — no `chrome.storage`, no audio, transcripts gone on reload). A user-invoked
+  "Send session data" item on the toolbar menu opens an extension-owned, dismissible dialog listing
+  those sessions; this is a deliberate, on-demand diagnostics surface, distinct from the forbidden
+  live caption panel of REQ-SPCH-007 (which governs the always-on solving UI). The dialog offers (a)
+  copy-to-clipboard of the full log and (b) a link that opens a GitHub issue with the log pre-filled
+  in the URL for the user to review, edit, and submit. The extension itself makes no network request
+  (REQ-NFR-001): the issue link is ordinary user navigation via an anchor the user clicks, and the
+  clipboard is local — nothing is transmitted or stored by the extension. Over-long logs are capped
+  in the link (with a copy-for-full note) so nothing is silently lost.
+- **Accept:** Given two start/stop sessions on one page load, then the dialog lists both with their
+  settings and transcripts; given a page reload, then the log is empty (nothing persisted); given a
+  log, then Copy places the full text on the clipboard and the issue link's target is
+  `github.com/missingbulb/CrosswordChat/issues/new` with a `body` query param; given the source
+  tree, then no storage or network primitive appears outside the settings/options paths.
+- **Verify:** unit `extension-test/unit/session-log.test.js`, `extension-test/unit/arch.test.js`.
 
 #### REQ-NFR-003 — Latency budgets
 - **Status:** Active · **Level:** SHOULD

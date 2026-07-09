@@ -23,13 +23,17 @@ afterEach(() => {
 describe('persisted settings (REQ-NAV-012)', () => {
   test('REQ-NAV-012: settings round-trip through chrome.storage.sync', async () => {
     fakeChromeStorage();
-    await saveSettings({ strategy: 'most-filled', rate: 1.7, echoMode: 'native' });
-    expect(await loadSettings()).toEqual({ strategy: 'most-filled', rate: 1.7, echoMode: 'native' });
+    await saveSettings({ strategy: 'most-filled', rate: 1.7, echoMode: 'native', biasing: 'commands' });
+    expect(await loadSettings()).toEqual({
+      strategy: 'most-filled', rate: 1.7, echoMode: 'native', biasing: 'commands',
+    });
   });
 
   test('REQ-NAV-012: unknown stored values are sanitized to the defaults', async () => {
-    fakeChromeStorage({ strategy: 'bogus', rate: 'fast', echoMode: 'sideways', junk: 42 });
-    expect(await loadSettings()).toEqual({ strategy: 'list-order', rate: 1.3, echoMode: 'guard' });
+    fakeChromeStorage({ strategy: 'bogus', rate: 'fast', echoMode: 'sideways', biasing: 'nope', junk: 42 });
+    expect(await loadSettings()).toEqual({
+      strategy: 'list-order', rate: 1.3, echoMode: 'guard', biasing: 'full',
+    });
     expect(sanitizeSettings({})).toEqual(DEFAULT_SETTINGS);
     expect(sanitizeSettings(null)).toEqual(DEFAULT_SETTINGS);
   });
@@ -40,6 +44,17 @@ describe('persisted settings (REQ-NAV-012)', () => {
     expect(sanitizeSettings({ echoMode: 'native' }).echoMode).toBe('native');
     expect(sanitizeSettings({ echoMode: 'bogus' }).echoMode).toBe('guard'); // unknown → default
     expect(sanitizeSettings({}).echoMode).toBe('guard'); // missing → default
+  });
+
+  test('REQ-SPCH-011: the biasing mode round-trips; default is full; off is an explicit choice', async () => {
+    fakeChromeStorage();
+    await saveSettings({ strategy: 'list-order', rate: 1.3, biasing: 'commands' });
+    expect((await loadSettings()).biasing).toBe('commands'); // a non-default value round-trips
+    expect(sanitizeSettings({ biasing: 'spelling' }).biasing).toBe('spelling');
+    expect(sanitizeSettings({ biasing: 'off' }).biasing).toBe('off'); // "no bias" is a real selection
+    expect(sanitizeSettings({ biasing: 'bogus' }).biasing).toBe('full'); // unknown → the default
+    expect(sanitizeSettings({}).biasing).toBe('full');
+    expect(DEFAULT_SETTINGS.biasing).toBe('full');
   });
 
   test('REQ-SPCH-001: the default reading speed is 1.3×', () => {

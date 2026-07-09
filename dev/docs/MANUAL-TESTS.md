@@ -215,8 +215,8 @@ Covers: REQ-CMD-006
 Covers: REQ-ANS-017 REQ-NAV-009 REQ-NAV-010
 1. Enter a fitting answer by voice; after the session moves on, say "undo".
 2. Say "back". Then say "flip".
-3. On a partially solved puzzle, say "switch to most filled", then "next" twice, then
-   "back" twice.
+3. On a partially solved puzzle, with "Smart Next" selected in Settings, say "next" twice,
+   then "back" twice.
 4. **PASS:** step 1 — undo re-selects the answered clue — the page cursor lands back on that
    clue in its own direction (never the crossing/vertical one), empties exactly the cells that
    answer filled (letters that were there beforehand come back), confirms with a brief "Undone."

@@ -16,7 +16,7 @@ export default {
   maxDiffRatio: 0.02, // browser screenshot: small cross-env antialiasing tolerance
   async render() {
     return contentToPng(`<style>${SETTINGS_MODAL_CSS}</style>${settingsModalMarkup()}`, {
-      width: 680, height: 760,
+      width: 680, height: 920, // tall enough to show the whole card (rate + strategy + biasing + echo + buttons)
     });
   },
 };

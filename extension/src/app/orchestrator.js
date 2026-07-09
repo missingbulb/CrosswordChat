@@ -5,6 +5,7 @@ import { initialState, reduce } from '../conversation/machine.js';
 import { render } from '../conversation/phrases.js';
 import { parseCommand } from '../matching/commands.js';
 import { toLetters } from '../matching/normalize.js';
+import { phrasesFor } from '../speech/biasing.js';
 
 // Echo guard threshold (REQ-SPCH-005): a heard chunk of this many letters found inside
 // the text we're speaking is decisive proof of our own voice. Below it, a fragment is
@@ -57,6 +58,14 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
   const echoGuardOn = settings.echoMode !== 'native';
 
   const caption = (role, text) => ui.caption?.(role, text);
+  // REQ-DIAG-001: structured per-turn diagnostics (heard n-best, spoken lines, errors) fed to
+  // the in-memory session log. A no-op unless the shell wired ui.diag.
+  const diag = (entry) => ui.diag?.(entry);
+  // REQ-SPCH-011: the biasing phrase set for the CURRENT machine state + the user's chosen
+  // experiment. The port ignores it unless Chrome's on-device path is available.
+  const biasPhrases = () => phrasesFor({
+    biasing: settings.biasing, mode: state.mode, model: state.model, clueId: state.clueId,
+  });
 
   // REQ-LIFE-017: a heard user command keeps NYT from auto-pausing a quiet puzzle. A voice
   // solver isn't touching the keyboard, so on every spoken command we nudge the page
@@ -75,13 +84,14 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
     const full = state.after === 'listen'; // phase is 'speaking' whenever a SAY executes
     let speaking = true;
     let interrupt = null;
+    const phrases = biasPhrases(); // REQ-SPCH-011: bias the barge-in mic like the formal one
     const speech = Promise.resolve(tts.speak(text)).then(() => { speaking = false; });
     const watcher = (async () => {
       for (;;) {
         // Yield first: when speak resolves immediately (headless/tests) the mic never opens.
         await Promise.resolve();
         if (!speaking || ended) return;
-        const result = await stt.listenOnce();
+        const result = await stt.listenOnce({ phrases });
         if (ended) return;
         if (result.error) {
           if (!speaking) return;
@@ -119,6 +129,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
           if (!speaking) return;
           continue;
         }
+        diag({ kind: 'heard', mode: state.mode, alternatives: result.alternatives, bargeIn: true }); // REQ-DIAG-001
         if (full) {
           caption('heard', top); // REQ-SPCH-008
           interrupt = { type: 'HEARD', alternatives: result.alternatives };
@@ -145,6 +156,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       case 'SAY': {
         const text = render(action.say);
         caption('say', text); // REQ-SPCH-007
+        diag({ kind: 'said', text, sayKind: action.say?.kind }); // REQ-DIAG-001
         const interrupt = await speakWithBargeIn(text);
         enqueue(interrupt ?? { type: 'TTS_DONE' });
         break;
@@ -152,17 +164,19 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       case 'LISTEN': {
         ui.listening?.(true);
         ping?.play(); // REQ-SPCH-010: the audible cursor — mic open, slate clean
-        const result = await stt.listenOnce();
+        const result = await stt.listenOnce({ phrases: biasPhrases() }); // REQ-SPCH-011
         ui.listening?.(false);
         if (ended) break;
         if (result.error) {
           // A pause reset means the user WAS speaking — that's activity, not silence.
           if (result.error === 'reset') { lastActivityAt = now(); keepPuzzleAlive(); }
+          diag({ kind: 'stt-error', code: result.error }); // REQ-DIAG-001
           enqueue({ type: 'STT_ERROR', code: result.error, silentMs: now() - lastActivityAt });
         } else {
           lastActivityAt = now();
           keepPuzzleAlive(); // heard a command — keep NYT from pausing the puzzle
           caption('heard', result.alternatives[0]?.transcript ?? ''); // REQ-SPCH-008
+          diag({ kind: 'heard', mode: state.mode, alternatives: result.alternatives }); // REQ-DIAG-001
           enqueue({ type: 'HEARD', alternatives: result.alternatives });
         }
         break;

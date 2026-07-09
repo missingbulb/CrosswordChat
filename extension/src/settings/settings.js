@@ -4,6 +4,7 @@
 
 import { STRATEGIES } from '../conversation/strategies.js';
 import { DEFAULT_RATE } from '../speech/tts-port.js';
+import { BIASING_MODES, DEFAULT_BIASING } from '../shared/biasing-modes.js';
 
 // Reading-speed slider bounds (REQ-SPCH-001); sanitization clamps stored values to match.
 export const RATE_MIN = 0.5;
@@ -19,7 +20,9 @@ export const RATE_MAX = 3;
 // only the barge-in filter is toggled.
 export const ECHO_MODES = ['guard', 'native'];
 
-export const DEFAULT_SETTINGS = { strategy: 'list-order', rate: DEFAULT_RATE, echoMode: 'guard' };
+export const DEFAULT_SETTINGS = {
+  strategy: 'list-order', rate: DEFAULT_RATE, echoMode: 'guard', biasing: DEFAULT_BIASING,
+};
 
 function sanitizeRate(raw) {
   if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_RATE;
@@ -33,6 +36,8 @@ export function sanitizeSettings(raw) {
     strategy: STRATEGIES.includes(raw?.strategy) ? raw.strategy : DEFAULT_SETTINGS.strategy,
     rate: sanitizeRate(raw?.rate),
     echoMode: ECHO_MODES.includes(raw?.echoMode) ? raw.echoMode : DEFAULT_SETTINGS.echoMode,
+    // REQ-SPCH-011: the experimental biasing mode; unknown values (older storage) → 'off'.
+    biasing: BIASING_MODES.includes(raw?.biasing) ? raw.biasing : DEFAULT_SETTINGS.biasing,
   };
 }
 
