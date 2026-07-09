@@ -12,6 +12,7 @@ function makeFakeRecognition() {
   const script = []; // per-instance event lists
   class FakeRecognition {
     constructor() {
+      this.phrases = []; // REQ-SPCH-011: on-device biasing target (an ObservableArray in Chrome)
       instances.push(this);
     }
 
@@ -341,5 +342,44 @@ describe('stt port', () => {
     const stt = createSttPort({ Recognition: undefined });
     expect(stt.available).toBe(false);
     expect(await stt.listenOnce()).toEqual({ error: 'other' });
+  });
+
+  class FakePhrase {
+    constructor(phrase, boost) { this.phrase = phrase; this.boost = boost; }
+  }
+
+  test('REQ-SPCH-011: on-device available → processLocally set and phrases pushed', async () => {
+    const { FakeRecognition, instances, script } = makeFakeRecognition();
+    script.push([{ type: 'result', alternatives: [alt('next', 0.9)] }]);
+    const stt = createSttPort({
+      Recognition: FakeRecognition, Phrase: FakePhrase, availableOnDevice: async () => 'available',
+    });
+    const result = await stt.listenOnce({ phrases: [{ phrase: 'next', boost: 3 }, { phrase: '12 across', boost: 5 }] });
+    expect(result.alternatives.map((a) => a.transcript)).toEqual(['next']); // transcript path unchanged
+    const rec = instances[0];
+    expect(rec.processLocally).toBe(true);
+    expect(rec.phrases.map((p) => [p.phrase, p.boost])).toEqual([['next', 3], ['12 across', 5]]);
+  });
+
+  test('REQ-SPCH-011: on-device unavailable → phrases ignored, un-biased path unchanged', async () => {
+    const { FakeRecognition, instances, script } = makeFakeRecognition();
+    script.push([{ type: 'result', alternatives: [alt('next', 0.9)] }]);
+    const stt = createSttPort({
+      Recognition: FakeRecognition, Phrase: FakePhrase, availableOnDevice: async () => 'unavailable',
+    });
+    const result = await stt.listenOnce({ phrases: [{ phrase: 'next', boost: 3 }] });
+    expect(result.alternatives.map((a) => a.transcript)).toEqual(['next']);
+    expect(instances[0].processLocally).toBeUndefined();
+    expect(instances[0].phrases).toEqual([]);
+  });
+
+  test('REQ-SPCH-011: no phrases API in the browser → phrases silently ignored', async () => {
+    const { FakeRecognition, instances, script } = makeFakeRecognition();
+    script.push([{ type: 'result', alternatives: [alt('next', 0.9)] }]);
+    const stt = createSttPort({ Recognition: FakeRecognition }); // no Phrase / availableOnDevice injected
+    const result = await stt.listenOnce({ phrases: [{ phrase: 'next', boost: 3 }] });
+    expect(result.alternatives.map((a) => a.transcript)).toEqual(['next']);
+    expect(instances[0].processLocally).toBeUndefined();
+    expect(instances[0].phrases).toEqual([]);
   });
 });

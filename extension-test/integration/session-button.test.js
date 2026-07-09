@@ -46,7 +46,7 @@ describe('session button', () => {
     expect(menu().hidden).toBe(true); // closed until asked for
     expect(caret().getAttribute('aria-expanded')).toBe('false');
     expect([...menu().querySelectorAll('[data-cc-act]')].map((el) => el.dataset.ccAct))
-      .toEqual(['activate', 'settings', 'help']);
+      .toEqual(['activate', 'settings', 'help', 'send-data']);
 
     caret().click();
     expect(menu().hidden).toBe(false);
@@ -63,6 +63,16 @@ describe('session button', () => {
     caret().click();
     item('activate').click(); // the Activate row shares the main toggle
     expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  test('REQ-DIAG-001: the Send session data item invokes onSendData', () => {
+    initFakeNyt(document, FIXTURE_PUZZLE);
+    const onSendData = vi.fn();
+    mountSessionButton(document, { onToggle() {}, onSendData });
+    caret().click();
+    item('send-data').click();
+    expect(onSendData).toHaveBeenCalledTimes(1);
+    expect(menu().hidden).toBe(true); // choosing the item closes the menu
   });
 
   test('REQ-CMD-007: a click outside closes the open menu', () => {

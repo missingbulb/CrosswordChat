@@ -1290,8 +1290,8 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 <strong>Voice-commands help page (help.html)</strong><br>
 <img src="../requirements/ui/cases/help-page.png" width="360" alt="Voice-commands help page (help.html)">
 
-<strong>Injected split button with its dropdown open (Activate / Settings / Voice commands)</strong><br>
-<img src="../requirements/ui/cases/implanted-button-toolbar-menu.png" width="520" alt="Injected split button with its dropdown open (Activate / Settings / Voice commands)">
+<strong>Injected split button with its dropdown open (Activate / Settings / Voice commands / Send session data)</strong><br>
+<img src="../requirements/ui/cases/implanted-button-toolbar-menu.png" width="520" alt="Injected split button with its dropdown open (Activate / Settings / Voice commands / Send session data)">
 
 <!-- /ui-gallery:REQ-CMD-007 -->
 
@@ -1431,6 +1431,31 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   next LISTEN follows immediately with a ping, and nothing is spoken; given plain silence, then
   `no-speech` (no reset); given a fake with no AudioContext, then pings are silently skipped.
 - **Verify:** unit `extension-test/unit/speech-ports.test.js`, `extension-test/unit/machine.test.js`; manual MT-33.
+
+#### REQ-SPCH-011 — Experimental contextual biasing (on-device)
+- **Status:** Active · **Level:** MAY
+- The STT port MAY bias recognition toward an expected vocabulary using the Web Speech API's
+  contextual-biasing surface (`SpeechRecognition.phrases`, a list of `SpeechRecognitionPhrase`
+  `{phrase, boost}` with boost 0.0–10.0). Biasing is a per-listen input, never a filter: phrases
+  raise the likelihood of matching transcripts; nothing is excluded. Because Chrome offers biasing
+  only on the on-device path, the port MUST feature-detect availability (`SpeechRecognitionPhrase`
+  present AND `SpeechRecognition.available({langs:['en-US'], processLocally:true})` reporting
+  `available`) and only then set `processLocally = true` and populate `phrases`; when unavailable it
+  MUST run the ordinary cloud path unchanged — no error, no behavior change (this realizes, for
+  biasing, the on-device path noted in REQ-FUT-006). The phrase set is mode-scoped and selected by a
+  persisted experimental setting (REQ-NAV-012) with four values: `off` (default — no biasing),
+  `commands` (the command lexicon + the loaded puzzle's real clue labels, graduated so the current
+  entry's crossings are boosted highest), `spelling` (the 26 single letters + NATO + letter-names,
+  applied in spelling mode and on 1–2 open-square entries), and `full` (both, plus
+  yes/no/first-second during confirmation and disambiguation). No answer word is ever biased — the
+  answer is unknown by design (§2). Biasing changes only recognition inputs; matching (REQ-ANS-*) is
+  unaffected.
+- **Accept:** Given a recognizer whose on-device biasing is available and a `commands` setting, then
+  the listen cycle sets `processLocally = true` and pushes the command + clue-label phrases; given a
+  recognizer without the phrases API (or on-device unavailable), then no phrases are set and the
+  transcript path is identical to `off`; given `off`, then no phrases are ever set.
+- **Verify:** unit `extension-test/unit/biasing.test.js`, `extension-test/unit/speech-ports.test.js`,
+  `extension-test/unit/settings.test.js`.
 
 ---
 
@@ -1590,6 +1615,28 @@ any time, every selector lives in one file with a self-diagnosing probe.
 - **Accept:** Given the source tree, then storage primitives appear only under the two allowed
   paths; given a session end, then extension storage holds nothing beyond the settings object.
 - **Verify:** unit `extension-test/unit/arch.test.js`; manual MT-15.
+
+#### REQ-DIAG-001 — In-session diagnostics log and user-invoked export
+- **Status:** Active · **Level:** SHOULD
+- For tuning recognition (e.g. the REQ-SPCH-011 experiments), the extension SHOULD keep an in-memory
+  transcript of the current page's voice sessions — per session: the chosen settings (including the
+  biasing mode) and, per turn, the spoken lines and the heard n-best (transcript + confidence). This
+  log lives only in the content script's memory and dies with the page; it MUST NOT be persisted
+  (REQ-NFR-002 stands — no `chrome.storage`, no audio, transcripts gone on reload). A user-invoked
+  "Send session data" item on the toolbar menu opens an extension-owned, dismissible dialog listing
+  those sessions; this is a deliberate, on-demand diagnostics surface, distinct from the forbidden
+  live caption panel of REQ-SPCH-007 (which governs the always-on solving UI). The dialog offers (a)
+  copy-to-clipboard of the full log and (b) a link that opens a GitHub issue with the log pre-filled
+  in the URL for the user to review, edit, and submit. The extension itself makes no network request
+  (REQ-NFR-001): the issue link is ordinary user navigation via an anchor the user clicks, and the
+  clipboard is local — nothing is transmitted or stored by the extension. Over-long logs are capped
+  in the link (with a copy-for-full note) so nothing is silently lost.
+- **Accept:** Given two start/stop sessions on one page load, then the dialog lists both with their
+  settings and transcripts; given a page reload, then the log is empty (nothing persisted); given a
+  log, then Copy places the full text on the clipboard and the issue link's target is
+  `github.com/missingbulb/CrosswordChat/issues/new` with a `body` query param; given the source
+  tree, then no storage or network primitive appears outside the settings/options paths.
+- **Verify:** unit `extension-test/unit/session-log.test.js`, `extension-test/unit/arch.test.js`.
 
 #### REQ-NFR-003 — Latency budgets
 - **Status:** Active · **Level:** SHOULD

@@ -94,6 +94,17 @@ for (const [idx, phrases] of Object.entries(CHOICE_PHRASES)) {
 }
 
 /**
+ * Every exact command surface phrase, for optional STT contextual biasing (REQ-SPCH-011).
+ * These are the literal strings the recognizer would emit for a command, so boosting them
+ * lifts command recognition without touching the matcher. Includes the "go to" prefix, which
+ * parseCommand handles by regex rather than the exact map.
+ * @returns {string[]}
+ */
+export function commandPhrases() {
+  return [...EXACT.keys(), 'go to'];
+}
+
+/**
  * @returns {{command: string, arg?: string|number} | null}
  *   Commands: next repeat hint help stop spell enter-anyway misheard(arg?) answer(arg)
  *             strategy(arg) yes no choice(arg). Contextual meaning is the machine's business.

@@ -46,6 +46,32 @@
         Clues you just skipped wait their turn until their letters change.</small>
     </label>
   </fieldset>
+  <!-- Keep these options in sync with the in-page modal + shared/biasing-modes.js (BIASING_CHOICES). -->
+  <fieldset>
+    <legend>Experimental: speech biasing</legend>
+    <p class="hint">Requires Chrome’s on-device recognition (Chrome 139+). On the standard cloud
+      path these have no effect.</p>
+    <label>
+      <input type="radio" name="biasing" value="off">
+      No biasing experiments
+      <small>Default. Recognition runs exactly as it does today.</small>
+    </label>
+    <label>
+      <input type="radio" name="biasing" value="commands">
+      Experimental 1 — Commands &amp; clue labels
+      <small>Nudges recognition toward voice commands and this puzzle’s clue numbers (“12 across”).</small>
+    </label>
+    <label>
+      <input type="radio" name="biasing" value="spelling">
+      Experimental 2 — Letters &amp; spelling
+      <small>Nudges toward single letters and the NATO alphabet when spelling or entering 1–2 letters.</small>
+    </label>
+    <label>
+      <input type="radio" name="biasing" value="full">
+      Experimental 3 — Full adaptive
+      <small>Both of the above, switched to match what you’re doing (answering, navigating, spelling).</small>
+    </label>
+  </fieldset>
   <div class="buttons">
     <button type="button" id="reset">Reset to defaults</button>
     <button type="button" id="save">Save</button>

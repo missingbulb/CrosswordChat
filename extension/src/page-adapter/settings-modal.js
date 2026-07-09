@@ -16,8 +16,13 @@
 import {
   loadSettings, saveSettings, DEFAULT_SETTINGS, RATE_MIN, RATE_MAX,
 } from '../settings/settings.js';
+import { BIASING_CHOICES, BIASING_NOTE } from '../shared/biasing-modes.js';
 
 export const MODAL_ID = 'cc-settings-modal';
+
+// Minimal HTML-escape for the biasing labels/hints injected into the markup below (our own
+// constants, but they carry `&`/`—`, so escape defensively).
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Scoped under #cc-settings-modal so nothing leaks into the host page. Fonts name NYT's
 // families first (already loaded on the puzzle page) and fall back to generics.
@@ -108,6 +113,15 @@ export function settingsModalMarkup() {
             blank letters left.</p>
         </div>
       </section>
+      <section class="cc-section">
+        <header class="cc-heading">Experimental: speech biasing</header>
+        <div class="cc-inset">
+          <p class="cc-hint">${esc(BIASING_NOTE)}</p>${BIASING_CHOICES.map(({ value, label, hint }) => `
+          <label><input type="radio" name="cc-biasing" value="${value}">
+            <span>${esc(label)}</span></label>
+          <p class="cc-hint cc-indent">${esc(hint)}</p>`).join('')}
+        </div>
+      </section>
     </form>
     <div class="cc-btns">
       <button type="button" class="cc-btn cc-secondary" data-cc-role="reset"
@@ -119,7 +133,8 @@ export function settingsModalMarkup() {
 }
 
 const atDefaults = (draft) =>
-  draft.strategy === DEFAULT_SETTINGS.strategy && draft.rate === DEFAULT_SETTINGS.rate;
+  draft.strategy === DEFAULT_SETTINGS.strategy && draft.rate === DEFAULT_SETTINGS.rate
+  && draft.biasing === DEFAULT_SETTINGS.biasing;
 
 /**
  * Mount the Settings dialog into the page (one at a time). Loads the persisted settings,
@@ -157,6 +172,7 @@ export function mountSettingsModal(document, { onClose } = {}) {
   const readout = $('[data-cc-role="rate-value"]');
   const resetBtn = $('[data-cc-role="reset"]');
   const radios = [...dialog.querySelectorAll('input[name="cc-strategy"]')];
+  const biasingRadios = [...dialog.querySelectorAll('input[name="cc-biasing"]')];
 
   let draft = { ...DEFAULT_SETTINGS };
   let removed = false;
@@ -165,6 +181,7 @@ export function mountSettingsModal(document, { onClose } = {}) {
     slider.value = draft.rate;
     readout.value = `${Number(slider.value).toFixed(1)}×`;
     for (const input of radios) input.checked = input.value === draft.strategy;
+    for (const input of biasingRadios) input.checked = input.value === draft.biasing;
     resetBtn.disabled = atDefaults(draft);
     resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
   };
@@ -193,6 +210,13 @@ export function mountSettingsModal(document, { onClose } = {}) {
   for (const input of radios) {
     input.addEventListener('change', () => {
       if (input.checked) draft.strategy = input.value;
+      resetBtn.disabled = atDefaults(draft);
+      resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
+    });
+  }
+  for (const input of biasingRadios) {
+    input.addEventListener('change', () => {
+      if (input.checked) draft.biasing = input.value;
       resetBtn.disabled = atDefaults(draft);
       resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
     });

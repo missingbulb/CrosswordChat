@@ -16,6 +16,7 @@ function prep() {
   slider.value = 1.3;
   document.querySelector('#rate-value').value = '1.3×';
   for (const r of document.querySelectorAll('input[name="strategy"]')) r.checked = r.value === 'list-order';
+  for (const r of document.querySelectorAll('input[name="biasing"]')) r.checked = r.value === 'off';
 }
 
 export default {
@@ -25,6 +26,6 @@ export default {
   engine: 'browser', // headless Chromium — self-skips where one isn't present
   maxDiffRatio: 0.02, // browser screenshot: small cross-env antialiasing tolerance
   async render() {
-    return pageToPng('extension/src/options/options.html', { width: 380, height: 480, prep });
+    return pageToPng('extension/src/options/options.html', { width: 380, height: 920, prep }); // taller: + biasing group
   },
 };
