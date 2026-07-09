@@ -4,10 +4,10 @@ name: Release
 # create-package, daily auto-release, and Chrome Web Store publish — lives in the
 # Claudinite canon as reusable workflows (referenced @main, so canon changes
 # apply here automatically). This file owns only the triggers; it passes NO repo
-# values. Everything repo-specific is read from the standard's defaults plus an
-# OPTIONAL `.github/release.config` — this repo carries one only to point the test
-# gate at `npm run verify` (vitest + the requirements-coverage trace); everything
-# else is on the defaults. Copied verbatim from the pack stub.
+# values. Every repo-specific value is declared explicitly in the REQUIRED
+# `.github/release.config` (six keys, no defaults). Copied verbatim from the pack
+# stub; the zip asset name is derived from the config's `zip_path` and the build
+# is always `npm run build`, so neither is a config key.
 #
 # Three operations, one file:
 #   * push to main            → create-package (a clean no-op unless the manifest
@@ -19,8 +19,7 @@ name: Release
 #
 # The Actions-tab entry is named "Release"; the failure reporter keys its
 # tracking issues on the per-operation names ("Release: Create Package", etc.)
-# baked into the canon reusable workflows, so collapsing to one file loses no
-# per-operation triage.
+# baked into the canon reusable workflows.
 #
 # secrets: inherit passes the four CHROME_* store secrets through to the canon
 # workflows.
