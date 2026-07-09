@@ -71,6 +71,9 @@ describe('architecture rules', () => {
   });
 
   test('REQ-NFR-002: persistence primitives only in the settings module and options page', () => {
+    // REQ-DIAG-001: the in-memory session log and its "Send session data" export add no
+    // storage or network primitive — this scan (and REQ-NFR-001's above) is exactly what
+    // keeps the transcript in memory only and never sent by the extension.
     const STORAGE = /localStorage|sessionStorage|indexedDB|chrome\.storage/;
     const ALLOWED = ['extension/src/settings/', 'extension/src/options/'];
     const offenders = sourceFiles()

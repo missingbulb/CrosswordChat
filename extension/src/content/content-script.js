@@ -13,6 +13,7 @@ import { probe } from '../page-adapter/probe.js';
 import { createWatcher } from '../page-adapter/watcher.js';
 import { mountSessionButton } from '../page-adapter/session-button.js';
 import { mountSettingsModal } from '../page-adapter/settings-modal.js';
+import { mountSessionDataModal } from '../page-adapter/session-data-modal.js';
 import { dismissSplash, waitForSplashClear } from '../page-adapter/splash.js';
 import { render } from '../conversation/phrases.js';
 import { createOrchestrator } from '../app/orchestrator.js';
@@ -24,6 +25,11 @@ import { loadSettings } from '../settings/settings.js';
 const TAG = '[CrosswordChat]';
 let session = null; // { orchestrator, port }
 let starting = false; // guards the async gap before `session` exists (button double-click)
+// REQ-DIAG-001: in-memory diagnostics — every voice session run on THIS page load. Held only
+// here, never persisted (REQ-NFR-002), and gone when the page reloads. `currentLog` is the
+// active session's record; `sessionLogs` is the page's history for the "Send session data" dialog.
+const sessionLogs = [];
+let currentLog = null;
 
 function createPageClient() {
   let watcher = null;
@@ -63,6 +69,8 @@ async function startSession() {
     const stt = createSttPort();
     const tts = createRemoteTtsPort(port);
     const settings = await loadSettings(); // REQ-NAV-012: options-page choices apply per session
+    currentLog = { startedAt: Date.now(), settings: { ...settings }, entries: [] }; // REQ-DIAG-001
+    sessionLogs.push(currentLog);
 
     const orchestrator = createOrchestrator({
       tts,
@@ -77,10 +85,13 @@ async function startSession() {
           console.info(`${TAG} ${role === 'heard' ? `heard: “${text}”` : text}`); // REQ-SPCH-007/008
         },
         listening: (on) => console.debug(`${TAG} mic ${on ? 'on' : 'off'}`),
+        // REQ-DIAG-001: append structured turns to the current session's in-memory record.
+        diag: (entry) => { currentLog?.entries.push({ t: Date.now(), ...entry }); },
       },
       onEnd: () => {
         console.info(`${TAG} session ended`);
         session = null;
+        currentLog = null; // REQ-DIAG-001: the next session starts a fresh record
         toggleButton.setActive(false);
         document.removeEventListener('keydown', onKeydown, true);
         try {
@@ -138,6 +149,7 @@ async function startSession() {
 // Help still opens an extension page, which only the worker can do (REQ-CMD-007). Mounts
 // as soon as the NYT toolbar renders; quietly absent when it never does.
 let settingsModal = null;
+let sessionDataModal = null;
 const toggleButton = mountSessionButton(document, {
   onToggle: () => {
     if (session) session.orchestrator.stop();
@@ -147,6 +159,13 @@ const toggleButton = mountSessionButton(document, {
     settingsModal = mountSettingsModal(document, { onClose: () => { settingsModal = null; } });
   },
   onHelp: () => chrome.runtime.sendMessage({ type: MSG.OPEN_HELP }).catch(() => {}),
+  // REQ-DIAG-001: the in-page diagnostics dialog reads the in-memory session history.
+  onSendData: () => {
+    sessionDataModal = mountSessionDataModal(document, {
+      getSessions: () => sessionLogs,
+      onClose: () => { sessionDataModal = null; },
+    });
+  },
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

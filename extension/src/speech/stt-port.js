@@ -25,6 +25,11 @@ export function mapSttError(name) {
 
 export function createSttPort({
   Recognition = globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition,
+  // REQ-SPCH-011: contextual biasing. Both injectable for tests. Chrome exposes biasing only
+  // on the on-device path, so it is gated behind a one-time availability probe; when absent,
+  // phrases are ignored and recognition runs exactly as before.
+  Phrase = globalThis.SpeechRecognitionPhrase,
+  availableOnDevice = globalThis.SpeechRecognition?.available?.bind(globalThis.SpeechRecognition),
   lang = DEFAULT_LANG,
   maxAlternatives = 5,
   // REQ-SPCH-010: a pause this long in the MIDDLE of an utterance (interim hypotheses
@@ -34,6 +39,34 @@ export function createSttPort({
   pauseResetMs = 1200,
 } = {}) {
   let current = null;
+  let onDeviceProbe = null; // memoized Promise<boolean> — probe the on-device path at most once
+
+  const canBias = () => typeof Phrase === 'function' && typeof availableOnDevice === 'function';
+
+  // Is Chrome's on-device recognition (which biasing requires) available right now? Probed
+  // once and cached; only 'available' counts — we never trigger a language-pack download.
+  function probeOnDevice() {
+    if (!onDeviceProbe) {
+      onDeviceProbe = (async () => {
+        if (!canBias()) return false;
+        try {
+          return (await availableOnDevice({ langs: [lang], processLocally: true })) === 'available';
+        } catch {
+          return false;
+        }
+      })();
+    }
+    return onDeviceProbe;
+  }
+
+  // Attach biasing phrases to a live recognizer (REQ-SPCH-011). Best-effort: any failure
+  // falls back to un-biased recognition rather than breaking the listen cycle.
+  function applyBias(rec, phrases) {
+    try {
+      rec.processLocally = true;
+      for (const { phrase, boost } of phrases) rec.phrases.push(new Phrase(phrase, boost));
+    } catch { /* biasing unsupported here — recognize without it */ }
+  }
 
   return {
     available: Boolean(Recognition),
@@ -42,10 +75,14 @@ export function createSttPort({
      * One listen cycle. Resolves {alternatives:[{transcript, confidence}]} or {error}.
      * Never rejects. A cycle ending without any result maps to {error:'no-speech'};
      * a mid-utterance pause past pauseResetMs maps to {error:'reset'} (REQ-SPCH-010).
+     * @param {{phrases?: Array<{phrase: string, boost: number}>}} [opts]  REQ-SPCH-011:
+     *   contextual-biasing phrases; applied only when Chrome's on-device path is available,
+     *   otherwise ignored (the transcript path is then identical to an un-biased cycle).
      */
-    listenOnce() {
+    listenOnce({ phrases } = {}) {
       if (!Recognition) return Promise.resolve({ error: 'other' });
-      return new Promise((resolve) => {
+      const bias = phrases?.length && canBias() ? phrases : null;
+      const start = (onDevice) => new Promise((resolve) => {
         const rec = new Recognition();
         current = rec;
         let settled = false;
@@ -66,6 +103,7 @@ export function createSttPort({
         // needs; they are never delivered to the caller.
         rec.interimResults = pauseResetMs > 0;
         rec.continuous = false;
+        if (onDevice && bias) applyBias(rec, bias); // REQ-SPCH-011
 
         rec.onresult = (event) => {
           const results = event.results ?? [];
@@ -110,6 +148,9 @@ export function createSttPort({
           settle({ error: 'other' });
         }
       });
+      // Only await the (memoized) on-device probe when biasing is actually requested — the
+      // un-biased path stays synchronous and byte-for-byte unchanged.
+      return bias ? probeOnDevice().then(start) : start(false);
     },
 
     /** Abort the in-flight cycle (surfaces as 'aborted', which the machine ignores). */

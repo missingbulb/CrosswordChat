@@ -14,11 +14,13 @@ async function init() {
   const readout = document.querySelector('#rate-value');
   Object.assign(slider, { min: RATE_MIN, max: RATE_MAX, step: 0.1 });
   const radios = [...document.querySelectorAll('input[name="strategy"]')];
+  const biasingRadios = [...document.querySelectorAll('input[name="biasing"]')]; // REQ-SPCH-011
 
   const render = () => {
     slider.value = draft.rate;
     readout.value = `${Number(slider.value).toFixed(1)}×`;
     for (const input of radios) input.checked = input.value === draft.strategy;
+    for (const input of biasingRadios) input.checked = input.value === draft.biasing;
   };
   render();
 
@@ -29,6 +31,11 @@ async function init() {
   for (const input of radios) {
     input.addEventListener('change', () => {
       if (input.checked) draft.strategy = input.value;
+    });
+  }
+  for (const input of biasingRadios) {
+    input.addEventListener('change', () => {
+      if (input.checked) draft.biasing = input.value;
     });
   }
 

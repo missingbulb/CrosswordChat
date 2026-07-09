@@ -266,8 +266,6 @@ describe('commands', () => {
     }
     expect(parseCommand('the first one')).toEqual({ command: 'choice', arg: 0 });
     expect(parseCommand('second')).toEqual({ command: 'choice', arg: 1 });
-    expect(parseCommand('switch to most filled')).toEqual({ command: 'strategy', arg: 'most-filled' });
-    expect(parseCommand('go in order')).toEqual({ command: 'strategy', arg: 'list-order' });
     expect(parseCommand('i meant plane')).toEqual({ command: 'misheard', arg: 'plane' });
     expect(parseCommand('no i said heart')).toEqual({ command: 'misheard', arg: 'heart' });
   });

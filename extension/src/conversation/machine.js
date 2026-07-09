@@ -454,8 +454,6 @@ function handleCommand(state, cmd) {
         : state.rejected;
       return listenAgain({ ...state, rejected, pendingWord: null }, [{ kind: 'misheard-reprompt' }]);
     }
-    case 'strategy': // REQ-NAV-005
-      return listenAgain({ ...state, strategy: cmd.arg }, [{ kind: 'strategy-ack', strategy: cmd.arg }]);
     case 'answer': // REQ-ANS-014
       return evaluateAnswer(state, [{ transcript: cmd.arg }])
         ?? listenAgain(state, [{ kind: 'didnt-catch' }]);
