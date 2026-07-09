@@ -108,6 +108,19 @@ export function settingsModalMarkup() {
             blank letters left.</p>
         </div>
       </section>
+      <section class="cc-section">
+        <header class="cc-heading">Hearing you over its own voice</header>
+        <div class="cc-inset">
+          <label><input type="radio" name="cc-echo" value="guard" checked>
+            <span>Filter out its own voice</span></label>
+          <p class="cc-hint cc-indent">Best on speakers: it ignores the words it just spoke, so
+            they&rsquo;re never mistaken for your answer.</p>
+          <label><input type="radio" name="cc-echo" value="native">
+            <span>Trust your device&rsquo;s echo cancellation</span></label>
+          <p class="cc-hint cc-indent">Best with headphones: skip that filter for snappier
+            interruptions. On speakers it may sometimes mishear its own voice.</p>
+        </div>
+      </section>
     </form>
     <div class="cc-btns">
       <button type="button" class="cc-btn cc-secondary" data-cc-role="reset"
@@ -119,7 +132,8 @@ export function settingsModalMarkup() {
 }
 
 const atDefaults = (draft) =>
-  draft.strategy === DEFAULT_SETTINGS.strategy && draft.rate === DEFAULT_SETTINGS.rate;
+  draft.strategy === DEFAULT_SETTINGS.strategy && draft.rate === DEFAULT_SETTINGS.rate
+  && draft.echoMode === DEFAULT_SETTINGS.echoMode;
 
 /**
  * Mount the Settings dialog into the page (one at a time). Loads the persisted settings,
@@ -157,6 +171,7 @@ export function mountSettingsModal(document, { onClose } = {}) {
   const readout = $('[data-cc-role="rate-value"]');
   const resetBtn = $('[data-cc-role="reset"]');
   const radios = [...dialog.querySelectorAll('input[name="cc-strategy"]')];
+  const echoRadios = [...dialog.querySelectorAll('input[name="cc-echo"]')];
 
   let draft = { ...DEFAULT_SETTINGS };
   let removed = false;
@@ -165,6 +180,7 @@ export function mountSettingsModal(document, { onClose } = {}) {
     slider.value = draft.rate;
     readout.value = `${Number(slider.value).toFixed(1)}×`;
     for (const input of radios) input.checked = input.value === draft.strategy;
+    for (const input of echoRadios) input.checked = input.value === draft.echoMode;
     resetBtn.disabled = atDefaults(draft);
     resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
   };
@@ -193,6 +209,13 @@ export function mountSettingsModal(document, { onClose } = {}) {
   for (const input of radios) {
     input.addEventListener('change', () => {
       if (input.checked) draft.strategy = input.value;
+      resetBtn.disabled = atDefaults(draft);
+      resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
+    });
+  }
+  for (const input of echoRadios) {
+    input.addEventListener('change', () => {
+      if (input.checked) draft.echoMode = input.value;
       resetBtn.disabled = atDefaults(draft);
       resetBtn.setAttribute('aria-disabled', String(resetBtn.disabled));
     });

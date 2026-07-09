@@ -234,6 +234,20 @@ Covers: REQ-SPCH-009
    exactly as if spoken after the readout. Step 3 — the extension never reacts to its own voice
    (the echo guard discards it); no self-triggered replies, ever.
 
+### MT-34 — Echo mode toggle (speakers vs headphones)
+Covers: REQ-SPCH-005
+1. In Settings, under "Hearing you over its own voice", leave "Filter out its own voice" selected
+   (the default). On **speakers**, repeat MT-27 step 3: **PASS** — the extension never reacts to its
+   own voice.
+2. Switch to "Trust your device's echo cancellation", Save, and start a fresh session wearing
+   **headphones**. Barge in mid-readout with a fitting answer. **PASS** — interruptions feel at least
+   as responsive as in guard mode, and since TTS is in your ears (not the mic) the extension still
+   never triggers on itself.
+3. Sanity check the footgun the label warns about: with "Trust your device's echo cancellation"
+   selected and back on **speakers**, a readout *may* occasionally trip the mic on its own voice —
+   which is exactly why "Filter out its own voice" is the default. No data loss either way; only
+   barge-in is affected (the formal post-readout mic is unchanged).
+
 ### MT-28 — Strategy setting and easiest-first skipping
 Covers: REQ-NAV-011 REQ-NAV-012
 1. Right-click the toolbar icon → Settings…. The settings popup opens under the icon (no

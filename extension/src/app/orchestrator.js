@@ -48,6 +48,14 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
   // pure, so the shell measures silence and passes it along with no-speech errors.
   let lastActivityAt = now();
 
+  // REQ-SPCH-005(b): the barge-in echo guard is a user setting. 'guard' (default) filters
+  // our own TTS voice out of the barge-in mic — needed on speakers, where the readout
+  // acoustically reaches the mic. 'native' skips the filter and trusts the browser/OS echo
+  // cancellation instead (headphones, where TTS never reaches the mic — snappier barge-in).
+  // Session-fixed, like the strategy setting. REQ-SPCH-005(a) holds regardless: the formal
+  // answer mic is never opened in the same batch as a SAY, in either mode.
+  const echoGuardOn = settings.echoMode !== 'native';
+
   const caption = (role, text) => ui.caption?.(role, text);
 
   // REQ-LIFE-017: a heard user command keeps NYT from auto-pausing a quiet puzzle. A voice
@@ -95,9 +103,13 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         // (accepted): recognition of our own voice that yields ONLY a bare command
         // word slips through — in practice echo carries neighboring words on some
         // alternative, which the long-chunk check catches.
-        const echoChunks = result.alternatives
-          .map((a) => toLetters(a.transcript))
-          .filter((heard) => heard && spokenLetters.includes(heard));
+        // 'native' echo mode (REQ-SPCH-005(b)) trusts the browser/OS canceller and skips
+        // the signature match entirely — anything heard is treated as real barge-in input.
+        const echoChunks = echoGuardOn
+          ? result.alternatives
+            .map((a) => toLetters(a.transcript))
+            .filter((heard) => heard && spokenLetters.includes(heard))
+          : [];
         const strongEcho = echoChunks.some(
           (heard) => heard.length >= ECHO_MIN_LETTERS || heard === spokenLetters,
         );

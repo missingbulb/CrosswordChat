@@ -27,6 +27,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 const modal = () => document.getElementById(MODAL_ID);
 const q = (sel) => modal()?.querySelector(sel);
 const strategy = (value) => modal()?.querySelector(`input[name="cc-strategy"][value="${value}"]`);
+const echo = (value) => modal()?.querySelector(`input[name="cc-echo"][value="${value}"]`);
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -60,6 +61,21 @@ describe('in-page Settings modal (REQ-NAV-012)', () => {
     expect(q('[data-cc-role="rate-value"]').value).toBe('1.7×');
     // Non-default settings → Restore defaults is offered.
     expect(q('[data-cc-role="reset"]').disabled).toBe(false);
+  });
+
+  test('REQ-SPCH-005: the echo-mode toggle reflects storage and Save persists it', async () => {
+    const store = fakeChromeStorage({ echoMode: 'native' });
+    mountSettingsModal(document);
+    await flush();
+    expect(echo('native').checked).toBe(true); // reflects the stored choice
+    expect(echo('guard').checked).toBe(false);
+
+    echo('guard').checked = true;
+    echo('guard').dispatchEvent(new Event('change'));
+    q('[data-cc-role="save"]').click();
+    await flush();
+
+    expect(store.echoMode).toBe('guard'); // the edited draft persisted
   });
 
   test('Save persists the edited draft and closes; nothing wrote before Save', async () => {

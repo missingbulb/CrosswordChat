@@ -46,6 +46,23 @@
         Clues you just skipped wait their turn until their letters change.</small>
     </label>
   </fieldset>
+  <fieldset>
+    <legend>Hearing you over its own voice</legend>
+    <p class="hint">How CrosswordChat keeps its own spoken words from being mistaken for your
+      commands when you talk over a readout.</p>
+    <label>
+      <input type="radio" name="echoMode" value="guard">
+      Filter out its own voice
+      <small>Best on speakers: it ignores the words it just spoke, so they’re never mistaken
+        for your answer.</small>
+    </label>
+    <label>
+      <input type="radio" name="echoMode" value="native">
+      Trust your device’s echo cancellation
+      <small>Best with headphones: skip that filter for snappier interruptions. On speakers it
+        may sometimes mishear its own voice.</small>
+    </label>
+  </fieldset>
   <div class="buttons">
     <button type="button" id="reset">Reset to defaults</button>
     <button type="button" id="save">Save</button>
