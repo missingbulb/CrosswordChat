@@ -1443,13 +1443,14 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   `available`) and only then set `processLocally = true` and populate `phrases`; when unavailable it
   MUST run the ordinary cloud path unchanged — no error, no behavior change (this realizes, for
   biasing, the on-device path noted in REQ-FUT-006). The phrase set is mode-scoped and selected by a
-  persisted experimental setting (REQ-NAV-012) with four values: `off` (default — no biasing),
-  `commands` (the command lexicon + the loaded puzzle's real clue labels, graduated so the current
-  entry's crossings are boosted highest), `spelling` (the 26 single letters + NATO + letter-names,
-  applied in spelling mode and on 1–2 open-square entries), and `full` (both, plus
-  yes/no/first-second during confirmation and disambiguation). No answer word is ever biased — the
-  answer is unknown by design (§2). Biasing changes only recognition inputs; matching (REQ-ANS-*) is
-  unaffected.
+  persisted experimental setting (REQ-NAV-012) with four values: `commands` (default — the command
+  lexicon + the loaded puzzle's real clue labels, graduated so the current entry's crossings are
+  boosted highest), `spelling` (the 26 single letters + NATO + letter-names, applied in spelling mode
+  and on 1–2 open-square entries), `full` (both, plus yes/no/first-second during confirmation and
+  disambiguation), and `off` (a deliberate opt-out — no biasing). Biasing is inert on the cloud path
+  regardless of the setting, so `commands` as the default changes nothing for cloud-path users. No
+  answer word is ever biased — the answer is unknown by design (§2). Biasing changes only recognition
+  inputs; matching (REQ-ANS-*) is unaffected.
 - **Accept:** Given a recognizer whose on-device biasing is available and a `commands` setting, then
   the listen cycle sets `processLocally = true` and pushes the command + clue-label phrases; given a
   recognizer without the phrases API (or on-device unavailable), then no phrases are set and the

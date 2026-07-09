@@ -16,7 +16,7 @@
 import {
   loadSettings, saveSettings, DEFAULT_SETTINGS, RATE_MIN, RATE_MAX,
 } from '../settings/settings.js';
-import { BIASING_CHOICES, BIASING_NOTE } from '../shared/biasing-modes.js';
+import { BIASING_CHOICES, BIASING_NOTE, DEFAULT_BIASING } from '../shared/biasing-modes.js';
 
 export const MODAL_ID = 'cc-settings-modal';
 
@@ -81,8 +81,8 @@ export const SETTINGS_MODAL_CSS = `
 #${MODAL_ID} .cc-secondary[disabled] { opacity: 0.35; cursor: default; }
 `;
 
-// The dialog markup in its fresh-install default state (list-order, 1.3×) — the state
-// the golden captures and the state mount() starts from before loadSettings resolves.
+// The dialog markup in its fresh-install default state (list-order, 1.3×, commands biasing) —
+// the state the golden captures and the state mount() starts from before loadSettings resolves.
 export function settingsModalMarkup() {
   return `
 <div id="${MODAL_ID}" role="dialog" aria-modal="true" aria-label="CrosswordChat settings">
@@ -117,7 +117,7 @@ export function settingsModalMarkup() {
         <header class="cc-heading">Experimental: speech biasing</header>
         <div class="cc-inset">
           <p class="cc-hint">${esc(BIASING_NOTE)}</p>${BIASING_CHOICES.map(({ value, label, hint }) => `
-          <label><input type="radio" name="cc-biasing" value="${value}">
+          <label><input type="radio" name="cc-biasing" value="${value}"${value === DEFAULT_BIASING ? ' checked' : ''}>
             <span>${esc(label)}</span></label>
           <p class="cc-hint cc-indent">${esc(hint)}</p>`).join('')}
         </div>
