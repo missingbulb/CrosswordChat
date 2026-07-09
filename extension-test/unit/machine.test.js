@@ -1010,11 +1010,33 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
     expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '3 Down' });
   });
 
-  test('REQ-NAV-013: a clear direction with a garbled number asks again instead of guessing', () => {
+  test('REQ-NAV-013: a garbled number holds the direction and asks for the number; a bare "six" then jumps', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const out = s.step(heard('gibberish across'));
-    expect(says(out)[0]).toEqual({ kind: 'goto-didnt-catch' });
+    expect(says(out)[0]).toEqual({ kind: 'goto-need-number', direction: 'across' });
     expect(out.find((a) => a.type === 'SELECT_CLUE')).toBeUndefined();
+    s.step({ type: 'TTS_DONE' });
+    const done = s.step(heard('six')); // just the number, in the direction we already have
+    expect(done.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('A6');
+    expect(says(done)[0]).toMatchObject({ kind: 'clue', label: '6 Across' });
+  });
+
+  test('REQ-NAV-013: in the goto-number sub-mode a full label supersedes the held direction', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('gibberish across'));
+    s.step({ type: 'TTS_DONE' });
+    const out = s.step(heard('one down')); // full label wins over the pending 'across'
+    expect(out.find((a) => a.type === 'SELECT_CLUE').clueId).toBe('D1');
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '1 Down' });
+  });
+
+  test('REQ-NAV-013: the goto-number sub-mode never traps the user — an ordinary command still runs', () => {
+    const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
+    s.step(heard('gibberish across'));
+    s.step({ type: 'TTS_DONE' });
+    const out = s.step(heard('next')); // not a number — "next" still advances
+    expect(says(out)[0]).toMatchObject({ kind: 'clue' });
+    expect(says(out)[0]).not.toEqual({ kind: 'goto-need-number', direction: 'across' });
   });
 
   test('REQ-ANS-024: "clear" empties the current entry and "undo" brings it back, pencil states intact', () => {

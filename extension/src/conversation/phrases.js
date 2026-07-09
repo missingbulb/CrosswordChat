@@ -161,6 +161,8 @@ export function render(say) {
       return 'That entry is already empty.';
     case 'goto-didnt-catch':
       return "I didn't catch which clue — say the number and the direction, like five across.";
+    case 'goto-need-number':
+      return `Which number, going ${say.direction}?`;
     case 'no-crossing':
       return 'No crossing clue there.';
     case 'no-such-clue':

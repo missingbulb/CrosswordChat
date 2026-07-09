@@ -704,9 +704,13 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   "5/6/7/9 across" repeatedly failed), so the matcher MUST also accept: "a cross" and "cross"
   as renderings of *across*; ordinal forms of the number ("sixth across", "6th across"); and the
   frequent number homophones (won/to/for/sex/ate/nein…). When the direction was clearly *across*
-  but the number still doesn't parse, ask for the number briefly ("I didn't catch which clue")
-  instead of treating the utterance as an answer. When the puzzle has no such clue, reply that it
-  doesn't exist and keep listening; bare utterances whose leading part is not a number and whose
+  but the number still doesn't parse (the short number is what STT drops, not the direction word),
+  the machine MUST NOT discard the understood direction: it holds that direction and asks for the
+  number alone (*"Which number, going across?"*), and a bare number heard next completes the jump in
+  the remembered direction — a lone number is far more reliably recognized than the whole label.
+  This recovery is a minimal sub-mode (like spelling): a full label supersedes it, any ordinary
+  command leaves it, and a reply carrying no usable number drops back to normal listening. When the
+  puzzle has no such clue, reply that it doesn't exist and keep listening; bare utterances whose leading part is not a number and whose
   tail is not unambiguous navigation ("falling down", "red cross") are NOT gotos and stay available
   to the answer pipeline.
 - **Explicit "go to" prefix.** *"go to …"* (and STT variants: *goto*, *go two*, *go 2*, *jump to*)
@@ -717,11 +721,12 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   is what makes navigating to a definition robust when the listener mishears the tail.
 - **Accept:** Given "six across" on a puzzle with a 6-Across, then 6-Across is selected and read;
   given "5 a cross" or "sixth across", then the jump still happens; given "twelve down" with no
-  12-Down, then the reply says there is no 12 down; given "gibberish across", then the reply asks
-  for the clue number; given "go to six across", then 6-Across is selected; given "go to seven"
+  12-Down, then the reply says there is no 12 down; given "gibberish across", then the reply holds
+  the across direction and asks for the number, and a following "six" jumps to 6-Across; given "go
+  to six across", then 6-Across is selected; given "go to seven"
   (no direction), then the reply asks for the label instead of answering.
 - **Verify:** unit `extension-test/unit/matching.test.js` (parsing), `extension-test/unit/machine.test.js` (jump +
-  missing label + garbled number).
+  missing label + garbled number + directional recovery).
 
 #### REQ-NAV-014 — A full grid patrols its penciled entries
 - **Status:** Active · **Level:** MUST

@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { toLetters, normalizedTokens, numberToWord, ordinalToWord } from '../../extension/src/matching/normalize.js';
 import { homophonesOf } from '../../extension/src/matching/homophone-data.js';
 import { evaluate, collectSpelledLetters, patternCompatible, collisionsWith } from '../../extension/src/matching/evaluate.js';
-import { parseCommand, fuzzyCommand } from '../../extension/src/matching/commands.js';
+import { parseCommand, fuzzyCommand, bareClueNumber } from '../../extension/src/matching/commands.js';
 
 const P = (s) => s.split('').map((ch) => (ch === '.' ? null : ch)); // 'HEA.T' → pattern
 
@@ -293,6 +293,18 @@ describe('commands', () => {
     // Bare "... cross" with no number stays an answer candidate (RED CROSS is a word).
     expect(parseCommand('red cross')).toBeNull();
     expect(parseCommand('holy cross')).toBeNull();
+  });
+
+  test('REQ-NAV-013: a bare number parses for the goto-number recovery; non-numbers stay null', () => {
+    // After "<garbled> across", the machine asks for the number alone — a lone number
+    // (digit, word, or homophone) completes the jump; anything else escapes the sub-mode.
+    expect(bareClueNumber('nine')).toBe(9);
+    expect(bareClueNumber('9')).toBe(9);
+    expect(bareClueNumber('twenty two')).toBe(22);
+    expect(bareClueNumber('ninth')).toBe(9); // ordinal rendering
+    expect(bareClueNumber('stop')).toBeNull(); // a real command escapes, not a number
+    expect(bareClueNumber('heart')).toBeNull(); // an answer word is not a number
+    expect(bareClueNumber('')).toBeNull();
   });
 
   test('REQ-NAV-013: "go to" is an explicit navigation prefix, even with a shaky tail', () => {
