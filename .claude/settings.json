@@ -14,6 +14,10 @@
           {
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claudinite/packs/load-active-prose.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claudinite/packs/env.mjs check"
           }
         ]
       }
