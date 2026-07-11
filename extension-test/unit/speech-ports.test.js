@@ -410,7 +410,8 @@ describe('stt port — mic permission preflight (REQ-SPCH-003/005)', () => {
       },
     };
     const stt = createSttPort({ Recognition: undefined });
-    expect(await stt.ensureMicPermission({ nav, log: { info() {} } })).toBe('granted');
+    expect(await stt.ensureMicPermission({ nav, log: { info() {} } }))
+      .toEqual({ status: 'granted', echoCancellation: true });
     expect(requested).toEqual([{ audio: AUDIO_CONSTRAINTS }]);
     expect(stream._track.stop).toHaveBeenCalled(); // preflight releases the device
   });
@@ -428,7 +429,7 @@ describe('stt port — mic permission preflight (REQ-SPCH-003/005)', () => {
       },
     };
     const stt = createSttPort({ Recognition: undefined });
-    expect(await stt.ensureMicPermission({ nav, log: { info() {} } })).toBe('granted');
+    expect((await stt.ensureMicPermission({ nav, log: { info() {} } })).status).toBe('granted');
     expect(requested).toEqual([{ audio: AUDIO_CONSTRAINTS }, { audio: true }]);
   });
 
@@ -437,17 +438,35 @@ describe('stt port — mic permission preflight (REQ-SPCH-003/005)', () => {
       mediaDevices: { getUserMedia: () => Promise.reject(new Error('NotAllowedError')) },
     };
     const stt = createSttPort({ Recognition: undefined });
-    expect(await stt.ensureMicPermission({ nav, log: { info() {} } })).toBe('denied');
+    expect(await stt.ensureMicPermission({ nav, log: { info() {} } }))
+      .toEqual({ status: 'denied', echoCancellation: null });
   });
 
-  test('REQ-SPCH-003: an already-granted permission short-circuits before any capture', async () => {
-    const getUserMedia = vi.fn();
+  test('REQ-SPCH-003/REQ-DIAG-002: an already-granted permission still warms the device and reads AEC', async () => {
+    // Without the warm-up, the device is only warmed (and echo-cancellation engagement
+    // only known for the session log) on the very first grant.
+    const requested = [];
+    const stream = fakeStream({ echoCancellation: true });
     const nav = {
       permissions: { query: () => Promise.resolve({ state: 'granted' }) },
+      mediaDevices: { getUserMedia: (c) => { requested.push(c); return Promise.resolve(stream); } },
+    };
+    const stt = createSttPort({ Recognition: undefined });
+    expect(await stt.ensureMicPermission({ nav, log: { info() {} } }))
+      .toEqual({ status: 'granted', echoCancellation: true });
+    expect(requested).toEqual([{ audio: AUDIO_CONSTRAINTS }]);
+    expect(stream._track.stop).toHaveBeenCalled();
+  });
+
+  test('REQ-SPCH-003: a denied permission state short-circuits before any capture', async () => {
+    const getUserMedia = vi.fn();
+    const nav = {
+      permissions: { query: () => Promise.resolve({ state: 'denied' }) },
       mediaDevices: { getUserMedia },
     };
     const stt = createSttPort({ Recognition: undefined });
-    expect(await stt.ensureMicPermission({ nav })).toBe('granted');
+    expect(await stt.ensureMicPermission({ nav }))
+      .toEqual({ status: 'denied', echoCancellation: null });
     expect(getUserMedia).not.toHaveBeenCalled();
   });
 
@@ -461,17 +480,43 @@ describe('stt port — mic permission preflight (REQ-SPCH-003/005)', () => {
       },
     };
     const stt = createSttPort({ Recognition: undefined });
-    await stt.ensureMicPermission({ nav, log: { info: (m) => lines.push(m) } });
+    const result = await stt.ensureMicPermission({ nav, log: { info: (m) => lines.push(m) } });
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('echoCancellation=false'); // surfaces a device with AEC off
+    expect(result.echoCancellation).toBe(false); // …and the session log gets the same fact
     // A log sink that throws must not break the (already-granted) preflight.
     const nav2 = { mediaDevices: { getUserMedia: () => Promise.resolve(fakeStream({})) } };
     const boom = { info() { throw new Error('console gone'); } };
-    expect(await stt.ensureMicPermission({ nav: nav2, log: boom })).toBe('granted');
+    expect((await stt.ensureMicPermission({ nav: nav2, log: boom })).status).toBe('granted');
   });
 
   test('REQ-SPCH-003: no mediaDevices at all (headless) maps to denied without throwing', async () => {
     const stt = createSttPort({ Recognition: undefined });
-    expect(await stt.ensureMicPermission({ nav: {} })).toBe('denied');
+    expect((await stt.ensureMicPermission({ nav: {} })).status).toBe('denied');
+  });
+});
+
+// ---- On-device availability probe, surfaced for the session log ------------------
+
+describe('stt port — biasingAvailable (REQ-SPCH-011/REQ-DIAG-002)', () => {
+  class FakePhrase {}
+
+  test('reports true when the on-device path is available, probing at most once', async () => {
+    const available = vi.fn(async () => 'available');
+    const stt = createSttPort({ Recognition: function R() {}, Phrase: FakePhrase, availableOnDevice: available });
+    expect(await stt.biasingAvailable()).toBe(true);
+    expect(await stt.biasingAvailable()).toBe(true);
+    expect(available).toHaveBeenCalledTimes(1); // memoized — never re-probed
+  });
+
+  test('reports false when the phrases API or the on-device model is missing', async () => {
+    const noApi = createSttPort({ Recognition: function R() {}, Phrase: undefined, availableOnDevice: undefined });
+    expect(await noApi.biasingAvailable()).toBe(false);
+    const noModel = createSttPort({
+      Recognition: function R() {},
+      Phrase: FakePhrase,
+      availableOnDevice: async () => 'downloadable', // only 'available' counts — no downloads
+    });
+    expect(await noModel.biasingAvailable()).toBe(false);
   });
 });

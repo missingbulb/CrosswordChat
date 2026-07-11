@@ -845,7 +845,17 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   `"EIGHT is 5 letters, and ATE is 3 letters — we need 4."` Up to 3 variants are reported. No
   "I heard ..." preamble, no commentary about what does fit, and no usage coaching ("try again",
   "say spell", "say next") — the numbers are the whole reply. Then keep listening (same clue).
-- **Accept:** Given "ocelot" for a 4-entry, then the reply contains OCELOT, 6, and 4.
+- Variants that are homophone *respellings* of the heard word (swaps > 0 in the candidate
+  expansion, REQ-ANS-003) MUST NOT be voiced as if they were distinct words — spoken aloud they
+  sound identical to the literal reading, so `"Newyork is 7 letters, and Knewyork is 8 letters"`
+  reads as the same word given two lengths (field data: issue #43). A respelled variant is
+  reported by its length alone: `"Newyork is 7 letters, or 8 spelled differently — we need 4."`
+  Distinct heard words (from different recognizer alternatives) are still named in full. When
+  every variant is a respelling (the literal was rejected via "you misheard", REQ-ANS-010), no
+  word is voiced at all — `"That's 8 letters — we need 5."`
+- **Accept:** Given "ocelot" for a 4-entry, then the reply contains OCELOT, 6, and 4; given
+  "new york" for a 4-entry (homophone expansion KNEWYORK), then the reply names NEWYORK and 7,
+  gives 8 only as "spelled differently", and never voices KNEWYORK.
 - **Verify:** unit `extension-test/unit/matching.test.js` (variant list), `extension-test/unit/verbalizer.test.js`
   (phrasing), `extension-test/unit/machine.test.js` (stays on clue).
 
@@ -1355,13 +1365,18 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   constraint quirk never reads as a denial; only a second failure is a genuine `denied`. On
   success the preflight MUST log (console, REQ-SPCH-007) whether echo cancellation actually
   engaged on the device (`track.getSettings()`), the single most useful fact for diagnosing
-  self-echo. This preflight capture is released immediately; it does **not** feed the recognizer
-  (see REQ-SPCH-005 for why the recognizer's own capture can't be constrained).
+  self-echo, and report it to the caller so the session log can record it (REQ-DIAG-002). The
+  warm-up capture runs even when permission is already granted — otherwise the device is only
+  warmed (and the engagement fact only known) on the very first grant. This preflight capture is
+  released immediately; it does **not** feed the recognizer (see REQ-SPCH-005 for why the
+  recognizer's own capture can't be constrained).
 - **Accept:** Given a recognizer erroring `not-allowed`, then the mic-denied utterance is spoken and
   the session ends. Given `getUserMedia` available, then the preflight requests
-  `{echoCancellation, noiseSuppression, autoGainControl}`; given a browser that rejects that shape,
-  then it retries `{audio:true}` and still resolves `granted`; given both attempts fail, then
-  `denied`; given a device reporting `echoCancellation:false`, then a diagnostic line says so.
+  `{echoCancellation, noiseSuppression, autoGainControl}` — also when the permission state is
+  already `granted`; given a browser that rejects that shape, then it retries `{audio:true}` and
+  still resolves `granted`; given both attempts fail, then `denied`; given a device reporting
+  `echoCancellation:false`, then a diagnostic line says so and the result carries
+  `echoCancellation: false`.
 - **Verify:** unit `extension-test/unit/machine.test.js`, `extension-test/unit/speech-ports.test.js`
   (error mapping + preflight constraints/diagnostics); manual MT-05.
 
@@ -1495,18 +1510,43 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   biasing, the on-device path noted in REQ-FUT-006). The phrase set is mode-scoped and selected by a
   persisted experimental setting (REQ-NAV-012) with four values: `commands` (the command lexicon + the
   loaded puzzle's real clue labels, graduated so the current entry's crossings are boosted highest),
-  `spelling` (the 26 single letters + NATO + letter-names, applied in spelling mode and on 1–2
-  open-square entries), `full` (default — both, plus yes/no/first-second during confirmation and
-  disambiguation), and `off` (a deliberate opt-out — no biasing). Biasing is inert on the cloud path
-  regardless of the setting, so the default changes nothing for cloud-path users. No answer word is
-  ever biased — the answer is unknown by design (§2). Biasing changes only recognition
-  inputs; matching (REQ-ANS-*) is unaffected.
+  `spelling` (the 26 single letters + NATO + letter-names, applied in spelling mode, on 1–2
+  open-square entries, and — because a solver the recognizer keeps failing usually resorts to
+  spelling next — after two consecutive failed answer attempts on the current entry: length
+  mismatches and didn't-catch turns, counted by the machine and reset on a fit or a clue change;
+  field data: issue #43's FINN struggle), `full` (default — both, plus yes/no/first-second during
+  confirmation and disambiguation), and `off` (a deliberate opt-out — no biasing). Biasing is inert
+  on the cloud path regardless of the setting, so the default changes nothing for cloud-path users.
+  No answer word is ever biased — the answer is unknown by design (§2). Biasing changes only
+  recognition inputs; matching (REQ-ANS-*) is unaffected.
 - **Accept:** Given a recognizer whose on-device biasing is available and a `commands` setting, then
   the listen cycle sets `processLocally = true` and pushes the command + clue-label phrases; given a
   recognizer without the phrases API (or on-device unavailable), then no phrases are set and the
-  transcript path is identical to `off`; given `off`, then no phrases are ever set.
+  transcript path is identical to `off`; given `off`, then no phrases are ever set; given a
+  `spelling`/`full` setting and two consecutive failed answer attempts on a 3+-open-square entry,
+  then the next listen cycle's phrase set includes the spelling alphabet.
 - **Verify:** unit `extension-test/unit/biasing.test.js`, `extension-test/unit/speech-ports.test.js`,
   `extension-test/unit/settings.test.js`.
+
+#### REQ-SPCH-012 — A reset storm names the problem, once
+- **Status:** Active · **Level:** SHOULD
+- Consecutive mid-utterance resets (REQ-SPCH-010) are the signature of continuous background
+  speech: the recognizer keeps hearing talk that never finalizes, each cycle burns ~4 s, and the
+  session is effectively deaf while giving the user no clue why (field data: issue #43, session 2 —
+  three resets in a row, then the user gave up). After the **third consecutive** reset the machine
+  SHOULD say once that background noise is the problem — e.g. *"I'm having trouble hearing over the
+  background noise."* — and keep listening. The hint plays at most once per session (never a nag,
+  REQ-CMD-005 spirit: this is a response to *speech* the recognizer can't finalize, not to
+  silence). "Consecutive" is literal — back-to-back reset cycles, the observed storm signature: a
+  successfully heard utterance or a plain-silence (`no-speech`) cycle in between resets the count,
+  so a slow speller who trips isolated resets minutes apart (REQ-SPCH-010's accepted cost) never
+  hears the hint.
+- **Accept:** Given three consecutive `reset` errors while listening, then the hint is spoken once
+  and listening continues; given a fourth and fifth reset, then nothing more is said; given a heard
+  utterance or a no-speech cycle between resets, then the count starts over and no hint plays at
+  two-plus-one resets.
+- **Verify:** unit `extension-test/unit/machine.test.js` (streak, one-shot, reset-on-heard),
+  `extension-test/unit/verbalizer.test.js` (phrasing).
 
 ---
 
@@ -1680,14 +1720,57 @@ any time, every selector lives in one file with a self-diagnosing probe.
   copy-to-clipboard of the full log and (b) a link that opens a GitHub issue with the log pre-filled
   in the URL for the user to review, edit, and submit. The extension itself makes no network request
   (REQ-NFR-001): the issue link is ordinary user navigation via an anchor the user clicks, and the
-  clipboard is local — nothing is transmitted or stored by the extension. Over-long logs are capped
-  in the link (with a copy-for-full note) so nothing is silently lost.
+  clipboard is local — nothing is transmitted or stored by the extension.
+- The rendered log is a **compact, machine-oriented format**, because the issue link's ~6000
+  URL-encoded characters are the binding budget and the first field export (issue #43) lost the
+  most diagnostic part — the newest session's tail — to trimming. Heard transcripts stay **plain
+  text** (they are the data); everything else — timestamps, spoken lines, errors — is encoded as
+  short codes; what the extension *said* is logged as the say kind plus its key numbers, never the
+  rendered sentence (it is reconstructable from the code). The grammar and a worked example live in
+  `dev/docs/SESSION-LOG.md`, kept in sync with the formatter by a unit drift-guard.
+- When the link budget still overflows, trimming MUST drop whole events, never cut mid-line, and
+  MUST sacrifice oldest first: older sessions' event streams collapse to an
+  `(N events omitted)` marker before the newest session loses anything, and the newest session then
+  trims from its *head* (with an `(N earlier events omitted)` marker) so its tail — how the session
+  ended — is the last thing ever lost. A copy-for-full note still marks every trimmed link, and the
+  hard length cap always holds.
 - **Accept:** Given two start/stop sessions on one page load, then the dialog lists both with their
   settings and transcripts; given a page reload, then the log is empty (nothing persisted); given a
   log, then Copy places the full text on the clipboard and the issue link's target is
-  `github.com/missingbulb/CrosswordChat/issues/new` with a `body` query param; given the source
-  tree, then no storage or network primitive appears outside the settings/options paths.
+  `github.com/missingbulb/CrosswordChat/issues/new` with a `body` query param; given an over-budget
+  log of two sessions, then the older session collapses to its header + omission marker before the
+  newer loses any event, the newer trims head-first, and no event is ever half-rendered; given the
+  source tree, then no storage or network primitive appears outside the settings/options paths.
 - **Verify:** unit `extension-test/unit/session-log.test.js`, `extension-test/unit/arch.test.js`.
+
+#### REQ-DIAG-002 — The log records the run context and what the user actually did
+- **Status:** Active · **Level:** SHOULD
+- A session transcript is only analyzable against the context it ran in, and issue #43 showed the
+  gaps: the settings header said `biasing=full` but nothing recorded whether Chrome's on-device
+  path (the only place biasing works, REQ-SPCH-011) actually engaged. The log SHOULD therefore
+  record, beyond REQ-DIAG-001's turns:
+  - **Run context, once per log:** a format tag (`CWC1`), the extension version, and the puzzle
+    (path tail of the puzzle URL — e.g. `mini`, `daily-2026-07-10`).
+  - **Per-session engagement flags:** whether on-device biasing is available/engaged (the
+    REQ-SPCH-011 probe result, recorded only when biasing is on) and whether echo cancellation
+    engaged on the preflight capture (REQ-SPCH-003's readback).
+  - **The end reason:** why each session ended — user stop, spoken goodbye, silence timeout, win,
+    NYT pause, page lost, mic denied, STT failure — today all silent stops are indistinguishable
+    in the log.
+  - **Out-of-band grid edits:** letters that appear in the grid *without* an ENTER/UNDO of ours
+    (the watcher already distinguishes these — our writes are pause-wrapped, REQ-NAV-008), logged
+    with the entry and its resulting letters. This is the "voice failed, so I typed it myself"
+    signal: a user who says a word repeatedly, gets mismatches, then types it manually documents a
+    recognition failure the transcript alone understates.
+  - All of it stays in-memory only (REQ-NFR-002); nothing here adds storage or network.
+- **Accept:** Given a session with biasing on, then its header carries the on-device flag and the
+  echo-cancellation flag once known; given a session ended by the silence timeout, then its last
+  event names that reason; given letters typed manually into an entry mid-session, then the log
+  carries a typed event naming the entry and its letters.
+- **Verify:** unit `extension-test/unit/session-log.test.js` (rendering),
+  `extension-test/unit/machine.test.js` (end reasons), `extension-test/unit/orchestrator.test.js`
+  (typed events, end-reason plumbing), `extension-test/unit/speech-ports.test.js` (probe + AEC
+  readback surfacing).
 
 #### REQ-NFR-003 — Latency budgets
 - **Status:** Active · **Level:** SHOULD

@@ -41,11 +41,13 @@ function doubledHalf(word) {
 function clueSay(model, clueId, extra = {}) {
   const clue = model.clue(clueId);
   // No answerLength: the letter count is not announced up front (REQ-READ-008 retired) —
-  // the user learns it from a length-mismatch report or the hint command.
+  // the user learns it from a length-mismatch report or the hint command. `len` is for
+  // the diagnostics log only (REQ-DIAG-001); the verbalizer never speaks it.
   return {
     kind: 'clue',
     label: clue.label,
     runs: clue.runs,
+    len: clue.cellIndices.length,
     ...extra,
   };
 }
@@ -87,6 +89,12 @@ function listenAgain(state, sayPayloads) {
   return speak(state, sayPayloads.map(say), 'listen');
 }
 
+/** A failed answer attempt on the current entry — counts toward the struggle streak that
+ * arms the spelling-alphabet biasing (REQ-SPCH-011). */
+function missed(state) {
+  return { ...state, missStreak: (state.missStreak ?? 0) + 1 };
+}
+
 function readClue(state, extra = {}, leadActions = []) {
   return speak(state, [...leadActions, say(clueSay(state.model, state.clueId, extra))], 'listen');
 }
@@ -106,6 +114,7 @@ function moveTo(state, clueId) {
     undoSay: null,
     pendingCorrection: null,
     pendingGotoDir: null,
+    missStreak: 0, // REQ-SPCH-011: a fresh clue is a fresh start for the struggle counter
   };
 }
 
@@ -226,13 +235,14 @@ function finishFit(state, word, spelledDifferently) {
   const current = state.model.wordFor(state.clueId);
   if (current && current !== word) {
     // lastProposed too: "you misheard" during the confirmation rejects this word.
+    // missStreak resets here as on any fit: recognition succeeded (REQ-SPCH-011).
     return listenAgain(
-      { ...state, mode: 'confirm-replace', pendingWord: word, lastProposed: word, spellBuffer: [] },
+      { ...state, mode: 'confirm-replace', pendingWord: word, lastProposed: word, spellBuffer: [], missStreak: 0 },
       [{ kind: 'replace-confirm', word, current }],
     );
   }
   return speak(
-    { ...state, mode: 'normal', pendingWord: word, lastProposed: word, pendingEntry: { word }, spellBuffer: [] },
+    { ...state, mode: 'normal', pendingWord: word, lastProposed: word, pendingEntry: { word }, spellBuffer: [], missStreak: 0 },
     [say({ kind: 'fit', word, spelledDifferently })],
     'enter',
   );
@@ -280,8 +290,10 @@ function evaluateAnswer(state, alternatives) {
       );
     }
     case 'length-mismatch':
+      // A failed answer attempt: count it toward the struggle streak that arms the
+      // spelling-alphabet biasing (REQ-SPCH-011) — spelling is the user's likely next move.
       return listenAgain(
-        { ...state, lastProposed: outcome.variants[0].word },
+        { ...state, lastProposed: outcome.variants[0].word, missStreak: (state.missStreak ?? 0) + 1 },
         [{ kind: 'length-mismatch', variants: outcome.variants, needed: outcome.needed }],
       );
     case 'too-long': {
@@ -405,7 +417,7 @@ function handleCommand(state, cmd) {
     case 'help':
       return listenAgain(state, [{ kind: 'help' }]);
     case 'stop':
-      return speak(state, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
+      return speak({ ...state, endReason: 'goodbye' }, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
     case 'spell': {
       const pattern = evalPattern(state); // penciled squares count as open (REQ-ANS-023)
       const open = pattern.filter((l) => !l).length;
@@ -444,7 +456,7 @@ function handleCommand(state, cmd) {
       if (cmd.arg) {
         if (entered) return startUndo(state, { rejected: [undoneWord].filter(Boolean), correction: cmd.arg });
         return evaluateAnswer(state, [{ transcript: cmd.arg }])
-          ?? listenAgain(state, [{ kind: 'didnt-catch' }]);
+          ?? listenAgain(missed(state), [{ kind: 'didnt-catch' }]);
       }
       if (entered) {
         return startUndo(state, { sayKind: 'misheard-reprompt', rejected: [undoneWord].filter(Boolean) });
@@ -456,7 +468,7 @@ function handleCommand(state, cmd) {
     }
     case 'answer': // REQ-ANS-014
       return evaluateAnswer(state, [{ transcript: cmd.arg }])
-        ?? listenAgain(state, [{ kind: 'didnt-catch' }]);
+        ?? listenAgain(missed(state), [{ kind: 'didnt-catch' }]);
     default:
       return null;
   }
@@ -508,7 +520,7 @@ function finishSpelling(state, buffer) {
 function onHeardSpelling(state, alternatives) {
   const top = alternatives[0]?.transcript ?? '';
   const cmd = parseCommand(top);
-  if (cmd?.command === 'stop') return speak(state, [say({ kind: 'goodbye' })], 'end');
+  if (cmd?.command === 'stop') return speak({ ...state, endReason: 'goodbye' }, [say({ kind: 'goodbye' })], 'end');
   const { letters, control } = collectSpelledLetters(top);
   if (control === 'cancel') {
     return listenAgain({ ...state, mode: 'normal', spellBuffer: [] }, [{ kind: 'spell-cancelled' }]);
@@ -616,15 +628,16 @@ function onHeardNormal(state, alternatives) {
       if (handled) return handled;
     }
   }
-  return listenAgain(state, [{ kind: 'didnt-catch' }]); // REQ-CMD-003
+  // Nothing usable at all is a failed answer attempt too (REQ-SPCH-011 struggle counter).
+  return listenAgain(missed(state), [{ kind: 'didnt-catch' }]); // REQ-CMD-003
 }
 
 function onStart(state, { snapshot, settings }) {
   if (snapshot.status === 'not-found') {
-    return speak({ ...state, phase: 'speaking' }, [say({ kind: 'no-puzzle' })], 'end'); // REQ-LIFE-003
+    return speak({ ...state, phase: 'speaking', endReason: 'no-puzzle' }, [say({ kind: 'no-puzzle' })], 'end'); // REQ-LIFE-003
   }
   if (snapshot.status === 'solved') {
-    return speak({ ...state, phase: 'speaking' }, [say({ kind: 'already-solved' })], 'end'); // REQ-LIFE-004
+    return speak({ ...state, phase: 'speaking', endReason: 'already-solved' }, [say({ kind: 'already-solved' })], 'end'); // REQ-LIFE-004
   }
   const model = buildModel(snapshot);
   const selected = snapshot.selection?.clueId;
@@ -659,6 +672,10 @@ function onStart(state, { snapshot, settings }) {
     pendingCorrection: null,
     sttRetried: false,
     celebrated: false,
+    missStreak: 0, // REQ-SPCH-011: consecutive failed answer attempts on the current entry
+    resetStreak: 0, // REQ-SPCH-012: consecutive mid-utterance resets (background-talk signature)
+    noiseHinted: false, // REQ-SPCH-012: the background-noise hint plays at most once a session
+    endReason: null, // REQ-DIAG-002: why a terminal say ends the session, for the END action
   };
   const actions = [];
   if (clueId !== selected) actions.push({ type: 'SELECT_CLUE', clueId });
@@ -669,7 +686,10 @@ function onStart(state, { snapshot, settings }) {
 
 function onTtsDone(state) {
   if (state.phase !== 'speaking') return { state, actions: [] };
-  if (state.after === 'end') return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
+  if (state.after === 'end') {
+    // REQ-DIAG-002: the terminal say set endReason when it chose to end the session.
+    return { state: { ...state, phase: 'done' }, actions: [{ type: 'END', reason: state.endReason ?? 'done' }] };
+  }
   if (state.after === 'enter') {
     const word = state.pendingEntry.word;
     // REQ-ANS-019: crossings that lose a letter to this write are malformed — their
@@ -710,6 +730,10 @@ function onTtsDone(state) {
   return { state: { ...state, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
 }
 
+// REQ-SPCH-012: this many resets in a row read as continuous background talk, not a
+// slow speller — the recognizer keeps hearing speech it can never finalize.
+export const RESET_STORM = 3;
+
 function onSttError(state, { code, silentMs }) {
   if (state.phase !== 'listening') return { state, actions: [] };
   if (code === 'aborted') return { state, actions: [] };
@@ -717,23 +741,33 @@ function onSttError(state, { code, silentMs }) {
     // REQ-SPCH-010: the port dropped a half-heard utterance after a mid-answer pause.
     // Reopen the mic right away — the fresh LISTEN's ready ping tells the user they
     // are starting from scratch.
-    return { state: { ...state, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
+    const resetStreak = (state.resetStreak ?? 0) + 1;
+    if (resetStreak >= RESET_STORM && !state.noiseHinted) {
+      // REQ-SPCH-012: a reset storm is the one failure the user can't see — name it, once.
+      return listenAgain(
+        { ...state, resetStreak, noiseHinted: true },
+        [{ kind: 'noise-hint' }],
+      );
+    }
+    return { state: { ...state, phase: 'listening', resetStreak }, actions: [{ type: 'LISTEN' }] };
   }
   if (code === 'not-allowed') { // REQ-SPCH-003
-    return speak(state, [say({ kind: 'mic-denied' })], 'end');
+    return speak({ ...state, endReason: 'mic-denied' }, [say({ kind: 'mic-denied' })], 'end');
   }
   if (code === 'no-speech') { // REQ-CMD-005: never nag about silence
     if ((silentMs ?? 0) >= SILENCE_TIMEOUT_MS) {
       // Enough quiet — just stop listening, as silently as the icon toggle.
-      return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
+      return { state: { ...state, phase: 'done' }, actions: [{ type: 'END', reason: 'silence' }] };
     }
-    return { state: { ...state, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
+    // A silent cycle between resets means the background talk stopped — a genuine storm
+    // (REQ-SPCH-012) is back-to-back resets, so the consecutive count starts over here.
+    return { state: { ...state, phase: 'listening', resetStreak: 0 }, actions: [{ type: 'LISTEN' }] };
   }
   // network / audio-capture / other: retry once (REQ-SPCH-004)
   if (!state.sttRetried) {
     return listenAgain({ ...state, sttRetried: true }, [{ kind: 'stt-error', final: false }]);
   }
-  return speak(state, [say({ kind: 'stt-error', final: true })], 'end');
+  return speak({ ...state, endReason: 'stt-error' }, [say({ kind: 'stt-error', final: true })], 'end');
 }
 
 function onEntryResult(state, { ok, snapshot }) {
@@ -757,7 +791,7 @@ function onEntryResult(state, { ok, snapshot }) {
   // The proposal is an entry now: from here "you misheard" means undo it (REQ-ANS-010).
   s = { ...s, lastProposed: null };
   if (model.isSolved() && !s.celebrated) { // REQ-LIFE-005
-    return speak({ ...s, celebrated: true }, [say({ kind: 'celebration' })], 'end');
+    return speak({ ...s, celebrated: true, endReason: 'win' }, [say({ kind: 'celebration' })], 'end');
   }
   if (model.isFull()) {
     // REQ-LIFE-006 + REQ-NAV-014: full but wrong — say so, and when penciled letters
@@ -781,7 +815,7 @@ function onPageEvent(state, { kind, snapshot }) {
   if (kind === 'solved') {
     if (state.celebrated) return { state, actions: [] };
     return speak(
-      { ...state, celebrated: true, model: remodel(state, snapshot) },
+      { ...state, celebrated: true, endReason: 'win', model: remodel(state, snapshot) },
       [say({ kind: 'celebration' })],
       'end',
     );
@@ -835,9 +869,12 @@ function onUndoResult(state, { ok, snapshot }) {
 function onBargeIn(state) {
   if (state.phase !== 'speaking') return { state, actions: [] };
   if (state.after === 'end') { // stop during the sign-off itself — just go
-    return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
+    return {
+      state: { ...state, phase: 'done' },
+      actions: [{ type: 'END', reason: state.endReason ?? 'goodbye' }],
+    };
   }
-  return speak(state, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
+  return speak({ ...state, endReason: 'goodbye' }, [say({ kind: 'goodbye' })], 'end'); // REQ-CMD-004
 }
 
 function onHeard(state, { alternatives }) {
@@ -846,8 +883,11 @@ function onHeard(state, { alternatives }) {
   const receptive = state.phase === 'listening'
     || (state.phase === 'speaking' && state.after === 'listen');
   if (!receptive) return { state, actions: [] };
-  const s = { ...state, sttRetried: false };
-  if (!alternatives?.length) return listenAgain(s, [{ kind: 'didnt-catch' }]);
+  // A successful hearing clears the retry flag and the reset streak (REQ-SPCH-012).
+  const s = { ...state, sttRetried: false, resetStreak: 0 };
+  if (!alternatives?.length) {
+    return listenAgain(missed(s), [{ kind: 'didnt-catch' }]);
+  }
   switch (s.mode) {
     case 'spelling': return onHeardSpelling(s, alternatives);
     case 'disambiguating': return onHeardDisambig(s, alternatives);
@@ -868,7 +908,11 @@ export function reduce(state, event) {
     case 'UNDO_RESULT': return onUndoResult(state, event);
     case 'PAGE_EVENT': return onPageEvent(state, event);
     case 'TOGGLE_OFF': // REQ-LIFE-002: instant, silent teardown
-      return { state: { ...state, phase: 'done' }, actions: [{ type: 'END' }] };
+      return {
+        state: { ...state, phase: 'done' },
+        // REQ-DIAG-002: the shell says why it toggled off (user stop, NYT pause, page lost).
+        actions: [{ type: 'END', reason: event.reason ?? 'user' }],
+      };
     default:
       return { state, actions: [] };
   }

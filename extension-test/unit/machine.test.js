@@ -82,7 +82,7 @@ describe('session start (LIFE)', () => {
   test('REQ-LIFE-002: icon toggle ends instantly and silently from any phase', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const actions = s.step({ type: 'TOGGLE_OFF' });
-    expect(actions).toEqual([{ type: 'END' }]); // no goodbye SAY — silence is the spec
+    expect(actions).toEqual([{ type: 'END', reason: 'user' }]); // no goodbye SAY — silence is the spec
   });
 });
 
@@ -275,7 +275,7 @@ describe('answers (ANS)', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const actions = s.step(heard('ocelot'));
     expect(says(actions)[0]).toMatchObject({ kind: 'length-mismatch', needed: 5 });
-    expect(says(actions)[0].variants[0]).toEqual({ word: 'OCELOT', len: 6 });
+    expect(says(actions)[0].variants[0]).toEqual({ word: 'OCELOT', len: 6, swaps: 0 });
     expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['LISTEN']); // same clue, listening again
   });
 
@@ -849,7 +849,7 @@ describe('hints, commands, control (HINT/CMD/READ)', () => {
     const s = scenario();
     s.step({ type: 'START', snapshot: heartSnapshot(undefined, { selection: { clueId: 'A1' } }) });
     s.step({ type: 'BARGE_IN' }); // goodbye starts speaking
-    expect(s.step({ type: 'BARGE_IN' })).toEqual([{ type: 'END' }]); // no second goodbye
+    expect(s.step({ type: 'BARGE_IN' })).toEqual([{ type: 'END', reason: 'goodbye' }]); // no second goodbye
     expect(s.state().phase).toBe('done');
 
     const s2 = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
@@ -863,7 +863,7 @@ describe('hints, commands, control (HINT/CMD/READ)', () => {
     expect(types(s.step(noSpeech(8_000)))).toEqual(['LISTEN']);
     expect(types(s.step(noSpeech(SILENCE_TIMEOUT_MS - 1)))).toEqual(['LISTEN']);
     // At the timeout: end immediately — no goodbye, no reprompt, just END.
-    expect(s.step(noSpeech(SILENCE_TIMEOUT_MS))).toEqual([{ type: 'END' }]);
+    expect(s.step(noSpeech(SILENCE_TIMEOUT_MS))).toEqual([{ type: 'END', reason: 'silence' }]);
     expect(s.state().phase).toBe('done');
   });
 });
@@ -1137,6 +1137,99 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
     });
     expect(actions).toEqual([]);
     expect(says(s.step(heard('hint')))[0].pattern[0]).toBe('H'); // fresh letters visible
+  });
+});
+
+describe('reset storms name the problem, once (REQ-SPCH-012)', () => {
+  test('the third consecutive reset speaks the noise hint, then listening continues', () => {
+    const s = listening(heartSnapshot());
+    expect(types(s.step({ type: 'STT_ERROR', code: 'reset' }))).toEqual(['LISTEN']);
+    expect(types(s.step({ type: 'STT_ERROR', code: 'reset' }))).toEqual(['LISTEN']);
+    const third = s.step({ type: 'STT_ERROR', code: 'reset' });
+    expect(says(third)).toEqual([{ kind: 'noise-hint' }]);
+    expect(types(s.step({ type: 'TTS_DONE' }))).toEqual(['LISTEN']); // the session goes on
+  });
+
+  test('the hint plays at most once a session, however long the storm', () => {
+    const s = listening(heartSnapshot());
+    for (let i = 0; i < 3; i++) s.step({ type: 'STT_ERROR', code: 'reset' });
+    s.step({ type: 'TTS_DONE' });
+    for (let i = 0; i < 5; i++) {
+      expect(types(s.step({ type: 'STT_ERROR', code: 'reset' }))).toEqual(['LISTEN']);
+    }
+  });
+
+  test('a heard utterance restarts the count — two resets around real speech stay silent', () => {
+    const s = listening(heartSnapshot());
+    s.step({ type: 'STT_ERROR', code: 'reset' });
+    s.step({ type: 'STT_ERROR', code: 'reset' });
+    s.step(heard('repeat')); // successfully heard → the streak clears
+    s.step({ type: 'TTS_DONE' });
+    expect(types(s.step({ type: 'STT_ERROR', code: 'reset' }))).toEqual(['LISTEN']); // count is 1 again
+  });
+
+  test('a silent cycle between resets restarts the count — isolated resets are not a storm', () => {
+    const s = listening(heartSnapshot());
+    s.step({ type: 'STT_ERROR', code: 'reset' });
+    s.step({ type: 'STT_ERROR', code: 'reset' });
+    s.step({ type: 'STT_ERROR', code: 'no-speech', silentMs: 0 }); // the talk stopped
+    const next = s.step({ type: 'STT_ERROR', code: 'reset' }); // count is 1 again, not 3
+    expect(types(next)).toEqual(['LISTEN']);
+    expect(says(next)).toEqual([]);
+  });
+});
+
+describe('the struggle counter that arms spelling biasing (REQ-SPCH-011)', () => {
+  test('length mismatches count; an explicit skip (clue change) resets', () => {
+    const s = listening(heartSnapshot());
+    s.step(heard('elephant')); // 8 letters into a 5-entry → length-mismatch
+    s.step({ type: 'TTS_DONE' });
+    expect(s.state().missStreak).toBe(1);
+    s.step(heard('elephant'));
+    s.step({ type: 'TTS_DONE' });
+    expect(s.state().missStreak).toBe(2);
+    s.step(heard('next'));
+    expect(s.state().missStreak).toBe(0);
+  });
+
+  test('a fit resets the streak', () => {
+    const s = listening(heartSnapshot());
+    s.step(heard('elephant'));
+    s.step({ type: 'TTS_DONE' });
+    expect(s.state().missStreak).toBe(1);
+    s.step(heard('heart')); // fits the 5-entry
+    expect(s.state().missStreak).toBe(0);
+  });
+
+  test('an explicit "answer ..." attempt that goes nowhere counts too', () => {
+    const s = listening(heartSnapshot());
+    s.step(heard('answer supercalifragilisticexpialidocious')); // REQ-ANS-014, unusable
+    s.step({ type: 'TTS_DONE' });
+    expect(s.state().missStreak).toBe(1);
+  });
+});
+
+describe('sessions end with a recorded reason (REQ-DIAG-002)', () => {
+  test('TOGGLE_OFF forwards the shell reason; a bare one defaults to user', () => {
+    const s = listening(heartSnapshot());
+    expect(s.step({ type: 'TOGGLE_OFF', reason: 'nyt-pause' })).toEqual([{ type: 'END', reason: 'nyt-pause' }]);
+    const s2 = listening(heartSnapshot());
+    expect(s2.step({ type: 'TOGGLE_OFF' })).toEqual([{ type: 'END', reason: 'user' }]);
+  });
+
+  test('a spoken stop ends as goodbye; the silence timeout as silence', () => {
+    const s = listening(heartSnapshot());
+    s.step(heard('stop'));
+    expect(s.step({ type: 'TTS_DONE' })).toEqual([{ type: 'END', reason: 'goodbye' }]);
+    const s2 = listening(heartSnapshot());
+    expect(s2.step({ type: 'STT_ERROR', code: 'no-speech', silentMs: SILENCE_TIMEOUT_MS }))
+      .toEqual([{ type: 'END', reason: 'silence' }]);
+  });
+
+  test('REQ-DIAG-001: clue says carry the entry length for the compact log', () => {
+    const s = scenario();
+    const actions = s.step({ type: 'START', snapshot: heartSnapshot() });
+    expect(says(actions)[0].len).toBe(5); // 1 Across in the HEART fixture
   });
 });
 

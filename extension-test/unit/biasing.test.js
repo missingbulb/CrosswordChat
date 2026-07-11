@@ -57,6 +57,18 @@ describe('STT contextual biasing (REQ-SPCH-011)', () => {
     expect(phrasesOf(phrasesFor({ biasing: 'spelling', mode: 'normal', model, clueId: 'A1' }))).not.toContain('a');
   });
 
+  test('REQ-SPCH-011: a struggling user arms the spelling alphabet regardless of open squares', () => {
+    const model = fakeModel();
+    // Same 3-open-square entry as above: 2+ failed attempts flip the letters on…
+    const armed = phrasesOf(phrasesFor({ biasing: 'full', mode: 'normal', model, clueId: 'A1', struggling: true }));
+    expect(armed).toContain('a');
+    expect(armed).toContain('juliet');
+    // …but only where spelling biasing is wanted at all: commands-only mode stays letter-free.
+    expect(phrasesOf(phrasesFor({ biasing: 'commands', mode: 'normal', model, clueId: 'A1', struggling: true })))
+      .not.toContain('a');
+    expect(phrasesFor({ biasing: 'off', mode: 'normal', model, clueId: 'A1', struggling: true })).toEqual([]);
+  });
+
   test('full mode adds yes/no/first during confirmation and disambiguation', () => {
     const words = phrasesOf(phrasesFor({ biasing: 'full', mode: 'confirm-replace', model: fakeModel(), clueId: 'A1' }));
     expect(words).toContain('yes');

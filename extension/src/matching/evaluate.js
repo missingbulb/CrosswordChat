@@ -168,13 +168,15 @@ export function evaluate({ alternatives, entryLength, pattern, rejected = [], li
 
   if (!fitting.length) {
     // Report what we heard with lengths, homophone variants included (REQ-ANS-007).
+    // `swaps` rides along so the verbalizer can tell a homophone RESPELLING (sounds
+    // identical spoken aloud — reported by length only) from a distinct heard word.
     const firstAlt = unique[0].altIndex;
     const fromTop = unique.filter((c) => c.altIndex === firstAlt);
     const variants = [];
     const seenLens = new Set();
     for (const c of fromTop) {
       if (variants.length && seenLens.has(c.word.length)) continue;
-      variants.push({ word: c.word, len: c.word.length });
+      variants.push({ word: c.word, len: c.word.length, swaps: c.swaps });
       seenLens.add(c.word.length);
       if (variants.length >= 3) break;
     }

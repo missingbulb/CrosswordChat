@@ -10,7 +10,7 @@
 // (settings-modal.js). Transcript text is injected via textContent only — heard speech is
 // untrusted, so it must never become markup.
 
-import { formatSessions } from '../shared/session-log.js';
+import { formatSessions, formatSessionsWithin } from '../shared/session-log.js';
 import { buildIssueUrl } from '../shared/urls.js';
 
 export const SESSION_DATA_MODAL_ID = 'cc-session-data-modal';
@@ -77,7 +77,8 @@ export function mountSessionDataModal(document, { getSessions = () => [], onClos
   }
 
   const view = document.defaultView ?? globalThis;
-  const logText = formatSessions(getSessions() ?? []);
+  const sessions = getSessions() ?? [];
+  const logText = formatSessions(sessions);
 
   const host = document.createElement('div');
   host.dataset.ccRole = 'session-data-host';
@@ -136,7 +137,13 @@ export function mountSessionDataModal(document, { getSessions = () => [], onClos
   issueLink.className = 'cc-btn cc-primary';
   issueLink.dataset.ccRole = 'issue';
   issueLink.textContent = 'Open a GitHub issue';
-  issueLink.href = buildIssueUrl({ title: ISSUE_TITLE, body: logText });
+  // Over-budget logs re-render through the format-aware trimmer (whole events only,
+  // newest tail kept — REQ-DIAG-001) instead of being chopped mid-line.
+  issueLink.href = buildIssueUrl({
+    title: ISSUE_TITLE,
+    body: logText,
+    trim: (fits) => formatSessionsWithin(sessions, fits),
+  });
   issueLink.target = '_blank';
   issueLink.rel = 'noopener noreferrer';
 
