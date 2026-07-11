@@ -1,5 +1,5 @@
 /.claudinite/*
-!/.claudinite/.gitkeep
+!/.claudinite/sync-claudinite.sh
 /.claudinite.new/
 
 node_modules/
