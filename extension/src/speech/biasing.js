@@ -79,9 +79,12 @@ function openSquares(model, clueId) {
  * @param {string} [p.mode]     the machine's sub-mode: 'normal'|'spelling'|'confirm-replace'|'disambiguating'
  * @param {object} [p.model]    the puzzle model (for clue labels / open-square count)
  * @param {string} [p.clueId]   the current clue id
+ * @param {boolean} [p.struggling]  REQ-SPCH-011: the machine counted 2+ consecutive failed
+ *   answer attempts on this entry — spelling is the user's likely next move, so the letter
+ *   phrases arm in normal mode regardless of the open-square count
  * @returns {Array<{phrase: string, boost: number}>}  deduped; [] when biasing is off/unknown
  */
-export function phrasesFor({ biasing = 'off', mode = 'normal', model = null, clueId = null } = {}) {
+export function phrasesFor({ biasing = 'off', mode = 'normal', model = null, clueId = null, struggling = false } = {}) {
   if (!BIASING_MODES.includes(biasing) || biasing === 'off') return [];
   const wantCommands = biasing === 'commands' || biasing === 'full';
   const wantSpelling = biasing === 'spelling' || biasing === 'full';
@@ -104,7 +107,7 @@ export function phrasesFor({ biasing = 'off', mode = 'normal', model = null, clu
     }
     if (wantSpelling) {
       const open = openSquares(model, clueId);
-      if (open != null && open >= 1 && open <= 2) out.push(...letterPhrases());
+      if ((open != null && open >= 1 && open <= 2) || struggling) out.push(...letterPhrases());
     }
   }
   return dedupe(out);

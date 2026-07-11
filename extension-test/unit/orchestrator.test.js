@@ -642,3 +642,95 @@ describe('the full-grid verdict popup (REQ-LIFE-005/REQ-LIFE-006)', () => {
     expect(polls()).toBe(3 + 1); // the bounded polls, plus the post-dismiss refresh
   });
 });
+
+// ---- Diagnostics plumbing: the entries only the shell can produce (REQ-DIAG-002) ----
+
+describe('diagnostics plumbing (REQ-DIAG-002)', () => {
+  // Boots against fakes with a diag sink. `script` supplies successive listenOnce
+  // results; when it runs dry, cycles resolve 'aborted' (which the machine ignores),
+  // parking the session until stop() is called.
+  function boot({ settings, script = [] } = {}) {
+    const diag = [];
+    const phrasesSeen = [];
+    let pageEventCb = null;
+    let orchestrator = null;
+    const ended = new Promise((resolve) => {
+      orchestrator = createOrchestrator({
+        now: () => 0,
+        tts: { speak: async () => {}, cancel: () => {} },
+        stt: {
+          listenOnce: async ({ phrases } = {}) => {
+            phrasesSeen.push(phrases ?? []);
+            return script.shift() ?? { error: 'aborted' };
+          },
+          stop: () => {},
+        },
+        settings,
+        pageClient: {
+          snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
+          watch: (cb) => { pageEventCb = cb; },
+          unwatch: () => { pageEventCb = null; },
+          keepAlive: () => {},
+        },
+        ui: { diag: (entry) => diag.push(entry) },
+        onEnd: () => resolve(null),
+      });
+    });
+    // Bounded settle: wait for the async event queue to reach a condition, then assert.
+    const until = async (cond) => {
+      for (let i = 0; i < 100 && !cond(); i++) await new Promise((r) => setTimeout(r, 0));
+    };
+    return { orchestrator, diag, phrasesSeen, ended, until, emit: (k, s) => pageEventCb?.(k, s) };
+  }
+
+  test('said entries carry the say payload, never the rendered sentence', async () => {
+    const { orchestrator, diag, until, ended } = boot();
+    await orchestrator.start();
+    await until(() => diag.some((e) => e.kind === 'said'));
+    const said = diag.find((e) => e.kind === 'said');
+    expect(said.say.kind).toBe('clue');
+    expect(said.say.label).toBe('1 Across');
+    expect(said.say.len).toBe(5);
+    expect(said.text).toBeUndefined(); // the sentence would blow the issue-link budget
+    orchestrator.stop();
+    await ended;
+  });
+
+  test('letters appearing outside our writes are logged as typed events with the entry', async () => {
+    const { orchestrator, diag, until, emit, ended } = boot();
+    await orchestrator.start();
+    await until(() => diag.some((e) => e.kind === 'said'));
+    // The watcher only reports changes we did NOT make (our writes are pause-wrapped),
+    // so a grid event with fresh letters is the user typing into 1-Across.
+    emit('grid', heartSnapshot(['HE...', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    await until(() => diag.some((e) => e.kind === 'typed'));
+    expect(diag.find((e) => e.kind === 'typed')).toEqual({ kind: 'typed', clueId: 'A1', word: 'HE...' });
+    orchestrator.stop();
+    await ended;
+  });
+
+  test('teardown records the end reason as the final entry, before the record closes', async () => {
+    const { orchestrator, diag, until, ended } = boot();
+    await orchestrator.start();
+    await until(() => diag.some((e) => e.kind === 'said'));
+    orchestrator.stop('nyt-pause');
+    await ended;
+    expect(diag.at(-1)).toEqual({ kind: 'end', reason: 'nyt-pause' });
+  });
+
+  test('REQ-SPCH-011: after two failed attempts the next listen cycle is letter-biased', async () => {
+    const elephant = { alternatives: [{ transcript: 'elephant', confidence: 0.9 }] };
+    const { orchestrator, phrasesSeen, until, ended } = boot({
+      settings: { biasing: 'full' },
+      script: [elephant, elephant], // two length-mismatches on the 5-entry
+    });
+    await orchestrator.start();
+    await until(() => phrasesSeen.length >= 3);
+    const hasLetters = (phrases) => phrases.some((p) => p.phrase === 'juliet');
+    expect(hasLetters(phrasesSeen[0])).toBe(false); // 5 open squares, no struggle yet
+    expect(hasLetters(phrasesSeen[1])).toBe(false); // one miss — not yet
+    expect(hasLetters(phrasesSeen[2])).toBe(true); // two misses — spelling armed
+    orchestrator.stop();
+    await ended;
+  });
+});

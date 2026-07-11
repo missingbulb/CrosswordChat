@@ -63,16 +63,20 @@ describe('evaluate', () => {
     const out = evaluate({ alternatives: [{ transcript: 'ocelot' }], entryLength: 4, pattern: P('....') });
     expect(out.kind).toBe('length-mismatch');
     expect(out.needed).toBe(4);
-    expect(out.variants[0]).toEqual({ word: 'OCELOT', len: 6 });
+    expect(out.variants[0]).toEqual({ word: 'OCELOT', len: 6, swaps: 0 });
   });
 
-  test('REQ-ANS-007: mismatch report includes homophone variants with their lengths', () => {
+  test('REQ-ANS-007: mismatch report includes homophone variants with their lengths and swap counts', () => {
     const out = evaluate({ alternatives: [{ transcript: 'eight' }], entryLength: 4, pattern: P('....') });
     expect(out.kind).toBe('length-mismatch');
     const words = out.variants.map((v) => v.word);
     expect(words).toContain('EIGHT'); // 5
     expect(words).toContain('ATE'); // 3
     expect(out.variants.find((v) => v.word === 'EIGHT').len).toBe(5);
+    // swaps distinguishes the literal reading (0) from homophone respellings (>0), so the
+    // verbalizer can report a respelling by length only — spoken aloud they sound identical.
+    expect(out.variants.find((v) => v.word === 'EIGHT').swaps).toBe(0);
+    expect(out.variants.find((v) => v.word === 'ATE').swaps).toBeGreaterThan(0);
   });
 
   test('REQ-ANS-008: collision names 0-based position, wanted and existing letters', () => {
@@ -174,7 +178,7 @@ describe('evaluate', () => {
     // Neither reading fits a 5-entry — but the complaint names DOG, not DOGDOG.
     const miss = evaluate({ alternatives: [{ transcript: 'dog d o g' }], entryLength: 5, pattern: P('.....') });
     expect(miss.kind).toBe('length-mismatch');
-    expect(miss.variants[0]).toEqual({ word: 'DOG', len: 3 });
+    expect(miss.variants[0]).toEqual({ word: 'DOG', len: 3, swaps: 0 });
     // Trailing letters that spell something ELSE are not the pattern — no DOG candidate.
     const other = evaluate({ alternatives: [{ transcript: 'dog c a t' }], entryLength: 3, pattern: P('...') });
     expect(other.kind).toBe('length-mismatch');

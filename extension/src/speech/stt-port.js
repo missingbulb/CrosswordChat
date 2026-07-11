@@ -188,19 +188,30 @@ export function createSttPort({
     },
 
     /**
+     * Is Chrome's on-device recognition — the only path where biasing works — available?
+     * The memoized REQ-SPCH-011 probe, exposed so the session log can record whether the
+     * biasing experiment actually engaged (REQ-DIAG-002). Never triggers a download.
+     * @returns {Promise<boolean>}
+     */
+    biasingAvailable() {
+      return probeOnDevice();
+    },
+
+    /**
      * Surface the mic permission prompt in a controlled moment (REQ-SPCH-003), requesting
      * the audio-processing constraints that fight self-echo (AUDIO_CONSTRAINTS, REQ-SPCH-005)
-     * and logging whether echo cancellation actually took on this device.
-     * @returns {Promise<'granted'|'denied'|'unknown'>}
+     * and reporting whether echo cancellation actually took on this device. The warm-up
+     * capture runs even when permission is already granted — otherwise the device is only
+     * warmed (and AEC engagement only known, REQ-DIAG-002) on the very first grant.
+     * @returns {Promise<{status: 'granted'|'denied', echoCancellation: boolean|null}>}
      */
     async ensureMicPermission({ nav = globalThis.navigator, log = globalThis.console } = {}) {
       try {
         const status = await nav?.permissions?.query?.({ name: 'microphone' });
-        if (status?.state === 'granted') return 'granted';
-        if (status?.state === 'denied') return 'denied';
+        if (status?.state === 'denied') return { status: 'denied', echoCancellation: null };
       } catch { /* permissions API unavailable — fall through */ }
       const media = nav?.mediaDevices;
-      if (!media?.getUserMedia) return 'denied';
+      if (!media?.getUserMedia) return { status: 'denied', echoCancellation: null };
       let stream;
       try {
         stream = await media.getUserMedia({ audio: AUDIO_CONSTRAINTS });
@@ -211,14 +222,17 @@ export function createSttPort({
         try {
           stream = await media.getUserMedia({ audio: true });
         } catch {
-          return 'denied';
+          return { status: 'denied', echoCancellation: null };
         }
       }
       // The single most useful fact for diagnosing self-echo: did echo cancellation actually
-      // engage on this device? Mirrored to the console like everything else (REQ-SPCH-007);
-      // best-effort — diagnostics never throw and never change the outcome.
+      // engage on this device? Mirrored to the console like everything else (REQ-SPCH-007)
+      // and returned for the session log (REQ-DIAG-002); best-effort — diagnostics never
+      // throw and never change the outcome.
+      let echoCancellation = null;
       try {
         const s = stream.getAudioTracks?.()[0]?.getSettings?.() ?? {};
+        if (typeof s.echoCancellation === 'boolean') echoCancellation = s.echoCancellation;
         const supported = media.getSupportedConstraints?.() ?? {};
         log?.info?.(
           `${TAG} mic ready — echoCancellation=${s.echoCancellation ?? 'n/a'}`
@@ -230,7 +244,7 @@ export function createSttPort({
         );
       } catch { /* diagnostics are best-effort */ }
       stream.getTracks?.().forEach((t) => t.stop());
-      return 'granted';
+      return { status: 'granted', echoCancellation };
     },
   };
 }

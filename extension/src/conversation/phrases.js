@@ -97,12 +97,17 @@ export function render(say) {
       return say.spelledDifferently ? `${spellOut(say.word)} — fits!` : 'Fits!';
     case 'length-mismatch': {
       // REQ-ANS-007: only the problem — no "I heard ..." preamble, no usage coaching.
-      const list = say.variants
-        .map((v) => `${sayWord(v.word)} is ${v.len} letters`)
-        .join(', and ');
+      // A homophone respelling (swaps > 0) sounds identical to the literal word when read
+      // aloud, so naming it would hand the "same" word two lengths — length only instead.
+      const named = say.variants.filter((v, i) => !v.swaps || i === 0);
+      const respelled = say.variants.filter((v) => !named.includes(v));
+      const list = named.map((v) => `${sayWord(v.word)} is ${v.len} letters`).join(', and ');
+      const others = respelled.length
+        ? `, or ${respelled.map((v) => v.len).join(' or ')} spelled differently`
+        : '';
       // REQ-ANS-018: while spelling a partially solved entry, both counts work.
       const alsoOpen = say.open ? `, or ${say.open} for just the open squares` : '';
-      return `${list} — we need ${say.needed}${alsoOpen}.`;
+      return `${list}${others} — we need ${say.needed}${alsoOpen}.`;
     }
     case 'collision': {
       // REQ-ANS-008: quick — the first clash in full, the rest only as a count.
@@ -134,6 +139,9 @@ export function render(say) {
       return 'You can: say an answer — whole or spelled out — or answer followed by a word. Say pass or next to skip, back for the previous clue, flip for the crossing clue, repeat to hear the clue again, hint for the letters so far, spell to spell a word, undo to take back the last answer, clear to empty the entry, pencil or pen to switch write modes, anyway to enter over a clash, or goodbye to stop.';
     case 'didnt-catch':
       return "Sorry, I didn't catch that.";
+    case 'noise-hint':
+      // REQ-SPCH-012: a reset storm (speech that never finalizes) gets named once.
+      return "I'm having trouble hearing over the background noise.";
     case 'nothing-pending':
       return 'No word is waiting to be entered — give an answer first.';
     case 'misheard-reprompt':

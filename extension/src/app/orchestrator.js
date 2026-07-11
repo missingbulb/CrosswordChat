@@ -65,7 +65,35 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
   // experiment. The port ignores it unless Chrome's on-device path is available.
   const biasPhrases = () => phrasesFor({
     biasing: settings.biasing, mode: state.mode, model: state.model, clueId: state.clueId,
+    struggling: (state.missStreak ?? 0) >= 2, // 2+ failed attempts arm the spelling alphabet
   });
+
+  // REQ-DIAG-002: letters that appear WITHOUT an ENTER/UNDO of ours are the user typing —
+  // our own writes are pause-wrapped (REQ-NAV-008), so the watcher never reports them.
+  // Diff the machine's last-known grid against the incoming snapshot and log the touched
+  // entry with its resulting letters ('.' for still-open cells).
+  const letterOf = (cell) => {
+    const raw = String(cell?.letter ?? '').trim().toUpperCase();
+    return raw ? raw[0] : null;
+  };
+  function diagTyped(snapshot) {
+    const model = state.model;
+    if (!model?.snapshot?.cells || !snapshot?.cells) return;
+    const before = new Map(model.snapshot.cells.map((c) => [c.index, letterOf(c)]));
+    const after = new Map(snapshot.cells.map((c) => [c.index, letterOf(c)]));
+    const changed = [...after.keys()].filter((i) => (before.get(i) ?? null) !== (after.get(i) ?? null));
+    if (!changed.length) return; // pencil flips and such — not letter changes
+    // The entry containing every changed cell is the one typed into; when a single cell
+    // belongs to two entries, the page selection names the one the user was in.
+    const holders = [...(model.clueById?.values() ?? [])]
+      .filter((clue) => changed.every((i) => clue.cellIndices.includes(i)));
+    const target = holders.find((c) => c.id === snapshot.selection?.clueId) ?? holders[0];
+    if (!target) {
+      diag({ kind: 'typed', cells: changed.length }); // spans entries (reveal-all etc.)
+      return;
+    }
+    diag({ kind: 'typed', clueId: target.id, word: target.cellIndices.map((i) => after.get(i) ?? '.').join('') });
+  }
 
   // REQ-LIFE-017: a heard user command keeps NYT from auto-pausing a quiet puzzle. A voice
   // solver isn't touching the keyboard, so on every spoken command we nudge the page
@@ -156,7 +184,10 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       case 'SAY': {
         const text = render(action.say);
         caption('say', text); // REQ-SPCH-007
-        diag({ kind: 'said', text, sayKind: action.say?.kind }); // REQ-DIAG-001
+        // REQ-DIAG-001: the say PAYLOAD, never the rendered sentence — the compact log
+        // reconstructs meaning from the kind + its numbers, and the text would blow the
+        // issue link's budget.
+        diag({ kind: 'said', say: action.say });
         const interrupt = await speakWithBargeIn(text);
         enqueue(interrupt ?? { type: 'TTS_DONE' });
         break;
@@ -240,16 +271,17 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         break;
       }
       case 'END':
-        teardown();
+        teardown(action.reason);
         break;
       default:
         break;
     }
   }
 
-  function teardown() {
+  function teardown(reason) {
     if (ended) return;
     ended = true;
+    diag({ kind: 'end', reason: reason ?? 'user' }); // REQ-DIAG-002 — before onEnd drops the record
     tts.cancel();
     stt.stop();
     ping?.dispose();
@@ -262,7 +294,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
   function pageLost() {
     // Tab navigated away or closed (REQ-LIFE-008).
     caption('note', 'Lost the puzzle page — ending the session.');
-    enqueue({ type: 'TOGGLE_OFF' });
+    enqueue({ type: 'TOGGLE_OFF', reason: 'page-lost' });
   }
 
   function enqueue(event) {
@@ -279,7 +311,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         // switch (REQ-LIFE-011) — we piggyback on NYT's own pause instead of tracking
         // focus. End the session, with a tiny blip so the silence is explained.
         ping?.off?.();
-        enqueue({ type: 'TOGGLE_OFF' });
+        enqueue({ type: 'TOGGLE_OFF', reason: 'nyt-pause' });
         return;
       }
       // Clicking or typing on the puzzle is user presence — reset the silence clock.
@@ -334,14 +366,17 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       let snap;
       try {
         snap = await pageClient.snapshot();
-        pageClient.watch?.((kind, snapshot) => enqueue({ type: 'PAGE_EVENT', kind, snapshot }));
+        pageClient.watch?.((kind, snapshot) => {
+          if (kind === 'grid') diagTyped(snapshot); // REQ-DIAG-002 — before the machine absorbs it
+          enqueue({ type: 'PAGE_EVENT', kind, snapshot });
+        });
       } catch {
         snap = { status: 'not-found', size: { rows: 0, cols: 0 }, cells: [], clues: [], selection: {} };
       }
       enqueue({ type: 'START', snapshot: snap, settings });
     },
-    stop() {
-      enqueue({ type: 'TOGGLE_OFF' });
+    stop(reason = 'user') {
+      enqueue({ type: 'TOGGLE_OFF', reason });
     },
     get state() {
       return state;

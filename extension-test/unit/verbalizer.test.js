@@ -90,6 +90,24 @@ describe('outcome phrasing', () => {
     expect(out).not.toContain('I heard'); // no preamble before the problem
   });
 
+  test('REQ-ANS-007: homophone respellings are reported by length only — never voiced', () => {
+    // KNEWYORK spoken aloud is indistinguishable from NEWYORK, so naming both would give
+    // the "same" word two lengths (issue #43's "Newyork is 7 letters, and Knewyork is 8").
+    const out = render({
+      kind: 'length-mismatch',
+      variants: [{ word: 'NEWYORK', len: 7, swaps: 0 }, { word: 'KNEWYORK', len: 8, swaps: 1 }],
+      needed: 4,
+    });
+    expect(out).toContain('Newyork is 7 letters');
+    expect(out).toContain('or 8 spelled differently');
+    expect(out).not.toContain('Knewyork');
+    expect(out).toContain('we need 4');
+  });
+
+  test('REQ-SPCH-012: the reset-storm hint names background noise', () => {
+    expect(render({ kind: 'noise-hint' })).toMatch(/background noise/i);
+  });
+
   test('REQ-ANS-018: spelling a partially solved entry — both counts offered, prompt mentions the option', () => {
     const mismatch = render({
       kind: 'length-mismatch',

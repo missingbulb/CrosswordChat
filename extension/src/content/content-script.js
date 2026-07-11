@@ -21,6 +21,7 @@ import { createSttPort } from '../speech/stt-port.js';
 import { createRemoteTtsPort } from '../speech/remote-tts-port.js';
 import { createPing } from '../speech/ping.js';
 import { loadSettings } from '../settings/settings.js';
+import { puzzleTag } from '../shared/urls.js';
 
 const TAG = '[CrosswordChat]';
 let session = null; // { orchestrator, port }
@@ -69,8 +70,19 @@ async function startSession() {
     const stt = createSttPort();
     const tts = createRemoteTtsPort(port);
     const settings = await loadSettings(); // REQ-NAV-012: options-page choices apply per session
-    currentLog = { startedAt: Date.now(), settings: { ...settings }, entries: [] }; // REQ-DIAG-001
+    currentLog = { // REQ-DIAG-001/002: turns + the run context they only make sense against
+      startedAt: Date.now(),
+      version: chrome.runtime.getManifest().version,
+      puzzle: puzzleTag(location.pathname),
+      settings: { ...settings },
+      entries: [],
+    };
     sessionLogs.push(currentLog);
+    if (settings.biasing && settings.biasing !== 'off') {
+      // REQ-DIAG-002: did the biasing experiment actually engage? Only meaningful (and
+      // only probed) when the setting asks for biasing at all.
+      void stt.biasingAvailable().then((ok) => { if (currentLog) currentLog.onDevice = ok; });
+    }
 
     const orchestrator = createOrchestrator({
       tts,
@@ -122,8 +134,12 @@ async function startSession() {
     port.onDisconnect.addListener(() => orchestrator.stop()); // service worker died
 
     // Surface the mic prompt (page origin) at a sane moment (REQ-SPCH-003); recognition
-    // errors still flow through the machine if the user denies here.
-    await stt.ensureMicPermission();
+    // errors still flow through the machine if the user denies here. The preflight also
+    // reports whether echo cancellation engaged — recorded for the log (REQ-DIAG-002).
+    const mic = await stt.ensureMicPermission();
+    if (currentLog && typeof mic?.echoCancellation === 'boolean') {
+      currentLog.aec = mic.echoCancellation;
+    }
 
     // REQ-LIFE-016: the pre-puzzle splash ("Ready to start solving?") hides the board.
     // Click Play for the user; if the page insists on a real click, ask them to and
