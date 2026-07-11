@@ -131,7 +131,8 @@ async function startSession() {
     port.onMessage.addListener((msg) => {
       if (msg?.type === MSG.CLOSE) orchestrator.stop(); // icon toggle / takeover
     });
-    port.onDisconnect.addListener(() => orchestrator.stop()); // service worker died
+    // Service worker died — an infrastructure abort, not a user stop (REQ-DIAG-002).
+    port.onDisconnect.addListener(() => orchestrator.stop('worker-lost'));
 
     // Surface the mic prompt (page origin) at a sane moment (REQ-SPCH-003); recognition
     // errors still flow through the machine if the user denies here. The preflight also

@@ -709,6 +709,21 @@ describe('diagnostics plumbing (REQ-DIAG-002)', () => {
     await ended;
   });
 
+  test('a typed letter that arrives AS a selection event (NYT auto-advance) is still logged', async () => {
+    // The watcher reports one kind per debounced tick, selection shadowing grid — the
+    // last letter of a hand-typed word lands together with NYT's cursor move to the next
+    // clue. The diff must run for those ticks too, or the signature "voice failed, user
+    // typed it" case (issue #43) logs nothing.
+    const { orchestrator, diag, until, emit, ended } = boot();
+    await orchestrator.start();
+    await until(() => diag.some((e) => e.kind === 'said'));
+    emit('selection', heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A6' } }));
+    await until(() => diag.some((e) => e.kind === 'typed'));
+    expect(diag.find((e) => e.kind === 'typed')).toEqual({ kind: 'typed', clueId: 'A1', word: 'HEART' });
+    orchestrator.stop();
+    await ended;
+  });
+
   test('teardown records the end reason as the final entry, before the record closes', async () => {
     const { orchestrator, diag, until, ended } = boot();
     await orchestrator.start();

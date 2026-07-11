@@ -1167,6 +1167,16 @@ describe('reset storms name the problem, once (REQ-SPCH-012)', () => {
     s.step({ type: 'TTS_DONE' });
     expect(types(s.step({ type: 'STT_ERROR', code: 'reset' }))).toEqual(['LISTEN']); // count is 1 again
   });
+
+  test('a silent cycle between resets restarts the count — isolated resets are not a storm', () => {
+    const s = listening(heartSnapshot());
+    s.step({ type: 'STT_ERROR', code: 'reset' });
+    s.step({ type: 'STT_ERROR', code: 'reset' });
+    s.step({ type: 'STT_ERROR', code: 'no-speech', silentMs: 0 }); // the talk stopped
+    const next = s.step({ type: 'STT_ERROR', code: 'reset' }); // count is 1 again, not 3
+    expect(types(next)).toEqual(['LISTEN']);
+    expect(says(next)).toEqual([]);
+  });
 });
 
 describe('the struggle counter that arms spelling biasing (REQ-SPCH-011)', () => {
@@ -1189,6 +1199,13 @@ describe('the struggle counter that arms spelling biasing (REQ-SPCH-011)', () =>
     expect(s.state().missStreak).toBe(1);
     s.step(heard('heart')); // fits the 5-entry
     expect(s.state().missStreak).toBe(0);
+  });
+
+  test('an explicit "answer ..." attempt that goes nowhere counts too', () => {
+    const s = listening(heartSnapshot());
+    s.step(heard('answer supercalifragilisticexpialidocious')); // REQ-ANS-014, unusable
+    s.step({ type: 'TTS_DONE' });
+    expect(s.state().missStreak).toBe(1);
   });
 });
 

@@ -89,6 +89,12 @@ function listenAgain(state, sayPayloads) {
   return speak(state, sayPayloads.map(say), 'listen');
 }
 
+/** A failed answer attempt on the current entry — counts toward the struggle streak that
+ * arms the spelling-alphabet biasing (REQ-SPCH-011). */
+function missed(state) {
+  return { ...state, missStreak: (state.missStreak ?? 0) + 1 };
+}
+
 function readClue(state, extra = {}, leadActions = []) {
   return speak(state, [...leadActions, say(clueSay(state.model, state.clueId, extra))], 'listen');
 }
@@ -450,7 +456,7 @@ function handleCommand(state, cmd) {
       if (cmd.arg) {
         if (entered) return startUndo(state, { rejected: [undoneWord].filter(Boolean), correction: cmd.arg });
         return evaluateAnswer(state, [{ transcript: cmd.arg }])
-          ?? listenAgain(state, [{ kind: 'didnt-catch' }]);
+          ?? listenAgain(missed(state), [{ kind: 'didnt-catch' }]);
       }
       if (entered) {
         return startUndo(state, { sayKind: 'misheard-reprompt', rejected: [undoneWord].filter(Boolean) });
@@ -462,7 +468,7 @@ function handleCommand(state, cmd) {
     }
     case 'answer': // REQ-ANS-014
       return evaluateAnswer(state, [{ transcript: cmd.arg }])
-        ?? listenAgain(state, [{ kind: 'didnt-catch' }]);
+        ?? listenAgain(missed(state), [{ kind: 'didnt-catch' }]);
     default:
       return null;
   }
@@ -623,7 +629,7 @@ function onHeardNormal(state, alternatives) {
     }
   }
   // Nothing usable at all is a failed answer attempt too (REQ-SPCH-011 struggle counter).
-  return listenAgain({ ...state, missStreak: (state.missStreak ?? 0) + 1 }, [{ kind: 'didnt-catch' }]); // REQ-CMD-003
+  return listenAgain(missed(state), [{ kind: 'didnt-catch' }]); // REQ-CMD-003
 }
 
 function onStart(state, { snapshot, settings }) {
@@ -753,7 +759,9 @@ function onSttError(state, { code, silentMs }) {
       // Enough quiet — just stop listening, as silently as the icon toggle.
       return { state: { ...state, phase: 'done' }, actions: [{ type: 'END', reason: 'silence' }] };
     }
-    return { state: { ...state, phase: 'listening' }, actions: [{ type: 'LISTEN' }] };
+    // A silent cycle between resets means the background talk stopped — a genuine storm
+    // (REQ-SPCH-012) is back-to-back resets, so the consecutive count starts over here.
+    return { state: { ...state, phase: 'listening', resetStreak: 0 }, actions: [{ type: 'LISTEN' }] };
   }
   // network / audio-capture / other: retry once (REQ-SPCH-004)
   if (!state.sttRetried) {
@@ -878,7 +886,7 @@ function onHeard(state, { alternatives }) {
   // A successful hearing clears the retry flag and the reset streak (REQ-SPCH-012).
   const s = { ...state, sttRetried: false, resetStreak: 0 };
   if (!alternatives?.length) {
-    return listenAgain({ ...s, missStreak: (s.missStreak ?? 0) + 1 }, [{ kind: 'didnt-catch' }]);
+    return listenAgain(missed(s), [{ kind: 'didnt-catch' }]);
   }
   switch (s.mode) {
     case 'spelling': return onHeardSpelling(s, alternatives);

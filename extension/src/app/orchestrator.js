@@ -367,7 +367,13 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       try {
         snap = await pageClient.snapshot();
         pageClient.watch?.((kind, snapshot) => {
-          if (kind === 'grid') diagTyped(snapshot); // REQ-DIAG-002 — before the machine absorbs it
+          // REQ-DIAG-002 — diff BEFORE the machine absorbs the snapshot. Not only 'grid':
+          // the watcher reports one kind per tick with 'solved'/'selection' taking
+          // precedence, and NYT moves the cursor when a typed letter completes a word —
+          // so the last letter of a hand-typed answer arrives AS a selection (or solved)
+          // event. The diff no-ops when no letters changed. 'paused' stays excluded: the
+          // pause veil blanks the grid, which would read as a giant phantom edit.
+          if (kind === 'grid' || kind === 'selection' || kind === 'solved') diagTyped(snapshot);
           enqueue({ type: 'PAGE_EVENT', kind, snapshot });
         });
       } catch {

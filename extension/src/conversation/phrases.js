@@ -99,12 +99,15 @@ export function render(say) {
       // REQ-ANS-007: only the problem — no "I heard ..." preamble, no usage coaching.
       // A homophone respelling (swaps > 0) sounds identical to the literal word when read
       // aloud, so naming it would hand the "same" word two lengths — length only instead.
-      const named = say.variants.filter((v, i) => !v.swaps || i === 0);
-      const respelled = say.variants.filter((v) => !named.includes(v));
-      const list = named.map((v) => `${sayWord(v.word)} is ${v.len} letters`).join(', and ');
-      const others = respelled.length
-        ? `, or ${respelled.map((v) => v.len).join(' or ')} spelled differently`
-        : '';
+      // When every variant is a respelling (the literal was rejected via "you misheard"),
+      // no word is voiced at all: the lengths are the whole report.
+      const named = say.variants.filter((v) => !v.swaps);
+      const respelled = say.variants.filter((v) => v.swaps);
+      const list = named.length
+        ? named.map((v) => `${sayWord(v.word)} is ${v.len} letters`).join(', and ')
+        : `That's ${respelled[0].len} letters`;
+      const otherLens = (named.length ? respelled : respelled.slice(1)).map((v) => v.len);
+      const others = otherLens.length ? `, or ${otherLens.join(' or ')} spelled differently` : '';
       // REQ-ANS-018: while spelling a partially solved entry, both counts work.
       const alsoOpen = say.open ? `, or ${say.open} for just the open squares` : '';
       return `${list}${others} — we need ${say.needed}${alsoOpen}.`;

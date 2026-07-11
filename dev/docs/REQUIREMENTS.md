@@ -850,7 +850,9 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   sound identical to the literal reading, so `"Newyork is 7 letters, and Knewyork is 8 letters"`
   reads as the same word given two lengths (field data: issue #43). A respelled variant is
   reported by its length alone: `"Newyork is 7 letters, or 8 spelled differently — we need 4."`
-  Distinct heard words (from different recognizer alternatives) are still named in full.
+  Distinct heard words (from different recognizer alternatives) are still named in full. When
+  every variant is a respelling (the literal was rejected via "you misheard", REQ-ANS-010), no
+  word is voiced at all — `"That's 8 letters — we need 5."`
 - **Accept:** Given "ocelot" for a 4-entry, then the reply contains OCELOT, 6, and 4; given
   "new york" for a 4-entry (homophone expansion KNEWYORK), then the reply names NEWYORK and 7,
   gives 8 only as "spelled differently", and never voices KNEWYORK.
@@ -1535,10 +1537,14 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   SHOULD say once that background noise is the problem — e.g. *"I'm having trouble hearing over the
   background noise."* — and keep listening. The hint plays at most once per session (never a nag,
   REQ-CMD-005 spirit: this is a response to *speech* the recognizer can't finalize, not to
-  silence). Any successfully heard utterance resets the consecutive count.
+  silence). "Consecutive" is literal — back-to-back reset cycles, the observed storm signature: a
+  successfully heard utterance or a plain-silence (`no-speech`) cycle in between resets the count,
+  so a slow speller who trips isolated resets minutes apart (REQ-SPCH-010's accepted cost) never
+  hears the hint.
 - **Accept:** Given three consecutive `reset` errors while listening, then the hint is spoken once
   and listening continues; given a fourth and fifth reset, then nothing more is said; given a heard
-  utterance between resets, then the count starts over and no hint plays at two-plus-one resets.
+  utterance or a no-speech cycle between resets, then the count starts over and no hint plays at
+  two-plus-one resets.
 - **Verify:** unit `extension-test/unit/machine.test.js` (streak, one-shot, reset-on-heard),
   `extension-test/unit/verbalizer.test.js` (phrasing).
 

@@ -52,7 +52,7 @@ After a trim marker, the first Δ counts from the (dropped) previous event.
 | `(kind)` | any other spoken line, by its say kind |
 | `e?` | STT error: `en`o-speech `er`eset `ea`borted `ed`enied `ew`network `ec`apture `eo`ther |
 | `t 5A f.nn` | letters appeared WITHOUT us writing them — the user typed into 5-Across; `t *6` = 6 cells changed across entries (reveal/check) |
-| `z reason` | session ended: `user`, `goodbye`, `silence`, `win`, `nyt-pause`, `page-lost`, `mic-denied`, `stt-error`, `no-puzzle`, `already-solved` |
+| `z reason` | session ended: `user`, `goodbye`, `silence`, `win`, `nyt-pause`, `page-lost`, `worker-lost`, `mic-denied`, `stt-error`, `no-puzzle`, `already-solved` |
 
 **Trim markers** (REQ-DIAG-001): when the issue link runs out of budget, older sessions
 collapse to `(N events omitted)` first; the newest session then loses events from its
