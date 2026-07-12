@@ -17,6 +17,10 @@
           },
           {
             "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claudinite/skills/mount-skills.mjs"
+          },
+          {
+            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claudinite/packs/env.mjs check"
           }
         ]

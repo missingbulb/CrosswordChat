@@ -1,5 +1,6 @@
 {
   "packs": [
+    "basics",
     "chrome-extension",
     "chrome-extension-release",
     "github-actions",
@@ -7,5 +8,8 @@
     "spec-driven-product"
   ],
   "rules": {},
-  "accept": []
+  "accept": [],
+  "maintenance": {
+    "delivery": "push"
+  }
 }
