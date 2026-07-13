@@ -19,6 +19,7 @@ function runSession(listenScript) {
   let micStops = 0;
   let keepAlives = 0;
   let offs = 0;
+  let plays = 0;
   let pageEventCb = null;
   const emitPageEvent = (kind, snapshot) => pageEventCb?.(kind, snapshot);
 
@@ -38,7 +39,7 @@ function runSession(listenScript) {
         },
         stop: () => { micStops += 1; },
       },
-      ping: { play: () => {}, off: () => { offs += 1; }, dispose: () => {} },
+      ping: { play: () => { plays += 1; }, off: () => { offs += 1; }, dispose: () => {} },
       pageClient: {
         snapshot: async () => heartSnapshot(undefined, { selection: { clueId: 'A1' } }),
         watch: (cb) => { pageEventCb = cb; },
@@ -52,7 +53,7 @@ function runSession(listenScript) {
 
   return done.then(() => ({
     spoken, listens: () => listens, micStops: () => micStops,
-    keepAlives: () => keepAlives, offs: () => offs,
+    keepAlives: () => keepAlives, offs: () => offs, plays: () => plays,
   }));
 }
 
@@ -91,6 +92,15 @@ describe('orchestrator silence clock (REQ-CMD-005)', () => {
       ({ clock }) => { clock.t += SILENCE_TIMEOUT_MS; return noSpeech; },
     ]);
     expect(listens()).toBe(2); // the 70 s cycle did NOT end the session
+  });
+
+  test('REQ-SPCH-010: the reset reopen is silent — no ready ping, only the first turn pings', async () => {
+    const { plays, listens } = await runSession([
+      () => ({ error: 'reset' }), // LISTEN #1 (post-readout) pinged; a mid-utterance reset follows
+      ({ clock }) => { clock.t += SILENCE_TIMEOUT_MS; return noSpeech; }, // silent reopen, then quiet end
+    ]);
+    expect(listens()).toBe(2);
+    expect(plays()).toBe(1); // only the handed-turn opening pinged; the reset reopen stayed silent
   });
 
   test('REQ-LIFE-017: a heard command keeps the puzzle alive; silence sends no nudge', async () => {

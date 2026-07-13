@@ -651,11 +651,18 @@ entities. The readout must convey what the eye would see.
   than getting stuck. Skip memory is
   session-scoped; it does not constrain the list-order strategy (REQ-NAV-002), *back*
   (REQ-NAV-009), *flip* (REQ-NAV-010), or manual clicks (REQ-NAV-008).
+- When *next* lands the user back on a clue they had skipped — the cycle-back once everything has
+  been passed, or a skip made eligible again by a fresh crossing letter — the readout MUST announce
+  the return (a short lead such as *"Back to this one."*) rather than reading the clue as if it were
+  a brand-new suggestion. A silent re-offer read as "why has it put me back on the one I keep
+  skipping?" (field feedback); naming it as a return makes the loop legible instead of confusing.
 - **Accept:** Given four open entries with distinct open counts under most-filled, when the user
   says next four times, then the entries are visited fewest-open first with no repeats,
-  and a fifth next returns to the first-skipped one; given a skipped entry gains a letter from a
-  crossing answer, then the following next offers it again.
-- **Verify:** unit `extension-test/unit/strategies.test.js`, `extension-test/unit/machine.test.js`; manual MT-28.
+  and a fifth next returns to the first-skipped one *and is announced as a return*; given a skipped
+  entry gains a letter from a crossing answer, then the following next offers it again; given a
+  never-before-skipped clue is offered, then it is read plainly with no return lead.
+- **Verify:** unit `extension-test/unit/strategies.test.js`, `extension-test/unit/machine.test.js`,
+  `extension-test/unit/verbalizer.test.js`; manual MT-28.
 
 #### REQ-NAV-012 — Default strategy is a persisted setting
 - **Status:** Active · **Level:** MUST
@@ -1018,12 +1025,19 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   reads as "fill just those" — a single letter for a single hole included. Ambiguity with a
   same-length word reading is offered as a choice, never guessed (REQ-ANS-009). The same applies
   to "spell" carrying letters (REQ-ANS-011): *spell A, T* on a 2-open entry fills the holes
-  immediately.
+  immediately. Because the recognizer often glues a quick two-letter spelling into a single token
+  ("O, D" → `OD`) that the letter reader cannot split, a lone alphabetic token exactly as long as
+  the open-square count (and shorter than the entry) MUST also read as those letters filling the
+  holes — rather than dead-ending on the maddening "`OD` is 2 letters, we need 4". This split is
+  scoped to the partial-fill case: on an empty entry a token is a plain word (REQ-ANS-020), and a
+  token longer than the open count is never a fill.
 - **Accept:** Given A1 reads `H__R_` (squares 2, 3 and 5 open) in spelling mode, when the user
   spells "E, A, T" and says done, then HEART is spelled back and entered. Given the same entry,
   spelling H-E-A-R-T still auto-evaluates to HEART at the fifth letter. Given "E, A" then done, the
   report offers 5 letters or 3 for the open squares. Given A1 reads `HE_R_` in NORMAL listening,
-  when the user says "A, T" (or "alpha tango"), then HEART is spelled back and entered — no mode.
+  when the user says "A, T" (or "alpha tango"), then HEART is spelled back and entered — no mode;
+  given the same entry and the recognizer returns the glued token "AT", then HEART is still filled;
+  given an empty A1, then "AT" is a plain word (length mismatch), not a two-letter fill.
 
 #### REQ-ANS-019 — Overriding softens the malformed crossings to pencil
 - **Status:** Active · **Level:** MUST
@@ -1480,21 +1494,28 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 #### REQ-SPCH-010 — Mid-utterance pause resets; the ready ping is the cue
 - **Status:** Active · **Level:** MUST
 - When the recognizer has interim hypotheses (the user started speaking) but produces no final
-  result and the hypotheses stop changing for longer than the pause limit (~1.2 s), the listen
+  result and the hypotheses stop changing for longer than the pause limit (~1.8 s), the listen
   cycle MUST discard the half-heard input and surface `reset`; the shell reopens the mic at once,
   and the machine says nothing about it. Rationale: engines that miss their endpoint otherwise
-  swallow the pause AND the user's repeat into one absurd utterance ("heart heart"). Silence with
-  no speech at all stays a plain `no-speech` (REQ-CMD-005) — a reset only ever follows actual
+  swallow the pause AND the user's repeat into one absurd utterance ("heart heart"). The limit sits
+  well above a natural mid-command pause on purpose: at ~1.2 s a solver who paused to think
+  mid-instruction had the command dropped out from under them (field feedback: "ruins commands
+  mid-instruction"), so the window is set to catch only the genuine missed-endpoint case. Silence
+  with no speech at all stays a plain `no-speech` (REQ-CMD-005) — a reset only ever follows actual
   speech, and it counts as user activity for the silence clock. Slow letter-by-letter spellers
   will trip this; that is accepted and signaled (below).
-- Every formal mic opening MUST play a tiny audible ping — the audible cursor: after a readout it
-  means "you can speak now", after a reset it means "start over from scratch". The ping is
-  best-effort (Web Audio; no audio → no ping, never an error) and MUST NOT play for barge-in
-  cycles while TTS is still speaking. Resets during barge-in listening are routine (our own voice
-  pauses) and MUST NOT terminate the barge-in watcher.
-- **Accept:** Given interim results then 1.2 s of stillness, then the cycle resolves `reset`, the
-  next LISTEN follows immediately with a ping, and nothing is spoken; given plain silence, then
-  `no-speech` (no reset); given a fake with no AudioContext, then pings are silently skipped.
+- A mic opening that hands the user a turn — after a readout or a reply — MUST play a tiny audible
+  ping, the audible cursor meaning "you can speak now". A mic opening that is NOT a handed turn MUST
+  stay silent: the reopen after a mid-utterance `reset` (the user is still mid-instruction, not
+  being given the floor) and barge-in cycles while TTS is still speaking play no ping. A tick on
+  every reset — and on every cycle of a reset storm (REQ-SPCH-012) — read as intrusive rather than
+  helpful (field feedback), so the reset reopen is now invisible: the mic simply keeps listening.
+  The ping is best-effort (Web Audio; no audio → no ping, never an error). Resets during barge-in
+  listening are routine (our own voice pauses) and MUST NOT terminate the barge-in watcher.
+- **Accept:** Given interim results then ~1.8 s of stillness, then the cycle resolves `reset`, the
+  next LISTEN follows immediately and silently (no ping, nothing spoken); given a readout then a
+  LISTEN, then the ping plays; given plain silence, then `no-speech` (no reset); given a fake with
+  no AudioContext, then pings are silently skipped.
 - **Verify:** unit `extension-test/unit/speech-ports.test.js`, `extension-test/unit/machine.test.js`; manual MT-33.
 
 #### REQ-SPCH-011 — Experimental contextual biasing (on-device)

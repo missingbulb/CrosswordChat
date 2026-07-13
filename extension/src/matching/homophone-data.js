@@ -189,10 +189,10 @@ export function homophonesOf(word) {
 
 // Spelling mode vocab (REQ-ANS-011): spoken-word → letter.
 export const LETTER_NAMES = {
-  BEE: 'B', BE: 'B', CEE: 'C', SEA: 'C', SEE: 'C', DEE: 'D', EFF: 'F', GEE: 'G',
-  AITCH: 'H', EYE: 'I', AYE: 'I', JAY: 'J', KAY: 'K', EL: 'L', ELL: 'L', EM: 'M',
-  EN: 'N', OH: 'O', OWE: 'O', PEA: 'P', PEE: 'P', CUE: 'Q', QUEUE: 'Q', ARE: 'R',
-  ESS: 'S', TEA: 'T', TEE: 'T', YOU: 'U', EWE: 'U', VEE: 'V', EX: 'X', WHY: 'Y',
+  BEE: 'B', BE: 'B', CEE: 'C', SEA: 'C', SEE: 'C', DEE: 'D', EE: 'E', EFF: 'F', EF: 'F',
+  GEE: 'G', AITCH: 'H', EYE: 'I', AYE: 'I', JAY: 'J', KAY: 'K', EL: 'L', ELL: 'L', EM: 'M',
+  EN: 'N', OH: 'O', OWE: 'O', PEA: 'P', PEE: 'P', CUE: 'Q', QUEUE: 'Q', AR: 'R', ARE: 'R',
+  ESS: 'S', ES: 'S', TEA: 'T', TEE: 'T', YOU: 'U', EWE: 'U', VEE: 'V', EX: 'X', WHY: 'Y',
   ZEE: 'Z', ZED: 'Z',
 };
 

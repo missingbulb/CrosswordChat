@@ -200,6 +200,37 @@ describe('evaluate', () => {
       .toBe('length-mismatch');
   });
 
+  test('REQ-ANS-018: two open letters glued into one token still fill just those squares', () => {
+    // A fast "O, D" for the two open squares often comes back as one token "OD" that the
+    // letter reader can't split — the maddening "OD is 2, we need 4" was the complaint.
+    // A single alphabetic token exactly as long as the open count fills the holes.
+    expect(evaluate({ alternatives: [{ transcript: 'od' }], entryLength: 4, pattern: P('W.R.') }))
+      .toEqual({ kind: 'fit', word: 'WORD', spelledDifferently: true });
+    expect(evaluate({ alternatives: [{ transcript: 'OD' }], entryLength: 4, pattern: P('W.R.') }))
+      .toEqual({ kind: 'fit', word: 'WORD', spelledDifferently: true });
+    // Three open, one glued three-letter token.
+    expect(evaluate({ alternatives: [{ transcript: 'eat' }], entryLength: 5, pattern: P('H..R.') }))
+      .toEqual({ kind: 'fit', word: 'HEART', spelledDifferently: true });
+    // An empty entry never triggers it — a glued token there is a plain word (REQ-ANS-020).
+    expect(evaluate({ alternatives: [{ transcript: 'od' }], entryLength: 4, pattern: P('....') }).kind)
+      .toBe('length-mismatch');
+    // The token must match the open count exactly — a longer word is not a fill.
+    expect(evaluate({ alternatives: [{ transcript: 'cat' }], entryLength: 4, pattern: P('W.R.') }).kind)
+      .toBe('length-mismatch');
+  });
+
+  test('single-syllable letter names (ar, ef, es, ee) are recognized like their doubled forms', () => {
+    // STT renders spoken letters as short name words as often as the doubled spelling;
+    // "ar es" for R, S must read the same as "are ess" (REQ-ANS-020/018).
+    for (const [name, letter] of [['ar', 'R'], ['ef', 'F'], ['es', 'S'], ['ee', 'E']]) {
+      expect(collectSpelledLetters(name).letters, name).toEqual([letter]);
+    }
+    // Two such letters fill a two-open entry rather than dead-ending on a length report.
+    // .EE. with R, F in the two holes → REEF.
+    expect(evaluate({ alternatives: [{ transcript: 'ar ef' }], entryLength: 4, pattern: P('.EE.') }))
+      .toEqual({ kind: 'fit', word: 'REEF', spelledDifferently: true });
+  });
+
   test('REQ-ANS-020: length gate picks between the literal and the spelled reading', () => {
     // "are you" on a 2-cell entry: AREYOU (6) fails, spelled R-U fits.
     expect(evaluate({ alternatives: [{ transcript: 'are you' }], entryLength: 2, pattern: P('..') }))

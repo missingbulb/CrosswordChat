@@ -138,10 +138,23 @@ export function evaluate({ alternatives, entryLength, pattern, rejected = [], li
       // letter is allowed here (one hole, one letter); ambiguity with a same-length
       // word reading is surfaced, never guessed (REQ-ANS-009).
       const open = pattern.filter((l) => !l).length;
-      if (!control && !ignored && letters.length && letters.length === open && open < entryLength) {
-        let next = 0;
-        const word = pattern.map((have) => have ?? letters[next++]).join('');
-        candidates.push({ word, swaps: 0, altIndex });
+      if (open && open < entryLength) {
+        // The spoken letters, however the recognizer packaged them. Normally clean letter
+        // tokens (bare, letter names, NATO). But a quick "O, D" for two open squares often
+        // comes back glued as ONE token "OD" that collectSpelledLetters can't read — so when
+        // the whole utterance is a single alphabetic token exactly `open` letters long, split
+        // it back into those letters instead of reporting the maddening "OD is 2, we need 4"
+        // (the grid fixes the length; a lone glued token can't be a real answer here anyway).
+        const openFill = (!control && !ignored && letters.length === open)
+          ? letters
+          : (tokens.length === 1 && tokens[0].length === open && /^[A-Z]+$/.test(tokens[0]))
+            ? tokens[0].split('')
+            : null;
+        if (openFill) {
+          let next = 0;
+          const word = pattern.map((have) => have ?? openFill[next++]).join('');
+          candidates.push({ word, swaps: 0, altIndex });
+        }
       }
     }
     const combos = literalOnly

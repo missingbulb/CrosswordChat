@@ -257,9 +257,11 @@ Covers: REQ-NAV-011 REQ-NAV-012
 4. Reopen Settings…; switch back to "In list order" and Save; start a new session and say "next".
 5. **PASS:** step 2 — each "next" lands on the open clue closest to done (the fewest blank letters
    left) that you haven't just skipped: no ping-ponging between the two nearest completion; once
-   every open clue has been skipped, "next" cycles back to the one skipped longest ago. Step 3 — the skipped
-   entry whose letters just changed is offered again. Step 4 — the new session advances in plain
-   list order; the setting survived the browser restart / new session.
+   every open clue has been skipped, "next" cycles back to the one skipped longest ago, and the
+   readout leads with a short "Back to this one." so the return is obvious, not a mystery. Step 3 —
+   the skipped entry whose letters just changed is offered again (also announced as a return). Step
+   4 — the new session advances in plain list order; the setting survived the browser restart / new
+   session.
 
 ### MT-29 — Override pencils the malformed crossing; undo restores pen
 Covers: REQ-ANS-019 REQ-PAGE-012 REQ-ANS-023 REQ-ANS-024 REQ-ANS-025
@@ -335,15 +337,17 @@ Covers: REQ-SPCH-001 REQ-SPCH-010 REQ-LIFE-015 REQ-LIFE-016
    With the session still running, open Settings… (right-click the toolbar icon), drag the
    reading speed slider to the maximum, press Save (the popup closes), and say "repeat".
 2. Say half an answer and stop mid-word; wait ~2 s.
-3. Say an answer, wait ~2 s, then repeat the same answer.
+3. Say an answer, wait ~2.5 s, then repeat the same answer.
 4. Press Escape mid-session. Then open a fresh puzzle showing "Ready to start solving?" and
    start a session from the toolbar button without clicking Play yourself.
-5. **PASS:** step 1 — speech plays at a comfortable clip (default 1.3×) and a tiny ping marks
-   the mic opening; after moving the slider the very next line is dramatically faster — no
-   session restart needed — and reopening Settings… shows the slider where you left it.
-   Step 2 — a ping replays (the reset cue); nothing is spoken about it. Step 3 — the answer is
-   never doubled into "X X"; either the first utterance was taken, or the reset ping told you to
-   restart. Step 4 — Escape cuts speech and mic instantly (button back to gold) and NYT's rebus
+5. **PASS:** step 1 — speech plays at a comfortable clip (default 1.3×) and a tiny ping marks the
+   mic opening after the readout (your turn); after moving the slider the very next line is
+   dramatically faster — no session restart needed — and reopening Settings… shows the slider where
+   you left it. Step 2 — after ~1.8 s the half-heard input is dropped and the mic quietly reopens
+   with NO ping and nothing spoken (the reset is invisible now — a tick there interrupted more than
+   it helped). Step 3 — the answer is never doubled into "X X": either the first utterance was
+   taken, or it was silently dropped and only your repeat counts. Step 4 — Escape cuts speech and
+   mic instantly (button back to gold) and NYT's rebus
    box does NOT open (we swallow the key during a session; outside one, Escape reaches NYT
    normally); on the splash page, Play is clicked for you (or you're asked to click it), and
    the first clue reads once the board shows. If the splash is NOT handled (session starts
