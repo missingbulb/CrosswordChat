@@ -90,12 +90,12 @@ describe('session diagnostics log (REQ-DIAG-001, REQ-DIAG-002)', () => {
       startedAt: 0,
       settings: {},
       entries: [
-        { t: 0, kind: 'said', say: { kind: 'kept' } },
+        { t: 0, kind: 'said', say: { kind: 'brand-new-kind' } },
         { t: 1000, kind: 'stt-error', code: 'weird-new-code' },
         { t: 2000, kind: 'typed', cells: 6 }, // multi-entry change (reveal-all etc.)
       ],
     }]);
-    expect(text).toContain('(kept)');
+    expect(text).toContain('(brand-new-kind)');
     expect(text).toContain('e(weird-new-code)');
     expect(text).toContain('t *6');
   });

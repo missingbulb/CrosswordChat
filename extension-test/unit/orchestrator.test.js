@@ -450,9 +450,9 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
     expect(spoken[1]).toContain('Goodbye');
   });
 
-  test('REQ-SPCH-005: "yes" barged into the "Yes or no." prompt is the reply, not echo', async () => {
+  test('REQ-SPCH-005: "second" barged into the "First or second?" prompt is the reply, not echo', async () => {
     const spoken = [];
-    const confirmPrompt = deferred(); // the replace-confirm prompt, held in-flight
+    const askPrompt = deferred(); // the disambiguation prompt, held in-flight
     const entered = [];
     let listening = false;
     let formalListens = 0;
@@ -461,34 +461,34 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
         tts: {
           speak: (text) => {
             spoken.push(text);
-            // Hold only the replace-confirm prompt open so the user can barge into it.
-            return text.includes('Yes or no') ? confirmPrompt.p : Promise.resolve();
+            // Hold only the "First or second?" prompt open so the user can barge into it.
+            return text.includes('First or second') ? askPrompt.p : Promise.resolve();
           },
-          cancel: () => confirmPrompt.resolve(),
+          cancel: () => askPrompt.resolve(),
         },
         stt: {
           listenOnce: () => {
             if (listening) { // formal LISTEN cycles
               formalListens += 1;
               return Promise.resolve(formalListens === 1
-                ? { alternatives: [{ transcript: 'panda', confidence: 0.9 }] } // triggers replace-confirm
+                ? { alternatives: [{ transcript: 'plain', confidence: 0.9 }] } // ambiguous: PLAIN / PLANE
                 : { alternatives: [{ transcript: 'goodbye', confidence: 0.9 }] });
             }
-            // Barge-in cycle during the confirm prompt: the user answers "yes" —
+            // Barge-in cycle during the disambiguation prompt: the user picks "second" —
             // a word that literally appears in the prompt being spoken.
-            return Promise.resolve({ alternatives: [{ transcript: 'yes', confidence: 0.9 }] });
+            return Promise.resolve({ alternatives: [{ transcript: 'second', confidence: 0.9 }] });
           },
           stop: () => {},
         },
         ui: { listening: (on) => { listening = on; } },
         pageClient: {
-          // A1 already reads HEART, so a fitting new answer asks for confirmation.
-          snapshot: async () => heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }),
+          // A1 is .L... — "plain" fits ambiguously as PLAIN or PLANE, so we ask which.
+          snapshot: async () => heartSnapshot(['.L...', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }),
           enterAnswer: async (cells) => {
             entered.push(cells.map((c) => c.letter).join(''));
             return {
               ok: true,
-              snapshot: heartSnapshot(['PANDA', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }),
+              snapshot: heartSnapshot(['PLANE', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }),
             };
           },
           selectClue: async () => ({ ok: true }),
@@ -501,10 +501,10 @@ describe('stop-only barge-in (REQ-CMD-006)', () => {
     });
     await ended;
 
-    // The barged "yes" was honored: the replacement really landed.
-    expect(spoken[1]).toContain('Yes or no');
-    expect(spoken[2]).toContain('entering Panda');
-    expect(entered).toEqual(['PANDA']);
+    // The barged "second" was honored, not discarded as echo: the pick really landed.
+    expect(spoken[1]).toContain('First or second');
+    expect(spoken[2]).toContain('fits'); // the chosen spelling, entered straight away
+    expect(entered).toHaveLength(1);
     expect(spoken[3]).toContain('Dying fire bit'); // conversation moved on to 6 Across
     expect(spoken[4]).toContain('Goodbye');
   });

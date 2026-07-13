@@ -69,11 +69,11 @@ describe('STT contextual biasing (REQ-SPCH-011)', () => {
     expect(phrasesFor({ biasing: 'off', mode: 'normal', model, clueId: 'A1', struggling: true })).toEqual([]);
   });
 
-  test('full mode adds yes/no/first during confirmation and disambiguation', () => {
-    const words = phrasesOf(phrasesFor({ biasing: 'full', mode: 'confirm-replace', model: fakeModel(), clueId: 'A1' }));
-    expect(words).toContain('yes');
-    expect(words).toContain('no');
+  test('full mode adds the contextual reply words during disambiguation', () => {
+    const words = phrasesOf(phrasesFor({ biasing: 'full', mode: 'disambiguating', model: fakeModel(), clueId: 'A1' }));
     expect(words).toContain('first');
+    expect(words).toContain('second');
+    expect(words).toContain('third');
   });
 
   test('every boost stays within the Web Speech range (0–10]', () => {

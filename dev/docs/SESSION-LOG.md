@@ -40,8 +40,9 @@ After a trim marker, the first Δ counts from the (dropped) previous event.
 | Body | Meaning |
 |---|---|
 | `>5A.4` | read clue 5-Across, entry length 4 (clue text is on the puzzle page, not logged) |
-| `h alt~69*alt~42` | heard n-best: plain-text transcripts, `~NN` = confidence 0–99 (omitted when 0). Tag variants: `hb` barge-in; mode letter `hs` spelling, `hc` confirm, `hd` disambiguating, `hg` goto-number |
+| `h alt~69*alt~42` | heard n-best: plain-text transcripts, `~NN` = confidence 0–99 (omitted when 0). Tag variants: `hb` barge-in; mode letter `hs` spelling, `hd` disambiguating, `hg` goto-number |
 | `+` / `+lama` | accepted, "Fits!"; the word appears only when written differently than heard |
+| `++` / `++lama` | accepted over a fully filled entry, "Override!" (REQ-ANS-016); the word appears only when written differently than heard |
 | `L7.8n4` | length mismatch: candidate lengths 7 and 8, entry needs 4 (`o2` suffix = "or 2 for the open squares") |
 | `x3` / `x3.2` | collision at letter 3 (+2 more clashes) |
 | `a2` | ambiguous between 2 spellings |

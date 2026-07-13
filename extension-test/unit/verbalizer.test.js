@@ -178,10 +178,12 @@ describe('outcome phrasing', () => {
       .toContain('Nothing filled in yet.');
   });
 
-  test('REQ-ANS-016: replace confirmation names both words', () => {
-    const out = render({ kind: 'replace-confirm', word: 'HEART', current: 'WRONG' });
-    expect(out).toContain('already reads Wrong');
-    expect(out).toContain('Replace it with Heart?');
+  test('REQ-ANS-016: an override is a terse "Override!"; only homophone rescues get spelled out', () => {
+    expect(render({ kind: 'override', word: 'HEART', spelledDifferently: false })).toBe('Override!');
+    const spelled = render({ kind: 'override', word: 'ATE', spelledDifferently: true });
+    expect(spelled).toContain('A, T, E');
+    expect(spelled).toContain('override');
+    expect(spelled).not.toContain('letters'); // no letter count, no confirmation prompt
   });
 
   test('REQ-LIFE-004/REQ-LIFE-005: celebrations are celebratory', () => {

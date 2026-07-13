@@ -9,7 +9,7 @@ import { phrasesFor } from '../speech/biasing.js';
 
 // Echo guard threshold (REQ-SPCH-005): a heard chunk of this many letters found inside
 // the text we're speaking is decisive proof of our own voice. Below it, a fragment is
-// ambiguous — prompts solicit one-word replies ("Yes or no", "say anyway") that are,
+// ambiguous — prompts solicit one-word replies ("say anyway", "First or second") that are,
 // by construction, substrings of the prompt itself.
 export const ECHO_MIN_LETTERS = 8;
 
@@ -135,7 +135,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
         // the spoken text are evidence of our own voice coming back through the mic.
         // A substantial chunk (or the whole prompt) on ANY alternative is decisive.
         // A short fragment alone is not: prompts invite one-word replies that are
-        // part of the prompt text ("Yes or no", "say anyway", "First or second"), so
+        // part of the prompt text ("say anyway", "First or second"), so
         // a short fragment only counts as echo when NO alternative parses as a
         // command/reply the user could be giving deliberately. Residual risk
         // (accepted): recognition of our own voice that yields ONLY a bare command
