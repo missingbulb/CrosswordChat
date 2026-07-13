@@ -18,6 +18,23 @@ function unfilledIds(model) {
 }
 
 /**
+ * Ids of the clues that CROSS `fromId` — the perpendicular entries sharing one of its
+ * cells (REQ-NAV-004 crossing tiebreak). Solving any of them fills a letter of `fromId`,
+ * so at equal closeness one of these is offered before a clue that never touches the
+ * current entry. Empty set when `fromId` is unknown.
+ */
+function crossingIds(model, fromId) {
+  const clue = model.clue(fromId);
+  if (!clue) return new Set();
+  const ids = new Set();
+  clue.cellIndices.forEach((_, pos) => {
+    const cross = model.crossingAt(fromId, pos);
+    if (cross) ids.add(cross.clueId);
+  });
+  return ids;
+}
+
+/**
  * @param {string[]} avoid  recently skipped clue ids, oldest skip first (REQ-NAV-011);
  *   honored by most-filled only — list order has a fixed path and cannot loop.
  * @returns {{clueId: string} | null}  null when nothing is unfilled.
@@ -33,9 +50,11 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
     // entry with many blanks outrank a short one needing a single letter, so the long one
     // got suggested over and over while the near-finished clue waited. A penciled cell is
     // the solver's own "not sure" mark (REQ-ANS-023 — real progress, but shaky), so it
-    // counts as half-open, not closed. Equal open counts go to the clue NEAREST the
-    // current one in list order (smallest jump; forward wins an exact-distance tie), then
-    // list order; current clue last resort.
+    // counts as half-open, not closed. Equal open counts break FIRST toward a clue that
+    // CROSSES the current entry — the intersecting answer sits where the solver is working
+    // and finishing it fills a letter here — then, among clues of equal crossing status, to
+    // the one NEAREST in list order (smallest jump; forward wins an exact-distance tie),
+    // then list order; current clue last resort.
     const others = candidates.filter((id) => id !== fromId);
     const order = model.orderedClueIds;
     const from = Math.max(order.indexOf(fromId), 0);
@@ -44,10 +63,13 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
       const pencil = model.pencilFor(id);
       return pattern.reduce((sum, letter, i) => sum + (letter ? (pencil[i] ? PENCIL_OPEN : 0) : 1), 0);
     };
+    const crosses = crossingIds(model, fromId);
+    const crossRank = (id) => (crosses.has(id) ? 0 : 1); // crossing the current clue sorts first
     const dist = (id) => Math.abs(order.indexOf(id) - from);
     const fresh = others
       .filter((id) => !avoid.includes(id))
       .sort((a, b) => openLetters(a) - openLetters(b)
+        || crossRank(a) - crossRank(b)
         || dist(a) - dist(b)
         || (order.indexOf(b) > from) - (order.indexOf(a) > from)
         || order.indexOf(a) - order.indexOf(b));

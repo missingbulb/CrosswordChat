@@ -550,7 +550,10 @@ entities. The readout must convey what the eye would see.
   FEWEST first — the entry closest to being finished is offered first — with a penciled cell
   counting as HALF-open: pencil marks are the solver's own "not sure" notes (REQ-ANS-023), real
   progress but shaky, so a penciled cell is half-closed, not closed. Equal open counts are
-  tie-broken by DISTANCE: the clue nearest the current one in list order wins (smallest jump — from
+  tie-broken FIRST by CROSSING, then by DISTANCE. CROSSING: a clue that shares a cell with the
+  current entry — one whose answer would fill a letter of the clue in front of the solver — is
+  offered before an equally-close clue that does not cross it. DISTANCE (among clues of equal
+  crossing status): the clue nearest the current one in list order wins (smallest jump — from
   clue 4, an equal clue 5 beats clue 6), a forward clue winning an exact-distance tie; remaining
   ties by list order, cycling through the current clue last. Rationale: "easiest first" should
   steer the solver to what they can finish NOW — the entry with the fewest gaps left — not the
@@ -558,12 +561,20 @@ entities. The readout must convey what the eye would see.
   let a long entry with many blanks outrank a short one needing a single letter, so the long entry
   was suggested over and over while the near-finished one waited (user feedback 2026-07: fewest
   open letters beats most letters placed — a 2-of-3 entry, 1 gap, beats a 3-of-5 entry, 2 gaps).
-  Among equals the smallest jump keeps the solver oriented.
+  Among equals a crossing entry beats bare list-order distance because list-order proximity is a
+  poor proxy for spatial nearness — 5 Down is adjacent to 4 Down by number yet need not touch it,
+  while 10 Across may cross 4 Down cell-to-cell; the crossing entry is the one sitting where the
+  solver is working, and finishing it unlocks a letter of the current answer (user feedback 2026-07).
+  Once crossing status is equal, the smallest jump keeps the solver oriented.
 - **Accept:** Given a 2-of-3 entry (1 open) and a 3-of-5 entry (2 open), when advancing under
   most-filled, then the 2-of-3 entry is chosen — fewer gaps wins even though it holds fewer
   letters; given one entry with 4 penciled + 1 blank (open 3) and another with 3 pen + 2 blank
-  (open 2), then the pen entry is chosen (shaky pencil leaves it more open). Given equal open
-  counts one and two steps ahead, then the one-step clue is chosen.
+  (open 2), then the pen entry is chosen (shaky pencil leaves it more open). Given two unfilled
+  entries equally close to done — one crossing the current clue, one not — then the crossing entry
+  is chosen even when the non-crossing one is nearer in list order; from an all-open Down clue,
+  "next" offers the nearest crossing Across rather than the numerically adjacent Down. Given equal
+  open counts AND equal crossing status one and two steps ahead (a block-separated band of parallel
+  entries), then the one-step clue is chosen, forward winning an exact tie.
 - **Verify:** unit `extension-test/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice

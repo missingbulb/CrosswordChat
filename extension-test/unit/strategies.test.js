@@ -7,6 +7,11 @@ import { heartSnapshot, makeSnapshot } from '../helpers/snapshots.js';
 // controllable lengths/fills. A1 = 3 of 5 (2 open), A2 = 2 of 3 (1 open), A3 = 0 of 5.
 const COUNT_ROWS = ['HEA..', '#####', 'AB.#.', '#####', '.....'];
 
+// A block-separated band of three parallel across entries (A1, A2, A3) with NO downs,
+// so nothing crosses anything: distance/forward ties can be tested free of the crossing
+// tiebreak. All empty → every open count is equal.
+const BAND_ROWS = ['.....', '#####', '.....', '#####', '.....'];
+
 describe('next-clue strategies', () => {
   test('REQ-NAV-002: list order advances after the current clue and wraps', () => {
     const model = buildModel(heartSnapshot());
@@ -39,18 +44,33 @@ describe('next-clue strategies', () => {
     expect(pick.clueId).toBe('A1'); // 2 open letters, fewer than everything else
   });
 
-  test('REQ-NAV-004: most-filled prefers others over the current clue; ties go nearest', () => {
-    const model = buildModel(heartSnapshot());
-    // All empty: ties everywhere → the closest clue in list order (here also the next one).
-    expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A6');
+  test('REQ-NAV-004: with no crossings, equal open counts jump the least distance; forward wins a tie', () => {
+    // Parallel band, all empty → open counts equal and nothing crosses, so DISTANCE alone
+    // decides. From A2 both neighbours are one step away — forward (A3) wins the exact tie.
+    const model = buildModel(makeSnapshot(BAND_ROWS));
+    expect(nextClue(model, 'A2', 'most-filled').clueId).toBe('A3');
+    // From A1, A2 is one step and A3 two — the nearer clue is offered, current excluded.
+    expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A2');
   });
 
-  test('REQ-NAV-004: equal open counts jump the least distance; forward wins an exact tie', () => {
+  test('REQ-NAV-004: among equally-close clues, one crossing the current entry beats a nearer non-crosser', () => {
+    // Full 5×5, all empty → every open count ties, so the CROSSING tiebreak governs. Every
+    // Across crosses every Down here. From D3 the list-order-adjacent clues are D2/D4 (one
+    // step) — but they run parallel to D3 and never touch it, so an Across that crosses D3
+    // is offered first; the nearest such crosser is A9. Distance alone would have said D4.
     const model = buildModel(heartSnapshot());
-    // All open counts equal. From A8: A7 and A9 are both one step away — forward wins.
-    expect(nextClue(model, 'A8', 'most-filled').clueId).toBe('A9');
-    // From D2 the nearest open clues are D1/D3 (one step) — never a far jump to A1.
-    expect(nextClue(model, 'D2', 'most-filled').clueId).toBe('D3');
+    expect(nextClue(model, 'D3', 'most-filled').clueId).toBe('A9');
+    // Symmetric from an Across: A7/A9 sit one step from A8 but are parallel; the crossing
+    // Downs win, nearest first → D1. (Before the crossing rule this returned A9.)
+    expect(nextClue(model, 'A8', 'most-filled').clueId).toBe('D1');
+  });
+
+  test('REQ-NAV-004: closeness still dominates crossing — fewer gaps wins even without crossing', () => {
+    // A7 is 4-of-5 (1 open) and runs parallel to the current clue A9 (never crosses it).
+    // The Downs D1–D4 DO cross A9 but sit at 1-of-5 (4 open). Closest-to-done ranks first,
+    // so the non-crossing A7 is still chosen over every crossing-but-emptier Down.
+    const model = buildModel(heartSnapshot(['.....', '.....', 'ABUS.', '.....', '.....']));
+    expect(nextClue(model, 'A9', 'most-filled').clueId).toBe('A7');
   });
 
   test('REQ-NAV-004: most-filled ranks by gaps remaining, not letters placed', () => {
