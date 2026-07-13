@@ -67,6 +67,11 @@ describe('clue readout (READ)', () => {
     expect(clue('Plain clue', { greeting: true }).startsWith("Let's solve. Plain clue.")).toBe(true);
     expect(clue('Plain clue', { wrapped: true })).toBe('Plain clue.'); // REQ-NAV-006 retired
   });
+
+  test('REQ-NAV-011: a revisited (skipped) clue is prefixed so it does not read as new', () => {
+    expect(clue('Plain clue', { revisit: true })).toBe('Back to this one. Plain clue.');
+    expect(clue('Plain clue')).toBe('Plain clue.'); // default: no prefix
+  });
 });
 
 describe('outcome phrasing', () => {

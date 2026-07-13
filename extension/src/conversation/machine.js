@@ -219,6 +219,11 @@ function advance(from, leadSays = []) {
     ], 'listen');
   }
   // Landing on a clue clears its skip record — skipping it again re-files it as newest.
+  // REQ-NAV-011: when "next" comes back around to a clue the user had skipped (the
+  // cycle-back once everything's been passed, or a skip made eligible again by a fresh
+  // crossing letter), announce it as a return rather than reading it like a brand-new
+  // suggestion — the silent re-offer read as "why am I back on the one I keep skipping?".
+  const revisit = state.skipped.some((e) => e.clueId === next.clueId);
   const s = {
     ...moveTo(state, next.clueId),
     skipped: skipped.filter((e) => e.clueId !== next.clueId),
@@ -226,7 +231,7 @@ function advance(from, leadSays = []) {
   return speak(s, [
     ...leadSays.map(say),
     { type: 'SELECT_CLUE', clueId: next.clueId },
-    say(clueSay(s.model, s.clueId)),
+    say(clueSay(s.model, s.clueId, revisit ? { revisit: true } : {})),
   ], 'listen');
 }
 
@@ -739,8 +744,9 @@ function onSttError(state, { code, silentMs }) {
   if (code === 'aborted') return { state, actions: [] };
   if (code === 'reset') {
     // REQ-SPCH-010: the port dropped a half-heard utterance after a mid-answer pause.
-    // Reopen the mic right away — the fresh LISTEN's ready ping tells the user they
-    // are starting from scratch.
+    // Reopen the mic right away, but SILENTLY — no ready ping. The user is mid-thought,
+    // not being handed a turn, and a tick on every reset (and every cycle of a reset
+    // storm) read as "intrusive, ruins commands mid-instruction" rather than helpful.
     const resetStreak = (state.resetStreak ?? 0) + 1;
     if (resetStreak >= RESET_STORM && !state.noiseHinted) {
       // REQ-SPCH-012: a reset storm is the one failure the user can't see — name it, once.
@@ -749,7 +755,7 @@ function onSttError(state, { code, silentMs }) {
         [{ kind: 'noise-hint' }],
       );
     }
-    return { state: { ...state, phase: 'listening', resetStreak }, actions: [{ type: 'LISTEN' }] };
+    return { state: { ...state, phase: 'listening', resetStreak }, actions: [{ type: 'LISTEN', silent: true }] };
   }
   if (code === 'not-allowed') { // REQ-SPCH-003
     return speak({ ...state, endReason: 'mic-denied' }, [say({ kind: 'mic-denied' })], 'end');

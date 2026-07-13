@@ -194,7 +194,10 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       }
       case 'LISTEN': {
         ui.listening?.(true);
-        ping?.play(); // REQ-SPCH-010: the audible cursor — mic open, slate clean
+        // REQ-SPCH-010: the audible cursor — mic open, slate clean. Suppressed on a
+        // silent reopen (a mid-utterance pause reset), where a tick would interrupt a
+        // solver still mid-instruction rather than hand them a turn.
+        if (!action.silent) ping?.play();
         const result = await stt.listenOnce({ phrases: biasPhrases() }); // REQ-SPCH-011
         ui.listening?.(false);
         if (ended) break;

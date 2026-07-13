@@ -62,7 +62,10 @@ export function createSttPort({
   // exist but the engine hasn't finalized) drops the half-heard input and surfaces
   // {error:'reset'} — the caller reopens a fresh cycle. Prevents "heart heart" doubles
   // when the engine misses its endpoint and the user repeats themselves. 0 disables.
-  pauseResetMs = 1200,
+  // Set well above a natural mid-command pause: at 1.2 s a solver who paused to think
+  // mid-instruction got their command dropped ("ruins commands mid-instruction"); the
+  // wider window keeps only the genuine missed-endpoint case a reset is meant to catch.
+  pauseResetMs = 1800,
 } = {}) {
   let current = null;
   let onDeviceProbe = null; // memoized Promise<boolean> — probe the on-device path at most once

@@ -128,6 +128,23 @@ describe('navigation (NAV)', () => {
     expect(walk).toEqual(['A2', 'A1', 'A3', 'A4', 'A2']);
   });
 
+  test('REQ-NAV-011: a "next" that comes back to a skipped clue announces the return', () => {
+    const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }), { strategy: 'most-filled' });
+    const clueSayOf = (a) => says(a).find((x) => x.kind === 'clue');
+    // The first three walk down never-before-seen clues — no revisit flag on any of them.
+    for (const expected of ['A2', 'A1', 'A3']) {
+      const a = s.step(heard('next'));
+      expect(picked(a)).toBe(expected);
+      expect(clueSayOf(a).revisit).toBeUndefined();
+      s.step({ type: 'TTS_DONE' });
+    }
+    // Every open clue is now skipped (A4 was skipped at the very start); the next "next"
+    // cycles back to A4 — and says so, rather than reading it like a brand-new suggestion.
+    const back = s.step(heard('next'));
+    expect(picked(back)).toBe('A4');
+    expect(clueSayOf(back).revisit).toBe(true);
+  });
+
   test('REQ-NAV-011: a skipped clue whose letters changed is back in the running', () => {
     const s = listening(makeSnapshot(ratioRows(), { selection: { clueId: 'A4' } }), { strategy: 'most-filled' });
     expect(picked(s.step(heard('next')))).toBe('A2'); // skips A4
@@ -1122,10 +1139,11 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
     expect(out.find((a) => a.type === 'SELECT_CLUE')).toBeUndefined();
   });
 
-  test('REQ-SPCH-010: a pause reset reopens the mic immediately, no chatter', () => {
+  test('REQ-SPCH-010: a pause reset reopens the mic immediately and silently', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1' } }));
     const out = s.step({ type: 'STT_ERROR', code: 'reset', silentMs: 0 });
-    expect(out).toEqual([{ type: 'LISTEN' }]); // no SAY — the ready ping is the only cue
+    // No SAY and NO ready ping (silent): the user was mid-instruction, not handed a turn.
+    expect(out).toEqual([{ type: 'LISTEN', silent: true }]);
   });
 
   test('external grid changes are absorbed without speaking', () => {
