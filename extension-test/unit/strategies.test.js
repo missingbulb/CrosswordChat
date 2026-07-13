@@ -7,10 +7,11 @@ import { heartSnapshot, makeSnapshot } from '../helpers/snapshots.js';
 // controllable lengths/fills. A1 = 3 of 5 (2 open), A2 = 2 of 3 (1 open), A3 = 0 of 5.
 const COUNT_ROWS = ['HEA..', '#####', 'AB.#.', '#####', '.....'];
 
-// A block-separated band of three parallel across entries (A1, A2, A3) with NO downs,
-// so nothing crosses anything: distance/forward ties can be tested free of the crossing
-// tiebreak. All empty → every open count is equal.
-const BAND_ROWS = ['.....', '#####', '.....', '#####', '.....'];
+// A block-separated band of parallel across entries (A1, A2, A3, A4) with NO downs, so
+// nothing crosses anything: the distance/forward tiebreak can be tested free of crossing.
+// A2 carries a letter so the CURRENT clue is non-blank — otherwise the blank-current edge
+// case (sequential same-direction) would take over. A1/A3/A4 are open and equal.
+const BAND_ROWS = ['.....', '#####', 'X....', '#####', '.....', '#####', '.....'];
 
 describe('next-clue strategies', () => {
   test('REQ-NAV-002: list order advances after the current clue and wraps', () => {
@@ -44,33 +45,47 @@ describe('next-clue strategies', () => {
     expect(pick.clueId).toBe('A1'); // 2 open letters, fewer than everything else
   });
 
-  test('REQ-NAV-004: with no crossings, equal open counts jump the least distance; forward wins a tie', () => {
-    // Parallel band, all empty → open counts equal and nothing crosses, so DISTANCE alone
-    // decides. From A2 both neighbours are one step away — forward (A3) wins the exact tie.
+  test('REQ-NAV-004: with no crossings, ties jump the least distance; forward wins an exact tie', () => {
+    // Parallel band, no downs → nothing crosses, and the current clue A2 holds a letter so
+    // the blank-current rule is out of the way: DISTANCE alone decides. A1 and A3 are both
+    // one step from A2 (A4 is two) — the nearer pair wins, and forward breaks their tie → A3.
     const model = buildModel(makeSnapshot(BAND_ROWS));
     expect(nextClue(model, 'A2', 'most-filled').clueId).toBe('A3');
-    // From A1, A2 is one step and A3 two — the nearer clue is offered, current excluded.
-    expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A2');
   });
 
-  test('REQ-NAV-004: among equally-close clues, one crossing the current entry beats a nearer non-crosser', () => {
-    // Full 5×5, all empty → every open count ties, so the CROSSING tiebreak governs. Every
-    // Across crosses every Down here. From D3 the list-order-adjacent clues are D2/D4 (one
-    // step) — but they run parallel to D3 and never touch it, so an Across that crosses D3
-    // is offered first; the nearest such crosser is A9. Distance alone would have said D4.
+  test('REQ-NAV-004: with the current entry started, a crossing clue beats a nearer non-crosser', () => {
+    // A6 (the current clue) holds one letter, so the crossing tiebreak is live. A8 (4-of-5,
+    // 1 open) and D1 (4-of-5, 1 open) tie for closest-to-done. A8 is nearer to A6 in list
+    // order but runs parallel to it; D1 crosses A6, so D1 is offered. Distance alone → A8.
+    const model = buildModel(heartSnapshot(['A....', 'B....', 'C....', 'WXYZ.', '.....']));
+    expect(nextClue(model, 'A6', 'most-filled').clueId).toBe('D1');
+  });
+
+  test('REQ-NAV-004: closeness still dominates crossing — the closer-to-done clue wins', () => {
+    // Current clue D2 holds a letter (crossing rule live). D5 is 4-of-5 (1 open) and runs
+    // parallel to D2 (never crosses it); A9 is 2-of-5 (3 open), DOES cross D2, and is nearer.
+    // Fewest-open ranks first, so the non-crossing, farther D5 still beats crossing A9.
+    const model = buildModel(heartSnapshot(['....P', '....Q', '....R', '....S', 'TU...']));
+    expect(nextClue(model, 'D2', 'most-filled').clueId).toBe('D5');
+  });
+
+  test('REQ-NAV-004: blank current entry → next in the SAME direction by number, wrapping, never crossing', () => {
+    // All empty → every open count ties, so the tiebreak alone decides. From a blank entry
+    // "next" walks the same direction numerically (REQ-NAV-004 edge) instead of jumping to a
+    // crossing perpendicular clue: an Across goes to the next Across, a Down to the next Down.
     const model = buildModel(heartSnapshot());
-    expect(nextClue(model, 'D3', 'most-filled').clueId).toBe('A9');
-    // Symmetric from an Across: A7/A9 sit one step from A8 but are parallel; the crossing
-    // Downs win, nearest first → D1. (Before the crossing rule this returned A9.)
-    expect(nextClue(model, 'A8', 'most-filled').clueId).toBe('D1');
+    expect(nextClue(model, 'A1', 'most-filled').clueId).toBe('A6'); // next Across
+    expect(nextClue(model, 'A9', 'most-filled').clueId).toBe('A1'); // wraps, stays Across
+    expect(nextClue(model, 'D3', 'most-filled').clueId).toBe('D4'); // next Down, not a crossing Across
+    expect(nextClue(model, 'D5', 'most-filled').clueId).toBe('D1'); // wraps, stays Down
   });
 
-  test('REQ-NAV-004: closeness still dominates crossing — fewer gaps wins even without crossing', () => {
-    // A7 is 4-of-5 (1 open) and runs parallel to the current clue A9 (never crosses it).
-    // The Downs D1–D4 DO cross A9 but sit at 1-of-5 (4 open). Closest-to-done ranks first,
-    // so the non-crossing A7 is still chosen over every crossing-but-emptier Down.
-    const model = buildModel(heartSnapshot(['.....', '.....', 'ABUS.', '.....', '.....']));
-    expect(nextClue(model, 'A9', 'most-filled').clueId).toBe('A7');
+  test('REQ-NAV-004: on a blank current entry, closeness still overrides the same-direction walk', () => {
+    // The blank-current rule is only a TIE-break. Col 0 is 4-of-5 (D1 has 1 open) while the
+    // current clue A9 is blank. Fewest-open still ranks first, so "next" goes to the near-done
+    // crossing Down D1 rather than the next Across — the sequential walk yields only on ties.
+    const model = buildModel(heartSnapshot(['X....', 'X....', 'X....', 'X....', '.....']));
+    expect(nextClue(model, 'A9', 'most-filled').clueId).toBe('D1');
   });
 
   test('REQ-NAV-004: most-filled ranks by gaps remaining, not letters placed', () => {
