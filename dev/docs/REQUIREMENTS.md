@@ -549,21 +549,45 @@ entities. The readout must convey what the eye would see.
 - A second strategy MUST rank unfilled clues by *how many* letters they still have OPEN (blank),
   FEWEST first — the entry closest to being finished is offered first — with a penciled cell
   counting as HALF-open: pencil marks are the solver's own "not sure" notes (REQ-ANS-023), real
-  progress but shaky, so a penciled cell is half-closed, not closed. Equal open counts are
-  tie-broken by DISTANCE: the clue nearest the current one in list order wins (smallest jump — from
-  clue 4, an equal clue 5 beats clue 6), a forward clue winning an exact-distance tie; remaining
-  ties by list order, cycling through the current clue last. Rationale: "easiest first" should
+  progress but shaky, so a penciled cell is half-closed, not closed. Equal open counts break by
+  one of two chains, chosen by whether the CURRENT entry holds a letter. When the current entry
+  is completely BLANK (no letters at all), ties move to the next entry in the SAME direction by
+  number, wrapping to the first — plain sequential movement, never a crossing jump: a blank entry
+  anchors no area to build around, so "next" simply keeps going the way it was pointed (the next
+  Down from a Down, the next Across from an Across); other-direction entries come up only when the
+  same direction is dry. Otherwise (the current entry has ≥1 letter) ties break FIRST by CROSSING,
+  then by DISTANCE. CROSSING: a clue that shares a cell with the current entry — one whose answer
+  would fill a letter of the clue in front of the solver — is offered before an equally-close clue
+  that does not cross it. DISTANCE (among clues of equal crossing status): the clue nearest the
+  current one in list order wins (smallest jump — from clue 4, an equal clue 5 beats clue 6), a
+  forward clue winning an exact-distance tie; remaining ties by list order, cycling through the
+  current clue last. Both chains keep CLOSENESS first: a near-done entry is always offered ahead
+  of the sequential/crossing/distance tiebreak. Rationale: "easiest first" should
   steer the solver to what they can finish NOW — the entry with the fewest gaps left — not the
   entry that merely holds the most letters. Ranking by letters ALREADY PLACED (the earlier rule)
   let a long entry with many blanks outrank a short one needing a single letter, so the long entry
   was suggested over and over while the near-finished one waited (user feedback 2026-07: fewest
   open letters beats most letters placed — a 2-of-3 entry, 1 gap, beats a 3-of-5 entry, 2 gaps).
-  Among equals the smallest jump keeps the solver oriented.
+  Among equals a crossing entry beats bare list-order distance because list-order proximity is a
+  poor proxy for spatial nearness — 5 Down is adjacent to 4 Down by number yet need not touch it,
+  while 10 Across may cross 4 Down cell-to-cell; the crossing entry is the one sitting where the
+  solver is working, and finishing it unlocks a letter of the current answer (user feedback 2026-07).
+  Once crossing status is equal, the smallest jump keeps the solver oriented. The blank-entry
+  exception exists because crossing toward an entry the solver has not started reads as a random
+  sideways jump — on a fresh grid there is no area being built, so sequential same-direction
+  movement is what "next" is expected to do (user feedback 2026-07).
 - **Accept:** Given a 2-of-3 entry (1 open) and a 3-of-5 entry (2 open), when advancing under
   most-filled, then the 2-of-3 entry is chosen — fewer gaps wins even though it holds fewer
   letters; given one entry with 4 penciled + 1 blank (open 3) and another with 3 pen + 2 blank
-  (open 2), then the pen entry is chosen (shaky pencil leaves it more open). Given equal open
-  counts one and two steps ahead, then the one-step clue is chosen.
+  (open 2), then the pen entry is chosen (shaky pencil leaves it more open). Given two unfilled
+  entries equally close to done — one crossing the current STARTED clue (≥1 letter), one not —
+  then the crossing entry is chosen even when the non-crossing one is nearer in list order. Given
+  a completely BLANK current entry on an otherwise-open grid, "next" moves to the next entry in the
+  same direction by number (the next Down from a Down, wrapping to the first Down past the last),
+  never to a crossing entry — but closeness still overrides, so a near-done entry elsewhere is
+  offered ahead of the sequential walk. Given equal open counts AND equal crossing status one and
+  two steps ahead (a block-separated band of parallel entries whose current clue is started), then
+  the one-step clue is chosen, forward winning an exact tie.
 - **Verify:** unit `extension-test/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
