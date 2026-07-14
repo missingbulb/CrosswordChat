@@ -98,6 +98,10 @@ export function render(say) {
       // REQ-ANS-006: terse — the user just said the word, so don't echo it back. The
       // spell-out stays only when we accepted a different spelling than they voiced.
       return say.spelledDifferently ? `${spellOut(say.word)} — fits!` : 'Fits!';
+    case 'override':
+      // REQ-ANS-016: a new answer over a fully filled entry replaces it outright — no
+      // confirmation. Just as terse as a fit, but named so the user hears the old word go.
+      return say.spelledDifferently ? `${spellOut(say.word)} — override!` : 'Override!';
     case 'length-mismatch': {
       // REQ-ANS-007: only the problem — no "I heard ..." preamble, no usage coaching.
       // A homophone respelling (swaps > 0) sounds identical to the literal word when read
@@ -128,10 +132,6 @@ export function render(say) {
       const ask = say.words.length === 2 ? 'First or second?' : 'Which one?';
       return `That could be ${spelled}. ${ask}`;
     }
-    case 'replace-confirm':
-      return `That entry already reads ${sayWord(say.current)}. Replace it with ${sayWord(say.word)}? Yes or no.`;
-    case 'kept':
-      return 'Okay, keeping it.';
     case 'entering-anyway':
       return `Okay — entering ${sayWord(say.word)}.`;
     case 'hint': {

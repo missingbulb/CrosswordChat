@@ -996,18 +996,21 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - **Accept:** Given "a lot" for a 4-entry, then ALOT fits.
 - **Verify:** unit `extension-test/unit/matching.test.js`.
 
-#### REQ-ANS-016 — Replacing a fully filled entry requires confirmation
+#### REQ-ANS-016 — A new answer overrides a fully filled entry outright
 - **Status:** Active · **Level:** MUST
 - If the current entry is already completely filled and the user offers a *different* fitting word,
-  the system MUST ask before replacing (`"That entry already reads HEART. Replace it with HEIST?"`);
-  *yes* replaces, *no* keeps and re-prompts. Offering the identical word just confirms and advances.
+  the system MUST replace it straight away — no confirmation prompt — and MUST announce it as an
+  override rather than a plain fit (`"Override!"`, or the spelled-out word plus `"override!"` when
+  the accepted spelling differs from what was heard, REQ-ANS-006). Offering the identical word is
+  not an override: it confirms and advances with the ordinary `"Fits!"`.
 - For a fully filled entry only the length gate applies — its letters are exactly what a new
   answer would replace, so they are not collision-checked (collisions, REQ-ANS-008, are about
-  *partially* filled entries whose letters come from crossings). A confirmed replacement that
-  changes letters malforms the crossings that held them, exactly like an override — REQ-ANS-019
-  applies here too.
-- **Accept:** Given filled HEART and utterance "heist" (fits), then the confirm question is asked and
-  "yes" rewrites the entry.
+  *partially* filled entries whose letters come from crossings). An override that changes letters
+  malforms the crossings that held them — REQ-ANS-019 applies here too. It enters like any answer,
+  so *undo* (REQ-ANS-017) takes it back, restoring the word it replaced.
+- **Accept:** Given filled HEART and utterance "heist" (fits), then the entry is rewritten to HEIST
+  immediately with an "Override!" announcement — no yes/no question. Given filled HEART and utterance
+  "heart", then the ordinary "Fits!" plays and the entry is unchanged.
 - **Verify:** unit `extension-test/unit/machine.test.js`.
 
 #### REQ-ANS-017 — Undo the last entered answer
@@ -1042,8 +1045,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
   the open-square reading applies only on an explicit *done*, so the two never race. Any other
   letter count reports a mismatch naming both accepted counts, keeping the buffer (REQ-ANS-011).
   Spelling mode's opening prompt MUST mention the option when the entry is partially solved. A
-  fully filled entry has no open squares — only a full-length spelling can replace it
-  (REQ-ANS-016).
+  fully filled entry has no open squares — only a full-length spelling can replace it, and doing so
+  overrides the existing word (REQ-ANS-016).
 - The open-square reading MUST also work with no mode at all (REQ-ANS-020 spirit): from normal
   listening, an utterance of spoken letters whose count exactly matches the entry's open squares
   reads as "fill just those" — a single letter for a single hole included. Ambiguity with a
@@ -1066,8 +1069,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 #### REQ-ANS-019 — Overriding softens the malformed crossings to pencil
 - **Status:** Active · **Level:** MUST
 - When an answer is written over letters that disagree with it — a collision override
-  (REQ-ANS-012) or a confirmed replacement (REQ-ANS-016) — every crossing entry that loses a
-  letter to it is left malformed: some of its letters now belong to the new word, so the rest can
+  (REQ-ANS-012) or an override of a fully filled entry (REQ-ANS-016) — every crossing entry that
+  loses a letter to it is left malformed: some of its letters now belong to the new word, so the rest can
   no longer be trusted. In the same write (REQ-PAGE-012), each remaining letter of every malformed
   entry MUST be rewritten in pencil mode, EXCEPT letters that are part of *another* completely
   filled entry (that crossing still corroborates them — they keep their pen) and letters already
@@ -1142,8 +1145,8 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 - Penciled letters are the solver's own "not sure" marks (REQ-PAGE-012), so they MUST NOT block
   a new answer: for evaluation, a penciled square counts as OPEN. An answer that disagrees only
   with penciled letters gets no collision report — it fits ("Fits!") and is written over them.
-  Only PEN letters on a partially filled entry produce collisions (REQ-ANS-008); fully filled
-  entries keep the replace-confirmation flow (REQ-ANS-016) regardless of pencil state. The
+  Only PEN letters on a partially filled entry produce collisions (REQ-ANS-008); a fully filled
+  entry is overridden outright (REQ-ANS-016) regardless of pencil state. The
   open-square readings (REQ-ANS-018 partial spelling, spell-start's open count) use the same
   rule: penciled squares count among the open ones.
 - Reading alone left this rule dead on the real site at v0.11.2 (the marker was being looked for
@@ -1261,8 +1264,10 @@ This is the heart of the product. Speech recognition is *phonetic*; crossword an
 | no (contextual) | no · nope · cancel · never mind · keep it · leave it |
 | choice (contextual) | first · the first one · second · the second one · third · the third one |
 
-- Contextual intents (yes/no/choice) apply only in their modes (confirm-replace, disambiguation);
-  elsewhere they fall through to answer evaluation (YES may be an answer!). enter-anyway with no
+- Contextual intents (yes/no/choice) never fire as commands on their own: *choice*
+  (first/second/third) is the reply in disambiguation (REQ-ANS-009), and *yes*/*no* are recognized
+  but have no mode that consumes them; everywhere else they fall through to answer evaluation (YES
+  may be an answer!). enter-anyway with no
   candidate pending replies that nothing is waiting (REQ-ANS-012). Every non-contextual command
   works in every listening state — including spelling mode (REQ-ANS-011): a command that doesn't
   apply gets an honest one-liner ("nothing to undo", "no word is waiting"), never a dead end.
@@ -1434,7 +1439,7 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   MUST discard any utterance where ANY n-best alternative reads as a *substantial* contiguous
   chunk of the words currently being spoken (or as the entire utterance). Short fragments are
   ambiguous — prompts deliberately solicit one-word replies that are part of the prompt text
-  ("Yes or no", "say anyway", "First or second") — so a short in-prompt fragment MUST be kept
+  ("say anyway", "First or second") — so a short in-prompt fragment MUST be kept
   when any alternative parses as a command or contextual reply, and discarded otherwise.
   Accepted residual risk: an echo recognized as ONLY a bare command word passes the guard; in
   practice echo carries neighboring prompt words on some alternative, which the substantial-chunk
@@ -1469,8 +1474,8 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 - **Accept:** Given any machine trace, then no action batch contains both SAY and LISTEN; given a
   mid-speech transcript repeating a multi-word span of the spoken text (in `guard` mode), then it is
   discarded and the speech continues; given a short non-command fragment of the spoken text, then it
-  is discarded; given "yes" barged into a prompt ending in "Yes or no.", then it is processed as
-  the reply; given the SAME echo-like utterance in `native` mode, then it is NOT discarded but barges
+  is discarded; given "second" barged into a prompt ending in "First or second?", then it is
+  processed as the reply; given the SAME echo-like utterance in `native` mode, then it is NOT discarded but barges
   in as heard input; given `echoMode` unset or invalid in storage, then it defaults to `guard`.
 - **Verify:** unit `extension-test/unit/machine.test.js` (action-order invariant),
   `extension-test/unit/orchestrator.test.js` (echo guard + native barge-in),

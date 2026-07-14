@@ -71,8 +71,8 @@ Covers: REQ-ANS-008 REQ-ANS-012 REQ-ANS-016
 2. **PASS:** a quick one-liner names the position, the existing letter (and the crossing clue) —
    no options menu — and does NOT enter. Say "enter it anyway" → now it enters, replacing the
    letter. Then
-   answer a *different* fitting word on an already-full entry → it asks before replacing; "no"
-   keeps the grid unchanged.
+   answer a *different* fitting word on an already-full entry → it replaces the entry immediately
+   with an "Override!" (no yes/no question); saying the same word already there just plays "Fits!".
 
 ### MT-08 — Already-solved puzzle
 Covers: REQ-LIFE-004

@@ -36,7 +36,6 @@ const ERROR_CODES = {
 const MODE_CODES = {
   normal: '',
   spelling: 's',
-  'confirm-replace': 'c',
   disambiguating: 'd',
   'goto-number': 'g',
 };
@@ -67,6 +66,8 @@ function fmtSay(say = {}) {
       return `>${compactLabel(say.label)}${say.len != null ? `.${say.len}` : ''}`;
     case 'fit':
       return say.spelledDifferently && say.word ? `+${sanitize(say.word).toLowerCase()}` : '+';
+    case 'override':
+      return say.spelledDifferently && say.word ? `++${sanitize(say.word).toLowerCase()}` : '++';
     case 'length-mismatch': {
       const lens = (say.variants ?? []).map((v) => v.len).join('.');
       return `L${lens}n${say.needed}${say.open ? `o${say.open}` : ''}`;

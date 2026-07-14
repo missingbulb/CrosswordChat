@@ -76,7 +76,7 @@ function openSquares(model, clueId) {
  * Phrases to bias the next listen cycle toward, scoped to the current mode.
  * @param {object} p
  * @param {string} [p.biasing]  one of BIASING_MODES ('off' → no biasing)
- * @param {string} [p.mode]     the machine's sub-mode: 'normal'|'spelling'|'confirm-replace'|'disambiguating'
+ * @param {string} [p.mode]     the machine's sub-mode: 'normal'|'spelling'|'disambiguating'|'goto-number'
  * @param {object} [p.model]    the puzzle model (for clue labels / open-square count)
  * @param {string} [p.clueId]   the current clue id
  * @param {boolean} [p.struggling]  REQ-SPCH-011: the machine counted 2+ consecutive failed
@@ -97,7 +97,7 @@ export function phrasesFor({ biasing = 'off', mode = 'normal', model = null, clu
       out.push(...SPELL_CONTROLS.map((word) => ({ phrase: word, boost: BOOST.spellControl })));
     }
     if (wantCommands) out.push({ phrase: 'stop', boost: BOOST.command }); // stop always escapes
-  } else if (mode === 'confirm-replace' || mode === 'disambiguating') {
+  } else if (mode === 'disambiguating') {
     out.push(...CONTEXTUAL_WORDS.map((word) => ({ phrase: word, boost: BOOST.contextual })));
     if (wantCommands) out.push(...commandPhrases().map((phrase) => ({ phrase, boost: BOOST.command })));
   } else { // normal

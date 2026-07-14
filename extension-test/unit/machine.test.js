@@ -626,33 +626,17 @@ describe('answers (ANS)', () => {
     expect(says(s2.step(heard('answer pass')))[0]).toMatchObject({ kind: 'fit', word: 'PASS' });
   });
 
-  test('REQ-ANS-016: replacing a filled entry needs a yes; identical word sails through', () => {
+  test('REQ-ANS-016: a different word overrides a filled entry outright; identical word just fits', () => {
     const filled = heartSnapshot(['WRONG', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } });
     const s = listening(filled);
-    const ask = s.step(heard('heart'));
-    expect(says(ask)[0]).toEqual({ kind: 'replace-confirm', word: 'HEART', current: 'WRONG' });
-    s.step({ type: 'TTS_DONE' });
-    const yes = s.step(heard('yes'));
-    expect(says(yes)[0]).toEqual({ kind: 'entering-anyway', word: 'HEART' });
+    const over = s.step(heard('heart'));
+    // No confirmation prompt — it announces an override and enters straight away.
+    expect(says(over)[0]).toEqual({ kind: 'override', word: 'HEART', spelledDifferently: false });
     expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
 
-    const s2 = listening(filled);
-    s2.step(heard('heart'));
-    s2.step({ type: 'TTS_DONE' });
-    const no = s2.step(heard('no'));
-    expect(says(no)[0].kind).toBe('kept');
-
-    const s3 = listening(heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
-    expect(says(s3.step(heard('heart')))[0].kind).toBe('fit'); // same word → no confirmation
-  });
-
-  test('REQ-ANS-016/REQ-ANS-012: "anyway" during the replace confirmation counts as yes', () => {
-    const s = listening(heartSnapshot(['WRONG', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
-    s.step(heard('heart'));
-    s.step({ type: 'TTS_DONE' });
-    const go = s.step(heard('anyway'));
-    expect(says(go)[0]).toEqual({ kind: 'entering-anyway', word: 'HEART' });
-    expect(s.step({ type: 'TTS_DONE' })[0]).toMatchObject({ type: 'ENTER', word: 'HEART' });
+    // Offering the word already there is not an override — the ordinary "Fits!" plays.
+    const s2 = listening(heartSnapshot(['HEART', '.....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
+    expect(says(s2.step(heard('heart')))[0].kind).toBe('fit');
   });
 
   test('REQ-ANS-017: "undo" clears the last entered answer, returns to its clue, and prompts', () => {
@@ -776,13 +760,11 @@ describe('answers (ANS)', () => {
     ]);
   });
 
-  test('REQ-ANS-019/REQ-ANS-016: a confirmed replacement softens the crossings it hurts, too', () => {
-    // A1 is fully filled with WRONG; D1 below it holds a lone E. Replacing WRONG with
+  test('REQ-ANS-019/REQ-ANS-016: an override of a filled entry softens the crossings it hurts, too', () => {
+    // A1 is fully filled with WRONG; D1 below it holds a lone E. Overriding WRONG with
     // HEART changes A1's W (D1's first letter), malforming D1 → its E gets penciled.
     const s = listening(heartSnapshot(['WRONG', 'E....', '.....', '.....', '.....'], { selection: { clueId: 'A1' } }));
-    s.step(heard('heart'));
-    s.step({ type: 'TTS_DONE' });
-    s.step(heard('yes'));
+    s.step(heard('heart')); // override — enters straight away, no confirmation
     const enter = s.step({ type: 'TTS_DONE' })[0];
     expect(enter).toMatchObject({ type: 'ENTER', word: 'HEART' });
     expect(enter.cells).toContainEqual({ index: 5, letter: 'E', pencil: true });

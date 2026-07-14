@@ -235,20 +235,18 @@ function advance(from, leadSays = []) {
   ], 'listen');
 }
 
-/** Accept a fitting word: replace-confirmation when overwriting (REQ-ANS-016), else enter. */
+/**
+ * Accept a fitting word. Overriding a fully filled entry with a *different* word says
+ * "Override!"; a clean fill says "Fits!" (REQ-ANS-016). Either way the word enters straight
+ * away — a full entry's letters are exactly what the new answer replaces, so there is nothing
+ * to confirm. missStreak resets here as on any fit: recognition succeeded (REQ-SPCH-011).
+ */
 function finishFit(state, word, spelledDifferently) {
   const current = state.model.wordFor(state.clueId);
-  if (current && current !== word) {
-    // lastProposed too: "you misheard" during the confirmation rejects this word.
-    // missStreak resets here as on any fit: recognition succeeded (REQ-SPCH-011).
-    return listenAgain(
-      { ...state, mode: 'confirm-replace', pendingWord: word, lastProposed: word, spellBuffer: [], missStreak: 0 },
-      [{ kind: 'replace-confirm', word, current }],
-    );
-  }
+  const overriding = Boolean(current && current !== word);
   return speak(
     { ...state, mode: 'normal', pendingWord: word, lastProposed: word, pendingEntry: { word }, spellBuffer: [], missStreak: 0 },
-    [say({ kind: 'fit', word, spelledDifferently })],
+    [say({ kind: overriding ? 'override' : 'fit', word, spelledDifferently })],
     'enter',
   );
 }
@@ -567,23 +565,6 @@ function onHeardDisambig(state, alternatives) {
   return evaluateAnswer(reset, alternatives) ?? listenAgain(reset, [{ kind: 'didnt-catch' }]);
 }
 
-function onHeardConfirm(state, alternatives) {
-  const top = alternatives[0]?.transcript ?? '';
-  const cmd = parseCommand(top);
-  // "anyway" counts as yes here — it is an explicit go-ahead (REQ-ANS-012/016).
-  if ((cmd?.command === 'yes' || cmd?.command === 'enter-anyway') && state.pendingWord) {
-    return speak(
-      { ...state, mode: 'normal', pendingEntry: { word: state.pendingWord } },
-      [say({ kind: 'entering-anyway', word: state.pendingWord })],
-      'enter',
-    );
-  }
-  if (cmd?.command === 'no') {
-    return listenAgain({ ...state, mode: 'normal', pendingWord: null }, [{ kind: 'kept' }]);
-  }
-  return onHeardNormal({ ...state, mode: 'normal', pendingWord: null }, alternatives);
-}
-
 // REQ-NAV-013: after "<garbled> across", the direction is held (pendingGotoDir) and we
 // asked for the number alone. Like every sub-mode, it never traps the user.
 function onHeardGotoNumber(state, alternatives) {
@@ -897,7 +878,6 @@ function onHeard(state, { alternatives }) {
   switch (s.mode) {
     case 'spelling': return onHeardSpelling(s, alternatives);
     case 'disambiguating': return onHeardDisambig(s, alternatives);
-    case 'confirm-replace': return onHeardConfirm(s, alternatives);
     case 'goto-number': return onHeardGotoNumber(s, alternatives);
     default: return onHeardNormal(s, alternatives);
   }
