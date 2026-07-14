@@ -5,7 +5,15 @@
     "chrome-extension-release",
     "github-actions",
     "node",
-    "spec-driven-product"
+    "spec-driven-product",
+    {
+      "id": "executable-requirements",
+      "via": [
+        "spec-driven-product"
+      ]
+    },
+    "tidy-repo",
+    "grow_with_claudinite"
   ],
   "rules": {},
   "accept": [],
