@@ -585,7 +585,10 @@ entities. The readout must convey what the eye would see.
   a completely BLANK current entry on an otherwise-open grid, "next" moves to the next entry in the
   same direction by number (the next Down from a Down, wrapping to the first Down past the last),
   never to a crossing entry — but closeness still overrides, so a near-done entry elsewhere is
-  offered ahead of the sequential walk. Given equal open counts AND equal crossing status one and
+  offered ahead of the sequential walk. Given a blank current entry and EVERY started entry already
+  skipped (REQ-NAV-011), the skips leave only equally-open blanks, so "next" still walks to the
+  numerically-next blank in the same direction rather than a crossing one. Given equal open counts
+  AND equal crossing status one and
   two steps ahead (a block-separated band of parallel entries whose current clue is started), then
   the one-step clue is chosen, forward winning an exact tie.
 - **Verify:** unit `extension-test/unit/strategies.test.js`.

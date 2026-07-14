@@ -117,4 +117,16 @@ describe('next-clue strategies', () => {
     expect(nextClue(model, 'A3', 'most-filled', ['A2', 'A1']).clueId).toBe('A2');
     expect(nextClue(model, 'A3', 'most-filled', ['A1', 'A2']).clueId).toBe('A1');
   });
+
+  test('REQ-NAV-004 / REQ-NAV-011: blank current + every started entry skipped → numerically-next blank, not a crossing one', () => {
+    // Row 0 'HE...' makes A1, D1, D2 the only STARTED (non-empty) entries; the solver has
+    // skipped all three. Standing on the blank A7, "next" has only equally-open blank entries
+    // left (the skips filter the started ones out), so it walks to the numerically-next Across
+    // — A8 — and NOT to a Down crossing A7 (e.g. D3). The blank-current rule already forbids a
+    // crossing jump, and the skip filter removes the started entries, so this holds on two counts.
+    const model = buildModel(heartSnapshot(['HE...', '.....', '.....', '.....', '.....']));
+    expect(nextClue(model, 'A7', 'most-filled', ['A1', 'D1', 'D2']).clueId).toBe('A8');
+    // Contrast: without the skips, closeness offers a started entry first (D1/D2 are 1-of-5).
+    expect(nextClue(model, 'A7', 'most-filled', []).clueId).not.toBe('A8');
+  });
 });
