@@ -1,0 +1,175 @@
+name: "Chrome extension: Create Package (reusable)"
+
+# Reusable workflow of the chrome-extension-release standard — the logic behind
+# every extension repo's release "create-package" job. Vendored into the
+# extension repo by the chrome-extension-release pack (not hosted in Claudinite);
+# the repo's single `chrome-extension-release.yml` orchestrator calls it locally
+# (uses: ./.github/workflows/chrome-extension-create-package.yml) and passes NO
+# repo values. workflow_call ONLY. All repo-specific values come from the
+# caller's optional `.github/release.config` (read by the read-release-config
+# composite action) plus the standard's defaults — the zip name is derived from
+# the repo name, so a single-package repo needs no config at all.
+#
+# Builds and publishes a GitHub Release of the extension at the version that is
+# currently committed in the extension manifest. It does NOT change the version —
+# bumping is a deliberate, human step (ask Claude to "bump version"; it edits the
+# manifest and package.json on a branch and lands on main via a normal PR — see
+# the chrome-extension release standard in Claudinite).
+#
+# If the manifest version already matches the latest published release, the run
+# is a clean no-op — so pushes to main that aren't version bumps don't cut a
+# release. (The orchestrator triggers this on every push to main and relies on
+# that no-op, so it needs no per-repo manifest path in its trigger.)
+#
+# The `ref` input exists for the daily auto-release
+# (chrome-extension-daily-release.yml), which calls this after pushing its
+# patch-bump commit: that run was triggered before the bump commit existed, so
+# the default checkout (github.sha) would build the pre-bump tree and no-op on
+# the old version.
+#
+# The calling job must grant `permissions: contents: write, issues: write`
+# (release publishing + the failure reporter).
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit to release (blank = the commit that triggered the run)"
+        required: false
+        type: string
+      build_env:
+        description: >-
+          Optional KEY=VALUE lines exported to the test/build steps (a repo that
+          bakes release config from repository variables into its build passes
+          them here). Every listed key must have a non-empty value or the run
+          fails — so a mis-configured zip can't ship.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+# The implicit run shell has no pipefail; several steps pipe.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Empty (every caller but the daily-release) = the default
+          # github.sha checkout.
+          ref: ${{ inputs.ref }}
+
+      # Resolve manifest_path / package_json_path / setup_command / test_command /
+      # build_command / zip_path from the caller's .github/release.config (all
+      # optional) + defaults; zip_name is derived from the repo name.
+      - id: cfg
+        uses: ./.github/actions/read-release-config
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          # npm caching needs a lockfile; a repo that skips install has none.
+          cache: ${{ steps.cfg.outputs.setup_command != '' && 'npm' || '' }}
+
+      - name: Install dependencies
+        if: steps.cfg.outputs.setup_command != ''
+        run: ${{ steps.cfg.outputs.setup_command }}
+
+      # Export the caller's release config and refuse to proceed on an empty
+      # value — this is the generic form of "fail fast rather than ship a
+      # placeholder-configured zip to the store".
+      - name: Export and require the build env
+        if: inputs.build_env != ''
+        run: |
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            key="${line%%=*}"; value="${line#*=}"
+            if [ -z "$value" ]; then
+              echo "Required build env var '$key' is empty — set it (Settings → Secrets and variables → Actions → Variables) before releasing." >&2
+              exit 1
+            fi
+            echo "$key=$value" >> "$GITHUB_ENV"
+          done <<'BUILD_ENV_EOF'
+          ${{ inputs.build_env }}
+          BUILD_ENV_EOF
+
+      # The version to release is whatever's committed in the manifest (the
+      # store's source of truth, kept in sync with package.json). When it already
+      # matches the latest published release (or a matching tag exists), there's
+      # nothing to release: skip cleanly (release=false) rather than fail, so a
+      # non-bump push doesn't turn the run red. A drift between the manifest and
+      # package.json, or a malformed version, is a real mistake and fails the run.
+      - name: Resolve and guard version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MANIFEST_PATH: ${{ steps.cfg.outputs.manifest_path }}
+          PACKAGE_JSON_PATH: ${{ steps.cfg.outputs.package_json_path }}
+        run: |
+          version="$(node -p "require('./$MANIFEST_PATH').version")"
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "$MANIFEST_PATH version '$version' is not X.Y.Z." >&2
+            exit 1
+          fi
+          pkg_version="$(node -p "require('./$PACKAGE_JSON_PATH').version")"
+          if [ "$pkg_version" != "$version" ]; then
+            echo "$PACKAGE_JSON_PATH ($pkg_version) and $MANIFEST_PATH ($version) disagree — bump both together." >&2
+            exit 1
+          fi
+          latest="$(gh release view --json tagName -q .tagName 2>/dev/null | sed 's/^v//' || true)"
+          if { [ -n "$latest" ] && [ "$latest" = "$version" ]; } || git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "v$version is already released; nothing to do." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$version" >> "$GITHUB_STEP_SUMMARY"
+
+      # The same gates CI runs on every PR.
+      - name: Run the full test gate
+        if: steps.version.outputs.release == 'true'
+        run: ${{ steps.cfg.outputs.test_command }}
+
+      # The build is universal across every extension repo (a monorepo wires a
+      # root `build` script that delegates), so it is mandated here, not a config
+      # key.
+      - name: Build extension zip
+        if: steps.version.outputs.release == 'true'
+        run: npm run build
+
+      # Publish the Release. action-gh-release creates the tag (vX.Y.Z) at the
+      # released commit when it doesn't exist — pinned explicitly to the commit
+      # we checked out and built, so a workflow_call `ref` is tagged rather than
+      # whatever main's HEAD is by then. That's a tag, not a push to main, so
+      # branch protection on main doesn't apply.
+      - name: Publish GitHub Release
+        if: steps.version.outputs.release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ inputs.ref || github.sha }}
+          files: ${{ steps.cfg.outputs.zip_path }}
+          generate_release_notes: true
+
+  # Auto-runs on a bump-merge to main with no human watching, so a silent failure
+  # here means the release never gets cut and the "bump version" flow stalls
+  # unnoticed. Surface it as a tracking issue. (A clean no-op release=false run is
+  # success, not failure, so it never reaches here.) The issue is keyed on the
+  # standard's job name, stable across repos and callers.
+  report-failure:
+    needs: release
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: ./.github/actions/report-failure
+        with:
+          workflow: "Release: Create Package"

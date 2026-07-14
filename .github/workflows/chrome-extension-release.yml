@@ -70,7 +70,7 @@ jobs:
     if: >-
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.mode == 'package')
-    uses: missingbulb/Claudinite/.github/workflows/chrome-extension-release.yml@main
+    uses: ./.github/workflows/chrome-extension-create-package.yml
     # build_env: uncomment on this job and `daily` if the build needs repo config
     #   with:
     #     build_env: |
@@ -78,7 +78,7 @@ jobs:
 
   publish:
     if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
-    uses: missingbulb/Claudinite/.github/workflows/chrome-extension-publish-store.yml@main
+    uses: ./.github/workflows/chrome-extension-publish-store.yml
     with:
       tag: ${{ inputs.tag }}
       auto_publish: ${{ inputs.auto_publish }}
@@ -88,5 +88,5 @@ jobs:
     if: >-
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.mode == 'daily')
-    uses: missingbulb/Claudinite/.github/workflows/chrome-extension-daily-release.yml@main
+    uses: ./.github/workflows/chrome-extension-daily-release.yml
     secrets: inherit
