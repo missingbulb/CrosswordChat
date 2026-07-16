@@ -248,20 +248,20 @@ Covers: REQ-SPCH-005
    which is exactly why "Filter out its own voice" is the default. No data loss either way; only
    barge-in is affected (the formal post-readout mic is unchanged).
 
-### MT-28 — Strategy setting and easiest-first skipping
+### MT-28 — Strategy setting and most-filled skipping
 Covers: REQ-NAV-011 REQ-NAV-012
 1. Right-click the toolbar icon → Settings…. The settings popup opens under the icon (no
-   chrome://extensions page). Pick "Most filled first (easiest)" and press Save — the popup closes.
+   chrome://extensions page). Pick "Most filled first" and press Save — the popup closes.
 2. Start a session on a partially solved puzzle and, without answering, say "next" several times.
 3. Answer one clue that crosses an entry you skipped in step 2, then say "next" again.
 4. Reopen Settings…; switch back to "In list order" and Save; start a new session and say "next".
-5. **PASS:** step 2 — each "next" lands on the open clue closest to done (the fewest blank letters
-   left) that you haven't just skipped: no ping-ponging between the two nearest completion; once
-   every open clue has been skipped, "next" cycles back to the one skipped longest ago, and the
-   readout leads with a short "Back to this one." so the return is obvious, not a mystery. Step 3 —
-   the skipped entry whose letters just changed is offered again (also announced as a return). Step
-   4 — the new session advances in plain list order; the setting survived the browser restart / new
-   session.
+5. **PASS:** step 2 — each "next" lands on the open clue with the most letters already placed (the
+   entry you have made the most headway on) that you haven't just skipped: no ping-ponging between
+   the two most-filled entries; once every open clue has been skipped, "next" cycles back to the one
+   skipped longest ago. Every clue is read plainly — no spoken "return" lead when a clue is cycled
+   back to (the page highlight already shows the move). Step 3 — the skipped entry whose letters
+   just changed is offered again. Step 4 — the new session advances in plain list order; the setting
+   survived the browser restart / new session.
 
 ### MT-29 — Override pencils the malformed crossing; undo restores pen
 Covers: REQ-ANS-019 REQ-PAGE-012 REQ-ANS-023 REQ-ANS-024 REQ-ANS-025

@@ -68,9 +68,10 @@ describe('clue readout (READ)', () => {
     expect(clue('Plain clue', { wrapped: true })).toBe('Plain clue.'); // REQ-NAV-006 retired
   });
 
-  test('REQ-NAV-011: a revisited (skipped) clue is prefixed so it does not read as new', () => {
-    expect(clue('Plain clue', { revisit: true })).toBe('Back to this one. Plain clue.');
-    expect(clue('Plain clue')).toBe('Plain clue.'); // default: no prefix
+  test('REQ-NAV-011: a returned-to (skipped) clue is read plainly, with no return lead', () => {
+    // The "Back to this one." announcement was removed (owner feedback 2026-07-16): the page
+    // highlight already shows the move, so there is no spoken prefix even when "next" cycles back.
+    expect(clue('Plain clue')).toBe('Plain clue.');
   });
 });
 

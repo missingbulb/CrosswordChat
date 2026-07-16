@@ -1,14 +1,15 @@
 // Next-clue selection strategies (REQ-NAV-002/003/004/011). Pure.
 
 // 'most-filled' is a PERSISTED id — saved in chrome.storage and spoken by voice
-// commands — so it is FROZEN: don't rename it even though REQ-NAV-004 now ranks by
-// FEWEST-OPEN letters (not most-placed); a rename silently breaks every user's saved
-// setting. The name still reads colloquially as "most nearly done".
+// commands — so it is FROZEN: don't rename it. It reads literally: REQ-NAV-004 ranks by
+// the MOST letters already PLACED (the entry the solver has made the most headway on),
+// so a rename would only risk breaking every user's saved setting for no gain.
 export const STRATEGIES = ['list-order', 'most-filled'];
 
-// How "open" a penciled cell counts when ranking most-filled (REQ-NAV-004): a penciled
-// letter is real progress but unconfirmed, so its cell is HALF-open, not closed.
-const PENCIL_OPEN = 0.5;
+// How much a penciled cell counts toward "placed" when ranking most-filled (REQ-NAV-004):
+// a penciled letter is real progress but unconfirmed, so it counts as HALF a placed
+// letter, not a whole one.
+const PENCIL_PLACED = 0.5;
 
 function unfilledIds(model) {
   return model.orderedClueIds.filter((id) => {
@@ -44,15 +45,15 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
   if (!candidates.length) return null;
 
   if (strategy === 'most-filled') {
-    // Closest-to-done first: the FEWEST open (still-blank) letters, so the entry that
-    // needs the least work to finish is offered first (REQ-NAV-004). Open letters — not
-    // letters already placed — is the right metric: ranking by count-placed let a long
-    // entry with many blanks outrank a short one needing a single letter, so the long one
-    // got suggested over and over while the near-finished clue waited. A penciled cell is
-    // the solver's own "not sure" mark (REQ-ANS-023 — real progress, but shaky), so it
-    // counts as half-open, not closed.
+    // Most-headway first: the MOST letters already PLACED, so the entry the solver has made
+    // the most progress on is offered first (REQ-NAV-004). Letters placed — not gaps
+    // remaining — is the metric: a long entry the solver has partly filled (say 3 of 10)
+    // outranks a random untouched short entry (a blank 3-letter), because the partly-filled
+    // one is where the work and the momentum are; finishing what you started beats detouring
+    // to an easy but untouched word. A penciled cell is the solver's own "not sure" mark
+    // (REQ-ANS-023 — real progress, but shaky), so it counts as half a placed letter.
     //
-    // Equal open counts break by one of two chains, chosen by whether the CURRENT entry
+    // Equal placed counts break by one of two chains, chosen by whether the CURRENT entry
     // holds any letter (REQ-NAV-004). A BLANK current entry (no letters at all) anchors no
     // area to build around, so ties do NOT jump to a crossing clue — they move to the next
     // entry in the SAME direction by number, wrapping to the first (plain sequential
@@ -64,10 +65,10 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
     const others = candidates.filter((id) => id !== fromId);
     const order = model.orderedClueIds;
     const from = Math.max(order.indexOf(fromId), 0);
-    const openLetters = (id) => {
+    const placedLetters = (id) => {
       const pattern = model.patternFor(id);
       const pencil = model.pencilFor(id);
-      return pattern.reduce((sum, letter, i) => sum + (letter ? (pencil[i] ? PENCIL_OPEN : 0) : 1), 0);
+      return pattern.reduce((sum, letter, i) => sum + (letter ? (pencil[i] ? PENCIL_PLACED : 1) : 0), 0);
     };
     const dist = (id) => Math.abs(order.indexOf(id) - from);
 
@@ -93,7 +94,7 @@ export function nextClue(model, fromId, strategy = 'list-order', avoid = []) {
     }
     const fresh = others
       .filter((id) => !avoid.includes(id))
-      .sort((a, b) => openLetters(a) - openLetters(b)
+      .sort((a, b) => placedLetters(b) - placedLetters(a)
         || tiebreak(a, b)
         || order.indexOf(a) - order.indexOf(b));
     if (fresh.length) return { clueId: fresh[0] };

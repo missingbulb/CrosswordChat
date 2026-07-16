@@ -31,9 +31,9 @@ export function spellOut(word) {
  * NOT spoken — the page highlight shows position (REQ-NAV-007). The letter count is
  * NOT spoken either (REQ-READ-008 retired): the user learns the length from a
  * length-mismatch report or the hint command when it actually matters.
- * @param {object} p {runs:[{text,italic}], greeting?, revisit?}
+ * @param {object} p {runs:[{text,italic}], greeting?}
  */
-export function verbalizeClue({ runs, greeting = false, revisit = false }) {
+export function verbalizeClue({ runs, greeting = false }) {
   const plain = runs.map((r) => r.text).join('');
   const trimmed = plain.trim();
 
@@ -71,9 +71,6 @@ export function verbalizeClue({ runs, greeting = false, revisit = false }) {
 
   const parts = [];
   if (greeting) parts.push("Let's solve.");
-  // REQ-NAV-011: a clue "next" returns you to after you skipped it is flagged, so a
-  // re-offer never reads as a fresh suggestion ("back on the one I keep skipping?").
-  if (revisit) parts.push('Back to this one.');
   parts.push(bracketed ? `The clue is in brackets: ${body}` : body);
   parts.push(...annotations);
   return parts.join(' ');

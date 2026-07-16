@@ -544,53 +544,60 @@ entities. The readout must convey what the eye would see.
 - **Accept:** Given the next two clues in order are filled, when advancing, then the third is selected.
 - **Verify:** unit `extension-test/unit/strategies.test.js`, `extension-test/unit/machine.test.js`.
 
-#### REQ-NAV-004 — Strategy: most-filled-first (easiest = fewest open letters, closest to done)
+#### REQ-NAV-004 — Strategy: most-filled-first (most letters placed, most headway first)
 - **Status:** Active · **Level:** MUST
-- A second strategy MUST rank unfilled clues by *how many* letters they still have OPEN (blank),
-  FEWEST first — the entry closest to being finished is offered first — with a penciled cell
-  counting as HALF-open: pencil marks are the solver's own "not sure" notes (REQ-ANS-023), real
-  progress but shaky, so a penciled cell is half-closed, not closed. Equal open counts break by
-  one of two chains, chosen by whether the CURRENT entry holds a letter. When the current entry
-  is completely BLANK (no letters at all), ties move to the next entry in the SAME direction by
-  number, wrapping to the first — plain sequential movement, never a crossing jump: a blank entry
-  anchors no area to build around, so "next" simply keeps going the way it was pointed (the next
-  Down from a Down, the next Across from an Across); other-direction entries come up only when the
-  same direction is dry. Otherwise (the current entry has ≥1 letter) ties break FIRST by CROSSING,
-  then by DISTANCE. CROSSING: a clue that shares a cell with the current entry — one whose answer
-  would fill a letter of the clue in front of the solver — is offered before an equally-close clue
-  that does not cross it. DISTANCE (among clues of equal crossing status): the clue nearest the
-  current one in list order wins (smallest jump — from clue 4, an equal clue 5 beats clue 6), a
-  forward clue winning an exact-distance tie; remaining ties by list order, cycling through the
-  current clue last. Both chains keep CLOSENESS first: a near-done entry is always offered ahead
-  of the sequential/crossing/distance tiebreak. Rationale: "easiest first" should
-  steer the solver to what they can finish NOW — the entry with the fewest gaps left — not the
-  entry that merely holds the most letters. Ranking by letters ALREADY PLACED (the earlier rule)
-  let a long entry with many blanks outrank a short one needing a single letter, so the long entry
-  was suggested over and over while the near-finished one waited (user feedback 2026-07: fewest
-  open letters beats most letters placed — a 2-of-3 entry, 1 gap, beats a 3-of-5 entry, 2 gaps).
-  Among equals a crossing entry beats bare list-order distance because list-order proximity is a
-  poor proxy for spatial nearness — 5 Down is adjacent to 4 Down by number yet need not touch it,
-  while 10 Across may cross 4 Down cell-to-cell; the crossing entry is the one sitting where the
-  solver is working, and finishing it unlocks a letter of the current answer (user feedback 2026-07).
-  Once crossing status is equal, the smallest jump keeps the solver oriented. The blank-entry
-  exception exists because crossing toward an entry the solver has not started reads as a random
-  sideways jump — on a fresh grid there is no area being built, so sequential same-direction
-  movement is what "next" is expected to do (user feedback 2026-07).
-- **Accept:** Given a 2-of-3 entry (1 open) and a 3-of-5 entry (2 open), when advancing under
-  most-filled, then the 2-of-3 entry is chosen — fewer gaps wins even though it holds fewer
-  letters; given one entry with 4 penciled + 1 blank (open 3) and another with 3 pen + 2 blank
-  (open 2), then the pen entry is chosen (shaky pencil leaves it more open). Given two unfilled
-  entries equally close to done — one crossing the current STARTED clue (≥1 letter), one not —
-  then the crossing entry is chosen even when the non-crossing one is nearer in list order. Given
-  a completely BLANK current entry on an otherwise-open grid, "next" moves to the next entry in the
-  same direction by number (the next Down from a Down, wrapping to the first Down past the last),
-  never to a crossing entry — but closeness still overrides, so a near-done entry elsewhere is
-  offered ahead of the sequential walk. Given a blank current entry and EVERY started entry already
-  skipped (REQ-NAV-011), the skips leave only equally-open blanks, so "next" still walks to the
-  numerically-next blank in the same direction rather than a crossing one. Given equal open counts
-  AND equal crossing status one and
-  two steps ahead (a block-separated band of parallel entries whose current clue is started), then
-  the one-step clue is chosen, forward winning an exact tie.
+- A second strategy MUST rank unfilled clues by *how many* letters they already have PLACED,
+  MOST first — the entry the solver has made the most headway on is offered first — with a
+  penciled cell counting as HALF a placed letter: pencil marks are the solver's own "not sure"
+  notes (REQ-ANS-023), real progress but shaky, so a penciled cell is half-placed, not fully
+  placed. Equal placed counts break by one of two chains, chosen by whether the CURRENT entry
+  holds a letter. When the current entry is completely BLANK (no letters at all), ties move to the
+  next entry in the SAME direction by number, wrapping to the first — plain sequential movement,
+  never a crossing jump: a blank entry anchors no area to build around, so "next" simply keeps
+  going the way it was pointed (the next Down from a Down, the next Across from an Across);
+  other-direction entries come up only when the same direction is dry. Otherwise (the current
+  entry has ≥1 letter) ties break FIRST by CROSSING, then by DISTANCE. CROSSING: a clue that
+  shares a cell with the current entry — one whose answer would fill a letter of the clue in front
+  of the solver — is offered before an equally-placed clue that does not cross it. DISTANCE (among
+  clues of equal crossing status): the clue nearest the current one in list order wins (smallest
+  jump — from clue 4, an equal clue 5 beats clue 6), a forward clue winning an exact-distance tie;
+  remaining ties by list order, cycling through the current clue last. Both chains keep PLACED
+  COUNT first: the entry with the most letters in is always offered ahead of the
+  sequential/crossing/distance tiebreak. Rationale: "most filled first" should steer the solver
+  toward the entry they have already invested in — where the work and the momentum are — not
+  scatter them to whichever short word happens to need the fewest letters. A long entry the solver
+  has partly filled (say 3 of 10) SHOULD outrank a random untouched short entry (a blank 3-letter):
+  finishing what you started beats detouring to an easy but untouched word, even though the short
+  one has fewer letters left to go (owner feedback 2026-07-16 — a totally blank 3-letter entry must
+  NOT outrank a 10-letter entry with 3 letters already solved; the latter is more important to
+  visit next). The accepted tradeoff is that a near-done short entry may wait behind a longer entry
+  that holds more letters overall — momentum is the chosen priority. Among equals a crossing entry
+  beats bare list-order distance because list-order proximity is a poor proxy for spatial nearness
+  — 5 Down is adjacent to 4 Down by number yet need not touch it, while 10 Across may cross 4 Down
+  cell-to-cell; the crossing entry is the one sitting where the solver is working, and finishing it
+  unlocks a letter of the current answer (user feedback 2026-07). Once crossing status is equal,
+  the smallest jump keeps the solver oriented. The blank-entry exception exists because crossing
+  toward an entry the solver has not started reads as a random sideways jump — on a fresh grid
+  there is no area being built, so sequential same-direction movement is what "next" is expected to
+  do (user feedback 2026-07).
+- **Accept:** Given a 2-of-3 entry (2 placed) and a 3-of-5 entry (3 placed), when advancing under
+  most-filled, then the 3-of-5 entry is chosen — more letters placed wins even though it has more
+  gaps left; given a blank 3-letter entry (0 placed) and a 10-letter entry with 3 letters in (3
+  placed), then the 10-letter entry is chosen. Given one entry with 2 confirmed letters (placed 2)
+  and another with 3 penciled letters (placed 1.5), then the 2-confirmed entry is chosen — a
+  confirmed letter outweighs shakier pencil; flip the first entry's letters to pencil (placed 1)
+  and the 3-penciled entry (placed 1.5) now wins. Given two unfilled entries with equal placed
+  counts — one crossing the current STARTED clue (≥1 letter), one not — then the crossing entry is
+  chosen even when the non-crossing one is nearer in list order. Given a completely BLANK current
+  entry on an otherwise-open grid, "next" moves to the next entry in the same direction by number
+  (the next Down from a Down, wrapping to the first Down past the last), never to a crossing entry —
+  but placed count still overrides, so a more-filled entry elsewhere is offered ahead of the
+  sequential walk. Given a blank current entry and EVERY started entry already skipped
+  (REQ-NAV-011), the skips leave only equally-placed (blank) entries, so "next" still walks to the
+  numerically-next blank in the same direction rather than a crossing one. Given equal placed
+  counts AND equal crossing status one and two steps ahead (a block-separated band of parallel
+  entries whose current clue is started), then the one-step clue is chosen, forward winning an
+  exact tie.
 - **Verify:** unit `extension-test/unit/strategies.test.js`.
 
 #### REQ-NAV-005 — Switching strategy by voice
@@ -670,26 +677,26 @@ entities. The readout must convey what the eye would see.
 - **Status:** Active · **Level:** MUST
 - Under the most-filled strategy, saying *next* MUST remember the clue it just left (together with
   its filled-letter count at that moment), and remembered clues MUST NOT be offered again while
-  their letters are unchanged — so repeated *next* walks the open clues fewest-open first (closest
-  to done first) instead of ping-ponging between the two nearest completion. A remembered clue
+  their letters are unchanged — so repeated *next* walks the open clues most-placed first (most
+  headway first) instead of ping-ponging between the two most-filled entries. A remembered clue
   becomes eligible again the moment its filled letters change (e.g. a crossing answer landed — its
-  new open count may make it the best pick once more). When every open clue is
+  new placed count may make it the best pick once more). When every open clue is
   remembered-and-unchanged, advancing MUST cycle back to the *least recently* skipped one rather
   than getting stuck. Skip memory is
   session-scoped; it does not constrain the list-order strategy (REQ-NAV-002), *back*
   (REQ-NAV-009), *flip* (REQ-NAV-010), or manual clicks (REQ-NAV-008).
-- When *next* lands the user back on a clue they had skipped — the cycle-back once everything has
-  been passed, or a skip made eligible again by a fresh crossing letter — the readout MUST announce
-  the return (a short lead such as *"Back to this one."*) rather than reading the clue as if it were
-  a brand-new suggestion. A silent re-offer read as "why has it put me back on the one I keep
-  skipping?" (field feedback); naming it as a return makes the loop legible instead of confusing.
-- **Accept:** Given four open entries with distinct open counts under most-filled, when the user
-  says next four times, then the entries are visited fewest-open first with no repeats,
-  and a fifth next returns to the first-skipped one *and is announced as a return*; given a skipped
-  entry gains a letter from a crossing answer, then the following next offers it again; given a
-  never-before-skipped clue is offered, then it is read plainly with no return lead.
-- **Verify:** unit `extension-test/unit/strategies.test.js`, `extension-test/unit/machine.test.js`,
-  `extension-test/unit/verbalizer.test.js`; manual MT-28.
+- A clue *next* lands back on — the cycle-back once everything has been passed, or a skip made
+  eligible again by a fresh crossing letter — is read PLAINLY, with no spoken "return" lead. The
+  page highlight (REQ-NAV-007) already shows the conversation moved, so a spoken flag such as *"Back
+  to this one."* only adds readout latency for a fact the screen already carries (owner feedback
+  2026-07: the return announcement was redundant — dropped).
+- **Accept:** Given four open entries with distinct placed counts under most-filled, when the user
+  says next four times, then the entries are visited most-placed first with no repeats,
+  and a fifth next returns to the first-skipped one; given a skipped
+  entry gains a letter from a crossing answer, then the following next offers it again; every clue
+  offered — first-time or returned-to — is read plainly, with no return lead.
+- **Verify:** unit `extension-test/unit/strategies.test.js`, `extension-test/unit/machine.test.js`;
+  manual MT-28.
 
 #### REQ-NAV-012 — Default strategy is a persisted setting
 - **Status:** Active · **Level:** MUST

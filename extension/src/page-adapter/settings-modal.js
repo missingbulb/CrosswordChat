@@ -108,8 +108,8 @@ export function settingsModalMarkup() {
           <p class="cc-hint cc-indent">6 -&gt; 7, 7 -&gt; 8, you get it...</p>
           <label><input type="radio" name="cc-strategy" value="most-filled">
             <span>Smart Next</span></label>
-          <p class="cc-hint cc-indent">We guess what you'd solve next. The clue with the
-            fewest blank letters left.</p>
+          <p class="cc-hint cc-indent">We guess what you'd solve next. The clue you've already
+            filled in the most.</p>
         </div>
       </section>
       <section class="cc-section">
