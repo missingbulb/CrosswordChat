@@ -778,7 +778,11 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   REQ-PAGE-012) and the session's own soft-cell ledger.
 - **Accept:** Given an entry that fills the grid wrong while 3 Down holds a penciled letter, then
   the discrepancy message is followed by 3 Down's readout; when the user then says "next"
-  repeatedly, then only entries holding penciled letters are visited, cycling.
+  repeatedly, then only entries holding penciled letters are visited, cycling. This holds
+  regardless of the stored strategy setting: given most-filled is selected and the grid is full
+  with no penciled letters, "next" still moves in plain list order, not by fill ratio — the
+  full-grid fallback does not consult the strategy setting, so most-filled's ranking never
+  applies once nothing is left unfilled, and the setting itself is untouched.
 - **Verify:** unit `extension-test/unit/machine.test.js`.
 
 ---

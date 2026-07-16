@@ -993,6 +993,29 @@ describe('speech errors and lifecycle tail (SPCH/LIFE)', () => {
     expect(says(actions)[1].label).toBe('7 Across'); // first suspect in list order
   });
 
+  // REQ-NAV-014/REQ-LIFE-006 are strategy-agnostic by construction: the full-grid branch
+  // in advance() never reads state.strategy, so most-filled's fancy ranking never runs
+  // once the grid is full — "next" is plain list order (pencil-patrol first if any exist)
+  // no matter which strategy is selected. Pin both shapes under most-filled explicitly so
+  // a future strategy check on that branch would break these, not just the list-order ones.
+  test('REQ-NAV-014/REQ-LIFE-006: under most-filled, "next" on a full grid (no pencils) is plain list order, not ranked', () => {
+    const s = listening(
+      heartSnapshot(['HEART', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], { selection: { clueId: 'A1' } }),
+      { strategy: 'most-filled' },
+    );
+    const out = s.step(heard('next'));
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '6 Across' }); // ordinal next, not a ratio pick
+  });
+
+  test('REQ-NAV-014: under most-filled, "next" on a full-but-wrong grid still patrols the penciled entries only', () => {
+    const s = listening(heartSnapshot(FULL_PENCIL_ROWS, { selection: { clueId: 'D3' } }), { strategy: 'most-filled' });
+    const out = s.step(heard('next'));
+    expect(says(out)[0]).toMatchObject({ kind: 'clue', label: '7 Across' }); // wraps to A7, same as list-order
+    s.step({ type: 'TTS_DONE' });
+    const again = s.step(heard('next'));
+    expect(says(again)[0]).toMatchObject({ kind: 'clue', label: '3 Down' }); // …and back
+  });
+
   test('REQ-NAV-010: flip crosses at the SELECTED square, not the entry\'s first letter', () => {
     const s = listening(heartSnapshot(undefined, { selection: { clueId: 'A1', cellIndex: 2 } }));
     const out = s.step(heard('flip'));
