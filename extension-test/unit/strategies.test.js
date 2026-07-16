@@ -31,18 +31,18 @@ describe('next-clue strategies', () => {
     expect(nextClue(model, 'A1', 'list-order')).toBeNull();
   });
 
-  test('REQ-NAV-004: most-filled picks the entry with the fewest open letters', () => {
-    // All entries are 5 long here, so fewest-open tracks most-filled: A1 leads with 3
-    // letters placed → only 2 blanks left, closer to done than anything else.
+  test('REQ-NAV-004: most-filled picks the entry with the most letters placed', () => {
+    // A1 leads with 3 letters placed — more headway than anything else on the grid, so it
+    // is offered first regardless of length.
     const model = buildModel(heartSnapshot([
-      'HEA..', // A1: 3/5 filled → 2 open
-      'E....', // A6: 1/5 → 4 open
+      'HEA..', // A1: 3 placed
+      'E....', // A6: 1 placed
       '.....',
       '.....',
       '.....',
     ]));
     const pick = nextClue(model, 'A9', 'most-filled');
-    expect(pick.clueId).toBe('A1'); // 2 open letters, fewer than everything else
+    expect(pick.clueId).toBe('A1'); // 3 letters placed, more than everything else
   });
 
   test('REQ-NAV-004: with no crossings, ties jump the least distance; forward wins an exact tie', () => {
@@ -61,10 +61,10 @@ describe('next-clue strategies', () => {
     expect(nextClue(model, 'A6', 'most-filled').clueId).toBe('D1');
   });
 
-  test('REQ-NAV-004: closeness still dominates crossing — the closer-to-done clue wins', () => {
-    // Current clue D2 holds a letter (crossing rule live). D5 is 4-of-5 (1 open) and runs
-    // parallel to D2 (never crosses it); A9 is 2-of-5 (3 open), DOES cross D2, and is nearer.
-    // Fewest-open ranks first, so the non-crossing, farther D5 still beats crossing A9.
+  test('REQ-NAV-004: placed count still dominates crossing — the more-filled clue wins', () => {
+    // Current clue D2 holds a letter (crossing rule live). D5 is 4-of-5 (4 placed) and runs
+    // parallel to D2 (never crosses it); A9 is 2-of-5 (2 placed), DOES cross D2, and is nearer.
+    // Most-placed ranks first, so the non-crossing, farther D5 still beats crossing A9.
     const model = buildModel(heartSnapshot(['....P', '....Q', '....R', '....S', 'TU...']));
     expect(nextClue(model, 'D2', 'most-filled').clueId).toBe('D5');
   });
@@ -80,36 +80,36 @@ describe('next-clue strategies', () => {
     expect(nextClue(model, 'D5', 'most-filled').clueId).toBe('D1'); // wraps, stays Down
   });
 
-  test('REQ-NAV-004: on a blank current entry, closeness still overrides the same-direction walk', () => {
-    // The blank-current rule is only a TIE-break. Col 0 is 4-of-5 (D1 has 1 open) while the
-    // current clue A9 is blank. Fewest-open still ranks first, so "next" goes to the near-done
+  test('REQ-NAV-004: on a blank current entry, placed count still overrides the same-direction walk', () => {
+    // The blank-current rule is only a TIE-break. Col 0 is 4-of-5 (D1 has 4 placed) while the
+    // current clue A9 is blank. Most-placed still ranks first, so "next" goes to the more-filled
     // crossing Down D1 rather than the next Across — the sequential walk yields only on ties.
     const model = buildModel(heartSnapshot(['X....', 'X....', 'X....', 'X....', '.....']));
     expect(nextClue(model, 'A9', 'most-filled').clueId).toBe('D1');
   });
 
-  test('REQ-NAV-004: most-filled ranks by gaps remaining, not letters placed', () => {
+  test('REQ-NAV-004: most-filled ranks by letters placed, not gaps remaining', () => {
     const model = buildModel(makeSnapshot(COUNT_ROWS));
-    // A2 has 1 blank left (2 of 3); A1 has 2 blanks (3 of 5). Closest to done wins, even
-    // though A1 holds MORE letters — the longer entry with more gaps is not offered first.
-    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A2');
+    // A1 holds 3 letters (3 of 5); A2 holds 2 (2 of 3). Most headway wins, even though A1 has
+    // MORE gaps left — momentum on the more-filled entry beats the shorter, nearer-done one.
+    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A1');
   });
 
-  test('REQ-NAV-004: penciled letters are half-open — shaky help leaves an entry more open', () => {
-    // A1: 4 PENCILED + 1 blank → open = 1 + 0.5×4 = 3; A2: 3 pen + 2 blank → open = 2.
-    // A2 is closer to done, so it wins — even though A1 shows more letters.
-    const model = buildModel(makeSnapshot(['hear.', '#####', 'ABU..', '#####', '.....']));
-    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A2');
-    // Flip A1's letters to pen: now A1 (open 1) beats A2 (open 2) — the same letters, but
-    // confirmed, close the entry that shaky pencil could not.
-    const pen = buildModel(makeSnapshot(['HEAR.', '#####', 'ABU..', '#####', '.....']));
-    expect(nextClue(pen, 'A3', 'most-filled').clueId).toBe('A1');
+  test('REQ-NAV-004: penciled letters are half-placed — confirmed progress outweighs more pencil', () => {
+    // A1: 2 CONFIRMED letters → placed = 2; A2: 3 pen → placed = 0.5×3 = 1.5. A1 has made more
+    // (confirmed) headway, so it wins — even though A2 shows more letters on the grid.
+    const model = buildModel(makeSnapshot(['HE...', '#####', 'abc..', '#####', '.....']));
+    expect(nextClue(model, 'A3', 'most-filled').clueId).toBe('A1');
+    // Flip A1's letters to pen: now A1 (placed 1) yields to A2 (placed 1.5) — shaky pencil is
+    // worth only half, so three penciled letters edge out two penciled ones.
+    const pen = buildModel(makeSnapshot(['he...', '#####', 'abc..', '#####', '.....']));
+    expect(nextClue(pen, 'A3', 'most-filled').clueId).toBe('A2');
   });
 
   test('REQ-NAV-011: recently skipped clues are passed over for the next-best pick', () => {
     const model = buildModel(makeSnapshot(COUNT_ROWS));
-    // A2 (1 open) is the natural pick; skip it and "next" moves on to A1 (2 open).
-    expect(nextClue(model, 'A3', 'most-filled', ['A2']).clueId).toBe('A1');
+    // A1 (3 placed) is the natural pick; skip it and "next" moves on to A2 (2 placed).
+    expect(nextClue(model, 'A3', 'most-filled', ['A1']).clueId).toBe('A2');
   });
 
   test('REQ-NAV-011: with every open clue skipped, the least recently skipped is revisited', () => {
@@ -120,13 +120,13 @@ describe('next-clue strategies', () => {
 
   test('REQ-NAV-004 / REQ-NAV-011: blank current + every started entry skipped → numerically-next blank, not a crossing one', () => {
     // Row 0 'HE...' makes A1, D1, D2 the only STARTED (non-empty) entries; the solver has
-    // skipped all three. Standing on the blank A7, "next" has only equally-open blank entries
+    // skipped all three. Standing on the blank A7, "next" has only equally-placed (blank) entries
     // left (the skips filter the started ones out), so it walks to the numerically-next Across
     // — A8 — and NOT to a Down crossing A7 (e.g. D3). The blank-current rule already forbids a
     // crossing jump, and the skip filter removes the started entries, so this holds on two counts.
     const model = buildModel(heartSnapshot(['HE...', '.....', '.....', '.....', '.....']));
     expect(nextClue(model, 'A7', 'most-filled', ['A1', 'D1', 'D2']).clueId).toBe('A8');
-    // Contrast: without the skips, closeness offers a started entry first (D1/D2 are 1-of-5).
+    // Contrast: without the skips, placed count offers a started entry first (A1 holds 2 letters).
     expect(nextClue(model, 'A7', 'most-filled', []).clueId).not.toBe('A8');
   });
 });

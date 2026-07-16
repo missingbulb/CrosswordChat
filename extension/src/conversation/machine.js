@@ -219,11 +219,9 @@ function advance(from, leadSays = []) {
     ], 'listen');
   }
   // Landing on a clue clears its skip record — skipping it again re-files it as newest.
-  // REQ-NAV-011: when "next" comes back around to a clue the user had skipped (the
-  // cycle-back once everything's been passed, or a skip made eligible again by a fresh
-  // crossing letter), announce it as a return rather than reading it like a brand-new
-  // suggestion — the silent re-offer read as "why am I back on the one I keep skipping?".
-  const revisit = state.skipped.some((e) => e.clueId === next.clueId);
+  // REQ-NAV-011: a clue "next" comes back around to (the cycle-back once everything's been
+  // passed, or a skip made eligible again by a fresh crossing letter) is read plainly — the
+  // page highlight already shows where the conversation went, so no spoken return lead.
   const s = {
     ...moveTo(state, next.clueId),
     skipped: skipped.filter((e) => e.clueId !== next.clueId),
@@ -231,7 +229,7 @@ function advance(from, leadSays = []) {
   return speak(s, [
     ...leadSays.map(say),
     { type: 'SELECT_CLUE', clueId: next.clueId },
-    say(clueSay(s.model, s.clueId, revisit ? { revisit: true } : {})),
+    say(clueSay(s.model, s.clueId)),
   ], 'listen');
 }
 
