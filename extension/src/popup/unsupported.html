@@ -5,8 +5,11 @@
   <title>CrosswordChat</title>
   <!-- Shown when the action icon is clicked on a page CrosswordChat doesn't support
        (REQ-LIFE-014). Static HTML only: no scripts, no network, nothing read from
-       the page (REQ-NFR-001/002). On supported puzzle pages there is no popup — the
-       click starts or stops the session directly. -->
+       the page (REQ-NFR-001/002). The quick-launch buttons are plain <a target="_blank">
+       links to the NYT game pages and the grid-tile logos are inline SVG shipped here,
+       so a click navigates the browser without the extension fetching or reading anything.
+       On supported puzzle pages there is no popup — the click starts or stops the session
+       directly. -->
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; width: 280px; color: #191919; }
     h1 { font-size: 15px; margin: 0 0 10px; }
@@ -14,6 +17,17 @@
     p:last-child { margin-bottom: 0; }
     .works { background: #faf6ec; border: 1px solid #e7dfc8; border-radius: 8px; padding: 8px 10px; }
     a { color: #191919; font-weight: 600; }
+
+    .lead { font-size: 12px; font-weight: 600; color: #6b6b6b; text-transform: uppercase;
+      letter-spacing: 0.04em; margin: 14px 0 8px; }
+    .launch { display: grid; gap: 8px; margin: 0 0 12px; }
+    .launch a { display: flex; align-items: center; gap: 10px; text-decoration: none;
+      border: 1px solid #e2e2e2; border-radius: 10px; padding: 8px 10px; background: #fff;
+      color: #191919; font-size: 14px; font-weight: 600; }
+    .launch a:hover { background: #f6f6f6; border-color: #cfcfcf; }
+    .launch a:focus-visible { outline: 2px solid #191919; outline-offset: 2px; }
+    .launch svg { flex: 0 0 auto; display: block; }
+    .launch .go { margin-left: auto; color: #9a9a9a; font-size: 15px; font-weight: 400; }
   </style>
 </head>
 <body>
@@ -21,6 +35,69 @@
   <p class="works">It works on the New York Times crosswords &mdash; the Mini, the Midi,
     and the daily puzzle &mdash; where you&rsquo;ll find its speech-bubble button right
     in the puzzle toolbar.</p>
+
+  <p class="lead">Open one in a new tab</p>
+  <div class="launch">
+    <a href="https://www.nytimes.com/crosswords/game/mini" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+        <defs><clipPath id="tile-mini"><rect x="2" y="2" width="20" height="20" rx="5"/></clipPath></defs>
+        <g clip-path="url(#tile-mini)">
+          <rect x="2" y="2" width="20" height="20" fill="#fff"/>
+          <rect x="3" y="3" width="9" height="9" fill="#121212"/>
+          <rect x="12" y="12" width="9" height="9" fill="#121212"/>
+        </g>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="#121212" stroke-width="1.5"/>
+        <line x1="12" y1="3" x2="12" y2="21" stroke="#121212" stroke-width="1.1"/>
+        <line x1="3" y1="12" x2="21" y2="12" stroke="#121212" stroke-width="1.1"/>
+      </svg>
+      The Mini<span class="go" aria-hidden="true">&#8599;</span>
+    </a>
+    <a href="https://www.nytimes.com/crosswords/game/midi" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+        <defs><clipPath id="tile-midi"><rect x="2" y="2" width="20" height="20" rx="5"/></clipPath></defs>
+        <g clip-path="url(#tile-midi)">
+          <rect x="2" y="2" width="20" height="20" fill="#fff"/>
+          <rect x="3" y="3" width="6" height="6" fill="#121212"/>
+          <rect x="9" y="9" width="6" height="6" fill="#121212"/>
+          <rect x="15" y="15" width="6" height="6" fill="#121212"/>
+          <rect x="15" y="3" width="6" height="6" fill="#121212"/>
+        </g>
+        <g stroke="#121212" stroke-width="1.05">
+          <line x1="9" y1="3" x2="9" y2="21"/>
+          <line x1="15" y1="3" x2="15" y2="21"/>
+          <line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="3" y1="15" x2="21" y2="15"/>
+        </g>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="#121212" stroke-width="1.5"/>
+      </svg>
+      The Midi<span class="go" aria-hidden="true">&#8599;</span>
+    </a>
+    <a href="https://www.nytimes.com/crosswords/game/daily" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+        <defs><clipPath id="tile-daily"><rect x="2" y="2" width="20" height="20" rx="5"/></clipPath></defs>
+        <g clip-path="url(#tile-daily)">
+          <rect x="2" y="2" width="20" height="20" fill="#121212"/>
+          <rect x="3" y="3" width="4.5" height="4.5" fill="#fff"/>
+          <rect x="16.5" y="3" width="4.5" height="4.5" fill="#fff"/>
+          <rect x="7.5" y="7.5" width="4.5" height="4.5" fill="#fff"/>
+          <rect x="12" y="12" width="4.5" height="4.5" fill="#fff"/>
+          <rect x="3" y="16.5" width="4.5" height="4.5" fill="#fff"/>
+          <rect x="16.5" y="16.5" width="4.5" height="4.5" fill="#fff"/>
+        </g>
+        <g stroke="#fff" stroke-width="0.9" opacity="0.55">
+          <line x1="7.5" y1="3" x2="7.5" y2="21"/>
+          <line x1="12" y1="3" x2="12" y2="21"/>
+          <line x1="16.5" y1="3" x2="16.5" y2="21"/>
+          <line x1="3" y1="7.5" x2="21" y2="7.5"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="16.5" x2="21" y2="16.5"/>
+        </g>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="#121212" stroke-width="1.5"/>
+      </svg>
+      The Crossword<span class="go" aria-hidden="true">&#8599;</span>
+    </a>
+  </div>
+
   <p>Is there a crossword on this page? Ask us to support it:<br>
     <a href="mailto:crosswords@missingbulb.com">crosswords@missingbulb.com</a></p>
 </body>
