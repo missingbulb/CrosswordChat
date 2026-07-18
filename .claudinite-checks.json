@@ -16,7 +16,13 @@
     "grow_with_claudinite"
   ],
   "rules": {},
-  "accept": [],
+  "accept": [
+    {
+      "rule": "feature-requirements-first",
+      "path": "(branch)",
+      "reason": "This project's executable spec lives at dev/docs/REQUIREMENTS.md; the canon check hardcodes dev/requirements/requirements.md and so cannot recognize this repo's doc-first spec commit. Doc-first ordering IS followed here (the REQ change lands in its own commit before the implementation commit) and spec/code binding is enforced by tools/trace.mjs plus the UI gallery. Remove this acceptance once the canon check discovers the project's spec path instead of hardcoding it."
+    }
+  ],
   "maintenance": {
     "delivery": "push"
   }
