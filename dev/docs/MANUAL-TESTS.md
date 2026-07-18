@@ -311,12 +311,16 @@ Covers: REQ-LIFE-013 REQ-LIFE-014
 1. Open four tabs: today's Mini, an NYT news article, the crosswords landing page, and any
    non-NYT site. Compare the extension's toolbar icon across the four.
 2. In the Mini tab, navigate to an NYT article in the same tab, then go back.
-3. Click the extension icon on the article tab; then on the Mini tab.
+3. Click the extension icon on the article tab; then on the Mini tab. On the article-tab popup,
+   click the Midi launch button.
 4. **PASS:** step 1 — the Mini tab shows the full-color icon; the other three show the gray
    variant. Step 2 — the icon follows the navigation both ways. Step 3 — on the article tab a
    small popup opens (no session, no speech) saying CrosswordChat isn't supported on this site,
    naming the NYT Mini/Midi/daily puzzles, and offering crosswords@missingbulb.com for support
-   requests; on the Mini tab the click starts the session directly, no popup.
+   requests; the popup also shows three launch buttons — the Mini, the Midi and The Crossword,
+   each with its NYT grid-tile logo — and clicking the Midi button opens
+   https://www.nytimes.com/crosswords/game/midi in a new tab; on the Mini tab the click starts
+   the session directly, no popup.
 
 ### MT-32 — Spelling without the mode; commands never trapped
 Covers: REQ-ANS-011 REQ-ANS-018 REQ-ANS-020 REQ-ANS-021 REQ-ANS-012

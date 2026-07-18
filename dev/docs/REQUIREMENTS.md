@@ -321,10 +321,21 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
   start/stop (REQ-LIFE-001/002). The popup is set per tab (`chrome.action.setPopup`), tracked
   together with the icon variant (REQ-LIFE-013), and is pure static HTML — no scripts, no
   network, nothing read from the page (REQ-NFR-001/002 apply).
+- The popup MUST also help the user reach a supported puzzle: it offers three quick-launch
+  buttons — the Mini, the Midi and The Crossword (the daily) — each carrying that puzzle's
+  New York Times grid-tile logo and linking to its game page,
+  `https://www.nytimes.com/crosswords/game/{mini,midi,daily}` respectively, opened in a new tab.
+  The buttons are plain `<a target="_blank">` links and the logos are inline SVG shipped inside
+  the popup, so the static-HTML / no-network rule above still holds (a user click that navigates
+  the browser is neither the extension reading the page nor fetching anything).
 - **Accept:** Given a non-supported tab, when the icon is clicked, then the popup opens showing
-  the unsupported message and the support address; given a supported puzzle tab, then no popup
-  opens and the session toggles.
-- **Verify:** manual MT-31.
+  the unsupported message, the three Mini/Midi/Crossword launch buttons (each linking to the
+  matching `nytimes.com/crosswords/game/…` page in a new tab), and the support address; given a
+  supported puzzle tab, then no popup opens and the session toggles.
+- **Verify:** UI golden `unsupported-popup` (the popup with its quick-launch buttons); manual MT-31.
+
+<!-- ui-gallery:REQ-LIFE-014 -->
+<!-- /ui-gallery:REQ-LIFE-014 -->
 
 #### REQ-LIFE-015 — Escape ends the session
 - **Status:** Active · **Level:** MUST
