@@ -335,6 +335,12 @@ _UI goldens — generated from the shipped code by `npm run refresh:ui`:_
 - **Verify:** UI golden `unsupported-popup` (the popup with its quick-launch buttons); manual MT-31.
 
 <!-- ui-gallery:REQ-LIFE-014 -->
+
+_UI goldens — generated from the shipped code by `npm run refresh:ui`:_
+
+<strong>Unsupported-site popup (unsupported.html) — message + quick-launch buttons</strong><br>
+<img src="../requirements/ui/cases/unsupported-popup.png" width="300" alt="Unsupported-site popup (unsupported.html) — message + quick-launch buttons">
+
 <!-- /ui-gallery:REQ-LIFE-014 -->
 
 #### REQ-LIFE-015 — Escape ends the session

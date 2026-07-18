@@ -26,6 +26,7 @@ const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace
 const widthFor = (name) => {
   if (name.startsWith('extension-button')) return 72;
   if (name === 'settings-popup') return 300;
+  if (name === 'unsupported-popup') return 300;
   if (name === 'help-page') return 360;
   return 520;
 };
