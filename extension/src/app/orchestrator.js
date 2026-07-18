@@ -356,7 +356,7 @@ export function createOrchestrator({ tts, stt, pageClient, ui = {}, onEnd = () =
       state = result.state;
       for (const action of result.actions) {
         if (ended && action.type !== 'END') continue;
-        // eslint-disable-next-line no-await-in-loop
+        // eslint-disable-next-line no-await-in-loop -- actions from one event must run in order: await each before the next so their side effects (speak/listen, page writes) never overlap or race
         await execute(action);
       }
     }
