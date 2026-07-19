@@ -185,6 +185,15 @@ const toggleButton = mountSessionButton(document, {
   },
 });
 
+// REQ-LIFE-008 made deterministic for the mic. The session already dies with the page, but
+// don't rely on the browser's implicit teardown to free the device: `pagehide` fires on real
+// unload AND on bfcache freeze (the page is suspended, not destroyed, and an open recognizer's
+// mic can stay held). End the session on the way out — orchestrator.stop() synchronously aborts
+// the in-flight recognizer, so the mic is released now, not whenever GC gets to the frozen page.
+window.addEventListener('pagehide', () => {
+  if (session) session.orchestrator.stop('page-hidden');
+});
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   switch (msg?.type) {
     case MSG.START:
