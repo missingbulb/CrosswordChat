@@ -245,8 +245,13 @@ export function createSttPort({
           + ` noiseSuppression=${Boolean(supported.noiseSuppression)},`
           + ` autoGainControl=${Boolean(supported.autoGainControl)})`,
         );
-      } catch { /* diagnostics are best-effort */ }
-      stream.getTracks?.().forEach((t) => t.stop());
+      } catch { /* diagnostics are best-effort */ } finally {
+        // Release the warm-up capture on EVERY path (REQ-SPCH-003). The device is only truly
+        // freed when the track is stopped — closing a context or dropping the reference does
+        // not reliably release it — so the stop lives in `finally`: no throw added above (nor
+        // an early return) can leave this one capture we own holding the mic open.
+        stream.getTracks?.().forEach((t) => t.stop());
+      }
       return { status: 'granted', echoCancellation };
     },
   };

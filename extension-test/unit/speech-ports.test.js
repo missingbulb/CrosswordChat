@@ -484,10 +484,13 @@ describe('stt port — mic permission preflight (REQ-SPCH-003/005)', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('echoCancellation=false'); // surfaces a device with AEC off
     expect(result.echoCancellation).toBe(false); // …and the session log gets the same fact
-    // A log sink that throws must not break the (already-granted) preflight.
-    const nav2 = { mediaDevices: { getUserMedia: () => Promise.resolve(fakeStream({})) } };
+    // A log sink that throws must not break the (already-granted) preflight — and the
+    // warm-up capture is still released (the `finally`), never left holding the mic open.
+    const stream2 = fakeStream({});
+    const nav2 = { mediaDevices: { getUserMedia: () => Promise.resolve(stream2) } };
     const boom = { info() { throw new Error('console gone'); } };
     expect((await stt.ensureMicPermission({ nav: nav2, log: boom })).status).toBe('granted');
+    expect(stream2._track.stop).toHaveBeenCalled();
   });
 
   test('REQ-SPCH-003: no mediaDevices at all (headless) maps to denied without throwing', async () => {
