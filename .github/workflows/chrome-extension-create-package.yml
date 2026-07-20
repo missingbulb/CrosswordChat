@@ -139,23 +139,47 @@ jobs:
 
       # The build is universal across every extension repo (a monorepo wires a
       # root `build` script that delegates), so it is mandated here, not a config
-      # key.
-      - name: Build extension zip
+      # key. TWO zips come off the one tested tree, differing ONLY in the API
+      # pointer that build_env's API_BASE_URL injects:
+      #   * <zip>-prod.zip — the FULL injected config (API_BASE_URL → prod). This
+      #     is the store's source of truth: the publish workflow downloads THIS
+      #     asset. It is never the release's headline download.
+      #   * <zip> — the SAME build with API_BASE_URL cleared, so config.mjs keeps
+      #     its committed default (dev, by the standard's "no env ⇒ dev" rule). It
+      #     is the release's headline asset and the permanent
+      #     …/releases/latest/download/<zip> URL — so what a human downloads and
+      #     loads unpacked talks to DEV, never prod; only the store submission is
+      #     prod-pointed. (API_BASE_URL is the standard's one dev/prod pointer key;
+      #     the signing key + client id stay injected in both, so the dev download
+      #     keeps a stable id and working OAuth.)
+      - name: Build the release zips (dev headline download + prod store artifact)
+        id: build
         if: steps.version.outputs.release == 'true'
-        run: npm run build
+        env:
+          ZIP_NAME: ${{ steps.cfg.outputs.zip_name }}
+        run: |
+          npm run build
+          prod_zip="dist/${ZIP_NAME%.zip}-prod.zip"
+          mv "dist/$ZIP_NAME" "$prod_zip"
+          env -u API_BASE_URL npm run build
+          ls -l dist
+          echo "prod_zip=$prod_zip" >> "$GITHUB_OUTPUT"
 
       # Publish the Release. action-gh-release creates the tag (vX.Y.Z) at the
       # released commit when it doesn't exist — pinned explicitly to the commit
       # we checked out and built, so a workflow_call `ref` is tagged rather than
       # whatever main's HEAD is by then. That's a tag, not a push to main, so
-      # branch protection on main doesn't apply.
+      # branch protection on main doesn't apply. Both zips are attached: the dev
+      # headline zip and the prod zip the store publish consumes.
       - name: Publish GitHub Release
         if: steps.version.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ inputs.ref || github.sha }}
-          files: ${{ steps.cfg.outputs.zip_path }}
+          files: |
+            ${{ steps.cfg.outputs.zip_path }}
+            ${{ steps.build.outputs.prod_zip }}
           generate_release_notes: true
 
   # Auto-runs on a bump-merge to main with no human watching, so a silent failure

@@ -10,8 +10,10 @@ name: "Chrome extension: Publish to Chrome Web Store (reusable)"
 # `.github/release.config` (defaulting to the kebab-cased repo name), so the
 # orchestrator passes no repo values — only the runtime tag / auto_publish choice.
 #
-# Takes the extension zip from a GitHub Release of the CALLING repo and uploads
-# it to the Chrome Web Store (optionally publishing it to users), via the Web
+# Takes the PROD extension zip (the <zip>-prod.zip asset) from a GitHub Release
+# of the CALLING repo and uploads it to the Chrome Web Store (optionally
+# publishing it to users) — the release's headline <zip> asset is the dev
+# download and is NOT what ships to the store. Uploads via the Web
 # Store API using chrome-webstore-upload-cli, then refreshes the Pages-hosted
 # privacy page. The privacy page redeploys on every publish — there is no
 # separate privacy workflow and no privacy-only mode; the store listing points
@@ -80,27 +82,36 @@ jobs:
             exit 1
           fi
 
-      - name: Download the release zip
+      # The store gets the PROD zip, which the create-package workflow attaches
+      # as <zip>-prod.zip (the headline <zip> asset is the dev download — see
+      # chrome-extension-create-package.yml). Releases cut before the dev/prod
+      # split have no -prod asset, so fall back to the plain <zip> then (that
+      # older headline zip was itself prod-pointed).
+      - name: Download the prod release zip
+        id: fetch
         env:
           ZIP_NAME: ${{ steps.cfg.outputs.zip_name }}
         run: |
           mkdir -p dist
+          prod_zip="${ZIP_NAME%.zip}-prod.zip"
           # An empty tag makes `gh release download` pick the latest release.
-          gh release download ${{ inputs.tag }} \
-            --repo "${{ github.repository }}" \
-            --pattern "$ZIP_NAME" \
-            --dir dist
+          if gh release download ${{ inputs.tag }} \
+              --repo "${{ github.repository }}" --pattern "$prod_zip" --dir dist 2>/dev/null; then
+            asset="$prod_zip"
+          else
+            echo "No $prod_zip on this release (pre-split); falling back to $ZIP_NAME."
+            gh release download ${{ inputs.tag }} \
+              --repo "${{ github.repository }}" --pattern "$ZIP_NAME" --dir dist
+            asset="$ZIP_NAME"
+          fi
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"
           ls -l dist
 
       - name: Show the version being published
-        env:
-          ZIP_NAME: ${{ steps.cfg.outputs.zip_name }}
         run: |
-          echo "Publishing $(unzip -p "dist/$ZIP_NAME" manifest.json | grep '"version"')"
+          echo "Publishing $(unzip -p "dist/${{ steps.fetch.outputs.asset }}" manifest.json | grep '"version"')"
 
       - name: Upload to the Chrome Web Store
-        env:
-          ZIP_NAME: ${{ steps.cfg.outputs.zip_name }}
         run: |
           flags=
           if [ "${{ inputs.auto_publish }}" = "false" ]; then
@@ -109,7 +120,7 @@ jobs:
             flags="--auto-publish"
           fi
           npx --yes chrome-webstore-upload-cli@3 upload \
-            --source "dist/$ZIP_NAME" \
+            --source "dist/${{ steps.fetch.outputs.asset }}" \
             $flags
 
   # Refresh the Pages-hosted privacy policy on every publish, from the same
