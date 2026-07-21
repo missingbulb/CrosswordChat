@@ -1,0 +1,27 @@
+name: Bump extension patch version
+description: >-
+  Bumps the extension's PATCH version across the manifest and package.json (the
+  two version records the standard keeps in sync) and outputs the new version.
+  The generic form of the per-repo patch-bumpers the daily auto-release used to
+  require — the caller passes only its manifest/package paths (release config),
+  never a bump script. Composite so it adds no reusable-workflow nesting level.
+
+inputs:
+  manifest_path:
+    description: Path of the extension manifest (the version source of truth)
+    required: true
+  package_json_path:
+    description: Path of the package.json kept in sync with the manifest
+    required: true
+
+outputs:
+  version:
+    description: The new X.Y.Z version after the patch bump
+    value: ${{ steps.bump.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: bump
+      shell: bash
+      run: node "${{ github.action_path }}/bump.mjs" "${{ inputs.manifest_path }}" "${{ inputs.package_json_path }}"

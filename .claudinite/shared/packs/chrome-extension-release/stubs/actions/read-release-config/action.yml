@@ -1,0 +1,40 @@
+name: Read release config
+description: >-
+  Resolves a Chrome-extension repo's release configuration from the caller repo's
+  REQUIRED `.github/release.config` (six explicit keys, no defaults) and exposes
+  it as step outputs. A composite action (not a reusable workflow) so it adds no
+  reusable-workflow nesting level; runs in the caller's checkout, so it reads the
+  caller's own config. The release reusable workflows call it instead of taking
+  repo values as inputs, so the per-repo stub carries only triggers.
+
+outputs:
+  manifest_path:
+    description: Path of the extension manifest (the version source of truth)
+    value: ${{ steps.cfg.outputs.manifest_path }}
+  package_json_path:
+    description: Path of the package.json kept in sync with the manifest
+    value: ${{ steps.cfg.outputs.package_json_path }}
+  setup_command:
+    description: Dependency-install command ("" = no install)
+    value: ${{ steps.cfg.outputs.setup_command }}
+  test_command:
+    description: The full release test gate
+    value: ${{ steps.cfg.outputs.test_command }}
+  ship_paths:
+    description: Space-separated shipped roots (the daily change filter)
+    value: ${{ steps.cfg.outputs.ship_paths }}
+  zip_path:
+    description: Standard zip location the build writes to — dist/<kebab repo>.zip
+    value: ${{ steps.cfg.outputs.zip_path }}
+  zip_name:
+    description: Release asset filename — <kebab repo>.zip
+    value: ${{ steps.cfg.outputs.zip_name }}
+
+runs:
+  using: composite
+  steps:
+    - id: cfg
+      shell: bash
+      env:
+        REPO_NAME: ${{ github.event.repository.name }}
+      run: node "${{ github.action_path }}/read-config.mjs"
