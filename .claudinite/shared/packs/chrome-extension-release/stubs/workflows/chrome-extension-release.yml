@@ -1,0 +1,95 @@
+name: Release to Chrome Store
+
+# The ONE orchestrator of the chrome-extension-release standard. It owns only the
+# triggers; the logic — create-package, daily auto-release, and Chrome Web Store
+# publish — lives in the reusable workflows this repo carries alongside it in
+# `.github/workflows/` (all vendored from the chrome-extension-release pack, so
+# they run entirely inside this repo — no cross-repo `@main` dependency). This
+# file passes NO repo values. Every repo-specific value is declared explicitly in
+# the REQUIRED `.github/release.config` (five keys, no defaults) — the pack keeps
+# this whole set (`.github/workflows/` + `.github/actions/`) in sync, so treat it
+# as generated: edit the pack, not the copy. The zip asset name is derived from
+# the config's `zip_path`, and the build is always `npm run build`, so neither is
+# a config key.
+#
+# Three operations, one entry point:
+#   * push to main            → create-package (a clean no-op unless the manifest
+#                               version was bumped, so ordinary pushes don't cut a
+#                               release — no per-repo manifest path in the trigger)
+#   * schedule (00:30 UTC)    → daily auto-release (ship a store update if a
+#                               shipped file changed since the last release)
+#   * "Run workflow" dispatch → pick a mode: publish (default), package, or daily
+#
+# The Actions-tab entry is named "Release to Chrome Store"; the failure reporter keys its
+# tracking issues on the per-operation names ("Release: Create Package", etc.)
+# baked into the reusable workflows, so collapsing to one entry point loses no
+# per-operation triage.
+#
+# secrets: inherit passes the four CHROME_* store secrets through to the reusable
+# workflows.
+#
+# A repo whose build bakes in per-environment config (e.g. an API base URL)
+# uncomments a build_env block on the create-package and daily jobs — the ONLY
+# place a repo references its repository variables; every key must be non-empty
+# or the run fails, so a mis-configured zip can't ship. Example:
+#       build_env: |
+#         API_BASE_URL=${{ vars.API_BASE_URL }}
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to run"
+        type: choice
+        options: [publish, package, daily]
+        default: publish
+      tag:
+        description: "publish: release tag to publish (blank = latest release)"
+        required: false
+        type: string
+      auto_publish:
+        description: "publish: publish to users after upload (uncheck = dashboard draft)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+
+# Daily runs (scheduled, or a mode=daily dispatch) share one queue so a manual
+# dispatch can't race the scheduled bump-push; every other run gets its own group.
+concurrency: >-
+  ${{ (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' && inputs.mode == 'daily'))
+      && 'daily-release' || github.run_id }}
+
+jobs:
+  create-package:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'package')
+    uses: ./.github/workflows/chrome-extension-create-package.yml
+    # build_env: uncomment on this job and `daily` if the build needs repo config
+    #   with:
+    #     build_env: |
+    #       API_BASE_URL=${{ vars.API_BASE_URL }}
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
+    uses: ./.github/workflows/chrome-extension-publish-store.yml
+    with:
+      tag: ${{ inputs.tag }}
+      auto_publish: ${{ inputs.auto_publish }}
+    secrets: inherit
+
+  daily:
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'daily')
+    uses: ./.github/workflows/chrome-extension-daily-release.yml
+    secrets: inherit

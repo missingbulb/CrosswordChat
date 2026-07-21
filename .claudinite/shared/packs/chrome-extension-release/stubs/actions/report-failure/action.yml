@@ -1,0 +1,96 @@
+name: Report workflow failure
+description: >-
+  Failure reporter for UNATTENDED workflows — ones with no human actively
+  watching the run, so a red entry in the Actions list alerts nobody. It
+  converges such a failure to a human-visible state by opening a FRESH bug for
+  a human to triage, in the repository the run belongs to.
+
+  One issue per failure, not one standing issue appended to: each failure opens
+  its own dated issue, and any EARLIER open failure issues for the SAME workflow
+  are closed as duplicates of the new one. So the newest failure is always the
+  single open, top-of-list bug — a human triages that one, and the superseded
+  ones collapse behind it instead of piling up unread.
+
+  A composite action (not a reusable workflow) on purpose: callers are often
+  already at the bottom of GitHub's 4-level reusable-workflow nesting limit,
+  and an action step adds no level. Platform-agnostic by design — any publish
+  standard's workflows (Chrome extension or otherwise) report through it.
+
+  Vendored into the extension repo by the chrome-extension-release pack, so a
+  caller references it by the local path:
+
+    report-failure:
+      needs: <the-job(s)-that-can-fail>
+      if: failure()
+      runs-on: ubuntu-latest
+      permissions:
+        issues: write
+      steps:
+        - uses: ./.github/actions/report-failure
+          with:
+            workflow: "<the run's workflow name>"   # keys the tracking issue
+
+  PR CI deliberately does NOT use this: its failures are loud already — a red
+  required check on the PR, blocking merge, with the author watching. The rule
+  is the unattended-workflow escalation practice in the Claudinite canon
+  (skills/git-github-advanced/SKILL.md).
+
+inputs:
+  workflow:
+    description: "Name of the failing workflow; the tracking issues are keyed on it."
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Open a fresh failure issue and dedup earlier ones
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO:     ${{ github.repository }}
+        WORKFLOW: ${{ inputs.workflow }}
+        # github.* here refers to the overall run, so this is the caller's run.
+        RUN_ID:   ${{ github.run_id }}
+        RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+
+        # Every failure issue for a workflow shares this exact prefix; the dated
+        # run suffix keeps each one distinct and lets a later run find the
+        # earlier ones to supersede.
+        prefix="⚠️ Workflow failing: ${WORKFLOW}"
+        title="${prefix} — $(date -u +%Y-%m-%d) (run ${RUN_ID})"
+
+        # Create the label idempotently — GitHub won't make it on demand, and a
+        # list filtered by a non-existent label errors.
+        gh label create workflow-failure --repo "$REPO" --color B60205 \
+          --description "An unattended workflow failed and needs a human" \
+          2>/dev/null || true
+
+        # Earlier OPEN failure issues for THIS SAME workflow (matched on the
+        # exact prefix in jq, so it's deterministic — no search-index lag, and a
+        # different workflow's bug is never treated as a duplicate of this one).
+        mapfile -t olds < <(gh issue list --repo "$REPO" --label workflow-failure \
+          --state open --json number,title --limit 100 \
+          -q "map(select(.title | startswith(\"$prefix\"))) | .[].number")
+
+        # Open a fresh bug for THIS failure.
+        url="$(gh issue create --repo "$REPO" --title "$title" --label workflow-failure --body "$(
+          printf '%s\n' \
+            "The **${WORKFLOW}** workflow failed: [view run](${RUN_URL})." \
+            "" \
+            "A fresh issue is opened for each failure of this workflow; any earlier open failure issues for it are closed as duplicates of this one, so the newest failure is always the single open bug to triage. Close this once the cause is fixed." \
+        )")"
+        new="${url##*/}"
+        echo "Opened failure issue #$new."
+
+        # Close every earlier open failure issue for this workflow as a duplicate
+        # of the one just opened.
+        for n in "${olds[@]:-}"; do
+          [ -n "$n" ] || continue
+          gh issue comment "$n" --repo "$REPO" \
+            --body "Duplicate of #${new} — superseded by the latest failure of this workflow."
+          gh issue close "$n" --repo "$REPO" --reason "not planned" 2>/dev/null \
+            || gh issue close "$n" --repo "$REPO"
+          echo "Closed #$n as a duplicate of #$new."
+        done

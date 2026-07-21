@@ -1,0 +1,105 @@
+# Reusable workflow: builds a repo's privacy policy into a one-page GitHub
+# Pages site and deploys it at the fixed permalink /privacy/ —
+#   https://<owner>.github.io/<repo>/privacy/
+# The Jekyll `permalink` pins that public path independent of where PRIVACY.md
+# lives in the repo (move the file → only the input below changes, never the
+# URL). The page body is the caller's PRIVACY.md verbatim — the single source
+# of truth, no duplicated copy.
+#
+# Deliberately NOT Chrome-specific (hence the unprefixed name): any publish
+# standard whose store listing needs a live privacy-policy URL deploys through
+# it. Vendored into the extension repo by the chrome-extension-release pack;
+# workflow_call ONLY. It is invoked by "Chrome extension: Publish to Chrome Web
+# Store" (uses: ./.github/workflows/deploy-privacy-page.yml) so the page is
+# refreshed whenever the listing ships (and, because that publish workflow runs
+# this leg even when the upload leg fails, it's also how the /privacy/ URL first
+# goes live before the first publication). There is no standalone privacy
+# dispatch stub — a repo never calls this directly.
+#
+# One-time owner setup in the calling repo: Pages source = "GitHub Actions"
+# (repo Settings → Pages). Production deploys only from the default branch (the
+# github-pages environment's branch policy), so the calling stub must be on
+# `main` to publish.
+#
+# The calling job must grant `permissions: contents: read, pages: write,
+# id-token: write, issues: write` (Pages deploy + the failure reporter).
+name: Deploy privacy policy to GitHub Pages (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      privacy_md_path:
+        description: "Repo-relative path of the privacy policy Markdown"
+        required: false
+        type: string
+        default: dev/build/release/store_artifacts/PRIVACY.md
+
+# Least privilege for a Pages deploy: read the repo, write Pages, mint the OIDC
+# token deploy-pages exchanges.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deploys at once; let an in-flight deploy finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assemble the Pages site from PRIVACY.md
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          # The policy page: a permalink pins the public path; the body is
+          # PRIVACY.md verbatim (single source of truth — no duplicated copy).
+          {
+            printf -- '---\npermalink: /privacy/\ntitle: "Privacy Policy"\n---\n\n'
+            cat "${{ inputs.privacy_md_path }}"
+          } > site/privacy.md
+          # Site root redirects to the policy (relative link → no baseurl to hardcode).
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<meta charset="utf-8">' \
+            '<meta http-equiv="refresh" content="0; url=privacy/">' \
+            '<title>Privacy Policy</title>' \
+            '<a href="privacy/">Privacy Policy</a>' > site/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./site
+          destination: ./_site
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # A standalone (dispatch-stub) Pages deploy is unattended — a failure just
+  # turns the run red. Surface it as a tracking issue. The job-level permission
+  # below is what the token actually carries (the top-level block above omits
+  # issues on purpose); the caller grants issues:write through its call.
+  report-failure:
+    needs: [build, deploy]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: ./.github/actions/report-failure
+        with:
+          workflow: "Deploy privacy policy to GitHub Pages"
