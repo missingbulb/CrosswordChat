@@ -1,20 +1,15 @@
 import { finding } from '../../engine/checks/helpers/findings.mjs';
 
-// Converted (the testable slice) from the engineering-practices skill's "Earn
-// each dependency" rule. Only the *event* — a package.json gains a dependency it
-// did not carry before — has a signature; the rule's judgment half (prefer a
-// built-in or a few lines for a narrow job, and drop a dependency when the
-// assumption that justified it lapses) stays in the skill, which this finding
-// points back to. Directional by kind → advisory. Check-the-work: it reads the
-// manifest at the scoping base, so it fires once, on the branch that adds the
-// dependency, then converges (once the add is on main, base == head and the name
-// is no longer new). A rename between dependency groups (e.g. dev → prod) and a
-// version bump are not additions — the name already existed in the base.
+// The testable slice of the engineering-practices "earn each dependency" rule:
+// only the event — a package.json gains a dependency it did not carry at the
+// scoping base — has a signature; the judgment half stays in the skill this
+// finding points to. Fires once, on the branch that adds the name, then
+// converges; a group move or version bump is not an addition.
 
 const DEP_KEYS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
 
-// A package.json at the repo root or one directory down — the node pack's own
-// marker scope, so a nested fixture/example manifest never counts.
+// Root or one directory down — the node pack's own marker scope, so a nested
+// fixture/example manifest never counts.
 const nearRoot = (f) => {
   const parts = f.split('/');
   return parts[parts.length - 1] === 'package.json' && parts.length <= 2;
@@ -33,22 +28,18 @@ const rule = {
   severity: 'advisory',
   description: 'A newly added package.json dependency should be earned — prefer a built-in or a few lines for a narrow job',
   doc: 'skills/engineering-practices/SKILL.md',
+  scope: 'work',
   why: 'every dependency is standing surface area and supply-chain weight; a built-in or a few lines often covers a narrow job with none of it',
 
-  run(ctx) {
+  run(work) {
     const out = [];
-    for (const file of ctx.changedFiles.filter(nearRoot)) {
-      const headText = ctx.read(file);
-      if (headText === null) continue;
-      let head;
-      try { head = JSON.parse(headText); } catch { continue; } // malformed head is another check's problem
-      const baseText = ctx.readBase(file);
-      let base = {};
-      if (baseText !== null) { try { base = JSON.parse(baseText); } catch { base = {}; } } // unparsable/absent base → nothing carried before
+    for (const file of work.changedFiles.filter(nearRoot)) {
+      const { head, base } = work.jsonPair(file);
+      if (!head) continue;
       const carried = depNames(base);
       for (const key of DEP_KEYS) {
-        for (const name of Object.keys(head?.[key] ?? {})) {
-          if (carried.has(name)) continue; // a move between groups or a version bump, not a new dependency
+        for (const name of Object.keys(head[key] ?? {})) {
+          if (carried.has(name)) continue;
           out.push(finding(rule, {
             file,
             what: `"${name}" added to ${key}`,
