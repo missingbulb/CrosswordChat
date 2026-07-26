@@ -1,15 +1,21 @@
 # chrome-extension pack
 
-Active when a `manifest.json` declares `manifest_version` — the MV3 build/runtime gotchas that apply while you're *coding* an extension. Prose only (`RULES.md`), no checks.
+Active when a `manifest.json` declares `manifest_version` — the MV3 build/runtime gotchas that apply while you're *coding* an extension. Mostly prose (`RULES.md`); the gotchas with a static signature in the source are checks.
 
 Releasing and Chrome-Web-Store publication are a separate, opt-in concern: the [`chrome-extension-release`](../chrome-extension-release/README.md) pack (its `RELEASE.md` standard + conformance checks), declared when the project is ready to ship.
+
+## Checks (hardcoded)
+
+| Check | Enforces (≤5 words) | Severity |
+|---|---|---|
+| `declarative-content-set-icon` | SetIcon supplies imageData, not path | blocking |
 
 ## Prose gotchas (`RULES.md`)
 
 | Rule (≤5 words) | How enforced |
 |---|---|
 | MV3 worker paths must be root-absolute | prose |
-| SetIcon needs imageData, not path | prose |
+| SetIcon needs imageData, not path | prose + check (`declarative-content-set-icon`) |
 | Injected shared global: augment, not replace | prose |
 | CDP-introspecting an MV3 worker traps | prose |
 | JWT auth via launchWebAuthFlow id_token | prose |

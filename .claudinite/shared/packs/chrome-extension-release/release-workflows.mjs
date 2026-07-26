@@ -86,8 +86,24 @@ const rule = {
       }));
     }
 
+    // The orchestrator's own cron is a cutover flip. Before a repo adopts the
+    // per-repo scheduler, the orchestrator IS the release schedule and must carry the
+    // contract cron. Once the vendored claudinite-scheduler.yml is present, the
+    // store-release task drives the daily release (per-project-scheduling §6) and the
+    // scheduler is the repo's only cron — so the orchestrator must be dispatch-only,
+    // no `schedule:` at all. Gating on the scheduler's presence makes the flip travel
+    // WITH the de-cron'd stub into a repo's mount, never before it.
+    const cutOver = ctx.read('.github/workflows/claudinite-scheduler.yml') !== null;
     const cron = /^\s*-\s*cron:\s*['"]?([^'"\n]+?)['"]?\s*$/m.exec(text)?.[1];
-    if (cron !== STUB_CRON) {
+    if (cutOver) {
+      if (cron !== undefined) {
+        out.push(finding(rule, {
+          file: path,
+          what: `has a schedule cron "${cron}", but this repo runs the Claudinite scheduler — the store-release task drives the daily release, so the orchestrator must be dispatch-only`,
+          fix: 'remove the schedule: trigger from the orchestrator (keep push + workflow_dispatch); the store-release task fires the daily release',
+        }));
+      }
+    } else if (cron !== STUB_CRON) {
       out.push(finding(rule, {
         file: path,
         what: `schedule cron is ${cron ? `"${cron}"` : '(none)'} — the contract requires "${STUB_CRON}"`,
