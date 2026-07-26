@@ -13,8 +13,12 @@ name: Release to Chrome Store
 #   * push to main            → create-package (a clean no-op unless the manifest
 #                               version was bumped, so ordinary pushes don't cut a
 #                               release — no per-repo manifest path in the trigger)
-#   * schedule (00:30 UTC)    → daily auto-release (ship a store update if a
-#                               shipped file changed since the last release)
+#   * dispatch (mode: daily)  → daily auto-release (ship a store update if a
+#                               shipped file changed since the last release). No
+#                               cron here: the Claudinite scheduler's store-release
+#                               task detects a deployable change and dispatches this
+#                               workflow in daily mode — the scheduler is the repo's
+#                               only cron (per-project-scheduling §3, §6).
 #   * "Run workflow" dispatch → pick a mode: publish (default), package, or daily
 #
 # The Actions-tab entry is named "Release to Chrome Store"; the failure reporter keys its
@@ -34,8 +38,6 @@ name: Release to Chrome Store
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: "30 0 * * *"
   workflow_dispatch:
     inputs:
       mode:

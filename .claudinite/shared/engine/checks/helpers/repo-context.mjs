@@ -4,8 +4,8 @@ import { join, resolve, sep } from 'node:path';
 import { parseEntries } from './session-transcript.mjs';
 import { SHARED_SUBDIR, packEntryId } from '../../pack_loader/pack-registry.mjs';
 
-function sh(root, cmd, args, { allowFail = false, input = undefined } = {}) {
-  const r = spawnSync(cmd, args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, input });
+function sh(root, cmd, args, { allowFail = false, input = undefined, timeout = undefined } = {}) {
+  const r = spawnSync(cmd, args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, input, timeout });
   if (r.status !== 0 && !allowFail) {
     throw new Error(`${cmd} ${args.join(' ')} failed (${r.status}): ${r.stderr}`);
   }
@@ -20,6 +20,31 @@ function resolveBaseRef(root) {
     if (gitTry(root, 'rev-parse', '--verify', '--quiet', `${ref}^{commit}`) !== null) return ref;
   }
   return null;
+}
+
+const FETCH_TIMEOUT_MS = 8000;
+
+// A remote-tracking base ref is only as fresh as the last fetch, and a cloud session's
+// clone freezes it at container-creation time — so every commit the base branch gained
+// since lands inside `mergeBase..HEAD` and gets billed to the work. That is a wrong
+// verdict, not a stale one: the delta rules (squash-merge-history above all, a *blocking*
+// rule) report other people's commits as introduced by this change, and `--changed`
+// widens to files the change never touched. Refreshing the ref once per run is what makes
+// "the work" mean the work.
+//
+// Best-effort by construction — no network, no remote, a lock held, a slow server: the
+// fetch fails or times out and the run continues against the ref as it stands, exactly as
+// before this existed. It writes ONLY the remote-tracking ref (explicit refspec, no tags):
+// no local branch, no index, no working tree, nothing the session could be surprised by.
+// Set CLAUDINITE_CHECKS_NO_FETCH=1 to skip it (sealed sandboxes, or to pin a base).
+function refreshBaseRef(root, ref) {
+  if (!ref || process.env.CLAUDINITE_CHECKS_NO_FETCH === '1') return;
+  const m = /^([^/]+)\/(.+)$/.exec(ref);
+  if (!m) return; // a local branch is already as current as the checkout — nothing to fetch
+  const [, remote, branch] = m;
+  sh(root, 'git', ['fetch', '--quiet', '--no-tags', remote,
+    `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`],
+  { allowFail: true, timeout: FETCH_TIMEOUT_MS });
 }
 
 function lines(out) {
@@ -58,12 +83,12 @@ function vendoredSet(root, files) {
 // `claudinite` is the vendored-mount stamp — { updated: "<ISO datetime>", ref: "<sha>" },
 // written by the nightly update pass, selecting which migration notes still apply
 // (vendoring/DESIGN.md owns the model); the checks engine itself only tolerates it.
-// `schedule` is the per-repo maintenance anchor the vendored hourly scheduler
+// `taskScheduler` is the per-repo maintenance anchor the vendored hourly scheduler
 // reads (per-project-scheduling DESIGN §2) — { dailyHour, weeklyDay, monthlyDay },
 // all UTC. Absence means the documented defaults, so an omitted key is not an
 // error; a present one is range-validated at load below. Its declaration is also
 // the per-repo cutover marker during the scheduling rollout (MIGRATION Phase 0.6).
-export const CONFIG_KEYS = ['packs', 'rules', 'accept', 'sharedConstants', 'packConfig', 'maintenance', 'claudinite', 'schedule'];
+export const CONFIG_KEYS = ['packs', 'rules', 'accept', 'sharedConstants', 'packConfig', 'maintenance', 'claudinite', 'taskScheduler'];
 
 // The keys a `schedule` object may carry, and the canonical weekday vocabulary
 // (mirrored from engine/scheduler/slots.mjs WEEKDAYS — kept as a literal here so
@@ -99,7 +124,7 @@ export const PACK_ENTRY_KEYS = ['id', 'config', 'answers', 'rules', 'accept', 'v
 // read this one shape regardless of which form the file used.
 export function loadConfig(root) {
   const path = join(root, '.claudinite-checks.json');
-  const empty = { packs: [], packEntries: [], rules: {}, accept: [], sharedConstants: [], packConfig: {}, schedule: null, errors: [] };
+  const empty = { packs: [], packEntries: [], rules: {}, accept: [], sharedConstants: [], packConfig: {}, taskScheduler: null, errors: [] };
   if (!existsSync(path)) return empty;
 
   let raw;
@@ -210,31 +235,31 @@ export function loadConfig(root) {
     if (entry.config !== undefined) packConfig[entry.id] = entry.config;
   }
 
-  // --- schedule: the per-repo maintenance anchor (UTC). Range-validated at
+  // --- taskScheduler: the per-repo maintenance anchor (UTC). Range-validated at
   // load so a bad anchor is a settings error like any other; absence is legal
   // (the scheduler fills the documented defaults). The value passes through
   // unchanged for the scheduler to normalize.
-  let schedule = null;
-  if (raw.schedule !== undefined) {
-    if (raw.schedule === null || typeof raw.schedule !== 'object' || Array.isArray(raw.schedule)) {
-      errors.push({ what: '"schedule" must be an object', fix: 'e.g. { "dailyHour": 4, "weeklyDay": "Sun", "monthlyDay": 1 }' });
+  let taskScheduler = null;
+  if (raw.taskScheduler !== undefined) {
+    if (raw.taskScheduler === null || typeof raw.taskScheduler !== 'object' || Array.isArray(raw.taskScheduler)) {
+      errors.push({ what: '"taskScheduler" must be an object', fix: 'e.g. { "dailyHour": 4, "weeklyDay": "Sun", "monthlyDay": 1 }' });
     } else {
-      for (const key of Object.keys(raw.schedule)) {
+      for (const key of Object.keys(raw.taskScheduler)) {
         if (!SCHEDULE_KEYS.includes(key)) {
-          errors.push({ what: `unknown "schedule" setting "${key}"`, fix: `remove it or fix the name — valid schedule settings: ${SCHEDULE_KEYS.join(', ')}` });
+          errors.push({ what: `unknown "taskScheduler" setting "${key}"`, fix: `remove it or fix the name — valid taskScheduler settings: ${SCHEDULE_KEYS.join(', ')}` });
         }
       }
-      const { dailyHour, weeklyDay, monthlyDay } = raw.schedule;
+      const { dailyHour, weeklyDay, monthlyDay } = raw.taskScheduler;
       if (dailyHour !== undefined && !(Number.isInteger(dailyHour) && dailyHour >= 0 && dailyHour <= 23)) {
-        errors.push({ what: `"schedule.dailyHour" must be an integer 0–23 (UTC), got ${JSON.stringify(dailyHour)}`, fix: 'set an hour of the day, 0 through 23' });
+        errors.push({ what: `"taskScheduler.dailyHour" must be an integer 0–23 (UTC), got ${JSON.stringify(dailyHour)}`, fix: 'set an hour of the day, 0 through 23' });
       }
       if (weeklyDay !== undefined && !SCHEDULE_WEEKDAYS.includes(weeklyDay)) {
-        errors.push({ what: `"schedule.weeklyDay" must be one of ${SCHEDULE_WEEKDAYS.join(', ')}, got ${JSON.stringify(weeklyDay)}`, fix: 'name a weekday, e.g. "Sun"' });
+        errors.push({ what: `"taskScheduler.weeklyDay" must be one of ${SCHEDULE_WEEKDAYS.join(', ')}, got ${JSON.stringify(weeklyDay)}`, fix: 'name a weekday, e.g. "Sun"' });
       }
       if (monthlyDay !== undefined && !(Number.isInteger(monthlyDay) && monthlyDay >= 1 && monthlyDay <= 31)) {
-        errors.push({ what: `"schedule.monthlyDay" must be an integer 1–31, got ${JSON.stringify(monthlyDay)}`, fix: 'set a day of the month, 1 through 31 (clamped to the month length)' });
+        errors.push({ what: `"taskScheduler.monthlyDay" must be an integer 1–31, got ${JSON.stringify(monthlyDay)}`, fix: 'set a day of the month, 1 through 31 (clamped to the month length)' });
       }
-      schedule = raw.schedule;
+      taskScheduler = raw.taskScheduler;
     }
   }
 
@@ -245,7 +270,7 @@ export function loadConfig(root) {
     accept,
     sharedConstants: Array.isArray(raw.sharedConstants) ? raw.sharedConstants : [],
     packConfig,
-    schedule,
+    taskScheduler,
     errors,
   };
 }
@@ -253,9 +278,15 @@ export function loadConfig(root) {
 export function buildContext({ root, mode = 'changed', baseOverride = null, transcriptPath = null }) {
   root = resolve(root);
   const baseRef = baseOverride || resolveBaseRef(root);
+  refreshBaseRef(root, baseRef);
   const mergeBase = baseRef ? (gitTry(root, 'merge-base', 'HEAD', baseRef) || '').trim() || null : null;
   // Diffing against HEAD keeps uncommitted work in scope even when no base branch resolves.
   const diffBase = mergeBase || 'HEAD';
+  // Is this commit already on the base branch? `--is-ancestor` exits non-zero for "no",
+  // which gitTry surfaces as null. No base ref to compare against ⇒ nothing is known to
+  // be on it, so nothing is filtered out.
+  const onBaseBranch = (sha) =>
+    !!baseRef && gitTry(root, 'merge-base', '--is-ancestor', sha, baseRef) !== null;
 
   const tracked = lines(gitTry(root, 'ls-files'));
   const untracked = lines(gitTry(root, 'ls-files', '--others', '--exclude-standard'));
@@ -394,13 +425,20 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
     // chain since the merge-base with the base branch (the squash-only effect
     // check, scoped to the work). Empty when no base resolves or the branch is
     // even with it; pre-existing merges already on the base are out of range.
+    //
+    // The range alone trusts the merge-base to be right, and it isn't always: a
+    // shallow clone's grafted boundary or a criss-cross history can hand back a
+    // merge-base that sweeps the base branch's own merges into the range. So each
+    // candidate is confirmed against the base ref itself — a merge already on the
+    // base branch was never introduced here, whatever the range says. Offline and
+    // exact, and it holds when refreshBaseRef couldn't run.
     introducedMergeCommits() {
       if (!mergeBase) return [];
       const out = gitTry(root, 'log', '--merges', '--first-parent', '--format=%h %s', `${mergeBase}..HEAD`);
       return lines(out).map((l) => {
         const i = l.indexOf(' ');
         return { sha: l.slice(0, i), subject: l.slice(i + 1) };
-      });
+      }).filter(({ sha }) => !onBaseBranch(sha));
     },
 
     // Fixed-string search across tracked files; git grep exits 1 on no match.
