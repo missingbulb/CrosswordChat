@@ -14,6 +14,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 import pack from './pack.mjs';
+import { isSource } from './lib.mjs';
 import ttsSpeakSettles from './tts-speak-settles.mjs';
 import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
@@ -36,6 +37,36 @@ describe('browser-speech pack manifest', () => {
     expect(pack.rules.map((r) => r.id).sort()).toEqual(
       ['mic-capture-released', 'stt-terminal-handlers', 'tts-speak-settles'],
     );
+  });
+});
+
+// The scan must be repo-shape agnostic: a rule that only ever looks under one
+// project's source root matches nothing — and passes vacuously green — in a repo
+// laid out differently, which is exactly the bug these cases exist to prevent.
+describe('source scope', () => {
+  test('accepts browser source under any layout, in JS and TS alike', () => {
+    for (const file of [
+      'extension/src/speech/stt-port.js',
+      'src/speech.ts',
+      'app/lib/voice.tsx',
+      'packages/web/audio.mjs',
+      'assistant.cjs',
+      'client/jsx/mic.jsx',
+    ]) expect(isSource(file), file).toBe(true);
+  });
+
+  test('rejects test scaffolding, fixtures and vendored code wherever they sit', () => {
+    for (const file of [
+      'extension-test/unit/speech-ports.test.js',
+      'src/speech.spec.ts',
+      'test/voice.js',
+      '__tests__/mic.js',
+      'src/__mocks__/recognition.js',
+      'test/fixtures/fake-recognizer.js',
+      'node_modules/some-pkg/speech.js',
+      'dist/bundle.js',
+      'README.md',
+    ]) expect(isSource(file), file).toBe(false);
   });
 });
 
@@ -70,7 +101,45 @@ describe('tts-speak-settles', () => {
       `,
     });
     expect(found).toHaveLength(1);
-    expect(found[0].what).toContain('onerror');
+    expect(found[0].what).toContain('error');
+  });
+
+  test('fires on an utterance wired for end via addEventListener but not error', () => {
+    const found = run(ttsSpeakSettles, {
+      'src/voice.ts': `
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.addEventListener('end', () => resolve());
+        synth.speak(utterance);
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].what).toContain('error');
+  });
+
+  test('stays quiet on an utterance that mixes the two wiring forms', () => {
+    // `.onend =` beside addEventListener('error') is correctly wired; a matcher
+    // that understood only property assignment would false-alarm here.
+    expect(run(ttsSpeakSettles, {
+      'src/voice.ts': `
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => resolve();
+        utterance.addEventListener('error', () => resolve());
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a handler that delegates to a hoisted terminal set', () => {
+    // It enumerates nothing inline, so the rule cannot read it — and says
+    // nothing rather than guessing. This code is correct; firing would be noise.
+    expect(run(ttsSpeakSettles, {
+      'src/tts.js': `
+        const TERMINAL = new Set(['end', 'interrupted', 'cancelled', 'error']);
+        function isDone(type) { return TERMINAL.has(type); }
+        chrome.tts.speak(text, {
+          onEvent(event) { if (isDone(event.type)) resolve(); },
+        });
+      `,
+    })).toEqual([]);
   });
 
   test('stays quiet on a handler that covers every terminal event', () => {
@@ -117,8 +186,8 @@ describe('stt-terminal-handlers', () => {
       `,
     });
     expect(found).toHaveLength(1);
-    expect(found[0].what).toContain('onend');
-    expect(found[0].what).toContain('onerror');
+    expect(found[0].what).toContain('end');
+    expect(found[0].what).toContain('error');
   });
 
   test('fires when only onend is missing', () => {
@@ -129,8 +198,8 @@ describe('stt-terminal-handlers', () => {
       `,
     });
     expect(found).toHaveLength(1);
-    expect(found[0].what).toContain('onend');
-    expect(found[0].what).not.toContain('onerror');
+    expect(found[0].what).toContain('end');
+    expect(found[0].what).not.toContain('error');
   });
 
   test('stays quiet when all three handlers are wired', () => {
@@ -139,6 +208,31 @@ describe('stt-terminal-handlers', () => {
         rec.onresult = (event) => settle(event);
         rec.onerror = (event) => settle({ error: mapSttError(event?.error) });
         rec.onend = () => settle({ error: 'no-speech' });
+      `,
+    })).toEqual([]);
+  });
+
+  test('fires on an addEventListener-wired recognizer missing end', () => {
+    // The rule used to hinge entirely on `.onresult =`, so a recognizer wired
+    // the other legal way was not judged at all — it passed silently.
+    const found = run(sttTerminalHandlers, {
+      'src/listen.ts': `
+        const rec = new webkitSpeechRecognition();
+        rec.addEventListener('result', (event) => settle(event));
+        rec.addEventListener('error', (event) => settle({ error: event.error }));
+        rec.start();
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].what).toContain('end');
+  });
+
+  test('stays quiet on a recognizer that mixes the two wiring forms', () => {
+    expect(run(sttTerminalHandlers, {
+      'src/listen.ts': `
+        rec.onresult = (event) => settle(event);
+        rec.addEventListener('error', (event) => settle({ error: event.error }));
+        rec.addEventListener('end', () => settle({ error: 'no-speech' }));
       `,
     })).toEqual([]);
   });
@@ -174,6 +268,17 @@ describe('mic-capture-released', () => {
       'extension/src/speech/probe.js': "if (!nav?.mediaDevices?.getUserMedia) return null;",
     })).toEqual([]);
   });
+
+  test('fires on a leaked capture in a TypeScript app under a plain src/', () => {
+    const found = run(micCaptureReleased, {
+      'src/audio/preflight.ts': `
+        const stream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        return { status: 'granted' };
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].file).toBe('src/audio/preflight.ts');
+  });
 });
 
 describe('against the real extension source', () => {
@@ -197,6 +302,18 @@ describe('against the real extension source', () => {
     expect(ctx.files.length).toBeGreaterThan(0);
     expect(ctx.files).toContain('extension/src/speech/stt-port.js');
     expect(ctx.files).toContain('extension/src/speech/tts-port.js');
+  });
+
+  test('the real speech ports are in scope, so "clean" below means something', () => {
+    // Without this, every assertion under it would still pass if the scan had
+    // quietly stopped matching this repo's files — the vacuous green a
+    // hard-coded source root produces in any repo but its own.
+    expect(ctx.files.filter(isSource)).toEqual(
+      expect.arrayContaining([
+        'extension/src/speech/stt-port.js',
+        'extension/src/speech/tts-port.js',
+      ]),
+    );
   });
 
   for (const rule of pack.rules) {

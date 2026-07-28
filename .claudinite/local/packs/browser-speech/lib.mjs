@@ -54,16 +54,45 @@ export function stripComments(source) {
   return out;
 }
 
-// The extension's shipped source. Every rule here is about how *this* product
-// drives the browser's speech APIs, so the scan is scoped to the code that runs
-// in the browser: the test suite's hand-rolled fakes deliberately implement only
-// the halves of these contracts a given case exercises, and holding a fake to the
-// production contract would be a false alarm on purpose-built scaffolding.
-export const SOURCE_ROOT = 'extension/src/';
-export const isSource = (file) => file.startsWith(SOURCE_ROOT) && /\.(?:mjs|js)$/.test(file);
+// What counts as shipped browser source. Deliberately NOT a hard-coded project
+// root: every rule in this pack is gated on the speech API it judges actually
+// appearing in the file, so the trigger is the API usage itself and the scan can
+// safely be repo-shaped. A path scope hard-wired to one project's layout would
+// make all three rules match zero files — and pass VACUOUSLY GREEN — in any repo
+// laid out differently, which is the worst failure mode a check has.
+//
+// The one thing the scan must still exclude is test scaffolding: hand-rolled
+// speech fakes implement only the halves of a contract a given case exercises,
+// and holding purpose-built scaffolding to the production contract is a false
+// alarm. That exclusion is expressed directly — by test/vendor path and test
+// filename — instead of being a side effect of the source root.
+const SOURCE_EXT = /\.(?:m|c)?[jt]sx?$/;
+const NOT_SOURCE = [
+  /(?:^|\/)(?:node_modules|dist|build|out|coverage|vendor|third_party)\//,
+  /(?:^|\/)(?:tests?|__tests__|__mocks__|spec|fixtures?|mocks?|e2e)\//,
+  /(?:^|[./-])(?:test|spec|fixture|mock|stub|fake)s?\.[^/]+$/,
+];
+export const isSource = (file) => SOURCE_EXT.test(file) && !NOT_SOURCE.some((re) => re.test(file));
 
 /** 1-based line number of `index` in `text`. */
 export const lineOf = (text, index) => text.slice(0, index).split('\n').length;
+
+/**
+ * Both legal ways to wire a speech event, as one matcher: the `onfoo =` property
+ * assignment and `addEventListener('foo', …)`. The DOM offers both for every one
+ * of these targets and neither is more correct, so a rule that knows only the
+ * property form silently passes half the world's code — and false-alarms on a
+ * file that mixes the two (`rec.onresult = …` beside
+ * `rec.addEventListener('error', …)` reads as "no error handler" to a matcher
+ * that only understands `.onerror =`).
+ */
+export const wires = (src, event) =>
+  new RegExp(
+    `\\.\\s*on${event}\\s*=|addEventListener\\s*\\(\\s*['"\`]${event}['"\`]`,
+  ).test(src);
+
+/** Does `text` contain `name` as a string literal? */
+export const quoted = (text, name) => new RegExp(`['"\`]${name}['"\`]`).test(text);
 
 /**
  * The balanced bracketed run beginning at the opener at `open` (inclusive of both

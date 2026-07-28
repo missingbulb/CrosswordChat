@@ -1,12 +1,18 @@
 # Browser speech — the judgment core
 
-Driving the browser's speech surfaces (`webkitSpeechRecognition`, `chrome.tts`,
-`speechSynthesis`, the mic capture behind them) in CrosswordChat. The mechanical rules —
-completion handlers and mic release — are this pack's three checks; what follows is only what
-no check can decide for you.
+Driving the browser's speech surfaces (`SpeechRecognition` / `webkitSpeechRecognition`,
+`chrome.tts`, `speechSynthesis`, the mic capture behind them). The mechanical rules — completion
+handlers and mic release — are this pack's three checks; what follows is only what no check can
+decide for you.
+
+Each rule below is a judgment about the API, and holds for any voice-driven app. Where one cites
+this repo — a file, a decision record, a measured number — that is the **evidence** it was drawn
+from, not the scope it applies to; a rule grounded in a real instance beats one asserted in the
+abstract. The measured values (the pause window especially) are this product's and should be
+re-measured elsewhere, not copied.
 
 The one thing to keep in mind everywhere below: **speech failures are silent**. Nothing throws,
-nothing logs, the extension keeps showing ON — the user just hears nothing, or is heard by
+nothing logs, the UI keeps showing a live session — the user just hears nothing, or is heard by
 nobody. Design each of these surfaces so every path produces exactly one observable outcome.
 
 ## Where each API can run
