@@ -16,22 +16,21 @@ kind).
 - **A requirement line** starts (optionally after a list dash) with a backtick-wrapped dotted
   number: `` `4.2` ``. A **leaf** is an id with no finer-numbered child. Parse with one shared
   regex (`` ^\s*(?:-\s+)?`(\d+(?:\.\d+)+)` ``) so specs stay drop-in compatible across projects.
-- **The folder is the kind.** A case's kind is the directory it lives in — the case declares no
-  kind field, so classification cannot drift. Cases are
+- **The folder is the kind.** A case's kind is the directory it lives in; the case declares no
+  kind field. Cases are
   `<kind>/cases/<slug>.<leaf-id>.case.<ext>`: a stable feature slug (so retitling a spec section
-  never forces renames), then the dotted leaf id. The filename **is** the leaf link.
+  never forces renames), then the dotted leaf id.
 - **Artifact expecteds live beside their case** (`<slug>.<id>.png`, `expected/<name>.json`);
   failure artifacts (actual/diff renders) go to a gitignored dir, never beside the goldens.
 - Where the language discovers cases dynamically (Node `require`), the registry walks the
   folders; where it cannot (Dart/Flutter), each kind keeps a hand-written `manifest` and **the
-  gate enforces manifest ⇄ disk equality** — a case file that exists but isn't registered never
-  runs, so unregistered must be red.
+  gate enforces manifest ⇄ disk equality** — an unregistered case file never runs, so unregistered
+  must be red.
 
 ## 2. What the coverage gate checks
 
-The bijection gate is one committed test, and it is the framework's spine. It must fail on every
-one of: a leaf no case claims (doc-first red-by-default); a case claiming a non-existent leaf; two
-cases claiming one leaf; a misnamed case file; a kind directory absent from the registry (or a
+The bijection gate is one committed test. It must fail on every one of: a leaf no case claims
+(doc-first red-by-default); a case claiming a non-existent leaf; two cases claiming one leaf; a misnamed case file; a kind directory absent from the registry (or a
 registered kind with no directory); a manifest out of sync with disk (where manifests exist); an
 image found in a coded kind's folder (a screenshot cannot verify a gesture or a pure rule); a
 stray golden no case or step accounts for. Every rule iterates the registry — adding a kind never
@@ -51,7 +50,7 @@ see what it asserts:
 
 - **surface snapshot** (`popup`, `icon`, `screen`, …): a rendered resting state, pixel-exact
   against a committed golden. One golden per leaf, even when several leaves render the same state
-  — the bijection stays strict and each golden is named for what it proves.
+  — the bijection stays strict.
 - **behavior**: a driven gesture and its outgoing request/consequence, asserted in code against
   the fakes' recordings. No images allowed in the folder.
 - **logic**: a pure product rule, a coded `verify()` importing shipped code.
@@ -71,8 +70,7 @@ states without losing the claim.
 
 - A saga case is an ordered list of **steps**; each step = a caption plus an action against the
   fake world; after each step the runner captures one golden frame `<slug>.<id>.step-NN.png`.
-- The **caption narrates the story** in user terms — captions surface in the gallery, turning the
-  spec into a storyboard strip the owner reviews like a comic.
+- The **caption narrates the story** in user terms — captions surface in the gallery.
 - One saga = one leaf; the frames are that one case's expected (all frames pixel-exact, same
   ownership rules as any golden). Keep sagas to 3–6 frames; a longer story is usually two sagas.
 - Saga steps drive the **same real entry point** as every other kind (the shipped app shell/render
@@ -80,8 +78,7 @@ states without losing the claim.
 
 **Animated saga goldens** (recording the motion, not the frames). A per-step frame proves a resting
 state; a saga can instead be **one animated golden** — an APNG per leaf — recording the real UI
-*moving* between steps, so a transition is proven, not just its endpoints. What keeps it
-delay-free and deterministic:
+*moving* between steps. What keeps it delay-free and deterministic:
 
 - **Strip dead delay, keep the animation.** Render time is virtual, so a scripted wait is a run of
   *identical* frames — dedup consecutive identical frames and clamp any single hold, so the golden
@@ -104,7 +101,7 @@ A rendered expected is only owner-ownable if it is byte-stable forever:
   substitutes), randomness, platform sensors, locale (pin it; date copy is locale-sensitive),
   viewport (one fixed logical size and pixel ratio).
 - **Load real fonts** in the render harness — test environments default to a glyph-less stub that
-  renders text as boxes, making goldens unreviewable. Load the product's bundled families plus the
+  renders text as boxes. Load the product's bundled families plus the
   icon font; watch for styles that don't inherit the family (button text styles are the classic
   leak) — pin the family there explicitly.
 - **Never wait for "settled".** Indeterminate spinners animate forever; use fixed-duration pumps
@@ -129,10 +126,9 @@ A rendered expected is only owner-ownable if it is byte-stable forever:
 
 - The spec doubles as a visual gallery: under every image-kind leaf, machine-managed image lines
   (tagged with an HTML comment marker) embed the committed goldens — saga leaves get their full
-  captioned storyboard strip. Approving the spec is approving what the product shows.
+  captioned storyboard strip.
 - A committed **gallery gate** keeps the doc equal to the generator's output byte-for-byte.
-  Regenerate via the tool; a hand-edited gallery line lies about the product until the next
-  regeneration overwrites it.
+  Regenerate via the tool, never by hand.
 
 ## 8. Refresh is a review step
 
@@ -140,5 +136,4 @@ One committed refresh entry point regenerates all goldens **and** the gallery to
 cannot skew. Running it is how an *intended* UI change lands — the refreshed PNGs ride the diff
 for the owner to approve. It is never how a red case gets fixed: the re-baselining approval
 procedure (surface actual/expected/diff, ask, only then re-baseline) is canon in the
-writing-tests skill and the spec-driven-product playbook, and it applies to every kind's expected
-alike.
+writing-tests skill and the spec-driven-product playbook.
