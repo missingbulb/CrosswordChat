@@ -124,7 +124,7 @@ export const PACK_ENTRY_KEYS = ['id', 'config', 'answers', 'rules', 'accept', 'v
 // read this one shape regardless of which form the file used.
 export function loadConfig(root) {
   const path = join(root, '.claudinite-checks.json');
-  const empty = { packs: [], packEntries: [], rules: {}, accept: [], sharedConstants: [], packConfig: {}, taskScheduler: null, errors: [] };
+  const empty = { packs: [], packEntries: [], rules: {}, accept: [], sharedConstants: [], packConfig: {}, taskScheduler: null, claudinite: null, maintenance: null, errors: [] };
   if (!existsSync(path)) return empty;
 
   let raw;
@@ -271,6 +271,18 @@ export function loadConfig(root) {
     sharedConstants: Array.isArray(raw.sharedConstants) ? raw.sharedConstants : [],
     packConfig,
     taskScheduler,
+    // Passed through as declared, not normalized: `claudinite` is the
+    // vendored-mount provenance stamp the `stamp` signal reads, and `maintenance`
+    // is the delivery preference. Both are in CONFIG_KEYS, so declaring them is
+    // legal and raises no error — and omitting them from THIS shape is what made
+    // the stamp invisible to the scheduler and silently killed baselining across
+    // the whole fleet: every repo self-skipped as "no vendored mount (no stamp)"
+    // while its scheduler runs went green. A key that validates but does not
+    // survive the load is the worst kind — legal to write, impossible to read,
+    // silent in both directions. The CONFIG_KEYS-survive-loadConfig test pins the
+    // whole set so no future key can go the same way.
+    claudinite: raw.claudinite ?? null,
+    maintenance: raw.maintenance ?? null,
     errors,
   };
 }

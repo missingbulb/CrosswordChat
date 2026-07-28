@@ -7,7 +7,6 @@ import releaseLayout from './release-layout.mjs';
 import privacyPermissionAlignment from './privacy-permission-alignment.mjs';
 import permissionAddedStoreIssue from './permission-added-store-issue.mjs';
 import readmeSections from './readme-sections.mjs';
-import storeRelease from './run_daily/store-release.mjs';
 
 // A repo "ships the release pipeline" once it carries the orchestrator — a
 // workflow named "Release to Chrome Store" that wires the create-package reusable
@@ -60,7 +59,7 @@ export default {
     permissionAddedStoreIssue,
     readmeSections,
   ],
-  // Pack-contributed run_daily task: the fleet plan picks this up only on repos that
-  // declare chrome-extension-release. See run_daily/store-release.mjs.
-  run_daily: [storeRelease],
+  // Pack-contributed scheduled task: `tasks/store-release/` — the scheduler's
+  // filesystem scan (engine/scheduler/discover.mjs) picks it up only on repos that
+  // declare chrome-extension-release, so it is not declared here.
 };
