@@ -18,6 +18,7 @@ import { isSource } from './lib.mjs';
 import ttsSpeakSettles from './tts-speak-settles.mjs';
 import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
+import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -35,7 +36,12 @@ describe('browser-speech pack manifest', () => {
     expect(pack.marker).toBeNull();
     expect(pack.prose).toBe('RULES.md');
     expect(pack.rules.map((r) => r.id).sort()).toEqual(
-      ['mic-capture-released', 'stt-terminal-handlers', 'tts-speak-settles'],
+      [
+        'mic-capture-released',
+        'mic-constraints-not-screen-capture',
+        'stt-terminal-handlers',
+        'tts-speak-settles',
+      ],
     );
   });
 });
@@ -278,6 +284,104 @@ describe('mic-capture-released', () => {
     });
     expect(found).toHaveLength(1);
     expect(found[0].file).toBe('src/audio/preflight.ts');
+  });
+});
+
+describe('mic-constraints-not-screen-capture', () => {
+  test('fires on a screen-capture constraint set inline on a mic capture', () => {
+    const found = run(micConstraintsNotScreenCapture, {
+      'extension/src/speech/echo.js': `
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, suppressLocalAudioPlayback: true },
+        });
+        stream.getTracks().forEach((t) => t.stop());
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe('mic-constraints-not-screen-capture');
+    expect(found[0].severity).toBe('blocking');
+    expect(found[0].what).toContain('suppressLocalAudioPlayback');
+    expect(found[0].line).toBe(3);
+  });
+
+  test('fires on restrictOwnAudio too, and reports both names', () => {
+    const found = run(micConstraintsNotScreenCapture, {
+      'src/audio/mic.ts': `
+        await media.getUserMedia({ audio: { restrictOwnAudio: true, suppressLocalAudioPlayback: true } });
+      `,
+    });
+    expect(found.map((f) => f.what.match(/asks for (\w+)/)[1]).sort()).toEqual(
+      ['restrictOwnAudio', 'suppressLocalAudioPlayback'],
+    );
+  });
+
+  test('follows one hop into a hoisted constraints constant', () => {
+    // The ordinary way to write this: constraints live in a frozen constant the
+    // getUserMedia call names. A rule that read only the literal argument list
+    // would pass this silently — the false negative that matters most, since
+    // hoisting is the shape real code takes.
+    const found = run(micConstraintsNotScreenCapture, {
+      'extension/src/speech/stt.js': `
+        export const AUDIO_CONSTRAINTS = Object.freeze({
+          echoCancellation: true,
+          restrictOwnAudio: true,
+        });
+        const stream = await media.getUserMedia({ audio: AUDIO_CONSTRAINTS });
+        stream.getTracks().forEach((t) => t.stop());
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].what).toContain('restrictOwnAudio');
+    expect(found[0].line).toBe(4);
+  });
+
+  test('stays quiet on the same constraint used on a real getDisplayMedia call', () => {
+    // This is what the constraint is FOR. Grepping the file would fire here.
+    expect(run(micConstraintsNotScreenCapture, {
+      'src/capture/tab.ts': `
+        const tab = await navigator.mediaDevices.getDisplayMedia({
+          audio: { suppressLocalAudioPlayback: true, restrictOwnAudio: true },
+        });
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when a mic file merely probes the constraint is supported', () => {
+    // A capability probe names the constraint without asking for it; only what
+    // reaches the getUserMedia argument list is judged.
+    expect(run(micConstraintsNotScreenCapture, {
+      'src/audio/probe.js': `
+        const supported = media.getSupportedConstraints();
+        log.info('display-only', supported.suppressLocalAudioPlayback);
+        const stream = await media.getUserMedia({ audio: { echoCancellation: true } });
+        stream.getTracks().forEach((t) => t.stop());
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a clean microphone capture', () => {
+    expect(run(micConstraintsNotScreenCapture, {
+      'extension/src/speech/good-mic.js': `
+        const AUDIO = Object.freeze({
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        });
+        const stream = await media.getUserMedia({ audio: AUDIO });
+        stream.getTracks().forEach((t) => t.stop());
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the only mention of the trap is a comment', () => {
+    expect(run(micConstraintsNotScreenCapture, {
+      'extension/src/speech/note.js': `
+        // suppressLocalAudioPlayback and restrictOwnAudio are getDisplayMedia
+        // constraints — deliberately absent from the constraints below.
+        const stream = await media.getUserMedia({ audio: { echoCancellation: true } });
+        stream.getTracks().forEach((t) => t.stop());
+      `,
+    })).toEqual([]);
   });
 });
 
