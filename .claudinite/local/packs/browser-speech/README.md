@@ -36,14 +36,23 @@ window) rather than a fact of the API. Until then it lives here.
 | `tts-speak-settles` | speak settles on every outcome | blocking |
 | `stt-terminal-handlers` | recognizer wires onend and onerror | blocking |
 | `mic-capture-released` | getUserMedia capture stops its tracks | blocking |
+| `mic-constraints-not-screen-capture` | mic constraints exclude display-only ones | blocking |
 
-**Scope.** All three scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
+**Scope.** All four scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
 vendor paths — never a hard-coded project root. Each rule is already gated on the speech API it
 judges actually appearing in the file, so the API usage *is* the trigger and the scan can be
 repo-shaped; a path scope wired to one layout would make every rule match zero files and pass
 vacuously green elsewhere, which is the worst failure mode a check has. The exclusion that
 matters — test scaffolding, whose hand-rolled speech fakes implement only the halves of a
 contract a given case needs — is stated directly, by test/vendor path and test filename.
+
+**Parsed, not grepped, where the name alone doesn't decide it.**
+`mic-constraints-not-screen-capture` judges `suppressLocalAudioPlayback` / `restrictOwnAudio` only
+where they *reach* a microphone capture — the balanced argument list of a `getUserMedia(` call,
+plus one hop into a same-file constant that list names (hoisting constraints into a frozen
+constant is how real code writes them). Every other use of those names is legitimate: a real
+`getDisplayMedia` call, a `getSupportedConstraints()` probe, a comment explaining the trap — all
+of which a file-wide grep would false-alarm on, this repo's own `stt-port.js` included.
 
 **Both DOM wiring forms count.** `el.onend = …` and `el.addEventListener('end', …)` are equally
 correct, so every handler rule accepts either (`lib.mjs` `wires`). A rule that knew only the
@@ -61,7 +70,7 @@ vitest run picks the file up via the `.claudinite/local/packs/**/*.test.mjs` inc
 | Rule (≤5 words) | How enforced |
 |---|---|
 | chrome.tts unavailable to content scripts | prose |
-| recognizer takes no audio constraints | prose |
+| recognizer takes no audio constraints | prose (its display-only-constraint trap is checked) |
 | preflight the mic deliberately | prose |
 | endpointing fails; monitor mid-utterance pauses | prose |
 | biasing is on-device only | prose |

@@ -2,8 +2,8 @@
 
 Driving the browser's speech surfaces (`SpeechRecognition` / `webkitSpeechRecognition`,
 `chrome.tts`, `speechSynthesis`, the mic capture behind them). The mechanical rules — completion
-handlers and mic release — are this pack's three checks; what follows is only what no check can
-decide for you.
+handlers, mic release, and which constraints a mic capture may even ask for — are this pack's four
+checks; what follows is only what no check can decide for you.
 
 Each rule below is a judgment about the API, and holds for any voice-driven app. Where one cites
 this repo — a file, a decision record, a measured number — that is the **evidence** it was drawn
@@ -35,9 +35,11 @@ not a stopgap (decision D11).
 
 Two traps around this:
 
-- `suppressLocalAudioPlayback` and `restrictOwnAudio` are **`getDisplayMedia` screen-capture**
-  constraints. They filter a captured tab's audio, not a microphone, and have no bearing on a
-  mic-plus-TTS setup. Don't reach for them.
+- `suppressLocalAudioPlayback` and `restrictOwnAudio` read like the fix for this and are not:
+  they are **`getDisplayMedia` screen-capture** constraints, filtering a captured tab's own
+  playout out of that tab's track, and `getUserMedia` ignores them without a word. The cost of
+  reaching for one is not the dead property — it is that the echo guard that would have worked
+  never gets written. (Enforced by the `mic-constraints-not-screen-capture` check.)
 - The constraints you *can* set (`echoCancellation`, `noiseSuppression`, `autoGainControl`)
   apply only to the one capture you own — the permission preflight. Their real value there is
   diagnostic: read `track.getSettings().echoCancellation` back and log it. Whether AEC actually
