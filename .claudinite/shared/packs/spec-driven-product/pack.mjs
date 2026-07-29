@@ -5,6 +5,7 @@
 // stay in the platform's release pack (e.g. chrome-extension-release).
 export default {
   id: 'spec-driven-product',
+  badge: 'badge.svg',
   marker: null,
   detect: null,
   // The product playbook runs its spec as tests — it leans on the framework

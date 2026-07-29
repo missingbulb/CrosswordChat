@@ -9,6 +9,7 @@ import declarativeContentSetIcon from './declarative-content-set-icon.mjs';
 // with a static signature in the source convert to checks here.
 export default {
   id: 'chrome-extension',
+  badge: 'badge.svg',
   marker: 'a manifest.json declaring manifest_version',
   detect: (ctx) => findExtensionManifest(ctx) !== null,
   prose: 'RULES.md',

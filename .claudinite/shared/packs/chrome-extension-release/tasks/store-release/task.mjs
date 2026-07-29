@@ -16,7 +16,6 @@ export default {
   precondition_signals: ['release', 'commits'],
   agent_model: 'none',                   // pure code — no agent (agent-preprocessing DESIGN §4)
   expected_outcome: 'none',                 // it only TRIGGERS the gated publish workflow; publishing stays behind that workflow's own guards
-  agent_instructions: 'worker.mjs',            // vestigial for a none task; the real work is the preprocessing command below
   agent_preprocessing: 'node worker.mjs',      // the scheduler runs this as a subprocess (cwd = this task dir) — DESIGN §3
   agent_preprocessing_timeout: 120,            // the dispatch is a quick REST call; a tight bound (the await-the-run Stage 2 would widen it)
 
