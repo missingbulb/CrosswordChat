@@ -16,6 +16,12 @@ kind).
 - **A requirement line** starts (optionally after a list dash) with a backtick-wrapped dotted
   number: `` `4.2` ``. A **leaf** is an id with no finer-numbered child. Parse with one shared
   regex (`` ^\s*(?:-\s+)?`(\d+(?:\.\d+)+)` ``) so specs stay drop-in compatible across projects.
+- **The line is a scannable one-liner; expanded detail collapses.** A leaf in `requirements.md`
+  reads as a single line the owner skims down the numbered spine on GitHub. Any expansion —
+  rationale, acceptance notes, edge cases, the owner-verification recipe — lives inside a
+  collapsed `<details>` block under the line, hidden until the owner expands it. The doc reviews
+  as a clean spec, not walls of prose; the depth is one click away when wanted, invisible when
+  not.
 - **The folder is the kind.** A case's kind is the directory it lives in; the case declares no
   kind field. Cases are
   `<kind>/cases/<slug>.<leaf-id>.case.<ext>`: a stable feature slug (so retitling a spec section
@@ -45,8 +51,14 @@ entry as `config.spec`.
 
 ## 3. The kind vocabulary
 
-Recurring kinds, by what they can honestly observe — route each leaf to the kind that can actually
-see what it asserts:
+Two forces pick a leaf's kind: what can **honestly observe** the assertion, and what gives the
+**owner the simplest verification**. Prefer the kind whose expected is a **visual the owner checks
+by sight** — a surface snapshot or a saga storyboard — and whose per-leaf test body is minimal:
+drive to the state, capture, done, with the golden as the assertion rather than hand-written
+expectations. Push as many requirements as can honestly be seen onto that visual path — the more
+of the spec an owner verifies by *looking*, the more of it they actually review. Reserve the coded
+kinds (behavior, logic) for what an image genuinely cannot see: a gesture's outgoing request, a
+pure rule. Route each leaf to the kind that can actually see what it asserts:
 
 - **surface snapshot** (`popup`, `icon`, `screen`, …): a rendered resting state, pixel-exact
   against a committed golden. One golden per leaf, even when several leaves render the same state

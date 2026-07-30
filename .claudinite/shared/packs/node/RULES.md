@@ -2,6 +2,11 @@
 
 Portable, project-agnostic practices for working in Node.js / npm codebases — package management, scripts, module resolution, runtime gotchas — true for any Node project read cold.
 
+## Module resolution
+
+- **A *named* import from a package's CommonJS entry can silently yield `undefined`.** Node recovers named bindings from a CJS module by static analysis, and that analysis fails on plenty of real entry points (a re-export built at runtime, a conditional assignment) — with no error: the import resolves, the binding is `undefined`, and the failure surfaces later as "x is not a function". When a package ships both entries, import the **ESM** one explicitly (`…/package/index.mjs`, or the `import` condition of its `exports`) for named bindings; when it doesn't, `import pkg from '…'` and destructure off the default. Resolve the package's own directory (`$(npm root -g)/<pkg>` for a global install) rather than hardcoding an absolute path into a version-pinned layout, which moves under you on the next image or upgrade.
+- **Modern Node (22.7+) detects ES-module syntax in a `.js` file on its own** — no `"type": "module"`, no flag, no warning. A directory of ES modules therefore needs **no `package.json` of its own** just to be loadable; adding one to declare module-ness is cargo cult, and one already present for that reason is vestigial. (Prefer `.js` consistently within a tree over mixing in `.mjs` for the same purpose; the extension is then a style choice, not a signal.)
+
 ## jsdom diverges from a real browser in ways a green test can hide
 
 Two that recur:
