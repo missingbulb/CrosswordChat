@@ -64,6 +64,15 @@ and then against this repo's real `extension/src/` tree, which must stay quiet. 
 vitest run picks the file up via the `.claudinite/local/packs/**/*.test.mjs` include in
 `vitest.config.js`, so the checks ship green in CI.
 
+**When a check's whole point is precision, red-first has to prove it in two directions.** A
+violating fixture failing and a clean one passing only proves the shipped check is correct — it
+says nothing about whether the parsing it does was *necessary*. Also run the quiet fixtures
+against the naive alternative the parsing exists to avoid (here: a file-wide grep in place of the
+`getUserMedia(` scoping) and confirm they'd wrongly fire — that's what earns the parsing its
+complexity. `mic-constraints-not-screen-capture`'s fixtures do both: the three firing fixtures
+fail with the rule neutered, and the three quiet fixtures — plus this repo's own `stt-port.js` —
+fail against a naive whole-file grep.
+
 ## Prose (`RULES.md`)
 
 | Rule (≤5 words) | How enforced |
