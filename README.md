@@ -1,5 +1,7 @@
 # CrosswordChat
 
+<!-- claudinite:packs -->![basics](../../../../../tmp/claudinite-canon-6L0QYl/packs/basics/badge.svg "basics") ![barriers](../../../../../tmp/claudinite-canon-6L0QYl/packs/barriers/badge.svg "barriers") ![git-github](../../../../../tmp/claudinite-canon-6L0QYl/packs/git-github/badge.svg "git-github") ![chrome-extension](../../../../../tmp/claudinite-canon-6L0QYl/packs/chrome-extension/badge.svg "chrome-extension") ![chrome-extension-release](../../../../../tmp/claudinite-canon-6L0QYl/packs/chrome-extension-release/badge.svg "chrome-extension-release") ![github-actions](../../../../../tmp/claudinite-canon-6L0QYl/packs/github-actions/badge.svg "github-actions") ![node](../../../../../tmp/claudinite-canon-6L0QYl/packs/node/badge.svg "node") ![spec-driven-product](../../../../../tmp/claudinite-canon-6L0QYl/packs/spec-driven-product/badge.svg "spec-driven-product") ![executable-requirements](../../../../../tmp/claudinite-canon-6L0QYl/packs/executable-requirements/badge.svg "executable-requirements") ![tidy-repo](../../../../../tmp/claudinite-canon-6L0QYl/packs/tidy-repo/badge.svg "tidy-repo") ![grow_with_claudinite](../../../../../tmp/claudinite-canon-6L0QYl/packs/grow_with_claudinite/badge.svg "grow_with_claudinite")<!-- /claudinite:packs -->
+
 Solve the New York Times crossword **conversationally**: a Chrome extension that reads clues
 aloud ("17 Across. Little house. The word 'house' is in italics. 6 letters."), listens to your
 answer, checks it against the grid — homophones, lengths, crossing letters and all — types it in,

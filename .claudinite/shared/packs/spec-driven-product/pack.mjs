@@ -5,11 +5,16 @@
 // stay in the platform's release pack (e.g. chrome-extension-release).
 export default {
   id: 'spec-driven-product',
+  ruleRoutingGuidance: {
+    belongs: 'playbook for shipping a small end-user product from an executable spec — leaf claims, owner-owned expecteds, green-main releases',
+    excludes: 'the requirements file format and coverage gates — that is executable-requirements; research wikis are product-wiki',
+  },
+  badge: 'badge.svg',
   marker: null,
   detect: null,
   // The product playbook runs its spec as tests — it leans on the framework
   // mechanics the executable-requirements pack carries.
   requires: ['executable-requirements'],
   prose: 'RULES.md',
-  rules: [],
+  worldRules: [],
 };
