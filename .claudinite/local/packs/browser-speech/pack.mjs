@@ -17,9 +17,12 @@ import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture
 // `local/browser-speech` in .claudinite-checks.json.
 export default {
   id: 'browser-speech',
-  always: false,
+  ruleRoutingGuidance: {
+    belongs: 'browser speech API contracts — SpeechRecognition, chrome.tts, speechSynthesis, and the getUserMedia capture behind them',
+    excludes: 'MV3 build and runtime gotchas — those are chrome-extension',
+  },
   marker: null,
   detect: null,
   prose: 'RULES.md',
-  rules: [ttsSpeakSettles, sttTerminalHandlers, micCaptureReleased, micConstraintsNotScreenCapture],
+  worldRules: [ttsSpeakSettles, sttTerminalHandlers, micCaptureReleased, micConstraintsNotScreenCapture],
 };

@@ -148,11 +148,6 @@ agreement with the manifest:
 
 - `dev/build/release/store_artifacts/PRIVACY.md` is the privacy policy, deployed verbatim as the
   public `/privacy/` page the listing points at.
-- `cer/privacy-permission-alignment` (test the world) blocks whenever a permission the manifest
-  requests isn't disclosed in `PRIVACY.md` — the one alignment that must hold at all times.
-- `cer/permission-added-store-issue` (test the work) fires when a change *adds* a permission,
-  prompting the one step that can't be automated: open a tracking issue to add that permission's
-  justification on the dashboard's Privacy-practices tab before the next publish.
 
 **Store assets & icons** — required inventory: a 128 px store icon; the manifest icons the
 extension ships (16/32/48/128), living inside the extension source where the manifest points;
@@ -362,17 +357,14 @@ default because it assumes nothing about the operator's machine.
 
 Any PR that changes the manifest's `permissions`, `host_permissions`, or `optional_*`:
 
-1. Disclose the permission in `PRIVACY.md` in the **same PR** — the deployed privacy policy must
-   reflect what the extension can access. `cer/privacy-permission-alignment` blocks the change
-   until it does.
-2. Adding a permission trips `cer/permission-added-store-issue` (advisory): open a tracking issue
+1. Adding a permission trips `cer/permission-added-store-issue` (advisory): open a tracking issue
    for the manual dashboard step — the Privacy-practices tab must carry a written justification
    for the new permission, and the store blocks publishing the new version until it does, so the
    next store publish (daily or manual) stalls on it. (If the daily pipeline hits it first, the
    failed publish lands on its `workflow-failure` tracking issue; the proactive issue beats the
    reactive one.) After updating the dashboard, re-run the publish.
-3. Expect deeper store review than a plain code update — permission changes re-open scrutiny.
-4. A new **required** permission that carries an install-time warning disables the extension
+2. Expect deeper store review than a plain code update — permission changes re-open scrutiny.
+3. A new **required** permission that carries an install-time warning disables the extension
    for existing users until each one re-approves it — prefer `optional_permissions` /
    `optional_host_permissions` requested at runtime (`chrome.permissions.request`) when the
    feature allows.

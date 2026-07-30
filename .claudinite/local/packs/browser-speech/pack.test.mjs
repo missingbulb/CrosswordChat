@@ -35,7 +35,7 @@ describe('browser-speech pack manifest', () => {
     expect(pack.detect).toBeNull();
     expect(pack.marker).toBeNull();
     expect(pack.prose).toBe('RULES.md');
-    expect(pack.rules.map((r) => r.id).sort()).toEqual(
+    expect(pack.worldRules.map((r) => r.id).sort()).toEqual(
       [
         'mic-capture-released',
         'mic-constraints-not-screen-capture',
@@ -420,7 +420,7 @@ describe('against the real extension source', () => {
     );
   });
 
-  for (const rule of pack.rules) {
+  for (const rule of pack.worldRules) {
     test(`${rule.id} is clean on extension/src`, () => {
       expect(rule.run(ctx)).toEqual([]);
     });
