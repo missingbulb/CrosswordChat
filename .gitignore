@@ -6,3 +6,4 @@ dist-pages/
 dev/requirements/ui/render/.artifacts/
 /.claudinite-hooks.log
 /.claudinite-hooks.log.tmp
+/.claude/worktrees/
