@@ -19,6 +19,7 @@ import ttsSpeakSettles from './tts-speak-settles.mjs';
 import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
 import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
+import sttErrorMapHasDefault from './stt-error-map-has-default.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -39,6 +40,7 @@ describe('browser-speech pack manifest', () => {
       [
         'mic-capture-released',
         'mic-constraints-not-screen-capture',
+        'stt-error-map-has-default',
         'stt-terminal-handlers',
         'tts-speak-settles',
       ],
@@ -380,6 +382,147 @@ describe('mic-constraints-not-screen-capture', () => {
         // constraints — deliberately absent from the constraints below.
         const stream = await media.getUserMedia({ audio: { echoCancellation: true } });
         stream.getTracks().forEach((t) => t.stop());
+      `,
+    })).toEqual([]);
+  });
+});
+
+describe('stt-error-map-has-default', () => {
+  test('fires on a mapping switch with no catch-all for an unknown error name', () => {
+    const found = run(sttErrorMapHasDefault, {
+      'extension/src/speech/bad-errors.js': `
+        export function mapSttError(name) {
+          switch (name) {
+            case 'not-allowed':
+            case 'service-not-allowed':
+              return 'not-allowed';
+            case 'no-speech':
+              return 'no-speech';
+            case 'network':
+              return 'network';
+          }
+        }
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe('stt-error-map-has-default');
+    expect(found[0].severity).toBe('blocking');
+    expect(found[0].what).toContain('undefined');
+    expect(found[0].what).toContain('no-speech');
+    expect(found[0].line).toBe(3);
+  });
+
+  test('fires in TypeScript under a plain src/ too', () => {
+    const found = run(sttErrorMapHasDefault, {
+      'src/voice/errors.ts': `
+        function kindOf(name: string): SttKind {
+          switch (name) {
+            case 'aborted': return 'aborted';
+            case 'audio-capture': return 'audio-capture';
+          }
+          log.warn('unmapped', name);
+        }
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].file).toBe('src/voice/errors.ts');
+  });
+
+  test('stays quiet when the switch has a default arm', () => {
+    expect(run(sttErrorMapHasDefault, {
+      'extension/src/speech/good-errors.js': `
+        export function mapSttError(name) {
+          switch (name) {
+            case 'not-allowed':
+            case 'service-not-allowed':
+              return 'not-allowed';
+            case 'no-speech':
+              return 'no-speech';
+            default:
+              return 'other';
+          }
+        }
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the catch-all is a return straight after the switch', () => {
+    // Exactly as total as a `default:` arm, and a common way to write it. A rule
+    // that only looked for the `default` keyword would fire here — noise on
+    // correct code, and the false alarm a whole-file grep makes most often.
+    expect(run(sttErrorMapHasDefault, {
+      'src/speech/errors.js': `
+        function kindOf(name) {
+          switch (name) {
+            case 'no-speech': return 'no-speech';
+            case 'not-allowed': return 'not-allowed';
+          }
+          return 'other';
+        }
+      `,
+    })).toEqual([]);
+  });
+
+  test('does not accept a nested switch default as the outer switch\'s catch-all', () => {
+    // The `default:` here belongs to the inner switch; the outer mapping is still
+    // partial. A depth-blind scan for the keyword would call this file covered.
+    const found = run(sttErrorMapHasDefault, {
+      'src/speech/nested.js': `
+        function kindOf(name, detail) {
+          switch (name) {
+            case 'network':
+              switch (detail) {
+                case 'dns': return 'network';
+                default: return 'network';
+              }
+            case 'no-speech':
+              return 'no-speech';
+          }
+        }
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].what).toContain('network');
+  });
+
+  test('stays quiet on a switch that dispatches side effects rather than mapping', () => {
+    // Not a taxonomy mapping: no arm returns a kind, so there is no undefined to
+    // fall through to and the rule has no honest opinion about the missing arm.
+    expect(run(sttErrorMapHasDefault, {
+      'src/speech/report.js': `
+        function report(name) {
+          switch (name) {
+            case 'no-speech': metrics.count('silence'); break;
+            case 'not-allowed': metrics.count('denied'); break;
+          }
+        }
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a switch over one error name plus unrelated labels', () => {
+    // One spec name is not a speech-error taxonomy — it is a switch that happens
+    // to mention an error. Two are what identify the mapping.
+    expect(run(sttErrorMapHasDefault, {
+      'src/speech/state.js': `
+        function next(event) {
+          switch (event) {
+            case 'no-speech': return 'idle';
+            case 'listening': return 'live';
+          }
+        }
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the only mention of the trap is a comment', () => {
+    expect(run(sttErrorMapHasDefault, {
+      'src/speech/note.js': `
+        // switch (name) {
+        //   case 'no-speech': return 'no-speech';
+        //   case 'not-allowed': return 'not-allowed';
+        // }
+        export const NOTE = 1;
       `,
     })).toEqual([]);
   });

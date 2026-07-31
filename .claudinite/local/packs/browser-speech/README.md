@@ -36,8 +36,9 @@ window) rather than a fact of the API. Until then it lives here.
 | `stt-terminal-handlers` | recognizer wires onend and onerror | blocking |
 | `mic-capture-released` | getUserMedia capture stops its tracks | blocking |
 | `mic-constraints-not-screen-capture` | mic constraints exclude display-only ones | blocking |
+| `stt-error-map-has-default` | error mapping has a catch-all | blocking |
 
-**Scope.** All four scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
+**Scope.** All five scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
 vendor paths — never a hard-coded project root. Each rule is already gated on the speech API it
 judges actually appearing in the file, so the API usage *is* the trigger and the scan can be
 repo-shaped; a path scope wired to one layout would make every rule match zero files and pass
@@ -52,6 +53,13 @@ plus one hop into a same-file constant that list names (hoisting constraints int
 constant is how real code writes them). Every other use of those names is legitimate: a real
 `getDisplayMedia` call, a `getSupportedConstraints()` probe, a comment explaining the trap — all
 of which a file-wide grep would false-alarm on, this repo's own `stt-port.js` included.
+
+`stt-error-map-has-default` reads a switch's arms at the switch body's *own* brace depth, so a
+nested switch's `default:` is not mistaken for the outer mapping's catch-all — and it treats a
+`return`/`throw` immediately after the switch as the catch-all it is, since that is the other
+idiomatic way to write a total mapping. It judges only switches whose arms `return` a kind: a
+switch dispatching side effects over error names is a different shape, and the rule has no
+honest opinion about its missing arm.
 
 **Both DOM wiring forms count.** `el.onend = …` and `el.addEventListener('end', …)` are equally
 correct, so every handler rule accepts either (`lib.mjs` `wires`). A rule that knew only the
@@ -71,7 +79,10 @@ against the naive alternative the parsing exists to avoid (here: a file-wide gre
 `getUserMedia(` scoping) and confirm they'd wrongly fire — that's what earns the parsing its
 complexity. `mic-constraints-not-screen-capture`'s fixtures do both: the three firing fixtures
 fail with the rule neutered, and the three quiet fixtures — plus this repo's own `stt-port.js` —
-fail against a naive whole-file grep.
+fail against a naive whole-file grep. `stt-error-map-has-default`'s do the same: its three firing
+fixtures fail with the rule neutered, and against a naive "≥2 error names and no `default:`
+anywhere in the file" grep the trailing-`return`, side-effect-dispatch and comment-only fixtures
+all wrongly fire while the nested-switch violation goes undetected.
 
 ## Prose (`RULES.md`)
 
@@ -83,4 +94,4 @@ fail against a naive whole-file grep.
 | endpointing fails; monitor mid-utterance pauses | prose |
 | biasing is on-device only | prose |
 | voices load lazily; default is worst | prose |
-| map speech errors to a taxonomy | prose |
+| map speech errors to a taxonomy | prose (that the mapping is total is checked) |

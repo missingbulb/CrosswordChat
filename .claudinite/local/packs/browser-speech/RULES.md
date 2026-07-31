@@ -2,8 +2,9 @@
 
 Driving the browser's speech surfaces (`SpeechRecognition` / `webkitSpeechRecognition`,
 `chrome.tts`, `speechSynthesis`, the mic capture behind them). The mechanical rules — completion
-handlers, mic release, and which constraints a mic capture may even ask for — are this pack's four
-checks; what follows is only what no check can decide for you.
+handlers, mic release, which constraints a mic capture may even ask for, and whether an error
+mapping is total — are this pack's five checks; what follows is only what no check can decide for
+you.
 
 Each rule below is a judgment about the API, and holds for any voice-driven app. Where one cites
 this repo — a file, a decision record, a measured number — that is the **evidence** it was drawn
@@ -99,5 +100,7 @@ constants to tune once.
 Map the raw Web Speech error names onto a small named set the dialog policy can reason about,
 and keep the mapping in one place. The policy cares about *kinds* — nothing heard, the mic was
 refused, we aborted on purpose, the network went — not about spellings, and a `default → other`
-arm means a browser inventing a new name degrades instead of crashing. Log the codes short
-(`en`/`ed`/`ea`…) so a whole session fits in a diagnostics dump.
+arm means a browser inventing a new name degrades instead of crashing. (That the mapping is
+total is the `stt-error-map-has-default` check; choosing the kinds, and keeping them in one
+place, is not.) Log the codes short (`en`/`ed`/`ea`…) so a whole session fits in a diagnostics
+dump.
