@@ -20,6 +20,7 @@ import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
 import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
 import sttErrorMapHasDefault from './stt-error-map-has-default.mjs';
+import sttInterimResultsGated from './stt-interim-results-gated.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -41,6 +42,7 @@ describe('browser-speech pack manifest', () => {
         'mic-capture-released',
         'mic-constraints-not-screen-capture',
         'stt-error-map-has-default',
+        'stt-interim-results-gated',
         'stt-terminal-handlers',
         'tts-speak-settles',
       ],
@@ -525,6 +527,128 @@ describe('stt-error-map-has-default', () => {
         export const NOTE = 1;
       `,
     })).toEqual([]);
+  });
+});
+
+describe('stt-interim-results-gated', () => {
+  // The trap in its plainest form: interim hypotheses turned on, and a handler
+  // written as if `result` still fired once. The caller gets `"heart"` while the
+  // user is still saying "heart of the matter".
+  test('fires on an ungated result handler with interim results on', () => {
+    const found = run(sttInterimResultsGated, {
+      'extension/src/speech/bad-stt.js': `
+        const rec = new webkitSpeechRecognition();
+        rec.interimResults = true;
+        rec.onresult = (event) => settle({ transcript: event.results[0][0].transcript });
+        rec.start();
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].severity).toBe('blocking');
+    expect(found[0].what).toContain('isFinal');
+  });
+
+  test('fires on the addEventListener wiring too', () => {
+    const found = run(sttInterimResultsGated, {
+      'src/listen.ts': `
+        rec.interimResults = true;
+        rec.addEventListener('result', function (event) {
+          deliver(event.results[event.results.length - 1][0].transcript);
+        });
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('fires when interim results are enabled through a computed value', () => {
+    // `interimResults = pauseResetMs > 0` is how a pause monitor turns them on —
+    // the exact path that leaves a pre-existing handler unguarded.
+    const found = run(sttInterimResultsGated, {
+      'app/voice.js': `
+        rec.interimResults = pauseResetMs > 0;
+        rec.onresult = async (event) => { await onTranscript(event.results[0][0].transcript); };
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('fires on the object-literal form of the same assignment', () => {
+    const found = run(sttInterimResultsGated, {
+      'src/speech/rec.js': `
+        Object.assign(rec, { interimResults: true, continuous: false });
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('stays quiet on a handler that gates on isFinal', () => {
+    expect(run(sttInterimResultsGated, {
+      'extension/src/speech/good-stt.js': `
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          const results = event.results ?? [];
+          for (let i = 0; i < results.length; i++) {
+            if (results[i] && results[i].isFinal !== false) return settle(results[i]);
+          }
+          lastInterimAt = Date.now();
+        };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the gate lives in a same-file helper', () => {
+    // An inline handler delegating the pick to a helper beside it is correct;
+    // the check has no business demanding the comparison sit in the handler.
+    expect(run(sttInterimResultsGated, {
+      'src/listen.js': `
+        const finalOf = (results) => [...results].find((r) => r.isFinal);
+        rec.interimResults = true;
+        rec.onresult = (event) => { const r = finalOf(event.results); if (r) settle(r); };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when interim results are explicitly off', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/once.js': `
+        rec.interimResults = false;
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the handler is delegated out of the file', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/port.js': `
+        rec.interimResults = true;
+        rec.onresult = this.handleResult;
+        rec.addEventListener('result', onResult);
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on prose that merely names the trap', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/notes.js': `
+        // rec.interimResults = true without an isFinal gate delivers a fragment.
+        export const NOTE = 1;
+      `,
+    })).toEqual([]);
+  });
+
+  // Precision has to be proved in two directions: that the shipped rule is right,
+  // and that the scoping it does was NECESSARY. Against the naive alternative —
+  // "the file says interimResults and never says isFinal" — the three quiet
+  // fixtures below all wrongly fire, which is what earns the value-reading and
+  // the inline-handler test their complexity.
+  test('the naive whole-file grep would false-alarm on the quiet cases', () => {
+    const naive = (src) => src.includes('interimResults') && !src.includes('isFinal');
+    for (const src of [
+      "rec.interimResults = false;\nrec.onresult = (e) => settle(e.results[0][0].transcript);",
+      "rec.interimResults = true;\nrec.onresult = this.handleResult;",
+      "// rec.interimResults = true without a gate delivers a fragment.\nexport const NOTE = 1;",
+    ]) expect(naive(src)).toBe(true);
   });
 });
 

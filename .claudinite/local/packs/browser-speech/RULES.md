@@ -2,9 +2,9 @@
 
 Driving the browser's speech surfaces (`SpeechRecognition` / `webkitSpeechRecognition`,
 `chrome.tts`, `speechSynthesis`, the mic capture behind them). The mechanical rules — completion
-handlers, mic release, which constraints a mic capture may even ask for, and whether an error
-mapping is total — are this pack's five checks; what follows is only what no check can decide for
-you.
+handlers, mic release, which constraints a mic capture may even ask for, whether an error mapping
+is total, and whether interim hypotheses are gated before delivery — are this pack's six checks;
+what follows is only what no check can decide for you.
 
 Each rule below is a judgment about the API, and holds for any voice-driven app. Where one cites
 this repo — a file, a decision record, a measured number — that is the **evidence** it was drawn
