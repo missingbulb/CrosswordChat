@@ -20,7 +20,8 @@
     },
     "tidy-repo",
     "grow_with_claudinite",
-    "local/browser-speech"
+    "local/browser-speech",
+    "local/host-page-adaptation"
   ],
   "maintenance": {
     "delivery": "auto-merge"
