@@ -37,8 +37,9 @@ window) rather than a fact of the API. Until then it lives here.
 | `mic-capture-released` | getUserMedia capture stops its tracks | blocking |
 | `mic-constraints-not-screen-capture` | mic constraints exclude display-only ones | blocking |
 | `stt-error-map-has-default` | error mapping has a catch-all | blocking |
+| `stt-interim-results-gated` | interim results told apart from finals | blocking |
 
-**Scope.** All five scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
+**Scope.** All six scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
 vendor paths — never a hard-coded project root. Each rule is already gated on the speech API it
 judges actually appearing in the file, so the API usage *is* the trigger and the scan can be
 repo-shaped; a path scope wired to one layout would make every rule match zero files and pass
@@ -91,7 +92,7 @@ all wrongly fire while the nested-switch violation goes undetected.
 | chrome.tts unavailable to content scripts | prose |
 | recognizer takes no audio constraints | prose (its display-only-constraint trap is checked) |
 | preflight the mic deliberately | prose |
-| endpointing fails; monitor mid-utterance pauses | prose |
+| endpointing fails; monitor mid-utterance pauses | prose (that interim and final are told apart is checked) |
 | biasing is on-device only | prose |
 | voices load lazily; default is worst | prose |
 | map speech errors to a taxonomy | prose (that the mapping is total is checked) |

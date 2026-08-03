@@ -20,6 +20,7 @@ import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
 import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
 import sttErrorMapHasDefault from './stt-error-map-has-default.mjs';
+import sttInterimResultsGated from './stt-interim-results-gated.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -41,6 +42,7 @@ describe('browser-speech pack manifest', () => {
         'mic-capture-released',
         'mic-constraints-not-screen-capture',
         'stt-error-map-has-default',
+        'stt-interim-results-gated',
         'stt-terminal-handlers',
         'tts-speak-settles',
       ],
@@ -522,6 +524,124 @@ describe('stt-error-map-has-default', () => {
         //   case 'no-speech': return 'no-speech';
         //   case 'not-allowed': return 'not-allowed';
         // }
+        export const NOTE = 1;
+      `,
+    })).toEqual([]);
+  });
+});
+
+describe('stt-interim-results-gated', () => {
+  test('fires when interim results are on and the handler never reads isFinal', () => {
+    const found = run(sttInterimResultsGated, {
+      'extension/src/speech/bad-interim.js': `
+        const rec = new webkitSpeechRecognition();
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          const best = event.results[0][0];
+          settle({ transcript: best.transcript });
+        };
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe('stt-interim-results-gated');
+    expect(found[0].severity).toBe('blocking');
+    expect(found[0].what).toContain('isFinal');
+    expect(found[0].line).toBe(3);
+  });
+
+  test('fires on an addEventListener-wired handler in TypeScript too', () => {
+    // The other legal wiring form — a rule hinged on `.onresult =` alone would
+    // pass this silently, the false negative that matters most here.
+    const found = run(sttInterimResultsGated, {
+      'src/voice/listen.ts': `
+        rec.addEventListener('result', (event: SpeechRecognitionEvent) => {
+          caption(event.results[event.resultIndex][0].transcript);
+        });
+        rec.interimResults = true;
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].file).toBe('src/voice/listen.ts');
+  });
+
+  test('fires when interim results are enabled through an options bag', () => {
+    const found = run(sttInterimResultsGated, {
+      'app/lib/recognizer.jsx': `
+        const rec = makeRecognizer({ lang, interimResults: true, continuous: false });
+        rec.onresult = (event) => deliver(event.results[0][0].transcript);
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('stays quiet when the handler branches on isFinal', () => {
+    expect(run(sttInterimResultsGated, {
+      'extension/src/speech/good-interim.js': `
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          for (const result of event.results) {
+            if (!result.isFinal) { lastInterimAt = Date.now(); continue; }
+            settle({ transcript: result[0].transcript });
+          }
+        };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on the legacy `.final` spelling of the same flag', () => {
+    // Older recognizers name the finality flag `final`; a handler using it is
+    // making exactly the distinction the rule is about.
+    expect(run(sttInterimResultsGated, {
+      'src/legacy/voice.js': `
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          const r = event.results[event.resultIndex];
+          if (r.final) settle(r[0].transcript);
+        };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when interim results are explicitly disabled', () => {
+    // With the setting off every result the engine delivers is already final,
+    // so there is nothing to tell apart — firing here would be backwards.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/simple.js': `
+        rec.interimResults = false;
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    })).toEqual([]);
+  });
+
+  test('does not read a comparison as enabling the setting', () => {
+    // `=== true` is a read, not a set; the file configures nothing and the rule
+    // has no honest opinion about it.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/report.js': `
+        rec.onresult = (event) => deliver(event.results[0][0].transcript);
+        if (rec.interimResults === true) log.info('interim on');
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the file enables the setting but wires no handler', () => {
+    // The handler this setting changed the meaning of lives in another file;
+    // guessing at it from here would false-alarm on correct code.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/configure.js': `
+        export function configure(rec) {
+          rec.interimResults = true;
+          rec.continuous = false;
+        }
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the only mention of the trap is a comment', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/speech/note.js': `
+        // rec.interimResults = true;
+        // rec.onresult = (event) => deliver(event.results[0][0].transcript);
         export const NOTE = 1;
       `,
     })).toEqual([]);
