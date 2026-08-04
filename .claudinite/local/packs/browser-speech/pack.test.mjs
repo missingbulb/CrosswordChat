@@ -20,6 +20,7 @@ import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
 import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
 import sttErrorMapHasDefault from './stt-error-map-has-default.mjs';
+import sttInterimResultsGated from './stt-interim-results-gated.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -41,6 +42,7 @@ describe('browser-speech pack manifest', () => {
         'mic-capture-released',
         'mic-constraints-not-screen-capture',
         'stt-error-map-has-default',
+        'stt-interim-results-gated',
         'stt-terminal-handlers',
         'tts-speak-settles',
       ],
@@ -523,6 +525,88 @@ describe('stt-error-map-has-default', () => {
         //   case 'not-allowed': return 'not-allowed';
         // }
         export const NOTE = 1;
+      `,
+    })).toEqual([]);
+  });
+});
+
+describe('stt-interim-results-gated', () => {
+  test('fires on a handler that reads a transcript with interims on and no isFinal', () => {
+    const found = run(sttInterimResultsGated, {
+      'extension/src/speech/eager-stt.js': `
+        const rec = new webkitSpeechRecognition();
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          const result = event.results[event.results.length - 1];
+          settle({ transcript: result[0].transcript });
+        };
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].line).toBe(3);
+    expect(found[0].what).toContain('isFinal');
+    expect(found[0].severity).toBe('blocking');
+  });
+
+  test('fires when interims are enabled through an options object', () => {
+    // The flag is as often passed into a wrapper as assigned onto a recognizer;
+    // a rule that knew only `rec.interimResults =` would pass this silently.
+    const found = run(sttInterimResultsGated, {
+      'src/listen.ts': `
+        const rec = makeRecognizer({ lang, interimResults: true, maxAlternatives: 3 });
+        rec.addEventListener('result', (e) => deliver(e.results[0][0].transcript));
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('stays quiet when the transcript is taken from a final result', () => {
+    expect(run(sttInterimResultsGated, {
+      'extension/src/speech/good-stt.js': `
+        rec.interimResults = pauseResetMs > 0;
+        rec.onresult = (event) => {
+          const results = event.results ?? [];
+          for (let i = 0; i < results.length; i++) {
+            if (results[i] && results[i].isFinal !== false) {
+              settle({ transcript: results[i][0].transcript });
+              return;
+            }
+          }
+          lastInterimAt = Date.now();
+        };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when interim results are switched off', () => {
+    // Engines omit isFinal entirely when interims are off, so every result is
+    // already final — demanding the gate there would be pure noise.
+    expect(run(sttInterimResultsGated, {
+      'src/listen.ts': `
+        rec.interimResults = false;
+        rec.onresult = (e) => deliver(e.results[0][0].transcript);
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a file holding only one half of the shape', () => {
+    expect(run(sttInterimResultsGated, {
+      // config only: no result wiring, no transcript — nothing to judge here
+      'src/config.js': 'export const RECOGNITION = { interimResults: true, continuous: false };',
+      // handler only: the flag is somebody else's file
+      'src/handler.js': `
+        rec.onresult = (e) => deliver(e.results[0][0].transcript);
+        rec.onend = () => settle();
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on prose that merely names the trap', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/notes.js': `
+        // rec.interimResults = true without isFinal delivers a hypothesis as a
+        // transcript. Never do that.
+        rec.onresult = (e) => settle(e);
       `,
     })).toEqual([]);
   });
