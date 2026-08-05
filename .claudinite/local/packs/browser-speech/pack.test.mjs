@@ -20,6 +20,7 @@ import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
 import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
 import sttErrorMapHasDefault from './stt-error-map-has-default.mjs';
+import sttInterimResultsGated from './stt-interim-results-gated.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -41,6 +42,7 @@ describe('browser-speech pack manifest', () => {
         'mic-capture-released',
         'mic-constraints-not-screen-capture',
         'stt-error-map-has-default',
+        'stt-interim-results-gated',
         'stt-terminal-handlers',
         'tts-speak-settles',
       ],
@@ -523,6 +525,125 @@ describe('stt-error-map-has-default', () => {
         //   case 'not-allowed': return 'not-allowed';
         // }
         export const NOTE = 1;
+      `,
+    })).toEqual([]);
+  });
+});
+
+describe('stt-interim-results-gated', () => {
+  test('fires when a recognizer turns interim results on and treats every result alike', () => {
+    const found = run(sttInterimResultsGated, {
+      'extension/src/speech/bad-interim.js': `
+        const rec = new webkitSpeechRecognition();
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          const result = event.results[event.results.length - 1];
+          settle({ transcript: result[0].transcript });
+        };
+        rec.start();
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe('stt-interim-results-gated');
+    expect(found[0].severity).toBe('blocking');
+    expect(found[0].what).toContain('isFinal');
+    expect(found[0].line).toBe(3);
+    expect(found[0].doc).toBe('.claudinite/local/packs/browser-speech/RULES.md');
+  });
+
+  test('fires on the addEventListener wiring form too', () => {
+    // Half the world's recognizers are wired this way; a rule that knew only
+    // `.onresult =` would pass them silently.
+    const found = run(sttInterimResultsGated, {
+      'src/voice/listen.ts': `
+        rec.interimResults = true;
+        rec.addEventListener('result', (event) => deliver(event.results[0][0].transcript));
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('fires when interim results are enabled through an options object', () => {
+    const found = run(sttInterimResultsGated, {
+      'app/lib/mic.jsx': `
+        const rec = makeRecognition({ lang, interimResults: true, continuous: false });
+        rec.onresult = (event) => deliver(event.results[0][0].transcript);
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('stays quiet when the result handler gates on isFinal', () => {
+    expect(run(sttInterimResultsGated, {
+      'extension/src/speech/good-interim.js': `
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          for (const result of event.results) {
+            if (result.isFinal !== false) return settle(result);
+          }
+          stillSpeakingAt = Date.now();
+        };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when interim results are conditionally enabled but still gated', () => {
+    // The shape real code takes: interim hypotheses feed a pause monitor only
+    // when one is running, and the handler still delivers finals alone.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/stt.js': `
+        rec.interimResults = pauseResetMs > 0;
+        rec.onresult = (event) => {
+          const final = [...event.results].find((r) => r.isFinal !== false);
+          if (!final) { lastInterimAt = Date.now(); return; }
+          settle(final);
+        };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when interim results are switched off', () => {
+    // With interim delivery disabled there are no hypotheses to confuse for a
+    // transcript, and engines omit isFinal entirely — demanding it is noise.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/oneshot.js': `
+        rec.interimResults = false;
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a file that configures interim results but handles no results', () => {
+    // Settings module, not a result consumer: the handler it feeds lives
+    // elsewhere, so this file has nothing to gate and the rule has no opinion.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/config.js': 'export const RECOGNITION = { interimResults: true, continuous: false };',
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a file that handles results without enabling interim ones', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/speech/plain.js': `
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+        rec.onend = () => settle({ error: 'no-speech' });
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a TypeScript interface that merely declares the field', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/speech/types.ts': `
+        interface RecognizerOptions { interimResults: boolean; lang: string }
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the only mention of the trap is a comment', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/speech/note.js': `
+        // rec.interimResults = true; without an isFinal gate delivers hypotheses.
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
       `,
     })).toEqual([]);
   });
