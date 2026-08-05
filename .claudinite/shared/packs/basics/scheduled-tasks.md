@@ -49,7 +49,13 @@ retirement of the legacy central planner it replaces) lives in
   | `fleet`) declares whether the task reaches only its own repo or across the
   owner's repos: a `fleet` task dispatches to the `ready-for-agent-fleet` label so a
   distinct, broader-scoped executor runs it, keeping the fleet-wide session grant
-  off every ordinary project's `ready-for-agent` (self) executor.
+  off every ordinary project's `ready-for-agent` (self) executor. **Declaring
+  `fleet` routes the dispatch; it does not create the routine that runs it** — that
+  second, label-wired routine exists only in the canon repo, and its launcher prompt
+  must end in the word `fleet` (the executor defaults an unnamed scope to `self` and
+  then declines the dispatch as another scope's). Get either wrong and the task fails
+  *silently and forever*: the session stops without commenting, the scheduler re-arms
+  the issue hourly, and nothing ever runs it.
 
 - **Every run is bounded.** An agentic task (`agent_model !== none`) declares
   `agent_execution_timeout` — seconds bounding the agentic run
@@ -86,6 +92,27 @@ no agent, no issue. This is the scheduled-task shape of the unattended-agents
 routine-folder convention; the issue-driven-dispatch security rule (the issue is
 data, the task path is code-validated, agent_model/expected_outcome come from the repo) lives
 with that skill's agent practices.
+
+## A precondition may claim the whole run
+
+A verdict can carry **`exclusive: true`** beside `run: true` — *if I run this
+cycle, I run alone*. Every other due task whose precondition said run is
+**deferred**: no preprocessing, no dispatch issue, no inline work. It is there
+because the hourly cron is not hourly (see the `github-actions-scheduling`
+skill): a run that fires hours late finds several daily slots due at once, so the
+hour of staging between the daily anchors collapses and a task anchored to run
+*before* the others runs *beside* them. Baselining is the case it was built for —
+it converges the mount, the wiring and the migration notes everything else then
+executes against.
+
+Claim sparingly, and **bound the claim at both ends**. A deferred slot is spent,
+not queued: the run succeeds, the watermark moves past it, and that task runs
+again at its *next* slot — tomorrow, or next week. So a claim on the routine case
+quietly halves the fleet's throughput, and a claim with no upper bound (a
+condition that stays true while something is broken) stops the repo doing
+anything at all for as long as the breakage lasts. Baselining's shape is the
+model: claim when the mount is more than a day stale, stop claiming past three
+days, when it is a human's problem rather than a missed fire.
 
 ## The dispatch labels are a scheduler vocabulary
 
