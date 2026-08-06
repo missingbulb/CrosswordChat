@@ -17,7 +17,7 @@ To post a **status update** on an issue (the lifecycle's "update the issue's sta
 
 While working a branch, commit frequently rather than landing one big commit at the end — small, ordered commits let the owner follow the work as it develops. Use commits to *layer* the work in the order you'd want it reviewed:
 
-- Write the failing test(s) first, commit them, **then** implement the feature — so the history shows the contract before the code that satisfies it (and you've seen the test fail before trusting it, per [the engineering-practices skill](../../../basics/skills/engineering-practices/SKILL.md)).
+- Write the failing test(s) first, commit them, **then** implement the feature — so the history shows the contract before the code that satisfies it (and you've seen the test fail before trusting it, per [the basics pack's RULES.md](../../../basics/RULES.md)).
 - Keep any documentation update as its own commit *after* the feature, not folded into it.
 
 There's no cost to a branch carrying many commits when the project uses a **squash** merge to `main` (one commit per PR): the squash collapses them into a single commit on `main`, so `main`'s one-commit-per-PR history is unaffected no matter how granularly the branch is committed.
