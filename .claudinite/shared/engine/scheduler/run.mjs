@@ -22,7 +22,7 @@ import { isAgentless } from './model-map.mjs';
 import { isDormant } from '../checks/helpers/repo-context.mjs';
 import { renderTaskRuns } from './run-record.mjs';
 import { localSignalContext } from './signals/local.mjs';
-import { runPreprocessing, preprocessingFailure, agentRequestPath, clearAgentRequest, agentRequested } from './preprocess.mjs';
+import { runPreprocessing, preprocessingFailure, agentRequestPath, clearAgentRequest, agentRequested, readAgentRequest } from './preprocess.mjs';
 
 // The due tasks, each paired with the slot it runs under. Union the discovered
 // tasks' frequencies, ask slots which are due (run-ledger math), then map due
@@ -531,7 +531,12 @@ async function main() {
   // the task path, body carries the precondition's binding Context (dispatch.mjs).
   const fileHandoff = async (rec, taskObj) => {
     const title = dispatchTitle({ pack: rec.pack, task: rec.task, slotId: rec.slotId });
-    const body = dispatchBody({ taskPath: taskObj.taskPath, pack: rec.pack, task: rec.task, slotId: rec.slotId, context: rec.context });
+    const body = dispatchBody({
+      taskPath: taskObj.taskPath, pack: rec.pack, task: rec.task, slotId: rec.slotId,
+      context: rec.context,
+      // What preprocessing made, by identity — the agent's only source for it.
+      delivered: rec.delivered,
+    });
     // The scope-resolved ready label (self vs fleet) from planDispatch — the
     // executor routine wired to it runs the task.
     const readyLabel = rec.dispatch?.label ?? READY_LABEL;
@@ -573,6 +578,12 @@ async function main() {
       // spuriously escalate this one.
       const requestPath = agentRequestPath(rec);
       clearAgentRequest(requestPath);
+      // The child's own output is echoed live inside a collapsible Actions group, so
+      // the run log says what the worker did instead of only whether it exited zero.
+      // Grouped because several tasks can preprocess in one run and their output would
+      // otherwise interleave into one unattributable wall; live because a worker killed
+      // at its timeout takes any buffered output with it.
+      console.log(`::group::preprocessing ${rec.pack}/${rec.task} [${rec.slotId}]`);
       const result = await runPreprocessing(decl.agent_preprocessing, {
         taskDir: taskObj.taskDir,
         env: {
@@ -587,11 +598,15 @@ async function main() {
         },
         timeoutSeconds: decl.agent_preprocessing_timeout,
       });
+      console.log('::endgroup::');
       rec.preprocessResult = { ok: result.ok, timedOut: result.timedOut, code: result.code };
       if (!result.ok) {
         const why = preprocessingFailure(result);
         console.log(`! preprocessing ${rec.pack}/${rec.task} [${rec.slotId}]: ${why}`);
         const extra = result.stderr?.trim() ? [`stderr tail: ${result.stderr.trim().split('\n').slice(-3).join(' / ')}`] : [];
+        // Repeat the tail OUTSIDE the group: Actions renders a group collapsed, so a
+        // failure whose only evidence sits inside one still reads as unexplained.
+        for (const line of extra) console.log(`  ${line}`);
         await fileNeedsHuman(rec, why, extra);
         clearAgentRequest(requestPath);
         continue; // never hand off to an agent after a failed preprocessing
@@ -601,6 +616,9 @@ async function main() {
       // agent (conditional escalation, §3): a task that absorbs its work into
       // preprocessing stays quiet on the nights nothing needs judgment.
       const requested = agentRequested(requestPath);
+      // Read the payload BEFORE clearing: the artifacts this run created, which the
+      // dispatch issue records so the agent never has to search for them by name.
+      rec.delivered = requested ? readAgentRequest(requestPath)?.delivered ?? null : null;
       clearAgentRequest(requestPath);
       rec.agentRequested = requested;
       console.log(`preprocessing ${rec.pack}/${rec.task} [${rec.slotId}]: ok${rec.inline ? '' : requested ? ' (agent requested)' : ' (no agent needed)'}`);

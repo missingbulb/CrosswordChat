@@ -10,9 +10,18 @@
 // root and slot context are handed in via CLAUDINITE_* env so the worker can act
 // on the whole repo. Nothing the subprocess prints is threaded into the agent —
 // preprocessing communicates only through the repository (DESIGN §3).
+//
+// THE LOG IS NOT THAT CHANNEL. The child's output is ECHOED to the scheduler's own
+// stdout/stderr as it arrives, so the Action log carries what the worker actually
+// did. That is an observability decision, not a data channel: no agent reads the
+// log, and §3's "communicate only through the repository" is untouched. It is echoed
+// LIVE rather than dumped at exit for the case that needs it most — a worker SIGKILLed
+// at its timeout, whose buffered output would otherwise die with it. Before this,
+// a failed worker surfaced as a bare `preprocessing exited 1` plus a three-line
+// stderr tail in an issue, and diagnosing one meant reproducing it by hand.
 
 import { spawn } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -20,19 +29,28 @@ import { tmpdir } from 'node:os';
 // rejects) with { ok, timedOut, code, signal, stdout, stderr }: `ok` is a clean
 // zero exit that did not time out. `taskDir` is the cwd; `env` is the full
 // environment the child inherits (the caller injects GITHUB_TOKEN + CLAUDINITE_*).
-export function runPreprocessing(command, { taskDir, env, timeoutSeconds }) {
+// `echo` (default on) mirrors the child's output to this process as it arrives —
+// injected rather than hardcoded so a test can capture it instead of polluting the
+// test runner's own output.
+export function runPreprocessing(command, {
+  taskDir, env, timeoutSeconds,
+  echo = (chunk, stream) => (stream === 'stderr' ? process.stderr : process.stdout).write(chunk),
+}) {
   return new Promise((resolve) => {
     const child = spawn(command, { cwd: taskDir, env, shell: true });
     let stdout = '';
     let stderr = '';
     let timedOut = false;
+    // Echo is best-effort: a worker's output must never be the thing that fails the
+    // run, so a broken sink is swallowed rather than propagated.
+    const mirror = (chunk, stream) => { try { echo?.(String(chunk), stream); } catch { /* the run matters, the echo does not */ } };
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill('SIGKILL'); // the hard kill — no grace period past the declared bound
     }, timeoutSeconds * 1000);
 
-    child.stdout?.on('data', (d) => { stdout += d; });
-    child.stderr?.on('data', (d) => { stderr += d; });
+    child.stdout?.on('data', (d) => { stdout += d; mirror(d, 'stdout'); });
+    child.stderr?.on('data', (d) => { stderr += d; mirror(d, 'stderr'); });
     // A spawn error (command not found, etc.) is a failure, not a throw.
     child.on('error', (e) => {
       clearTimeout(timer);
@@ -58,6 +76,22 @@ export function agentRequestPath({ pack, task, slotId }) {
 }
 export function clearAgentRequest(path) { try { rmSync(path, { force: true }); } catch { /* nothing to clear */ } }
 export function agentRequested(path) { return existsSync(path); }
+
+// …AND the artifacts that request refers to. A worker that opened a branch or a PR
+// writes them here as JSON `{ delivered: { branch, pr, merged } }`, and the scheduler
+// records them in the dispatch issue, which is where the agent reads them.
+//
+// This is the one thing that crosses the code→agent boundary as data (§3's named
+// exception): identifiers for what this run created — a PR number, a branch ref — never
+// findings and never instructions. Everything else still travels through the repository.
+// A worker that created nothing writes no `delivered`, and the issue then names none.
+export function readAgentRequest(path) {
+  if (!existsSync(path)) return null;
+  const raw = readFileSync(path, 'utf8').trim();
+  if (!raw) return {};
+  // A bare marker line (no payload) requests the agent and names no artifacts.
+  try { return JSON.parse(raw); } catch { return {}; }
+}
 
 // A one-line reason for the job summary / an issue comment when preprocessing
 // fails — distinguishing a timeout kill from a non-zero exit.

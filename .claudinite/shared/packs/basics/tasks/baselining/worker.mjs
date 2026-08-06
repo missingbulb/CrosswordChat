@@ -142,11 +142,32 @@ export function openMaintenanceBranch(pulls, prefix = MAINT_PREFIX) {
   return openMaintenancePull(pulls, prefix)?.head?.ref ?? null;
 }
 
+// The paths this stage is STRUCTURALLY UNABLE to deliver. deliver() pushes with the
+// Action's GITHUB_TOKEN, and GitHub refuses to let that token create or update anything
+// under `.github/workflows/` — there is no `permissions:` key that grants it. The refusal
+// is remote-side and rejects the WHOLE ref, so a workflow file left in the commit fails
+// the entire push, taking the mount convergence, the wiring and every other note with it.
+//
+// So the converge withholds exactly these paths and hands them to the AGENT stage, whose
+// writes go through the session's MCP GitHub tools — a credential that does hold the
+// `workflows` permission. The agent re-runs the same mechanical apply in its own checkout
+// to produce them.
+//
+// It covers `convergeWiring`'s scheduler workflow as much as any pack-owned one.
+export const UNPUSHABLE_PREFIX = '.github/workflows/';
+export function withheldWorkflowPaths(changedPaths) {
+  return (changedPaths ?? []).filter((p) => p.startsWith(UNPUSHABLE_PREFIX));
+}
+
 // The escalation predicate (owner, 2026-07-23): agent iff a pending agentic note,
 // or a real change the deterministic converge left non-green. No change, or a
 // green change with no agentic note, stays agentless.
-export function shouldRequestAgent({ pendingCount, meaningfulChange, checksPass, selftestOk = true }) {
+export function shouldRequestAgent({ pendingCount, meaningfulChange, checksPass, selftestOk = true, withheldCount = 0 }) {
   if (pendingCount > 0) return true;
+  // A withheld workflow file is work this stage COULD not do, not work it chose to
+  // leave: without the agent, the file simply never lands, and the converge would
+  // report itself clean while the repo stays un-updated.
+  if (withheldCount > 0) return true;
   // A converged mount that cannot pass its own self-test is the judgment case
   // whether or not the converge "changed" anything a diff can see: broken
   // machinery reports no findings precisely because it is not running.
@@ -403,10 +424,11 @@ function selfTestPasses(root) {
 // what turned a single failed arm into a PR that outlived every subsequent cycle
 // (#455/#205/#95). The disposal happens BEFORE the converge is pushed, because
 // the push would replace the head sha the merge evidence hangs on.
-async function deliver(root, repo, base, token, delivery, seed) {
+async function deliver(root, repo, base, token, delivery, seed, withheld = []) {
   const { json: pulls } = await gh(token, `/repos/${repo}/pulls?state=open&per_page=100`);
   const openPr = openMaintenancePull(Array.isArray(pulls) ? pulls : []);
   let pr = null;
+  let merged = false;
 
   if (openPr?.number) {
     // `wait` is the one case that keeps the PR: its checks are still running and
@@ -424,8 +446,21 @@ async function deliver(root, repo, base, token, delivery, seed) {
 
   git(['-C', root, 'checkout', '-B', branch]);
   git(['-C', root, 'add', '-A']);
+  // Withhold what this token cannot push (see withheldWorkflowPaths). Unstaged, not
+  // reverted: the file stays in the working tree so nothing here has to reason about
+  // restoring it, and the runner is discarded at job end either way. The agent lands
+  // them on this same branch afterwards.
+  for (const p of withheld) git(['-C', root, 'restore', '--staged', p]);
+  // With everything else staged, a converge whose ONLY content was a workflow file has
+  // nothing left to commit. It still needs the branch and the PR — that is where the
+  // agent does its half — so the commit is allowed to be empty rather than skipped.
+  const staged = git(['-C', root, 'diff', '--cached', '--name-only']).split('\n').filter(Boolean);
+  const note = withheld.length
+    ? `\n\nWithheld for the agent stage (the Action token cannot push a workflow file):\n${withheld.map((p) => `- ${p}`).join('\n')}`
+    : '';
   git(['-C', root, '-c', 'user.name=claudinite[bot]', '-c', 'user.email=claudinite@users.noreply.github.com',
-    'commit', '-m', 'Claudinite maintenance: converge vendored mount, wiring, and migration notes']);
+    'commit', ...(staged.length ? [] : ['--allow-empty']),
+    '-m', `Claudinite maintenance: converge vendored mount, wiring, and migration notes${note}`]);
   const remote = `https://x-access-token:${token}@github.com/${repo}.git`;
   git(['-C', root, 'push', '--force', remote, `HEAD:refs/heads/${branch}`]);
 
@@ -467,7 +502,7 @@ async function deliver(root, repo, base, token, delivery, seed) {
       const res = await gh(token, `/repos/${repo}/pulls/${pr.number}/merge`, {
         method: 'PUT', body: { merge_method: 'squash' },
       });
-      if (res.status === 200) console.log(`baselining: merged PR #${pr.number} directly — this repo has no pull_request CI to gate on`);
+      if (res.status === 200) { merged = true; console.log(`baselining: merged PR #${pr.number} directly — this repo has no pull_request CI to gate on`); }
       else console.log(`baselining: could not merge PR #${pr.number} (${res.status}: ${res.json?.message ?? 'no message'})`);
     } else if (action === 'arm' && pr.node_id) {
       // Surfaced, not swallowed: a failed arm is why a maintenance PR sits open
@@ -480,7 +515,9 @@ async function deliver(root, repo, base, token, delivery, seed) {
           + ' (pullDisposition).'));
     }
   }
-  return branch;
+  // What this cycle delivered. The scheduler records it in the dispatch issue, which is
+  // the agent's source for these artifacts.
+  return { branch, pr: pr?.number ?? null, merged };
 }
 
 // The I/O half of the disposal: read the workflow runs for the open PR's head
@@ -623,6 +660,9 @@ export async function main() {
   const base = process.env.CLAUDINITE_DEFAULT_BRANCH || 'main';
   const token = process.env.GITHUB_TOKEN;
   const requestFile = process.env.CLAUDINITE_REQUEST_AGENT;
+  // Set by deliver() to `{ branch, pr, merged }`; stays null when this cycle opened
+  // nothing, which is what the dispatch issue then says.
+  let delivered = null;
   if (!repo) { console.error('baselining: no repo (CLAUDINITE_REPO/GITHUB_REPOSITORY)'); process.exit(1); }
   if (!token) { console.error('baselining: no GITHUB_TOKEN in env'); process.exit(1); }
 
@@ -665,7 +705,14 @@ export async function main() {
   // 2-4. Deterministic converge: mount + stamp, then wiring, then mechanical notes.
   node([join(tmp, 'vendoring/apply-vendor-set.mjs'), '--target', root, '--ref', headSha]);
   const wiringOut = node([join(tmp, 'engine/scheduler/converge-wiring.mjs'), repo], { CLAUDINITE_REPO_ROOT: root });
-  node([join(tmp, 'migrations/apply.mjs')], { CLAUDE_PROJECT_DIR: root });
+  // The handshake (migrations/registry.mjs, WITHHOLD_CAPABLE_ENV): THIS worker withholds
+  // workflow paths from its commit and hands them to the agent, so a record may safely
+  // materialize one. An older vendored worker does not set it and the materialization is
+  // skipped instead of wedging its push. Set here, by the code that does the withholding,
+  // because the question is what the RUNNING process can do — and the disk cannot answer
+  // it: apply-vendor-set above has already overwritten this very file with the new
+  // version while this old-or-new code is the thing actually executing.
+  node([join(tmp, 'migrations/apply.mjs')], { CLAUDE_PROJECT_DIR: root, CLAUDINITE_CAN_WITHHOLD_WORKFLOWS: '1' });
 
   // Ask about any declared secret the repo hasn't configured — but only once the
   // wiring is settled. On the cycle that FIRST stamps a name into the workflow the
@@ -702,6 +749,13 @@ export async function main() {
     return;
   }
   const meaningfulChange = changed.length > 0;
+  // What this stage cannot push. Computed here, before the escalation gate, because a
+  // withheld file is residual work for the agent exactly like a pending agentic note.
+  const withheld = withheldWorkflowPaths(changed);
+  if (withheld.length) {
+    console.log(`baselining: withholding ${withheld.length} workflow file(s) from the push — `
+      + `the Action token cannot write .github/workflows/; the agent stage lands them: ${withheld.join(', ')}`);
+  }
 
   // 6b. SELF-TEST the converged tree before judging its content. This asks "can
   //     Claudinite still run here?" — mount, stamp, pack manifests, hook targets,
@@ -720,7 +774,9 @@ export async function main() {
   //    broken machinery is exactly the judgment case, and merging it would spread
   //    the breakage to a repo that was working an hour ago.
   const checksPass = (meaningfulChange && !pending.length) ? checkTheWorldPasses(root) : true;
-  const requestAgent = shouldRequestAgent({ pendingCount: pending.length, meaningfulChange, checksPass, selftestOk });
+  const requestAgent = shouldRequestAgent({
+    pendingCount: pending.length, meaningfulChange, checksPass, selftestOk, withheldCount: withheld.length,
+  });
 
   // 7b. A REHEARSAL stops here. It has done the only thing it was for — converged
   //     this real repo against a canon BRANCH and asked whether the result still
@@ -742,16 +798,24 @@ export async function main() {
   // 8. Deliver the converge (only when there's something to land).
   if (meaningfulChange || pending.length) {
     const seed = Math.random().toString(36).slice(2, 8);
-    const branch = await deliver(root, repo, base, token, delivery, seed);
-    console.log(`baselining: delivered converge on ${branch} (${delivery})`);
+    delivered = await deliver(root, repo, base, token, delivery, seed, withheld);
+    console.log(`baselining: delivered converge on ${delivered.branch}${delivered.pr ? ` (PR #${delivered.pr}${delivered.merged ? ', merged' : ''})` : ''} (${delivery})`);
   } else {
     console.log('baselining: no change to deliver');
   }
 
-  // 9. Request the agent only when judgment is left (conditional handoff, §3).
-  if (requestAgent && requestFile) writeFileSync(requestFile, `${AGENT_REQUEST_MARKER}\n`);
+  // 9. Request the agent only when judgment is left (conditional handoff, §3) — and name
+  //    what this run created, which the scheduler records in the dispatch issue for the
+  //    agent to work on. `delivered` stays null when nothing was opened, and the issue
+  //    then names nothing.
+  if (requestAgent && requestFile) {
+    writeFileSync(requestFile, `${JSON.stringify({ marker: AGENT_REQUEST_MARKER, delivered })}\n`);
+  }
+  const why = pending.length ? `${pending.length} agentic note(s)`
+    : withheld.length ? `${withheld.length} withheld workflow file(s)`
+      : 'conformance not green';
   console.log(requestAgent
-    ? `baselining: requested agent stage (${pending.length ? `${pending.length} agentic note(s)` : 'conformance not green'})`
+    ? `baselining: requested agent stage (${why})`
     : 'baselining: agentless night — deterministic converge delivered, no agent needed');
 }
 
