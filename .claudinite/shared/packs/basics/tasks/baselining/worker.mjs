@@ -142,11 +142,38 @@ export function openMaintenanceBranch(pulls, prefix = MAINT_PREFIX) {
   return openMaintenancePull(pulls, prefix)?.head?.ref ?? null;
 }
 
+// The paths this stage is STRUCTURALLY UNABLE to deliver. deliver() pushes with the
+// Action's GITHUB_TOKEN, and GitHub refuses to let that token create or update
+// anything under `.github/workflows/` — there is no `permissions:` key that grants it,
+// so this is a wall, not a misconfiguration. Worse, the refusal is remote-side and
+// rejects the WHOLE ref: before this, one workflow file the converge wanted to write
+// failed the entire push, and with it the mount convergence, the wiring and every other
+// note — every cycle, forever, since the converge is idempotent and re-attempted it
+// identically each run (#649, and the live wedge on missingbulb/Sheepdog).
+//
+// So the converge withholds exactly these paths from its commit and hands them to the
+// AGENT stage, whose writes go through the session's MCP GitHub tools — a different
+// credential, one that does hold the `workflows` permission. Nothing is passed to the
+// agent directly: the branch is the whole handoff, and the agent rediscovers the work by
+// re-running the same mechanical apply in its own checkout (DESIGN §3, no code→agent
+// data channel).
+//
+// This is not only about pack-owned workflows. `convergeWiring` writes the scheduler
+// workflow itself, so a change to that stub was latently the same wedge on every member.
+export const UNPUSHABLE_PREFIX = '.github/workflows/';
+export function withheldWorkflowPaths(changedPaths) {
+  return (changedPaths ?? []).filter((p) => p.startsWith(UNPUSHABLE_PREFIX));
+}
+
 // The escalation predicate (owner, 2026-07-23): agent iff a pending agentic note,
 // or a real change the deterministic converge left non-green. No change, or a
 // green change with no agentic note, stays agentless.
-export function shouldRequestAgent({ pendingCount, meaningfulChange, checksPass, selftestOk = true }) {
+export function shouldRequestAgent({ pendingCount, meaningfulChange, checksPass, selftestOk = true, withheldCount = 0 }) {
   if (pendingCount > 0) return true;
+  // A withheld workflow file is work this stage COULD not do, not work it chose to
+  // leave: without the agent, the file simply never lands, and the converge would
+  // report itself clean while the repo stays un-updated.
+  if (withheldCount > 0) return true;
   // A converged mount that cannot pass its own self-test is the judgment case
   // whether or not the converge "changed" anything a diff can see: broken
   // machinery reports no findings precisely because it is not running.
@@ -403,7 +430,7 @@ function selfTestPasses(root) {
 // what turned a single failed arm into a PR that outlived every subsequent cycle
 // (#455/#205/#95). The disposal happens BEFORE the converge is pushed, because
 // the push would replace the head sha the merge evidence hangs on.
-async function deliver(root, repo, base, token, delivery, seed) {
+async function deliver(root, repo, base, token, delivery, seed, withheld = []) {
   const { json: pulls } = await gh(token, `/repos/${repo}/pulls?state=open&per_page=100`);
   const openPr = openMaintenancePull(Array.isArray(pulls) ? pulls : []);
   let pr = null;
@@ -424,8 +451,21 @@ async function deliver(root, repo, base, token, delivery, seed) {
 
   git(['-C', root, 'checkout', '-B', branch]);
   git(['-C', root, 'add', '-A']);
+  // Withhold what this token cannot push (see withheldWorkflowPaths). Unstaged, not
+  // reverted: the file stays in the working tree so nothing here has to reason about
+  // restoring it, and the runner is discarded at job end either way. The agent lands
+  // them on this same branch afterwards.
+  for (const p of withheld) git(['-C', root, 'restore', '--staged', p]);
+  // With everything else staged, a converge whose ONLY content was a workflow file has
+  // nothing left to commit. It still needs the branch and the PR — that is where the
+  // agent does its half — so the commit is allowed to be empty rather than skipped.
+  const staged = git(['-C', root, 'diff', '--cached', '--name-only']).split('\n').filter(Boolean);
+  const note = withheld.length
+    ? `\n\nWithheld for the agent stage (the Action token cannot push a workflow file):\n${withheld.map((p) => `- ${p}`).join('\n')}`
+    : '';
   git(['-C', root, '-c', 'user.name=claudinite[bot]', '-c', 'user.email=claudinite@users.noreply.github.com',
-    'commit', '-m', 'Claudinite maintenance: converge vendored mount, wiring, and migration notes']);
+    'commit', ...(staged.length ? [] : ['--allow-empty']),
+    '-m', `Claudinite maintenance: converge vendored mount, wiring, and migration notes${note}`]);
   const remote = `https://x-access-token:${token}@github.com/${repo}.git`;
   git(['-C', root, 'push', '--force', remote, `HEAD:refs/heads/${branch}`]);
 
@@ -702,6 +742,13 @@ export async function main() {
     return;
   }
   const meaningfulChange = changed.length > 0;
+  // What this stage cannot push. Computed here, before the escalation gate, because a
+  // withheld file is residual work for the agent exactly like a pending agentic note.
+  const withheld = withheldWorkflowPaths(changed);
+  if (withheld.length) {
+    console.log(`baselining: withholding ${withheld.length} workflow file(s) from the push — `
+      + `the Action token cannot write .github/workflows/; the agent stage lands them: ${withheld.join(', ')}`);
+  }
 
   // 6b. SELF-TEST the converged tree before judging its content. This asks "can
   //     Claudinite still run here?" — mount, stamp, pack manifests, hook targets,
@@ -720,7 +767,9 @@ export async function main() {
   //    broken machinery is exactly the judgment case, and merging it would spread
   //    the breakage to a repo that was working an hour ago.
   const checksPass = (meaningfulChange && !pending.length) ? checkTheWorldPasses(root) : true;
-  const requestAgent = shouldRequestAgent({ pendingCount: pending.length, meaningfulChange, checksPass, selftestOk });
+  const requestAgent = shouldRequestAgent({
+    pendingCount: pending.length, meaningfulChange, checksPass, selftestOk, withheldCount: withheld.length,
+  });
 
   // 7b. A REHEARSAL stops here. It has done the only thing it was for — converged
   //     this real repo against a canon BRANCH and asked whether the result still
@@ -742,7 +791,7 @@ export async function main() {
   // 8. Deliver the converge (only when there's something to land).
   if (meaningfulChange || pending.length) {
     const seed = Math.random().toString(36).slice(2, 8);
-    const branch = await deliver(root, repo, base, token, delivery, seed);
+    const branch = await deliver(root, repo, base, token, delivery, seed, withheld);
     console.log(`baselining: delivered converge on ${branch} (${delivery})`);
   } else {
     console.log('baselining: no change to deliver');
@@ -750,8 +799,11 @@ export async function main() {
 
   // 9. Request the agent only when judgment is left (conditional handoff, §3).
   if (requestAgent && requestFile) writeFileSync(requestFile, `${AGENT_REQUEST_MARKER}\n`);
+  const why = pending.length ? `${pending.length} agentic note(s)`
+    : withheld.length ? `${withheld.length} withheld workflow file(s)`
+      : 'conformance not green';
   console.log(requestAgent
-    ? `baselining: requested agent stage (${pending.length ? `${pending.length} agentic note(s)` : 'conformance not green'})`
+    ? `baselining: requested agent stage (${why})`
     : 'baselining: agentless night — deterministic converge delivered, no agent needed');
 }
 
