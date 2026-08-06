@@ -1,9 +1,9 @@
 import { finding } from '../../engine/checks/helpers/findings.mjs';
 
-// The testable slice of the engineering-practices "earn each dependency" rule:
-// only the event — a package.json gains a dependency it did not carry at the
-// scoping base — has a signature; the judgment half stays in the skill this
-// finding points to. Fires once, on the branch that adds the name, then
+// The testable slice of the basics pack's "earn each dependency" rule: only the
+// event — a package.json gains a dependency it did not carry at the scoping
+// base — has a signature; the judgment half stays in the prose this finding
+// points to. Fires once, on the branch that adds the name, then
 // converges; a group move or version bump is not an addition.
 
 const DEP_KEYS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
@@ -27,7 +27,7 @@ const rule = {
   id: 'node/earn-each-dependency',
   severity: 'advisory',
   description: 'A newly added package.json dependency should be earned — prefer a built-in or a few lines for a narrow job',
-  doc: 'skills/engineering-practices/SKILL.md',
+  doc: 'packs/basics/RULES.md',
   scope: 'work',
   why: 'every dependency is standing surface area and supply-chain weight; a built-in or a few lines often covers a narrow job with none of it',
 
