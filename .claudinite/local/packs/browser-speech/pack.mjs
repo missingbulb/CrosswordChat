@@ -3,6 +3,7 @@ import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
 import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
 import sttErrorMapHasDefault from './stt-error-map-has-default.mjs';
+import sttInterimResultsGated from './stt-interim-results-gated.mjs';
 
 // browser-speech — driving the browser's speech APIs (SpeechRecognition /
 // webkitSpeechRecognition, chrome.tts, speechSynthesis, and the getUserMedia
@@ -31,5 +32,6 @@ export default {
     micCaptureReleased,
     micConstraintsNotScreenCapture,
     sttErrorMapHasDefault,
+    sttInterimResultsGated,
   ],
 };

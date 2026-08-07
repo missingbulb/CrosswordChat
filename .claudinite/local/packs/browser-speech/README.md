@@ -37,8 +37,9 @@ window) rather than a fact of the API. Until then it lives here.
 | `mic-capture-released` | getUserMedia capture stops its tracks | blocking |
 | `mic-constraints-not-screen-capture` | mic constraints exclude display-only ones | blocking |
 | `stt-error-map-has-default` | error mapping has a catch-all | blocking |
+| `stt-interim-results-gated` | interim results gated on isFinal | blocking |
 
-**Scope.** All five scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
+**Scope.** All six scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test and
 vendor paths — never a hard-coded project root. Each rule is already gated on the speech API it
 judges actually appearing in the file, so the API usage *is* the trigger and the scan can be
 repo-shaped; a path scope wired to one layout would make every rule match zero files and pass
@@ -60,6 +61,14 @@ nested switch's `default:` is not mistaken for the outer mapping's catch-all —
 idiomatic way to write a total mapping. It judges only switches whose arms `return` a kind: a
 switch dispatching side effects over error names is a different shape, and the rule has no
 honest opinion about its missing arm.
+
+`stt-interim-results-gated` reads the *value* assigned to `interimResults` rather than the name:
+an explicit `= false` turns the flag off, every result is then final, and there is nothing to
+gate — while a computed flag (`rec.interimResults = pauseResetMs > 0`, the shape real code takes)
+counts as on, since a check cannot show it is off and the handler has to survive it being true.
+It also judges only a file that spells its result handler out: a config module that sets the flag
+and hands the recognizer on, and `rec.onresult = this.handleResult`, both keep their gate in a
+file this check is not looking at, so delegation is answered with silence rather than a guess.
 
 **Both DOM wiring forms count.** `el.onend = …` and `el.addEventListener('end', …)` are equally
 correct, so every handler rule accepts either (`lib.mjs` `wires`). A rule that knew only the
@@ -83,6 +92,10 @@ fail against a naive whole-file grep. `stt-error-map-has-default`'s do the same:
 fixtures fail with the rule neutered, and against a naive "≥2 error names and no `default:`
 anywhere in the file" grep the trailing-`return`, side-effect-dispatch and comment-only fixtures
 all wrongly fire while the nested-switch violation goes undetected.
+`stt-interim-results-gated`'s do the same: with its `isFinal` gate neutered both the clean fixture
+*and this repo's own `stt-port.js`* fire — which is what proves the rule reaches the real file
+rather than passing over it — and against a naive "mentions `interimResults`, never `isFinal`"
+grep the flag-off, config-module, delegated-handler and comment-only fixtures all wrongly fire.
 
 ## Prose (`RULES.md`)
 
@@ -91,7 +104,7 @@ all wrongly fire while the nested-switch violation goes undetected.
 | chrome.tts unavailable to content scripts | prose |
 | recognizer takes no audio constraints | prose (its display-only-constraint trap is checked) |
 | preflight the mic deliberately | prose |
-| endpointing fails; monitor mid-utterance pauses | prose |
+| endpointing fails; monitor mid-utterance pauses | prose (that interim results aren't delivered is checked) |
 | biasing is on-device only | prose |
 | voices load lazily; default is worst | prose |
 | map speech errors to a taxonomy | prose (that the mapping is total is checked) |

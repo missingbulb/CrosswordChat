@@ -20,6 +20,7 @@ import sttTerminalHandlers from './stt-terminal-handlers.mjs';
 import micCaptureReleased from './mic-capture-released.mjs';
 import micConstraintsNotScreenCapture from './mic-constraints-not-screen-capture.mjs';
 import sttErrorMapHasDefault from './stt-error-map-has-default.mjs';
+import sttInterimResultsGated from './stt-interim-results-gated.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -41,6 +42,7 @@ describe('browser-speech pack manifest', () => {
         'mic-capture-released',
         'mic-constraints-not-screen-capture',
         'stt-error-map-has-default',
+        'stt-interim-results-gated',
         'stt-terminal-handlers',
         'tts-speak-settles',
       ],
@@ -525,6 +527,133 @@ describe('stt-error-map-has-default', () => {
         export const NOTE = 1;
       `,
     })).toEqual([]);
+  });
+});
+
+describe('stt-interim-results-gated', () => {
+  test('fires on a handler that delivers every result while interim results are on', () => {
+    const found = run(sttInterimResultsGated, {
+      'extension/src/speech/bad-interim.js': `
+        const rec = new webkitSpeechRecognition();
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          settle(event.results[0][0].transcript);
+        };
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe('stt-interim-results-gated');
+    expect(found[0].severity).toBe('blocking');
+    expect(found[0].what).toContain('isFinal');
+    expect(found[0].line).toBe(3);
+  });
+
+  test('fires on the object-literal form, addEventListener wiring, and TypeScript alike', () => {
+    const found = run(sttInterimResultsGated, {
+      'src/voice/listen.ts': `
+        const rec = new webkitSpeechRecognition();
+        Object.assign(rec, { lang, maxAlternatives: 3, interimResults: true });
+        rec.addEventListener('result', (event: SpeechRecognitionEvent) => {
+          deliver(event.results[event.results.length - 1][0].transcript);
+        });
+      `,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].file).toBe('src/voice/listen.ts');
+    expect(found[0].line).toBe(3);
+  });
+
+  test('fires when the flag is computed, since it cannot be shown to be off', () => {
+    // `rec.interimResults = pauseMs > 0` turns interim hypotheses on for every
+    // caller that asks for a pause monitor — the exact configuration whose
+    // handler most needs the gate. Judging only a literal `true` would pass the
+    // shape real code actually takes.
+    const found = run(sttInterimResultsGated, {
+      'src/speech/stt.js': `
+        rec.interimResults = pauseResetMs > 0;
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    });
+    expect(found).toHaveLength(1);
+  });
+
+  test('stays quiet when the result handler checks isFinal', () => {
+    expect(run(sttInterimResultsGated, {
+      'extension/src/speech/good-interim.js': `
+        rec.interimResults = true;
+        rec.onresult = (event) => {
+          for (const result of event.results) {
+            if (!result.isFinal) { stillSpeaking(); continue; }
+            settle(result[0].transcript);
+          }
+        };
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when interim results are explicitly off', () => {
+    // Every result the engine delivers is final, so there is nothing to gate.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/final-only.js': `
+        rec.interimResults = false;
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet on a config module that handles no results itself', () => {
+    // It turns the flag on and hands the recognizer somewhere else; the gate
+    // belongs in whatever file wires `result`, and this rule has no honest
+    // opinion about a file it cannot see the handler in.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/configure.js': `
+        export function configure(rec, lang) {
+          rec.lang = lang;
+          rec.interimResults = true;
+          return rec;
+        }
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the handler is delegated out of the file', () => {
+    // `rec.onresult = this.handleResult` hands the event to code the check is
+    // not looking at. The gate may well be there; firing here would be alarming
+    // about a file whose only sin is being one half of the story.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/port.js': `
+        rec.interimResults = true;
+        rec.onresult = this.handleResult;
+        rec.addEventListener('result', onResult);
+      `,
+    })).toEqual([]);
+  });
+
+  test('stays quiet when the only mention of the trap is a comment', () => {
+    expect(run(sttInterimResultsGated, {
+      'src/speech/note.js': `
+        // rec.interimResults = true; — deliberately left off: nothing here
+        // watches for a mid-utterance pause.
+        rec.onresult = (event) => settle(event.results[0][0].transcript);
+      `,
+    })).toEqual([]);
+  });
+
+  test('the quiet fixtures all fire under the naive whole-file grep, which is why the parsing exists', () => {
+    // The two-direction bar (README): firing fixtures prove the rule catches the
+    // bug; this proves the reading of the assigned value, the inline-handler
+    // gate and the comment strip are each load-bearing rather than decoration.
+    const naive = (src) => /interimResults/.test(src) && !/isFinal/.test(src);
+    const quiet = [
+      "rec.interimResults = false;\nrec.onresult = (e) => settle(e.results[0][0].transcript);",
+      'export function configure(rec) { rec.interimResults = true; return rec; }',
+      'rec.interimResults = true;\nrec.onresult = this.handleResult;',
+      '// rec.interimResults = true;\nrec.onresult = (e) => settle(e.results[0][0].transcript);',
+    ];
+    for (const src of quiet) {
+      expect(naive(src), src).toBe(true);
+      expect(run(sttInterimResultsGated, { 'src/speech/q.js': src }), src).toEqual([]);
+    }
   });
 });
 
