@@ -14,10 +14,10 @@ export default {
   id: 'store-release',
   frequency: 'daily',              // the 04:00 slot (DESIGN §2) — replaces the workflow's own 00:30 cron
   precondition_signals: ['release', 'commits'],
-  agent_model: 'none',                   // pure code — no agent (agent-preprocessing DESIGN §4)
+  agent_model: 'none',                   // pure code — no agent (task-prework DESIGN §4)
   expected_outcome: 'none',                 // it only TRIGGERS the gated publish workflow; publishing stays behind that workflow's own guards
-  agent_preprocessing: 'node worker.mjs',      // the scheduler runs this as a subprocess (cwd = this task dir) — DESIGN §3
-  agent_preprocessing_timeout: 120,            // the dispatch is a quick REST call; a tight bound (the await-the-run Stage 2 would widen it)
+  prework: 'node worker.mjs',      // the scheduler runs this as a subprocess (cwd = this task dir) — DESIGN §3
+  prework_timeout: 120,            // the dispatch is a quick REST call; a tight bound (the await-the-run Stage 2 would widen it)
 
   // Detect a deployable change since the last release, entirely in code:
   //   (a) the manifest version has advanced past the latest published release
