@@ -1,7 +1,7 @@
-// store-release worker (agent-preprocessing DESIGN §3/§4). This task is
-// `agent_model: 'none'` with `agent_preprocessing: 'node worker.mjs'`, so the
+// store-release worker (task-prework DESIGN §3/§4). This task is
+// `agent_model: 'none'` with `prework: 'node worker.mjs'`, so the
 // scheduler runs THIS FILE as a subprocess (cwd = this task dir) bounded by
-// `agent_preprocessing_timeout` — there is no agent and no dispatch issue on
+// `prework_timeout` — there is no agent and no dispatch issue on
 // success. Its one job is to TRIGGER the repo's vendored `Release to Chrome
 // Store` orchestrator in daily mode and hand off: the orchestrator's `daily` leg
 // does the authoritative shipped-file diff, patch bump, and gated submission, so
@@ -66,7 +66,7 @@ export async function main() {
   // STUB (unchanged from the pre-conversion worker): this triggers the daily
   // release and hands off. The full Stage-2 would then AWAIT the dispatched run
   // (poll it to conclusion) and report at completion — now safe to add, because
-  // the subprocess is bounded by agent_preprocessing_timeout, but it needs a
+  // the subprocess is bounded by prework_timeout, but it needs a
   // generous timeout and is left as the next increment.
 }
 
