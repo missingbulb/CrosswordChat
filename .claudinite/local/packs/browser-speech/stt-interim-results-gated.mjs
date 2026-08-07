@@ -1,4 +1,4 @@
-import { finding, stripComments, isSource, lineOf, wires } from './lib.mjs';
+import { finding, stripComments, isSource, lineOf } from './lib.mjs';
 
 // Interim hypotheses arrive on the SAME `result` event as the finished
 // utterance. Turning `interimResults` on does not open a second channel: the
@@ -22,8 +22,9 @@ import { finding, stripComments, isSource, lineOf, wires } from './lib.mjs';
 //      firing there is pure noise. Anything else counts as enabling, including a
 //      computed flag (`rec.interimResults = pauseResetMs > 0`), because a check
 //      cannot know it is false and the handler must survive it being true.
-//   2. Only a file that wires `result` ITSELF is judged. A config module that
-//      sets the flag and hands the recognizer on has its gate in some other
+//   2. Only a file that SPELLS OUT its result handler is judged. A config module
+//      that sets the flag and hands the recognizer on, and a file that delegates
+//      (`rec.onresult = this.handleResult`), both keep their gate in some other
 //      file; this rule has no honest opinion about a handler it cannot see, and
 //      a check that guesses is worse than one that asks a simple, honest
 //      question.
@@ -41,6 +42,32 @@ import { finding, stripComments, isSource, lineOf, wires } from './lib.mjs';
 const FLAG = /\binterimResults\s*(?:(?<![=!<>])=(?!=)|:)\s*([^,;\n)}]*)/g;
 const OFF = /^(?:false|0|null|undefined)$/;
 
+// Both legal wirings, each split at the point where the handler ARGUMENT begins.
+// This rule needs the argument itself, not merely the fact of a wiring, so
+// `lib.mjs`'s `wires` — which answers only "is `result` wired here?" — is not
+// enough; the two forms are still both accepted, as everywhere in this pack.
+const WIRES_RESULT = [
+  /\.\s*onresult\s*=\s*/g,
+  /addEventListener\s*\(\s*['"`]result['"`]\s*,\s*/g,
+];
+
+// A handler written out here and now: an arrow, a function expression, or an
+// async one. A bare reference (`this.handleResult`, `onResult`) or a call that
+// returns one (`makeHandler(deps)`) is delegation — the gate lives wherever that
+// handler is defined, which is a file this check is not looking at.
+const INLINE_HANDLER = /^(?:async\s+)?(?:function\b|\(|[A-Za-z_$][\w$]*\s*=>)/;
+
+/** True when this file wires `result` to a handler it also spells out itself. */
+function handlesResultInline(src) {
+  for (const re of WIRES_RESULT) {
+    re.lastIndex = 0;
+    for (let m = re.exec(src); m; m = re.exec(src)) {
+      if (INLINE_HANDLER.test(src.slice(m.index + m[0].length))) return true;
+    }
+  }
+  return false;
+}
+
 const rule = {
   id: 'stt-interim-results-gated',
   severity: 'blocking',
@@ -55,8 +82,8 @@ const rule = {
       const raw = ctx.read(file);
       if (raw === null || !raw.includes('interimResults')) continue;
       const src = stripComments(raw);
-      // Handled elsewhere: the gate belongs wherever `result` is wired.
-      if (!wires(src, 'result')) continue;
+      // Handled elsewhere: the gate belongs wherever the handler is written.
+      if (!handlesResultInline(src)) continue;
       if (/\bisFinal\b/.test(src)) continue;
 
       FLAG.lastIndex = 0;

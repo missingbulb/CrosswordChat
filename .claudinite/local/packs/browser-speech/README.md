@@ -66,8 +66,9 @@ honest opinion about its missing arm.
 an explicit `= false` turns the flag off, every result is then final, and there is nothing to
 gate — while a computed flag (`rec.interimResults = pauseResetMs > 0`, the shape real code takes)
 counts as on, since a check cannot show it is off and the handler has to survive it being true.
-It also judges only a file that wires `result` itself: a config module that sets the flag and
-hands the recognizer on has its gate in whatever file reads the results.
+It also judges only a file that spells its result handler out: a config module that sets the flag
+and hands the recognizer on, and `rec.onresult = this.handleResult`, both keep their gate in a
+file this check is not looking at, so delegation is answered with silence rather than a guess.
 
 **Both DOM wiring forms count.** `el.onend = …` and `el.addEventListener('end', …)` are equally
 correct, so every handler rule accepts either (`lib.mjs` `wires`). A rule that knew only the
@@ -94,7 +95,7 @@ all wrongly fire while the nested-switch violation goes undetected.
 `stt-interim-results-gated`'s do the same: with its `isFinal` gate neutered both the clean fixture
 *and this repo's own `stt-port.js`* fire — which is what proves the rule reaches the real file
 rather than passing over it — and against a naive "mentions `interimResults`, never `isFinal`"
-grep the flag-off, config-module and comment-only fixtures all wrongly fire.
+grep the flag-off, config-module, delegated-handler and comment-only fixtures all wrongly fire.
 
 ## Prose (`RULES.md`)
 
@@ -103,7 +104,7 @@ grep the flag-off, config-module and comment-only fixtures all wrongly fire.
 | chrome.tts unavailable to content scripts | prose |
 | recognizer takes no audio constraints | prose (its display-only-constraint trap is checked) |
 | preflight the mic deliberately | prose |
-| endpointing fails; monitor mid-utterance pauses | prose (the `isFinal` gate on interim results is checked) |
+| endpointing fails; monitor mid-utterance pauses | prose (that interim results aren't delivered is checked) |
 | biasing is on-device only | prose |
 | voices load lazily; default is worst | prose |
 | map speech errors to a taxonomy | prose (that the mapping is total is checked) |

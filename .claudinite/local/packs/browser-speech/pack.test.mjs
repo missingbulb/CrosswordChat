@@ -616,6 +616,19 @@ describe('stt-interim-results-gated', () => {
     })).toEqual([]);
   });
 
+  test('stays quiet when the handler is delegated out of the file', () => {
+    // `rec.onresult = this.handleResult` hands the event to code the check is
+    // not looking at. The gate may well be there; firing here would be alarming
+    // about a file whose only sin is being one half of the story.
+    expect(run(sttInterimResultsGated, {
+      'src/speech/port.js': `
+        rec.interimResults = true;
+        rec.onresult = this.handleResult;
+        rec.addEventListener('result', onResult);
+      `,
+    })).toEqual([]);
+  });
+
   test('stays quiet when the only mention of the trap is a comment', () => {
     expect(run(sttInterimResultsGated, {
       'src/speech/note.js': `
@@ -628,12 +641,13 @@ describe('stt-interim-results-gated', () => {
 
   test('the quiet fixtures all fire under the naive whole-file grep, which is why the parsing exists', () => {
     // The two-direction bar (README): firing fixtures prove the rule catches the
-    // bug; this proves the reading of the assigned value, the `result`-wiring
+    // bug; this proves the reading of the assigned value, the inline-handler
     // gate and the comment strip are each load-bearing rather than decoration.
     const naive = (src) => /interimResults/.test(src) && !/isFinal/.test(src);
     const quiet = [
       "rec.interimResults = false;\nrec.onresult = (e) => settle(e.results[0][0].transcript);",
       'export function configure(rec) { rec.interimResults = true; return rec; }',
+      'rec.interimResults = true;\nrec.onresult = this.handleResult;',
       '// rec.interimResults = true;\nrec.onresult = (e) => settle(e.results[0][0].transcript);',
     ];
     for (const src of quiet) {
