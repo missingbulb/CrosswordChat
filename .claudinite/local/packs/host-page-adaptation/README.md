@@ -42,9 +42,8 @@ readable state) as evidence, and those are examples of a category, not constants
 |---|---|---|
 | `page-observers-disconnected` | started DOM observers get disconnected | blocking |
 | `synthetic-input-events-bubble` | dispatched input events set bubbles | blocking |
-| `synthetic-key-events-legacy-fields` | key events carry keyCode/which | blocking |
 
-**Scope.** All three scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test
+**Scope.** Both scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test
 and vendor paths — never a hard-coded project root. Each rule is gated on the DOM API it judges
 actually appearing in the file, so the API usage *is* the trigger and the scan can be
 repo-shaped; a path scope wired to one layout would make every rule match zero files and pass
@@ -58,16 +57,23 @@ a host page.
 `synthetic-input-events-bubble` judges only events that are actually **dispatched** (a probe
 event constructed to feature-detect is not input), only the interfaces that model **real user
 input** (a `CustomEvent` is your own signal to your own listener and is legitimately
-non-bubbling), and it resolves the constructor through **one alias hop** — `const Ctor = isKey ?
-view.KeyboardEvent : view.MouseEvent` is how a generic `fire()` helper is written, and this
-repo's single dispatch site is exactly that shape, so a matcher that only knew literal class
-names would look straight past the one place the whole adapter funnels its input through.
+non-bubbling), and it resolves each side of the dispatch through **one hop**: the constructor
+through an alias (`const Ctor = isKey ? view.KeyboardEvent : view.MouseEvent` is how a generic
+`fire()` helper is written, and this repo's single dispatch site is exactly that shape), and
+the dispatched value through a local (`const ev = new MouseEvent('click');
+el.dispatchEvent(ev)` is the other shape real dispatch code takes). An init that spreads
+(`{ ...init }`) without an explicit `bubbles:` is beyond what the rule can see, so it stays
+silent there: the caller may well set the field, and a check that guessed would false-alarm on
+precisely the well-factored helper that centralises this.
 
-`synthetic-key-events-legacy-fields` reads the **init literal**, not the file, and narrows the
-alias set to constructors that can actually be a `KeyboardEvent` — a `MouseEvent` has no key
-fields to be missing. An init that spreads (`{ ...init }`) is beyond what either rule can see,
-so both stay silent there: the caller may well set the fields, and a check that guessed would
-false-alarm on precisely the well-factored helper that centralises this.
+**A third check was cut at review.** `synthetic-key-events-legacy-fields` (a synthetic
+`KeyboardEvent` init must carry `keyCode`/`which`) enforced a real live-page lesson (MT-02) —
+but this repo's only key-event construction builds its init in a helper and spreads it at the
+one dispatch site, exactly the shape a spread-silent check can never read. A check that is
+structurally blind to the house pattern can only ever fire on code that bypasses the `fire()`
+helper, and the mistake in that code is the bypass, not the field it then forgot. The lesson
+lands as prose instead (`RULES.md`, "A synthetic keystroke must carry the fields a real one
+would").
 
 `page-observers-disconnected` is deliberately **file-scoped, not flow-scoped**: proving a
 particular observer is disconnected on every path needs real data-flow analysis, and a check
@@ -87,9 +93,7 @@ violating fixture failing and a clean one passing only proves the shipped check 
 says nothing about whether the parsing it does was *necessary*. So the quiet fixtures are also
 run against the naive alternative each piece of parsing exists to avoid, and confirmed to fire
 there: a whole-file `new …Event(` grep wrongly flags the `CustomEvent`, never-dispatched and
-already-bubbling cases; a file-wide "constructs a key event, mentions `key`, never mentions
-`keyCode`" grep wrongly flags the spread-init helper; and a constructor-blind "`key:` without
-`keyCode`" grep wrongly flags the `MouseEvent`-alias case.
+already-bubbling cases.
 
 ## Prose (`RULES.md`)
 
@@ -101,6 +105,7 @@ already-bubbling cases; a file-wide "constructs a key event, mentions `key`, nev
 | probe reports, never throws | prose |
 | mirror the host in a fixture | prose |
 | never trust a write; re-read | prose |
+| synthetic keystrokes carry real-event fields | prose (its bubbles half is checked) |
 | restore borrowed host state; degrade | prose |
 | host lifecycle states aren't user actions | prose |
 | be inert when off | prose (its observer teardown is checked) |

@@ -17,7 +17,6 @@ import pack from './pack.mjs';
 import { isSource } from './lib.mjs';
 import pageObserversDisconnected from './page-observers-disconnected.mjs';
 import syntheticInputEventsBubble from './synthetic-input-events-bubble.mjs';
-import syntheticKeyEventsLegacyFields from './synthetic-key-events-legacy-fields.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -37,7 +36,6 @@ describe('host-page-adaptation pack manifest', () => {
     expect(pack.worldRules.map((r) => r.id).sort()).toEqual([
       'page-observers-disconnected',
       'synthetic-input-events-bubble',
-      'synthetic-key-events-legacy-fields',
     ]);
   });
 });
@@ -182,6 +180,29 @@ describe('synthetic-input-events-bubble', () => {
     expect(found.length).toBe(1);
   });
 
+  test('fires through one variable hop — built into a local, dispatched by name', () => {
+    const found = run(syntheticInputEventsBubble, {
+      'src/drive.js': "const ev = new MouseEvent('click', { cancelable: true });\nel.dispatchEvent(ev);",
+    });
+    expect(found.length).toBe(1);
+    expect(found[0].line).toBe(1); // the construction, where the fix goes
+  });
+
+  test('quiet when the locally built event sets bubbles: true', () => {
+    const found = run(syntheticInputEventsBubble, {
+      'src/drive.js': "const ev = new PointerEvent('pointerdown', { bubbles: true, cancelable: true });\nel.dispatchEvent(ev);",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet when the dispatched local is built by a call the check cannot read', () => {
+    const found = run(syntheticInputEventsBubble, {
+      // `ev` constructs nothing readable; `template` is constructed but never dispatched.
+      'src/drive.js': "const ev = makeEvent('click');\nel.dispatchEvent(ev);\nconst template = new MouseEvent('click');",
+    });
+    expect(found).toEqual([]);
+  });
+
   test('quiet when bubbles: true is set', () => {
     const found = run(syntheticInputEventsBubble, {
       'src/drive.js': "el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true }));",
@@ -226,66 +247,11 @@ describe('synthetic-input-events-bubble', () => {
   });
 });
 
-describe('synthetic-key-events-legacy-fields', () => {
-  test('fires on a bare { key } init', () => {
-    const found = run(syntheticKeyEventsLegacyFields, {
-      'src/type.js': "el.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true }));",
-    });
-    expect(found.map((f) => f.rule)).toEqual(['synthetic-key-events-legacy-fields']);
-  });
-
-  test('fires through an alias that can be a KeyboardEvent', () => {
-    const found = run(syntheticKeyEventsLegacyFields, {
-      'src/type.js': `
-        const Ctor = isKey ? view.KeyboardEvent : view.MouseEvent;
-        el.dispatchEvent(new Ctor(type, { key: 'Backspace', bubbles: true, composed: true }));
-      `,
-    });
-    expect(found.length).toBe(1);
-  });
-
-  test('quiet when keyCode and which are set', () => {
-    const found = run(syntheticKeyEventsLegacyFields, {
-      'src/type.js': "el.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', code: 'KeyA', keyCode: 65, which: 65, bubbles: true }));",
-    });
-    expect(found).toEqual([]);
-  });
-
-  test('quiet when the init spreads a caller-built descriptor', () => {
-    const found = run(syntheticKeyEventsLegacyFields, {
-      'src/type.js': `
-        const init = keyEventInit(key);
-        el.dispatchEvent(new KeyboardEvent(type, { bubbles: true, ...init }));
-      `,
-    });
-    expect(found).toEqual([]);
-  });
-
-  test('quiet on a MouseEvent-only alias — a mouse event has no key fields to miss', () => {
-    const found = run(syntheticKeyEventsLegacyFields, {
-      'src/type.js': `
-        const Ctor = view.MouseEvent;
-        el.dispatchEvent(new Ctor('click', { key: 'A', bubbles: true }));
-        const unrelated = new KeyboardEvent('keyup', { key: 'A', keyCode: 65, which: 65 });
-      `,
-    });
-    expect(found).toEqual([]);
-  });
-
-  test('quiet on an init that names no key at all', () => {
-    const found = run(syntheticKeyEventsLegacyFields, {
-      'src/type.js': "el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true }));",
-    });
-    expect(found).toEqual([]);
-  });
-});
-
 // The parsing each rule does has to be shown NECESSARY, not just correct: run the
 // quiet fixtures against the naive alternative the parsing exists to avoid and
 // confirm they would wrongly fire. That is what earns the complexity.
 describe('the parsing earns its keep', () => {
   const NAIVE_BUBBLES = /new\s+\w*Event\s*\(/;
-  const NAIVE_KEYS = /\bkey\s*:/;
 
   test('a whole-file grep for an event construction would false-alarm on the quiet cases', () => {
     for (const src of [
@@ -301,22 +267,6 @@ describe('the parsing earns its keep', () => {
       'src/b.js': "const probe = new MouseEvent('click'); el.dispatchEvent(new CustomEvent('x'));",
       'src/c.js': "el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));",
     })).toEqual([]);
-  });
-
-  test('each naive alternative the key rule refuses would false-alarm on the case its parsing exists for', () => {
-    // Reading the init literal (rather than the file) is what the spread case needs:
-    // a file-wide "constructs a key event, mentions key, never mentions keyCode" grep fires.
-    const spread = "const init = keyEventInit(key);\nel.dispatchEvent(new KeyboardEvent(type, { bubbles: true, ...init }));";
-    expect(/new\s+\w*Event\s*\(/.test(spread) && /\bkey\b/.test(spread) && !/keyCode|which/.test(spread)).toBe(true);
-
-    // Resolving WHICH class an alias can be is what the mouse case needs: a
-    // constructor-blind "an init names key: and no keyCode" grep fires on it.
-    const mouse = "const Ctor = view.MouseEvent;\nel.dispatchEvent(new Ctor('click', { key: 'A', bubbles: true }));\nconst unrelated = new KeyboardEvent('keyup', { key: 'A', keyCode: 65, which: 65 });";
-    const initOf = mouse.slice(mouse.indexOf('{'), mouse.indexOf('}') + 1);
-    expect(NAIVE_KEYS.test(initOf) && !/keyCode|which/.test(initOf)).toBe(true);
-
-    // The real rule is quiet on both.
-    expect(run(syntheticKeyEventsLegacyFields, { 'src/a.js': spread, 'src/b.js': mouse })).toEqual([]);
   });
 });
 
