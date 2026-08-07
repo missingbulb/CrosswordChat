@@ -2,9 +2,8 @@
 
 Working inside a web app you do not own: reading its DOM, driving it with synthetic input,
 watching it change, and putting your own UI into its chrome. The mechanical rules — that a
-page observer is disconnected, that a synthetic input event bubbles, that a synthetic key
-event carries the fields the browser fills in for a real one — are this pack's three checks;
-what follows is only what no check can decide for you.
+page observer is disconnected, that a synthetic input event bubbles — are this pack's two
+checks; what follows is only what no check can decide for you.
 
 Each rule below is a judgment about being a guest in someone else's page, and holds for any
 code that does it — a userscript, an automation layer, an extension's content script. Where
@@ -101,6 +100,24 @@ app processed it. And aim your events at a node **inside the app's own subtree**
 element if it has focus, otherwise a known app node. A modern app delegates key handling near
 its root, which is a descendant of `<body>`, so an event dispatched at `document` or `body`
 bubbles *past* it and is never seen (`page-adapter/writer.js`).
+
+## A synthetic keystroke must carry the fields a real one would
+
+The browser fills in the deprecated `keyCode`/`which`/`charCode` on every real keystroke; on
+a synthetic one they are plain init fields that default to 0, so
+`new KeyboardEvent('keydown', { key: 'A' })` reaches the page as a keystroke whose keyCode is
+0. Deprecated is not the same as unread: hosts with a long-lived key-handling layer still
+branch on the legacy fields — this one does (verified live, MT-02) — and a 0 matches nothing,
+so the handler runs and nothing happens, indistinguishable from "the app ignores untrusted
+events". Mirror the real event instead: `keyCode` and `which` alongside `key`/`code`,
+`charCode` on `keypress`, and the full keydown → keypress → keyup sequence a real keystroke
+produces (`page-adapter/writer.js` `keyEventInit`/`typeKey`).
+
+Build the init in **one helper** and spread it at the single dispatch site, so fidelity is one
+function's job. That factoring is also why this rule is prose rather than a check: the init a
+well-factored adapter dispatches is opaque to a static scan (`{ ...init }` could carry
+anything), so a check here could only ever police code that bypasses the helper — and the
+mistake in that code is bypassing the helper, not the field it then forgot.
 
 ## Put back any host state you borrowed, and degrade when you cannot read it
 
