@@ -2,10 +2,24 @@
 
 How a repo's recurring Claudinite work runs (per-project-scheduling
 [DESIGN](../../docs/per-project-scheduling/DESIGN.md), issue #394). A repo
-schedules **itself**: a vendored hourly **scheduler Action**
-(`.github/workflows/claudinite-scheduler.yml`) evaluates each task's precondition
-in code and dispatches agent work as `ready-for-agent` `[claudinite-task]`
-issues, which a per-repo **executor routine** (fired by that label event) runs.
+schedules **itself**, and the machinery is **three responsibilities, strictly
+separated** (owner, 2026-08-06):
+
+1. **The scheduler** — a vendored hourly Action
+   (`.github/workflows/claudinite-scheduler.yml`) that evaluates each task's
+   precondition in code, runs due tasks' prework, and **creates** dispatch
+   issues (`ready-for-agent` `[claudinite-task]`) for agentic work. It creates
+   task issues and nothing else about their afterlife.
+2. **The executor** — a per-repo routine (fired by the label event) that
+   executes **exactly the one task its triggering issue names**. It cares only
+   about its task: no cleanups, no sweeping the queue, no merging of tasks, no
+   updating other tracking issues.
+3. **The task-janitor** — an ordinary daily task (`basics/task-janitor`,
+   `agent_model: none`) that owns everything about tasks that is *nobody's
+   task*: escalating stale dispatches, reclaiming dead `agent-running` claims,
+   re-arming lost trigger events, and printing a health review of the open
+   dispatch set. Recovery runs once a day, in code, in one place — the stated
+   trade is that a lost event now waits up to a day instead of an hour.
 The engine is vendored under `.claudinite/shared/engine/scheduler/`; the basics
 pack owns the conformance guards for the surfaces a repo authors around it —
 scheduling is baseline Claudinite discipline, present wherever basics is
@@ -49,11 +63,17 @@ retirement of the legacy central planner it replaces) lives in
   | `fleet`) declares whether the task reaches only its own repo or across the
   owner's repos: a `fleet` task dispatches to the `ready-for-agent-fleet` label so a
   distinct, broader-scoped executor runs it, keeping the fleet-wide session grant
-  off every ordinary project's `ready-for-agent` (self) executor.
+  off every ordinary project's `ready-for-agent` (self) executor. **Declaring
+  `fleet` routes the dispatch; it does not create the routine that runs it** — that
+  second, label-wired routine exists only in the canon repo, and its launcher prompt
+  must end in the word `fleet` (the executor defaults an unnamed scope to `self` and
+  then declines the dispatch as another scope's). Get either wrong and the task fails
+  *silently and forever*: the session stops without commenting, the scheduler re-arms
+  the issue hourly, and nothing ever runs it.
 
 - **Every run is bounded.** An agentic task (`agent_model !== none`) declares
   `agent_execution_timeout` — seconds bounding the agentic run
-  (agent-preprocessing [DESIGN](../../docs/agent-preprocessing/DESIGN.md) §2, §6).
+  (task-prework [DESIGN](../../docs/task-prework/DESIGN.md) §2, §6).
   There is no platform wall-clock kill for a launched executor session, so the
   bound is best-effort: the executor surfaces it into the subagent's brief ("fail
   after N minutes") and the stale-`agent-running` backstop catches a dead session.
@@ -87,6 +107,53 @@ routine-folder convention; the issue-driven-dispatch security rule (the issue is
 data, the task path is code-validated, agent_model/expected_outcome come from the repo) lives
 with that skill's agent practices.
 
+## The precondition is the ONLY decision point
+
+Task execution is **two similar, consecutive phases**: deterministic **prework**
+(a subprocess the scheduler runs, Action-side) and **agentic work** (the
+executor's subagent following task.md). Neither phase is "preparation" for the
+other, and — the rule that matters — **neither may decide whether the task
+runs**. That decision is the precondition's alone:
+
+- A task that passes its precondition **runs**. The later phases must not find
+  "new reasons to skip" — not timing, not repo state, not "already handled", not
+  an open PR elsewhere. If a condition should stop the run, it belongs in the
+  precondition, as code over signals, its verdict binding via the dispatch
+  issue's Context.
+- **Failures may stop a run** — a crash, a timeout, an API error converge to
+  `needs-human`. Discretion may not.
+- **"The work ran and produced nothing" is always legal** — that is an empty
+  outcome, not a skip. The line: did the phase *do* the work and find it empty,
+  or *decline* to do it?
+- The conditional agent hand-off (a prework worker requesting the agentic phase
+  via `CLAUDINITE_REQUEST_AGENT`) escalates on **work prework could not do** —
+  never on a re-check of whether the run should have happened.
+
+The `task-phase-discipline` world check (advisory, heuristic) hunts for tasks
+that escape this — skip-language in task.md, cycle-skip strings in prework
+workers.
+
+## A precondition may claim the whole run
+
+A verdict can carry **`exclusive: true`** beside `run: true` — *if I run this
+cycle, I run alone*. Every other due task whose precondition said run is
+**deferred**: no preprocessing, no dispatch issue, no inline work. It is there
+because the hourly cron is not hourly (see the `github-actions-scheduling`
+skill): a run that fires hours late finds several daily slots due at once, so the
+hour of staging between the daily anchors collapses and a task anchored to run
+*before* the others runs *beside* them. Baselining is the case it was built for —
+it converges the mount, the wiring and the migration notes everything else then
+executes against.
+
+Claim sparingly, and **bound the claim at both ends**. A deferred slot is spent,
+not queued: the run succeeds, the watermark moves past it, and that task runs
+again at its *next* slot — tomorrow, or next week. So a claim on the routine case
+quietly halves the fleet's throughput, and a claim with no upper bound (a
+condition that stays true while something is broken) stops the repo doing
+anything at all for as long as the breakage lasts. Baselining's shape is the
+model: claim when the mount is more than a day stale, stop claiming past three
+days, when it is a human's problem rather than a missed fire.
+
 ## The dispatch labels are a scheduler vocabulary
 
 **Both ready labels are triggers**, so they belong on dispatch issues alone — never put
@@ -101,6 +168,21 @@ Which ready label a task dispatches under follows from its `session_scope`, and 
 session started by that label is the one with the matching reach — a `fleet` task's session
 has the owner's repos in its sources, a `self` task's has this repo alone. The task declares
 the scope; nothing downstream re-decides it.
+
+## Dispatch lifecycle — every exit is terminal, and stale dispatches close
+
+- Success → the executor comments the result and **closes** the issue.
+- Failure → one comment naming what failed, `needs-human`. Nothing keeps
+  updating a tracking issue about a failed state — one visible convergence,
+  then it is a human's (or the janitor's) to look at.
+- **Task gone** (the dispatch names a task the repo no longer carries — file
+  removed, pack undeclared) → the executor **closes** the issue as not planned
+  (resolve-dispatch exit `14`). An obsolete dispatch is not an anomaly; it gets
+  no `needs-human`.
+- Every executor terminal state is recorded in code as a
+  `claudinite-task-exec` line (`record-exec.mjs`, and resolve-dispatch for the
+  code-decided verdicts) so the usage fold counts task statuses out of the
+  captured conversation logs deterministically.
 
 ## A dormant project runs nothing
 
