@@ -22,6 +22,7 @@
     "grow_with_claudinite",
     "local/browser-speech",
     "local/host-page-adaptation",
+    "local/voice-dialog",
     {
       "id": "claude-code-web-users-support",
       "config": {
