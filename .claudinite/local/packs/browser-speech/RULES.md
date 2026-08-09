@@ -42,10 +42,7 @@ Two traps around this:
   reaching for one is not the dead property — it is that the echo guard that would have worked
   never gets written. (Enforced by the `mic-constraints-not-screen-capture` check.)
 - The constraints you *can* set (`echoCancellation`, `noiseSuppression`, `autoGainControl`)
-  apply only to the one capture you own — the permission preflight. Their real value there is
-  diagnostic: read `track.getSettings().echoCancellation` back and log it. Whether AEC actually
-  engaged on this device is the single most useful fact when diagnosing a self-echo report, and
-  it is the reason the session log carries `aec1`/`aec0` (`dev/docs/SESSION-LOG.md`).
+  apply only to the one capture you own — the permission preflight.
 
 ## Ask for the microphone in a moment you chose
 
@@ -82,9 +79,7 @@ Treat biasing as strictly best-effort:
 - accept only the literal `'available'` — never trigger a language-pack download;
 - apply phrases inside a `try` and fall through to un-biased recognition on any failure;
 - keep the un-biased path byte-for-byte unchanged (don't make every caller await a probe it
-  doesn't need);
-- and **record whether biasing actually engaged**, because recognition data from a session where
-  it silently didn't says nothing about biasing.
+  doesn't need).
 
 ## Voices load lazily, and the default one is usually the worst
 
