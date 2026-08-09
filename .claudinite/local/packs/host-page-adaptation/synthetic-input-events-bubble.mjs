@@ -1,6 +1,6 @@
 import {
   finding, stripComments, isSource, lineOf, balanced,
-  inputEventCtors, eventConstructions, hasSpread,
+  inputEventCtors, eventConstructions, hasSpread, assignedTo,
 } from './lib.mjs';
 
 // A real click or keystroke bubbles. A synthetic one only bubbles if you say so:
@@ -94,18 +94,5 @@ const rule = {
     return out;
   },
 };
-
-// The local a construction is assigned to (`const ev = new MouseEvent(…)` → 'ev'),
-// or null. One hop, mirroring the one alias hop on the constructor side; a local
-// built by a call (`const ev = makeEvent()`) constructs nothing this check can see
-// and stays unjudged. A property target (`foo.bar = …`) is rejected — a bare-ident
-// dispatch cannot be naming it.
-function assignedTo(src, index) {
-  const before = src.slice(Math.max(0, index - 80), index);
-  const m = /([A-Za-z_$][\w$]*)\s*=\s*$/.exec(before);
-  if (!m) return null;
-  const prev = before[m.index - 1];
-  return prev === '.' ? null : m[1];
-}
 
 export default rule;

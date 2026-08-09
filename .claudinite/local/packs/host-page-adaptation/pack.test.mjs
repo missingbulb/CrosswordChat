@@ -17,6 +17,7 @@ import pack from './pack.mjs';
 import { isSource } from './lib.mjs';
 import pageObserversDisconnected from './page-observers-disconnected.mjs';
 import syntheticInputEventsBubble from './synthetic-input-events-bubble.mjs';
+import inputEventsTargetAppSubtree from './input-events-target-app-subtree.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -34,6 +35,7 @@ describe('host-page-adaptation pack manifest', () => {
     expect(pack.marker).toBeNull();
     expect(pack.prose).toBe('RULES.md');
     expect(pack.worldRules.map((r) => r.id).sort()).toEqual([
+      'input-events-target-app-subtree',
       'page-observers-disconnected',
       'synthetic-input-events-bubble',
     ]);
@@ -247,6 +249,120 @@ describe('synthetic-input-events-bubble', () => {
   });
 });
 
+describe('input-events-target-app-subtree', () => {
+  test('fires on a keystroke dispatched at document', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true, cancelable: true }));",
+    });
+    expect(found.map((f) => f.rule)).toEqual(['input-events-target-app-subtree']);
+    expect(found[0].severity).toBe('blocking');
+    expect(found[0].what).toContain('KeyboardEvent');
+    expect(found[0].what).toContain('document');
+  });
+
+  test('fires at document.body — bubbling correctly, past the app root', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': "document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true }));",
+    });
+    expect(found.length).toBe(1);
+    expect(found[0].what).toContain('document.body');
+  });
+
+  test('fires at documentElement and at the window, through a qualifier', () => {
+    for (const target of ['document.documentElement', 'window', 'window.document.body', 'globalThis']) {
+      const found = run(inputEventsTargetAppSubtree, {
+        'app/host.ts': `${target}.dispatchEvent(new MouseEvent('click', { bubbles: true }));`,
+      });
+      expect(found.length, target).toBe(1);
+    }
+  });
+
+  test('fires through one variable hop — built into a local, dispatched by name', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': "const ev = new KeyboardEvent('keydown', { key: 'A', bubbles: true });\ndocument.dispatchEvent(ev);",
+    });
+    expect(found.length).toBe(1);
+    expect(found[0].line).toBe(2); // the dispatch, where the wrong target is
+  });
+
+  test('fires through a one-hop constructor alias — the generic fire() helper', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': `
+        function fire(type, init) {
+          const Ctor = type.startsWith('key') ? window.KeyboardEvent : window.MouseEvent;
+          document.body.dispatchEvent(new Ctor(type, { bubbles: true, ...init }));
+        }
+      `,
+    });
+    expect(found.length).toBe(1);
+  });
+
+  test('quiet when the event is aimed at an app node', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': "cellEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true }));",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet on a resolved target — the activeElement-else-app-node ladder', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      // The shape a real adapter has: the target is CHOSEN, and body is only the
+      // last resort. A static read cannot know which arm ran, so the rule says nothing.
+      'src/drive.js': `
+        function keyTarget(document, cellEl) {
+          const active = document.activeElement;
+          if (active && active !== document.body) return active;
+          return cellEl ?? document.querySelector('[role="cell"]') ?? document.body;
+        }
+        function typeKey(document, key, cellEl) {
+          const target = keyTarget(document, cellEl);
+          target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+        }
+      `,
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet on a CustomEvent at the window — your own signal to your own listener', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': "window.dispatchEvent(new CustomEvent('cc:session-ended', { detail: { ok: true } }));",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet on a non-input event at the window, which is its right target', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': "window.dispatchEvent(new Event('resize'));",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet on a document dispatch of a local the rule cannot see built', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/drive.js': "const ev = makeEvent('keydown');\ndocument.dispatchEvent(ev);",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet on a comment describing the trap', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'src/notes.js': `
+        // Never document.body.dispatchEvent(new KeyboardEvent('keydown')) — the app's
+        // delegated listener sits below body and never sees it.
+        export const nothing = 1;
+      `,
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet in test scaffolding driving its own jsdom document', () => {
+    const found = run(inputEventsTargetAppSubtree, {
+      'test/keys.test.js': "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true }));",
+    });
+    expect(found).toEqual([]);
+  });
+});
+
 // The parsing each rule does has to be shown NECESSARY, not just correct: run the
 // quiet fixtures against the naive alternative the parsing exists to avoid and
 // confirm they would wrongly fire. That is what earns the complexity.
@@ -266,6 +382,26 @@ describe('the parsing earns its keep', () => {
       'src/a.js': "el.dispatchEvent(new CustomEvent('cc:ready', { detail: { ok: true } }));",
       'src/b.js': "const probe = new MouseEvent('click'); el.dispatchEvent(new CustomEvent('x'));",
       'src/c.js': "el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));",
+    })).toEqual([]);
+  });
+
+  // The target rule's precision is the same bargain: a file that RESOLVES its
+  // target from the document is the well-factored shape, and a grep for
+  // "document … dispatchEvent" cannot tell it from aiming at the document.
+  const NAIVE_TARGET = /document[\s\S]{0,200}?dispatchEvent/;
+
+  test('a grep for document near dispatchEvent would false-alarm on the resolved-target shape', () => {
+    const resolved = `
+      const target = document.activeElement ?? document.querySelector('[role="cell"]');
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true }));
+    `;
+    const ownSignal = "const doc = document;\nwindow.dispatchEvent(new CustomEvent('cc:ready'));";
+    expect(NAIVE_TARGET.test(resolved)).toBe(true); // the naive rule fires...
+    expect(NAIVE_TARGET.test(ownSignal)).toBe(true);
+    // ...and the real rule stays quiet on both.
+    expect(run(inputEventsTargetAppSubtree, {
+      'src/a.js': resolved,
+      'src/b.js': ownSignal,
     })).toEqual([]);
   });
 });

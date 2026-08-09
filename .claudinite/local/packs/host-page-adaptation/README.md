@@ -42,8 +42,9 @@ readable state) as evidence, and those are examples of a category, not constants
 |---|---|---|
 | `page-observers-disconnected` | started DOM observers get disconnected | blocking |
 | `synthetic-input-events-bubble` | dispatched input events set bubbles | blocking |
+| `input-events-target-app-subtree` | input events aimed below body | blocking |
 
-**Scope.** Both scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test
+**Scope.** All three scan any browser source file (`.js/.mjs/.cjs/.ts/.tsx/.jsx`) except test
 and vendor paths — never a hard-coded project root. Each rule is gated on the DOM API it judges
 actually appearing in the file, so the API usage *is* the trigger and the scan can be
 repo-shaped; a path scope wired to one layout would make every rule match zero files and pass
@@ -65,6 +66,18 @@ el.dispatchEvent(ev)` is the other shape real dispatch code takes). An init that
 (`{ ...init }`) without an explicit `bubbles:` is beyond what the rule can see, so it stays
 silent there: the caller may well set the field, and a check that guessed would false-alarm on
 precisely the well-factored helper that centralises this.
+
+`input-events-target-app-subtree` judges the **other half of the same dispatch**: not whether the
+event can travel, but whether it is aimed anywhere the app can hear it. Both can be satisfied and
+the write still fail — `document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }))`
+bubbles perfectly, past nothing, because the app's delegated listener sits *below* `<body>`, not
+above it. It fires only on a receiver written out literally at the dispatch site (`document`,
+`document.body`, `document.documentElement`, `window`/`globalThis`/`self`, optionally qualified),
+and shares the sibling's resolution of *what* is dispatched: real-input interfaces only, one
+constructor-alias hop, one local-variable hop. A target the code **resolves** — the
+`activeElement ?? cell ?? body` ladder a real adapter picks with — is beyond a static read and
+stays silent, which is why this repo's own `writer.js` is quiet: the mistake the rule is after is
+aiming at a global, not falling back to one.
 
 **A third check was cut at review.** `synthetic-key-events-legacy-fields` (a synthetic
 `KeyboardEvent` init must carry `keyCode`/`which`) enforced a real live-page lesson (MT-02) —
@@ -93,7 +106,8 @@ violating fixture failing and a clean one passing only proves the shipped check 
 says nothing about whether the parsing it does was *necessary*. So the quiet fixtures are also
 run against the naive alternative each piece of parsing exists to avoid, and confirmed to fire
 there: a whole-file `new …Event(` grep wrongly flags the `CustomEvent`, never-dispatched and
-already-bubbling cases.
+already-bubbling cases, and a grep for `document` near a `dispatchEvent` wrongly flags the
+resolved-target helper and an own-signal `CustomEvent`.
 
 ## Prose (`RULES.md`)
 
@@ -104,7 +118,7 @@ already-bubbling cases.
 | date what selectors were verified against | prose |
 | probe reports, never throws | prose |
 | mirror the host in a fixture | prose |
-| never trust a write; re-read | prose |
+| never trust a write; re-read | prose (its dispatch-target half is checked) |
 | synthetic keystrokes carry real-event fields | prose (its bubbles half is checked) |
 | restore borrowed host state; degrade | prose |
 | host lifecycle states aren't user actions | prose |
