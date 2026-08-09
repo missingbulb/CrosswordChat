@@ -31,8 +31,7 @@ there (`page-adapter/selectors.js`). A selector inlined at its use site is the o
 missed when the host renames a class.
 
 Enforce the quarantine mechanically, by token: the repo's arch test fails if the host's class
-prefix (`xwd__`) appears in code outside `page-adapter/`. Match against source with comments
-**stripped** — a comment that names the token describes the code, it does not do it.
+prefix (`xwd__`) appears in code outside `page-adapter/`.
 
 ## Identify host UI by a net, not by a selector
 
