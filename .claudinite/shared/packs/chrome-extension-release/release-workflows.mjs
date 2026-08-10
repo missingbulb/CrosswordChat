@@ -20,12 +20,12 @@ import { migrationActive } from '../../engine/checks/helpers/active-migrations.m
 // its own: it redeploys as part of every publish (the publish reusable's
 // deploy-privacy-page leg).
 //
-// Migration tolerance: while `chrome-release-vendoring` is in flight, a repo still
+// Migration tolerance: while `chrome-release-vendoring` is recent, a repo still
 // on the pre-vendoring shape (the orchestrator calling Claudinite's core
-// workflows @main) is TOLERATED — baselining vendors it, no red window. When the
-// census retires that migration (every consumer moved), migrationActive() flips
-// false and the tolerance is gone: a repo still on @main would then be calling
-// deleted canon workflows, so it's flagged.
+// workflows @main) is TOLERATED — baselining vendors it, no red window. Once the
+// record ages out of the recency window, migrationActive() flips false and the
+// tolerance is gone: every up-to-date repo has vendored by then, and a repo
+// still on @main is flagged.
 export const STUB_FILE = 'chrome-extension-release.yml';
 export const STUB_NAME = 'Release to Chrome Store';
 export const LEGACY_STUB_NAMES = ['Release'];
