@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "foldedThrough": "2026-08-09",
-  "runsFoldedThrough": "2026-08-10T02:38:23Z",
+  "foldedThrough": "2026-08-10",
+  "runsFoldedThrough": "2026-08-11T02:31:33Z",
   "days": {
     "2026-07-29": {
       "captures": 1,
@@ -674,6 +674,98 @@
       }
     },
     "2026-08-10": {
+      "captures": 1,
+      "merges": 1,
+      "sessions": 1,
+      "userMessages": 0,
+      "userCommands": 0,
+      "skillLoads": {},
+      "checks": {},
+      "checkFindings": {},
+      "tasks": {
+        "basics/baselining": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "basics/task-janitor": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "chrome-extension-release/store-release": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "grow_with_claudinite/growth-extract": {
+          "agent": 1,
+          "prework": 0,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "grow_with_claudinite/usage-fold": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "tidy-repo/tidy-issues": {
+          "agent": 0,
+          "prework": 0,
+          "skipped": 1,
+          "failed": 0,
+          "deferred": 0
+        }
+      },
+      "taskExec": {
+        "grow_with_claudinite/growth-dedup": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-discover-packs": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-extract": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/prose-to-checks-sweep": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "tidy-repo/tidy-branches": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "tidy-repo/tidy-prs": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        }
+      }
+    },
+    "2026-08-11": {
       "captures": 0,
       "merges": 0,
       "sessions": 0,
@@ -894,6 +986,99 @@
           "invalid": 0
         },
         "grow_with_claudinite/growth-discover-packs": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/prose-to-checks-sweep": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "tidy-repo/tidy-branches": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "tidy-repo/tidy-prs": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        }
+      }
+    },
+    "2026-W33": {
+      "days": 1,
+      "captures": 1,
+      "merges": 1,
+      "sessionDays": 1,
+      "userMessages": 0,
+      "userCommands": 0,
+      "skillLoads": {},
+      "checks": {},
+      "checkFindings": {},
+      "tasks": {
+        "basics/baselining": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "basics/task-janitor": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "chrome-extension-release/store-release": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "grow_with_claudinite/growth-extract": {
+          "agent": 1,
+          "prework": 0,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "grow_with_claudinite/usage-fold": {
+          "agent": 0,
+          "prework": 1,
+          "skipped": 0,
+          "failed": 0,
+          "deferred": 0
+        },
+        "tidy-repo/tidy-issues": {
+          "agent": 0,
+          "prework": 0,
+          "skipped": 1,
+          "failed": 0,
+          "deferred": 0
+        }
+      },
+      "taskExec": {
+        "grow_with_claudinite/growth-dedup": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-discover-packs": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-extract": {
           "success": 1,
           "failed": 0,
           "task-gone": 0,
