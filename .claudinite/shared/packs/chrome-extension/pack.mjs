@@ -10,6 +10,8 @@ import declarativeContentSetIcon from './declarative-content-set-icon.mjs';
 // with a static signature in the source convert to checks here.
 export default {
   id: 'chrome-extension',
+  version: 1,
+  minEngineVersion: 1,
   ruleRoutingGuidance: {
     belongs: 'manifest V3 service-worker, permissions, content-script and extension-auth gotchas that apply while coding a Chrome extension',
     excludes: 'store submission, packaging, versioning and privacy disclosure — that is chrome-extension-release',
