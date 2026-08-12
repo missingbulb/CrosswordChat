@@ -30,7 +30,8 @@
     }
   ],
   "maintenance": {
-    "delivery": "auto-merge"
+    "delivery": "auto-merge",
+    "mechanism": "updates"
   },
   "taskScheduler": {
     "dailyHour": 4,
