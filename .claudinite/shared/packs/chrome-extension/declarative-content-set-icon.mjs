@@ -74,7 +74,10 @@ const rule = {
   id: 'declarative-content-set-icon',
   severity: 'blocking',
   description: 'A chrome.declarativeContent.SetIcon action supplies imageData, never path',
-  doc: 'packs/chrome-extension/RULES.md',
+  // Points at the pack README, not RULES.md: this rule is carried by the check
+  // alone, and the old pointer sent a reader to a file that never explained the
+  // finding (#777). The README says so; the `why` below is the account itself.
+  doc: 'packs/chrome-extension/README.md',
   why: 'declarativeContent rules are evaluated by the browser process, so the icon must already be raw pixels at registration time — the documented path option can silently leave the icon unset, with no throw and no console error to notice',
 
   run(ctx) {
