@@ -1,12 +1,7 @@
 import { workflowFiles } from '../../engine/checks/helpers/github-workflows.mjs';
 import releaseWorkflows, { STUB_NAME, LEGACY_STUB_NAMES, LEGACY_CREATE_PACKAGE, VENDORED_CREATE_PACKAGE } from './release-workflows.mjs';
-import templateTokens from './template-tokens.mjs';
-import releaseConfig from './release-config.mjs';
-import versionSync from './version-sync.mjs';
-import releaseLayout from './release-layout.mjs';
 import privacyPermissionAlignment from './privacy-permission-alignment.mjs';
 import permissionAddedStoreIssue from './permission-added-store-issue.mjs';
-import readmeSections from './readme-sections.mjs';
 
 // A repo "ships the release pipeline" once it carries the orchestrator — a
 // workflow named "Release to Chrome Store" that wires the create-package reusable
@@ -58,12 +53,7 @@ export default {
   prose: null,
   worldRules: [
     releaseWorkflows,
-    templateTokens,
-    releaseConfig,
-    versionSync,
-    releaseLayout,
     privacyPermissionAlignment,
-    readmeSections,
   ],
   // Judges the change: a permission added in THIS diff needs its store issue.
   workRules: [permissionAddedStoreIssue],
