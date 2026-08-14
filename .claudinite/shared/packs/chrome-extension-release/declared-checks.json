@@ -44,21 +44,22 @@
     "id": "cer/version-sync",
     "severity": "blocking",
     "failureMessage": "a version that diverges ships the wrong number to the store or refuses to publish",
-    "equalParsedValues": [
+    "checkParsedFiles": [
       {
-        "first": {
-          "filesMatching": "/manifest\\.json$/",
-          "whereFileContains": "/\"manifest_version\"/",
-          "field": "version"
-        },
-        "second": { "file": "package.json", "field": "version" },
-        "whenSecondMissing": {
-          "what": "missing — the release pipeline builds via npm run build at the repo root",
-          "fix": "add the root package.json with version equal to the manifest's"
-        },
-        "whenUnequal": {
-          "what": "manifest version {first} != package.json version {second}",
-          "fix": "bump both together — \"bump version\" edits the manifest and package.json in the same change"
+        "filesMatching": "/manifest\\.json$/",
+        "whereFileContains": "/\"manifest_version\"/",
+        "requireEqualFields": {
+          "field": "version",
+          "inFile": "package.json",
+          "atField": "version",
+          "whenFileMissing": {
+            "what": "missing — the release pipeline builds via npm run build at the repo root",
+            "fix": "add the root package.json with version equal to the manifest's"
+          },
+          "whenUnequal": {
+            "what": "manifest version {first} != package.json version {second}",
+            "fix": "bump both together — \"bump version\" edits the manifest and package.json in the same change"
+          }
         }
       }
     ]
@@ -79,6 +80,7 @@
     "id": "cer/readme-sections",
     "severity": "blocking",
     "failureMessage": "every extension repo documents install and release the same way, from the standard template",
+    "fix": "copy it from the README template in the release standard and fill in the repo values",
     "scanFiles": "README.md",
     "whenMissing": {
       "what": "missing",
@@ -87,13 +89,11 @@
     "checkEachFile": [
       {
         "require": "/^##\\s+Install\\b/m",
-        "what": "missing the standard \"## Install\" section",
-        "fix": "copy it from the README template in the release standard and fill in the repo values"
+        "what": "missing the standard \"## Install\" section"
       },
       {
         "require": "/^##\\s+Releasing\\b/m",
-        "what": "missing the standard \"## Releasing\" section",
-        "fix": "copy it from the README template in the release standard and fill in the repo values"
+        "what": "missing the standard \"## Releasing\" section"
       }
     ]
   }
