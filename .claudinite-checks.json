@@ -31,7 +31,7 @@
   ],
   "maintenance": {
     "delivery": "auto-merge",
-    "mechanism": "updates"
+    "mechanism": "versioned"
   },
   "taskScheduler": {
     "dailyHour": 4,
@@ -43,7 +43,7 @@
     "ref": "631a067f5a0413e154a0d4c1a66275f18b255af9",
     "engineVersion": 3,
     "packVersions": {
-      "basics": 1,
+      "basics": 2,
       "barriers": 1,
       "git-github": 1,
       "chrome-extension": 1,
