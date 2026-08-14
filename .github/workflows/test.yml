@@ -6,8 +6,8 @@ on:
     branches: [main]
   # Claudinite's maintenance PR is pushed by GITHUB_TOKEN, and this repo parks the
   # resulting `pull_request` run at `action_required` — created, never executed,
-  # waiting on an approval nobody clicks. Baselining's deliver() works around that
-  # by DISPATCHING the workflows a PR would have run, which needs this trigger:
+  # waiting on an approval nobody clicks. The update flow's deliver() works around
+  # that by DISPATCHING the workflows a PR would have run, which needs this trigger:
   # without it the maintenance PR has no green to stand on and is closed and re-cut
   # every cycle instead of landing.
   workflow_dispatch:
