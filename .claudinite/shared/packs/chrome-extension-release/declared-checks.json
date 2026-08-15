@@ -82,6 +82,7 @@
     "failureMessage": "every extension repo documents install and release the same way, from the standard template",
     "fix": "copy it from the README template in the release standard and fill in the repo values",
     "scanFiles": "README.md",
+    "scanIgnoringMarkdownFences": true,
     "whenMissing": {
       "what": "missing",
       "fix": "add a README with the standard Install and Releasing sections"
