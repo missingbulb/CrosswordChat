@@ -165,3 +165,22 @@ export function eventConstructions(src, names) {
 
 /** Does an init object literal spread something this check cannot see into? */
 export const hasSpread = (init) => init !== null && init.includes('...');
+
+/**
+ * The local a construction at `index` is assigned to (`const ev = new MouseEvent(…)`
+ * → 'ev'), or null. ONE hop, mirroring the one alias hop on the constructor side; a
+ * local built by a call (`const ev = makeEvent()`) constructs nothing a static read
+ * can see and stays unjudged. A property target (`foo.bar = …`) is rejected — a
+ * bare-identifier dispatch cannot be naming it.
+ *
+ * Shared by the two dispatch-site rules: `const ev = new MouseEvent('click');
+ * el.dispatchEvent(ev)` is one of the two shapes real dispatch code takes, and both
+ * rules have to see through it or look straight past the dispatch.
+ */
+export function assignedTo(src, index) {
+  const before = src.slice(Math.max(0, index - 80), index);
+  const m = /([A-Za-z_$][\w$]*)\s*=\s*$/.exec(before);
+  if (!m) return null;
+  const prev = before[m.index - 1];
+  return prev === '.' ? null : m[1];
+}

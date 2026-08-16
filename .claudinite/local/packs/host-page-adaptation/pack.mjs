@@ -1,5 +1,6 @@
 import pageObserversDisconnected from './page-observers-disconnected.mjs';
 import syntheticInputEventsBubble from './synthetic-input-events-bubble.mjs';
+import inputEventsTargetAppSubtree from './input-events-target-app-subtree.mjs';
 
 // host-page-adaptation — being a guest in a web app you do not own: reading its
 // DOM, driving it with synthetic input, watching it change, and injecting your
@@ -27,5 +28,6 @@ export default {
   worldRules: [
     pageObserversDisconnected,
     syntheticInputEventsBubble,
+    inputEventsTargetAppSubtree,
   ],
 };

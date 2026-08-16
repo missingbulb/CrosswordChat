@@ -2,8 +2,9 @@
 
 Working inside a web app you do not own: reading its DOM, driving it with synthetic input,
 watching it change, and putting your own UI into its chrome. The mechanical rules — that a
-page observer is disconnected, that a synthetic input event bubbles — are this pack's two
-checks; what follows is only what no check can decide for you.
+page observer is disconnected, that a synthetic input event bubbles, that it is aimed somewhere
+inside the app's own subtree — are this pack's three checks; what follows is only what no check
+can decide for you.
 
 Each rule below is a judgment about being a guest in someone else's page, and holds for any
 code that does it — a userscript, an automation layer, an extension's content script. Where
@@ -98,7 +99,9 @@ asynchronously (React here), so the DOM immediately after your event is the DOM 
 app processed it. And aim your events at a node **inside the app's own subtree** — the selected
 element if it has focus, otherwise a known app node. A modern app delegates key handling near
 its root, which is a descendant of `<body>`, so an event dispatched at `document` or `body`
-bubbles *past* it and is never seen (`page-adapter/writer.js`).
+bubbles *past* it and is never seen (`page-adapter/writer.js`). That last half is the
+`input-events-target-app-subtree` check — but only its negative: which node you aim at instead,
+and polling the re-read, are yours.
 
 ## A synthetic keystroke must carry the fields a real one would
 
