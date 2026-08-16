@@ -97,5 +97,61 @@
         "what": "missing the standard \"## Releasing\" section"
       }
     ]
+  },
+  {
+    "id": "cer/privacy-permission-alignment",
+    "severity": "blocking",
+    "failureMessage": "the deployed privacy policy must disclose everything the extension can access; an undisclosed permission is a store-review and trust failure",
+    "fix": "disclose what \"{value}\" accesses in PRIVACY.md, so the deployed privacy policy reflects what the extension can reach",
+    "requireIndexCoverage": [
+      {
+        "eachValueInParsedArray": {
+          "filesMatching": "/(^|\\/)manifest\\.json$/",
+          "whereFileContains": "/\"manifest_version\"/",
+          "atField": "permissions"
+        },
+        "indexFile": "dev/build/release/store_artifacts/PRIVACY.md",
+        "coveredByText": "{value}",
+        "whenIndexFileAbsent": "assertNothing",
+        "anchorFindingsAt": "indexFile",
+        "what": "manifest requests \"{value}\" but the privacy document does not mention it"
+      },
+      {
+        "eachValueInParsedArray": {
+          "filesMatching": "/(^|\\/)manifest\\.json$/",
+          "whereFileContains": "/\"manifest_version\"/",
+          "atField": "host_permissions"
+        },
+        "indexFile": "dev/build/release/store_artifacts/PRIVACY.md",
+        "coveredByText": "{value}",
+        "whenIndexFileAbsent": "assertNothing",
+        "anchorFindingsAt": "indexFile",
+        "what": "manifest requests host access to \"{value}\" but the privacy document does not mention it"
+      },
+      {
+        "eachValueInParsedArray": {
+          "filesMatching": "/(^|\\/)manifest\\.json$/",
+          "whereFileContains": "/\"manifest_version\"/",
+          "atField": "optional_permissions"
+        },
+        "indexFile": "dev/build/release/store_artifacts/PRIVACY.md",
+        "coveredByText": "{value}",
+        "whenIndexFileAbsent": "assertNothing",
+        "anchorFindingsAt": "indexFile",
+        "what": "manifest requests optional \"{value}\" but the privacy document does not mention it"
+      },
+      {
+        "eachValueInParsedArray": {
+          "filesMatching": "/(^|\\/)manifest\\.json$/",
+          "whereFileContains": "/\"manifest_version\"/",
+          "atField": "optional_host_permissions"
+        },
+        "indexFile": "dev/build/release/store_artifacts/PRIVACY.md",
+        "coveredByText": "{value}",
+        "whenIndexFileAbsent": "assertNothing",
+        "anchorFindingsAt": "indexFile",
+        "what": "manifest requests optional host access to \"{value}\" but the privacy document does not mention it"
+      }
+    ]
   }
 ]

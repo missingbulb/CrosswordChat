@@ -1,6 +1,5 @@
 import { workflowFiles } from '../../engine/checks/helpers/github-workflows.mjs';
 import releaseWorkflows, { STUB_NAME, LEGACY_STUB_NAMES, LEGACY_CREATE_PACKAGE, VENDORED_CREATE_PACKAGE } from './release-workflows.mjs';
-import privacyPermissionAlignment from './privacy-permission-alignment.mjs';
 import permissionAddedStoreIssue from './permission-added-store-issue.mjs';
 
 // A repo "ships the release pipeline" once it carries the orchestrator — a
@@ -51,9 +50,10 @@ export default {
   // and from findings), not always-on prose: it is long, and only the checks
   // need to be eager.
   prose: null,
+  // cer/privacy-permission-alignment rides beside this as a declared check
+  // (declared-checks.json in this directory).
   worldRules: [
     releaseWorkflows,
-    privacyPermissionAlignment,
   ],
   // Judges the change: a permission added in THIS diff needs its store issue.
   workRules: [permissionAddedStoreIssue],
