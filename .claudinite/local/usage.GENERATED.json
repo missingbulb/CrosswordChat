@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "foldedThrough": "2026-08-15",
-  "runsFoldedThrough": "2026-08-16T04:54:20Z",
+  "foldedThrough": "2026-08-16",
+  "runsFoldedThrough": "2026-08-17T03:16:04Z",
   "days": {
     "2026-07-29": {
       "captures": 1,
@@ -1111,13 +1111,28 @@
       "taskExec": {}
     },
     "2026-08-16": {
-      "captures": 1,
-      "merges": 1,
-      "sessions": 1,
+      "captures": 5,
+      "merges": 5,
+      "sessions": 5,
       "userMessages": 0,
       "userCommands": 0,
-      "skillLoads": {},
-      "checks": {},
+      "skillLoads": {
+        "extract-from-activity": 1,
+        "extract-from-conversations": 1,
+        "growth-dedup": 1,
+        "single-issue-triage": 1
+      },
+      "checks": {
+        "world": {
+          "runs": 1,
+          "failures": 0,
+          "errors": 0,
+          "blocking": 0,
+          "advisory": 0,
+          "ciRuns": 0,
+          "ciFailures": 0
+        }
+      },
       "checkFindings": {},
       "tasks": {
         "core/update": {
@@ -1130,7 +1145,68 @@
       },
       "taskExec": {
         "core/update": {
+          "success": 2,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-dedup": {
           "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-extract": {
+          "success": 2,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        }
+      }
+    },
+    "2026-08-17": {
+      "captures": 1,
+      "merges": 1,
+      "sessions": 1,
+      "userMessages": 0,
+      "userCommands": 0,
+      "skillLoads": {
+        "extract-from-activity": 1,
+        "extract-from-conversations": 6
+      },
+      "checks": {
+        "work": {
+          "runs": 2,
+          "failures": 2,
+          "errors": 0,
+          "blocking": 2,
+          "advisory": 0,
+          "ciRuns": 0,
+          "ciFailures": 0
+        }
+      },
+      "checkFindings": {
+        "comment-classification": {
+          "blocking": 2,
+          "advisory": 0
+        }
+      },
+      "tasks": {},
+      "taskExec": {
+        "core/update": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-dedup": {
+          "success": 1,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
+        "grow_with_claudinite/growth-extract": {
+          "success": 2,
           "failed": 0,
           "task-gone": 0,
           "invalid": 0
@@ -1364,16 +1440,18 @@
       }
     },
     "2026-W33": {
-      "days": 6,
-      "captures": 3,
-      "merges": 3,
-      "sessionDays": 3,
+      "days": 7,
+      "captures": 8,
+      "merges": 8,
+      "sessionDays": 8,
       "userMessages": 0,
       "userCommands": 0,
       "skillLoads": {
-        "extract-from-activity": 1,
-        "extract-from-conversations": 1,
-        "session-start-hook": 1
+        "extract-from-activity": 2,
+        "extract-from-conversations": 2,
+        "growth-dedup": 1,
+        "session-start-hook": 1,
+        "single-issue-triage": 1
       },
       "checks": {
         "work": {
@@ -1381,6 +1459,15 @@
           "failures": 2,
           "errors": 0,
           "blocking": 2,
+          "advisory": 0,
+          "ciRuns": 0,
+          "ciFailures": 0
+        },
+        "world": {
+          "runs": 1,
+          "failures": 0,
+          "errors": 0,
+          "blocking": 0,
           "advisory": 0,
           "ciRuns": 0,
           "ciFailures": 0
@@ -1422,7 +1509,7 @@
           "deferred": 0
         },
         "core/update": {
-          "agent": 0,
+          "agent": 1,
           "prework": 2,
           "skipped": 0,
           "failed": 0,
@@ -1451,8 +1538,14 @@
         }
       },
       "taskExec": {
+        "core/update": {
+          "success": 2,
+          "failed": 0,
+          "task-gone": 0,
+          "invalid": 0
+        },
         "grow_with_claudinite/growth-dedup": {
-          "success": 1,
+          "success": 2,
           "failed": 0,
           "task-gone": 0,
           "invalid": 0
@@ -1464,7 +1557,7 @@
           "invalid": 0
         },
         "grow_with_claudinite/growth-extract": {
-          "success": 4,
+          "success": 6,
           "failed": 0,
           "task-gone": 0,
           "invalid": 0
