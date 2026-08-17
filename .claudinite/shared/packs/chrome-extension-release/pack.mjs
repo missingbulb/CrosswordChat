@@ -1,6 +1,5 @@
 import { workflowFiles } from '../../engine/checks/helpers/github-workflows.mjs';
 import releaseWorkflows, { STUB_NAME, LEGACY_STUB_NAMES, LEGACY_CREATE_PACKAGE, VENDORED_CREATE_PACKAGE } from './release-workflows.mjs';
-import permissionAddedStoreIssue from './permission-added-store-issue.mjs';
 
 // A repo "ships the release pipeline" once it carries the orchestrator — a
 // workflow named "Release to Chrome Store" that wires the create-package reusable
@@ -55,8 +54,9 @@ export default {
   worldRules: [
     releaseWorkflows,
   ],
-  // Judges the change: a permission added in THIS diff needs its store issue.
-  workRules: [permissionAddedStoreIssue],
+  // Judges the change: a permission added in THIS diff needs its store issue —
+  // cer/permission-added-store-issue, a declared check carrying scope: "work".
+  workRules: [],
   // Pack-contributed scheduled task: `tasks/store-release/` — the scheduler's
   // filesystem scan (engine/scheduler/discover.mjs) picks it up only on repos that
   // declare chrome-extension-release, so it is not declared here.
