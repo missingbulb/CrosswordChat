@@ -14,15 +14,33 @@ the origin) and missingbulb/TLDR's adaptation of it (`dev/requirements/`,
 rules both build on are corpus canon in [the writing-tests skill](../basics/skills/writing-tests/SKILL.md)
 and are pointed to, not restated.
 
-## Prose (`RULES.md`) — by section
+## Rules (`RULES.md`)
 
-| Section (≤5 words) | How enforced |
-|---|---|
-| Executable spec is the backbone | prose (+ the project's doc-first gate) |
-| One leaf, one right-kind proof | prose (+ the project's coverage gate) |
-| Expecteds are owner-owned | prose (in-flight judgment; re-baseline mechanics in writing-tests) |
-| State once, prove enforcing boundaries | prose |
-| Supported-targets matrix is spec | prose (+ the project's committed samples) |
-| Green means claimed, track gap | prose (+ the project's committed allowlist) |
-| Owner reviews the product surface | prose |
-| Ship automatically on green `main` | prose (mechanics: the platform's release pack) |
+| Rule | Severity | Reason | Enforcement |
+|---|---|---|---|
+| One numbered document states the product | medium | complexity | prose: 38 words |
+| A leaf is what the harness asserts | medium | complexity | prose: 67 words |
+| Every leaf carries a stable id. | high | complexity | prose: 32 words |
+| Doc-first, red by default. | high | correctness | prose: 20 words |
+| The spec drives the tests | high | correctness | prose: 54 words |
+| Enforce the bijection with a coverage gate | high | correctness | prose: 42 words |
+| A kind is one way to assert | low | complexity | prose: 47 words |
+| A kind may be a singleton. | low | complexity | prose: 37 words |
+| Give each kind's runner a named lane | medium | performance | prose: 44 words |
+| Actuals come from the real code. | high | correctness | prose: 38 words |
+| Committed expecteds are the owner's approval record | high | correctness | prose: 21 words |
+| The contract takes two honest shapes. | medium | complexity | prose: 75 words |
+| On a mismatch, surface both and ask | high | correctness | prose: 48 words |
+| Expected changes ride the normal review flow | high | correctness | prose: 29 words |
+| One rule, sibling leaves per enforcing tier | medium | complexity | prose: 46 words |
+| Prove a rule where it is enforced | medium | correctness | prose: 45 words |
+| When breadth of targets is the value | medium | complexity | prose: 40 words |
+| Prove each target against a real sample | high | correctness | prose: 56 words |
+| Adding a target is a documented flow | low | complexity | prose: 22 words |
+| Name what the harness cannot reach | high | correctness | prose: 78 words |
+| Mark a deliberate gap at its leaf | high | correctness | prose: 79 words |
+| Embed regenerated renders in the spec | medium | complexity | prose: 40 words |
+| Regenerate, never hand-edit. | high | correctness | prose: 24 words |
+| The golden-image method is writing-tests' canon | low | complexity | prose: 53 words |
+| main is always releasable, automation releases | high | correctness | prose: 53 words |
+| The version users see moves deliberately. | medium | correctness | prose: 48 words |

@@ -18,15 +18,32 @@ pixel-exact snapshots), missingbulb/TLDR (adds the cross-tier `server` kind), an
 missingbulb/ShoutsAndWhispers (`dev/requirements/` — the Flutter port: golden-file rendering, the
 fake-world harness, and the `saga` storyboard kind's first implementation).
 
-## Prose (`RULES.md`) — by section
+## Rules (`RULES.md`)
 
-| Section (≤5 words) | How enforced |
-|---|---|
-| The layout is the contract | prose (+ the project's coverage gate) |
-| What the coverage gate checks | prose (checklist the project's gate implements) |
-| The kind vocabulary | prose |
-| Sagas: stories as storyboards | prose (+ the project's saga runner) |
-| Determinism or it isn't spec | prose (+ the project's harness) |
-| Rendering recipes per stack | prose |
-| The gallery is derived output | prose (+ the project's gallery gate) |
-| Refresh is a review step | prose (judgment: spec-driven-product + writing-tests) |
+| Rule | Severity | Reason | Enforcement |
+|---|---|---|---|
+| A requirement line | medium | complexity | prose: 42 words |
+| A requirement line is a scannable one-liner | low | complexity | prose: 77 words |
+| The folder is the kind. | medium | complexity | prose: 41 words |
+| Artifact expecteds live beside their case | medium | complexity | prose: 66 words |
+| surface snapshot | medium | correctness | prose: 33 words |
+| behavior | medium | correctness | prose: 22 words |
+| logic | low | correctness | prose: 12 words |
+| saga | low | correctness | prose: 10 words |
+| per-project kinds | low | complexity | prose: 41 words |
+| heavy/e2e singleton | medium | performance | prose: 21 words |
+| Strip dead delay, keep the animation. | medium | performance | prose: 49 words |
+| Lossless, so byte-identity still holds. | high | correctness | prose: 70 words |
+| Mark the gesture. | medium | correctness | prose: 30 words |
+| Pin the clock. | high | correctness | prose: 26 words |
+| Fake every nondeterministic input | high | correctness | prose: 31 words |
+| Load real fonts | high | correctness | prose: 51 words |
+| Never wait for "settled". | high | correctness | prose: 21 words |
+| Browser-extension / DOM products | medium | correctness | prose: 58 words |
+| Flutter | medium | correctness | prose: 91 words |
+
+## Checks
+
+| Check | Severity | Reason | Enforcement |
+|---|---|---|---|
+| `feature-requirements-first` | high | correctness | check: blocking |
