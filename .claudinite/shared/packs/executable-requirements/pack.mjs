@@ -8,7 +8,7 @@ import featureRequirementsFirst from './feature-requirements-first.mjs';
 // structural constant: the spec file itself.
 export default {
   id: 'executable-requirements',
-  version: 1,
+  version: 2,
   minEngineVersion: 1,
   ruleRoutingGuidance: {
     belongs: 'running a numbered spec as tests: dev/requirements layout, requirement ids, kinds, coverage and gallery gates, determinism rules',
