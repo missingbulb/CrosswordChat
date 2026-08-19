@@ -33,7 +33,7 @@ function shipsReleasePipeline(ctx) {
 
 export default {
   id: 'chrome-extension-release',
-  version: 2,
+  version: 3,
   minEngineVersion: 1,
   ruleRoutingGuidance: {
     belongs: 'store publication for a Chrome extension: release workflows, package versioning, release config, privacy and permission disclosure',
