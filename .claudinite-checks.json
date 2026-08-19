@@ -50,19 +50,19 @@
     "ref": "631a067f5a0413e154a0d4c1a66275f18b255af9",
     "engineVersion": 4,
     "packVersions": {
-      "basics": 3,
+      "basics": 5,
       "barriers": 2,
-      "git-github": 2,
+      "git-github": 3,
       "chrome-extension": 2,
-      "chrome-extension-release": 2,
-      "github-actions": 2,
+      "chrome-extension-release": 3,
+      "github-actions": 3,
       "node": 2,
       "spec-driven-product": 2,
       "executable-requirements": 2,
-      "tidy-repo": 2,
-      "grow_with_claudinite": 2,
+      "tidy-repo": 4,
+      "grow_with_claudinite": 6,
       "claude-code-web-users-support": 2,
-      "core": 3
+      "core": 6
     }
   }
 }

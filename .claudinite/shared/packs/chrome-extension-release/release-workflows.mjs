@@ -16,7 +16,7 @@ import { migrationActive } from '../../engine/checks/helpers/active-migrations.m
 // name — that's the fingerprint DESIGN.md pins the conformance suite to, and the
 // failure-reporter issue keys ("Release: Create Package", …) live in the vendored
 // reusables. The daily schedule is contract too: STUB_CRON pins every repo's
-// nightly release to the same slot. The privacy page has no orchestrator entry of
+// nightly release to the same anchor. The privacy page has no orchestrator entry of
 // its own: it redeploys as part of every publish (the publish reusable's
 // deploy-privacy-page leg).
 //
