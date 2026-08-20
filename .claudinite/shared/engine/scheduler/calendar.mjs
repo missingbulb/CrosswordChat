@@ -18,10 +18,10 @@
 // against and the author-time declaration check rejects anything outside.
 //
 // `manual` is the one non-cadence: a manual task has no occurrence at all, so the
-// tick never instantiates it and it runs only from an item created by hand
+// scheduler run never instantiates it and it runs only from an item created by hand
 // (`queue/create-work-item.mjs`). It exists for operator levers — work that
 // answers no recurring question but wants a task's whole apparatus (declaration,
-// contract validation, prework, the work item) when a human pulls it.
+// contract validation, code-work, the work item) when a human pulls it.
 export const FREQUENCIES = ['hourly', 'daily-2h', 'daily-1h', 'daily', 'daily+1h', 'weekly', 'monthly', 'manual'];
 
 // The documented anchor defaults (per-project-scheduling DESIGN §2) — applied
