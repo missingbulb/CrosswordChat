@@ -1,17 +1,17 @@
-// The PREWORK phase of task execution (task-prework DESIGN §3): the
+// The CODE-WORK phase of task execution (task-code-work DESIGN §3): the
 // deterministic first phase, run as a SUBPROCESS before the agentic phase (when
 // there is one) — code work, Action-side, over the one sanctioned non-MCP
-// surface (the Action GITHUB_TOKEN, inherited in `env`). Prework and agentic
+// surface (the Action GITHUB_TOKEN, inherited in `env`). Code-work and agentic
 // work are similar, consecutive parts of one task execution; neither may decide
 // to skip the run — that decision belongs to the precondition alone.
 //
-// The subprocess is the scheduler's child, so its `prework_timeout`
+// The subprocess is the scheduler's child, so its `code_work_timeout`
 // is a HARD kill: a manual timer SIGKILLs an overrun and the run is reported
 // failed. Its cwd is the TASK directory, so a declared `node worker.mjs` resolves
 // to the script beside task.mjs (the containment the contract enforces); the repo
 // root and item context are handed in via CLAUDINITE_* env so the worker can act
 // on the whole repo. Nothing the subprocess prints is threaded into the agent —
-// prework communicates only through the repository (DESIGN §3).
+// code-work communicates only through the repository (DESIGN §3).
 //
 // THE LOG IS NOT THAT CHANNEL. The child's output is ECHOED to the scheduler's own
 // stdout/stderr as it arrives, so the Action log carries what the worker actually
@@ -19,7 +19,7 @@
 // log, and §3's "communicate only through the repository" is untouched. It is echoed
 // LIVE rather than dumped at exit for the case that needs it most — a worker SIGKILLed
 // at its timeout, whose buffered output would otherwise die with it. Before this,
-// a failed worker surfaced as a bare `prework exited 1` plus a three-line
+// a failed worker surfaced as a bare `code-work exited 1` plus a three-line
 // stderr tail in an issue, and diagnosing one meant reproducing it by hand.
 
 import { spawn } from 'node:child_process';
@@ -34,7 +34,7 @@ import { tmpdir } from 'node:os';
 // `echo` (default on) mirrors the child's output to this process as it arrives —
 // injected rather than hardcoded so a test can capture it instead of polluting the
 // test runner's own output.
-export function runPrework(command, {
+export function runCodeWork(command, {
   taskDir, env, timeoutSeconds,
   echo = (chunk, stream) => (stream === 'stderr' ? process.stderr : process.stdout).write(chunk),
 }) {
@@ -73,15 +73,15 @@ export function runPrework(command, {
   });
 }
 
-// The conditional-handoff signal (task-prework DESIGN §3, E4). A task with
-// BOTH prework AND a non-`none` agent_model hands off to the agent
+// The conditional-handoff signal (task-code-work DESIGN §3, E4). A task with
+// BOTH code-work AND a non-`none` agent_model hands off to the agent
 // ONLY when its worker requests it — so a task can absorb its work into
-// prework and be AGENTLESS on the quiet nights. The scheduler hands the
+// code-work and be AGENTLESS on the quiet nights. The scheduler hands the
 // worker this path via CLAUDINITE_REQUEST_AGENT and hands off to an agent iff
 // the worker created it. It is a pure control signal: the worker communicates
 // DATA to the agent only through the repository, never through this file (DESIGN
 // §3, "no code→agent data channel"). The hand-off condition must name work
-// prework COULD not do — never re-check whether the run should have happened;
+// code-work COULD not do — never re-check whether the run should have happened;
 // the precondition already decided that.
 export function agentRequestPath({ pack, task, slotId }) {
   return join(tmpdir(), `claudinite-request-agent-${pack}-${task}-${slotId}`);
@@ -113,10 +113,32 @@ export function readAgentRequest(path) {
   try { return JSON.parse(raw); } catch { return {}; }
 }
 
-// A one-line reason for the job summary / an issue comment when prework
+// A one-line reason for the job summary / an issue comment when code-work
 // fails — distinguishing a timeout kill from a non-zero exit.
-export function preworkFailure(result) {
-  if (result.timedOut) return 'prework exceeded its prework_timeout and was killed';
-  if (result.code !== null) return `prework exited ${result.code}`;
-  return `prework could not run: ${result.stderr.trim().split('\n').pop() || 'unknown error'}`;
+export function codeWorkFailure(result) {
+  if (result.timedOut) return 'code_work exceeded its code_work_timeout and was killed';
+  if (result.code !== null) return `code-work exited ${result.code}`;
+  return `code_work could not run: ${result.stderr.trim().split('\n').pop() || 'unknown error'}`;
+}
+
+// THE WORKER'S OWN TRIAGE VERDICT. A failed worker is the only thing that knows
+// why it failed — a 403 from a token without the scope it needs is a person's
+// five-second fix, and an exception in its own code is a bug — and the executor,
+// reading an exit code, cannot tell those apart. So a worker may say, on either
+// stream, before it exits non-zero:
+//
+//     claudinite-needs-human: action — FLEET_GITHUB_TOKEN lacks Actions: write
+//
+// The kind is one of the triage kinds (`action`, `decision`, `approval`,
+// `failure`); anything else, or no marker at all, leaves the park a `failure`.
+// The LAST marker wins, so a worker that sweeps many targets may revise its
+// verdict as it goes. Read from the worker's output rather than from a file
+// because it must survive the SIGKILL at `code_work_timeout` — output is echoed
+// live, a file written at exit is not written at all.
+const TRIAGE_MARKER = /^claudinite-needs-human:[ \t]*([a-z]+)\b[ \t]*(.*)$/gm;
+export function readTriageMarker(text) {
+  let last = null;
+  for (const m of String(text ?? '').matchAll(TRIAGE_MARKER)) last = m;
+  if (!last) return null;
+  return { kind: last[1], detail: last[2].replace(/^[—\-:\s]+/, '').trim() || null };
 }
