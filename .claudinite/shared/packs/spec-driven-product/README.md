@@ -11,8 +11,7 @@ Distilled from the two worked examples of the class in the owner's fleet:
 missingbulb/GoogleCalendarEventCreator's executable-requirements methodology (`dev/requirements/` —
 the origin) and missingbulb/TLDR's adaptation of it (`dev/requirements/`,
 `dev/docs/ui-testing-guideline.md`, which adds the cross-tier server kind). The general test-trust
-rules both build on are corpus canon in [the writing-tests skill](../basics/skills/writing-tests/SKILL.md)
-and are pointed to, not restated.
+rules both build on are corpus canon already, and are pointed to rather than restated here.
 
 ## Rules (`RULES.md`)
 

@@ -12,7 +12,7 @@ const hasMarkerNearRoot = (ctx, marker) =>
 
 export default {
   id: 'node',
-  version: 2,
+  version: '60820.1',
   minEngineVersion: 1,
   ruleRoutingGuidance: {
     belongs: 'conventions for a Node/npm project — module resolution, ESM vs CJS, dependency justification, jsdom test divergences',

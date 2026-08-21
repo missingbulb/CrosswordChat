@@ -7,9 +7,8 @@ make rendered expecteds byte-stable. Prose-only: every rule here is enforced by 
 declaring project itself commits** (coverage gate, gallery gate) — the pack standardizes what those
 gates must check, not the checking.
 
-Sits under [spec-driven-product](../spec-driven-product/README.md), which owns the judgment layer
-(doc-first discipline, owner-owned expecteds, honest-gap tracking) — declare both for a product
-project of that class. This pack exists so a *new* project (or a new stack) adopts the framework by
+The judgment layer above it — doc-first discipline, owner-owned expecteds, honest-gap tracking —
+is not here. This pack exists so a *new* project (or a new stack) adopts the framework by
 convention instead of re-deriving it.
 
 Distilled from three worked implementations in the owner's fleet:

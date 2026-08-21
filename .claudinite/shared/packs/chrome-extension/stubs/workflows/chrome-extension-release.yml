@@ -1,0 +1,127 @@
+name: Release to Chrome Store
+
+# The ONE orchestrator of the Chrome Web Store release standard. It owns only the
+# triggers; the logic — create-package, daily auto-release, Chrome Web Store
+# publish, and the deliberate version bump — lives in the reusable workflows this
+# repo carries alongside it in `.github/workflows/` (all vendored from the
+# chrome-extension pack, so they run entirely inside this repo — no cross-repo
+# `@main` dependency). This file passes NO repo values. Every repo-specific value
+# is declared explicitly in the REQUIRED `.github/release.config` (five keys, no
+# defaults) — the pack keeps this whole set (`.github/workflows/` +
+# `.github/actions/`) in sync, so treat it as generated: edit the pack, not the
+# copy. The zip asset name is derived from the config's `zip_path`, and the build
+# is always `npm run build`, so neither is a config key.
+#
+# THE VERSION COMES FROM THE CHANGE. A PR touching a shipped file raises the
+# patch in the same PR (`cer/version-bumped`), so merging it is what cuts the
+# release: create-package no-ops unless the version on main has no release yet.
+# Nothing here bumps on its own; `mode: bump` is the deliberate minor/major, run
+# by a human.
+#
+# Four operations, one entry point:
+#   * push to main            → create-package (a clean no-op unless the version
+#                               was raised, so ordinary pushes don't cut a
+#                               release — no per-repo manifest path in the trigger)
+#   * schedule (00:30 UTC)    → daily auto-release (ship the version on main to
+#                               the store if it has not been released yet)
+#   * "Run workflow" dispatch → pick a mode: publish (default), package, daily,
+#                               or bump (with `part`, minor or major — raises the
+#                               version, pushes it, and packages the result)
+#
+# The Actions-tab entry is named "Release to Chrome Store"; the failure reporter keys its
+# tracking issues on the per-operation names ("Release: Create Package", etc.)
+# baked into the reusable workflows, so collapsing to one entry point loses no
+# per-operation triage.
+#
+# secrets: inherit passes the four CHROME_* store secrets through to the reusable
+# workflows.
+#
+# A repo whose build bakes in per-environment config (e.g. an API base URL)
+# uncomments a build_env block on the create-package and daily jobs — the ONLY
+# place a repo references its repository variables; every key must be non-empty
+# or the run fails, so a mis-configured zip can't ship. Example:
+#       build_env: |
+#         API_BASE_URL=${{ vars.API_BASE_URL }}
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to run"
+        type: choice
+        options: [publish, package, daily, bump]
+        default: publish
+      part:
+        description: "bump: which part to raise"
+        type: choice
+        options: [minor, major]
+        default: minor
+      tag:
+        description: "publish: release tag to publish (blank = latest release)"
+        required: false
+        type: string
+      auto_publish:
+        description: "publish: publish to users after upload (uncheck = dashboard draft)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+
+# Daily runs (scheduled, or a mode=daily dispatch) share one queue so a manual
+# dispatch can't race the scheduled release; every other run gets its own group.
+concurrency: >-
+  ${{ (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' && inputs.mode == 'daily'))
+      && 'daily-release' || github.run_id }}
+
+jobs:
+  # Dispatch-only, and only when asked for. Neither the push nor the schedule
+  # reaches it, so nothing writes a version unattended.
+  bump:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'bump'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/chrome-extension-bump-version.yml
+    with:
+      part: ${{ inputs.part }}
+
+  create-package:
+    needs: bump
+    # `always()` so the skipped bump job (every push, and every dispatch that
+    # asked for something else) does not skip the package with it; the explicit
+    # result test still stops a failed bump from releasing a half-written
+    # version. The bump's push used GITHUB_TOKEN and fired no trigger, so its
+    # commit is passed here by sha.
+    if: >-
+      always() && needs.bump.result != 'failure' && needs.bump.result != 'cancelled' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && (inputs.mode == 'package' || inputs.mode == 'bump')))
+    uses: ./.github/workflows/chrome-extension-create-package.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
+    # build_env: uncomment on this job and `daily` if the build needs repo config
+    #   with:
+    #     build_env: |
+    #       API_BASE_URL=${{ vars.API_BASE_URL }}
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
+    uses: ./.github/workflows/chrome-extension-publish-store.yml
+    with:
+      tag: ${{ inputs.tag }}
+      auto_publish: ${{ inputs.auto_publish }}
+    secrets: inherit
+
+  daily:
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'daily')
+    uses: ./.github/workflows/chrome-extension-daily-release.yml
+    secrets: inherit

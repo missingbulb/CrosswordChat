@@ -1,0 +1,145 @@
+name: "Chrome extension: Daily Auto-Release (reusable)"
+
+# Reusable workflow of the Chrome Web Store release standard — the logic behind
+# every extension repo's daily release. Vendored into the extension repo by the
+# chrome-extension pack (not hosted in Claudinite); the repo's single
+# `chrome-extension-release.yml` orchestrator owns the schedule/dispatch triggers
+# and the `concurrency: daily-release` guard, calls this locally, and passes NO
+# repo values. workflow_call ONLY. Everything repo-specific comes from the
+# caller's `.github/release.config` (via the read-release-config composite
+# action) — including the manifest that carries the version.
+#
+# THIS WORKFLOW WRITES NO VERSION. The version belongs to the change that earned
+# it: a PR touching a shipped file raises the patch in the same PR (the pack's
+# `cer/version-bumped` check holds that line), so what reaches main is already
+# the number to ship. A deliberate minor or major is the orchestrator's `bump`
+# dispatch.
+#
+# So "is a release due?" is one question, asked of the release list rather than
+# of a file diff: has the version currently on main been released yet? That is
+# self-healing by construction — a day whose run failed retries the next day with
+# nothing to undo, a push that touched only tooling carries the version that is
+# already out and is a clean no-op, and there is no window in which the pipeline
+# and the repo disagree about what "the current version" is.
+#
+# When a release is due it:
+#   1. calls the "Chrome extension: Create Package" reusable workflow (tests →
+#      zip → GitHub Release) on main's tip. Called with an explicit ref because
+#      the schedule fired against whatever main was then.
+#   2. calls the "Chrome extension: Publish to Chrome Web Store" reusable
+#      workflow with the fresh tag (auto-publishing to users, and refreshing
+#      the privacy page as that workflow always does).
+#
+# Unattended (scheduled), so failures must reach a human: the called workflows
+# report their own job failures as fresh tracking issues, and the
+# report-failure job below covers this workflow's own jobs — including a
+# called workflow failing to even start.
+#
+# The check job runs on a bare runner (no npm ci): the config action and the
+# version read are dependency-free node. Callers must pass `secrets: inherit`
+# (for the store secrets the publish leg needs) and grant `permissions:
+# contents: write, pages: write, id-token: write, issues: write`.
+on:
+  workflow_call:
+    inputs:
+      build_env:
+        description: "Forwarded to the release workflow (KEY=VALUE lines; see there)"
+        required: false
+        type: string
+        default: ""
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.due.outputs.release }}
+      version: ${{ steps.due.outputs.version }}
+      sha: ${{ steps.head.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The branch tip as of now, not github.sha (the tip when the schedule
+          # fired) — anything merged in between rides along in this release.
+          ref: main
+          # Full history + tags: the tag test below reads them.
+          fetch-depth: 0
+
+      # Pin that tip once, here: the release is cut at THIS sha, so the tree
+      # whose version was read is the tree that ships.
+      - id: head
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - id: cfg
+        uses: ./.github/actions/read-release-config
+
+      - name: Has the version on main been released yet?
+        id: due
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MANIFEST_PATH: ${{ steps.cfg.outputs.manifest_path }}
+        run: |
+          set -euo pipefail
+          # The bump script is also the version READER, so nothing else has to
+          # know where the version lives.
+          version="$(node .github/actions/bump-extension-patch/bump.mjs --print "$MANIFEST_PATH")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1 || git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "v$version is already released — nothing to ship. Raise the version in the change that needs shipping." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$version is not released yet — shipping it." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Tests → zip → GitHub Release, at main's pinned tip. Its internal
+  # report-failure job needs issues: write granted through this call.
+  release:
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    permissions:
+      contents: write
+      issues: write
+    uses: ./.github/workflows/chrome-extension-create-package.yml
+    with:
+      ref: ${{ needs.check.outputs.sha }}
+      build_env: ${{ inputs.build_env }}
+
+  # Upload the just-released zip to the Chrome Web Store and publish it to
+  # users. secrets: inherit passes the four CHROME_* store secrets through;
+  # the pages/id-token grants are for its privacy-page deploy, issues for the
+  # nested failure reporters. The publish workflow reads the zip name from the
+  # repo's release config itself, so only the tag is forwarded here.
+  publish:
+    needs: [check, release]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      issues: write
+    uses: ./.github/workflows/chrome-extension-publish-store.yml
+    with:
+      tag: v${{ needs.check.outputs.version }}
+      auto_publish: true
+    secrets: inherit
+
+  # Scheduled + nobody watching = every failure must converge to a fresh
+  # tracking issue a human sees. Covering release/publish here too can
+  # double-report (their internal reporters also fire on their own job failures)
+  # — accepted, so that a called workflow failing before its internal reporter
+  # can run (e.g. a workflow-file error) still reaches a human.
+  report-failure:
+    needs: [check, release, publish]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: ./.github/actions/report-failure
+        with:
+          workflow: "Release: Daily Auto-Release"

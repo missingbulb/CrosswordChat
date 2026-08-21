@@ -2,6 +2,7 @@ import { readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateManifest, normalizeManifest } from './pack-schema.mjs';
+import { canonicalPackId, canonicalPackIdAmong } from './renamed-packs.mjs';
 
 // This module lives at <canon>/engine/pack_loader/; the packs it scans at <canon>/packs/.
 const canonRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -180,7 +181,20 @@ async function scanPackDir(dir, { local, subdir }, errors) {
     // its own `scope` picks the list it joins — and normalizeManifest stamps the
     // same answer back either way.
     const declared = await declaredChecksIn(packDir, rel, errors);
+    // A CANON pack's own id is canonicalized like a declared one. A member's mount
+    // is replaced per pack and per version, so a repo can hold a pack DIRECTORY
+    // renamed by a migration record while the `pack.mjs` inside it still carries the
+    // old id — the tree is only rewritten once the canon ships a version above the
+    // one that repo has. Read literally, that pack announces an id nothing declares
+    // and goes inert, taking its checks, prose and tasks with it silently. A local
+    // pack keeps its own id: that namespace is the repo's.
+    //
+    // The raw id rides along because that canonicalization is only safe once the
+    // WHOLE tree is known — an absorbed pack's leftover directory maps onto a
+    // survivor that is itself present, and discoverPacks below undoes the map for
+    // exactly that case (#1186).
     const pack = { ...normalizeManifest({ ...mod,
+      ...(local ? {} : { id: canonicalPackId(mod.id), rawId: mod.id }),
       worldRules: [...(mod.worldRules ?? []), ...declared.filter((r) => r.scope !== 'work')],
       workRules: [...(mod.workRules ?? []), ...declared.filter((r) => r.scope === 'work')],
     }), dir: packDir, local };
@@ -247,6 +261,12 @@ async function scanSkillChecks(packDir, errors) {
 export async function discoverPacks({ localRoot } = {}) {
   const errors = [];
   const canon = await scanPackDir(packsDir, { local: false }, errors);
+  // Re-resolve each canon id now the whole tree is known, so an ABSORBED pack's
+  // leftover directory keeps its own id instead of colliding with the survivor
+  // sitting beside it (#1186). scanPackDir cannot make this call alone: it sees
+  // one directory at a time, and the map reads the same for a rename.
+  const rawCanonIds = new Set(canon.map((p) => p.rawId));
+  for (const pack of canon) pack.id = canonicalPackIdAmong(pack.rawId, rawCanonIds);
   // Scan BOTH local roots (canonical .claudinite/local/packs and the legacy
   // .claudinite/local_packs) so a repo mid-rename still loads; a pack present in
   // both would trip the id-collision guard below, which is the desired signal.
@@ -312,12 +332,23 @@ export const declTokenFor = (pack) =>
 // engine agree on both shapes — and on both declaration forms: it returns the
 // BARE pack id, stripping a `local_packs/` namespace where one is declared.
 // Returns undefined for a malformed entry.
-export const packEntryId = (entry) =>
-  typeof entry === 'string'
-    ? stripLocalPrefix(entry)
+// A declaration written before a canon pack was renamed resolves to the pack's
+// CURRENT id here (renamed-packs.mjs), so activation, config lookup and the vendor
+// set all agree on one spelling no matter which one the member wrote. A LOCAL pack
+// is exempt: its namespace belongs to the repo, so `local/core` stays `core`.
+// A local pack declared BARE cannot be told apart from a canon one at this seam and
+// is canonicalized with the rest — which is harmless while the shadow guard in
+// discoverPacks keeps a local id from claiming a canon one.
+export const packEntryId = (entry) => {
+  const raw = typeof entry === 'string'
+    ? entry
     : entry !== null && typeof entry === 'object' && typeof entry.id === 'string'
-      ? stripLocalPrefix(entry.id)
+      ? entry.id
       : undefined;
+  if (raw === undefined) return undefined;
+  const bare = stripLocalPrefix(raw);
+  return bare === raw ? canonicalPackId(bare) : bare;
+};
 
 // No pack is active by default. Activation is exactly the project's declaration
 // in .claudinite-checks.json (bootstrap's --init seeds the default-on packs).
