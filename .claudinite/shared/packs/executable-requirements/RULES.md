@@ -1,9 +1,8 @@
 # Executable requirements — the framework standard
 
-The concrete conventions for running a numbered spec as tests. The judgment layer — doc-first
-red-by-default, owner-owned expecteds, honest-gap tracking — is the
-[spec-driven-product](../spec-driven-product/RULES.md) playbook; this pack is the mechanics that
-implement it, so a new project or a new stack adopts the framework by convention instead of
+The concrete conventions for running a numbered spec as tests — the mechanics only. The judgment
+layer they implement — doc-first red-by-default, owner-owned expecteds, honest-gap tracking — is
+not here, so a new project or a new stack adopts the framework by convention instead of
 re-deriving it. Worked implementations: GoogleCalendarEventCreator (origin; extension/jsdom
 rendering), TLDR (adds a cross-tier `server` kind), ShoutsAndWhispers (Flutter port; first `saga`
 kind).

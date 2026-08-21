@@ -1,24 +1,48 @@
 import { findExtensionManifest } from '../../engine/checks/helpers/chrome-manifest.mjs';
 import contentScriptModuleSyntax from './content-script-module-syntax.mjs';
 import declarativeContentSetIcon from './declarative-content-set-icon.mjs';
+import releaseWorkflows from './release-workflows.mjs';
+import versionBumped from './version-bumped.mjs';
 
-// The coding pack: MV3 build/runtime gotchas that apply whenever you are writing
-// an extension, fingerprinted by the manifest. Release and Chrome-Web-Store
-// publication are a separate, opt-in concern — the chrome-extension-release pack
-// (its RELEASE.md and conformance checks), declared when the project is ready to
-// ship. Most of the pack's gotchas are runtime-shaped and stay prose; the ones
-// with a static signature in the source convert to checks here.
+// Everything about a Chrome extension in one pack: the MV3 build/runtime gotchas
+// that apply while you are writing one, and the Chrome-Web-Store release standard
+// that applies once you publish it. Fingerprinted by the manifest, which is what a
+// repo has from its first commit.
+//
+// THE RELEASE HALF IS GATED ON SHIPPING, not on a second declaration (#1057). It
+// used to be its own opt-in pack, chrome-extension-release, whose `detect` was the
+// orchestrator workflow's name — so the fact that decided whether the release rules
+// applied was always structural, and the declaration was a second copy of it that a
+// repo had to remember to write. Now that fact is read where it is used:
+// `shipsReleasePipeline` gates the coded rule, and every declared check carries the
+// same test as its `relevantWhen`. A repo that only codes an extension sees none of
+// them; a repo that publishes gets them without anyone declaring anything.
+//
+// The `cer/` check ids are kept as they are. A member's `accept` entries name rules
+// by id, and renaming one silently orphans an acceptance — the finding comes back
+// with nothing to carry the member across. A prefix outliving the pack it was named
+// for is the cheaper of those two.
 export default {
   id: 'chrome-extension',
-  version: 2,
+  version: '60821.1',
   minEngineVersion: 1,
   ruleRoutingGuidance: {
-    belongs: 'manifest V3 service-worker, permissions, content-script and extension-auth gotchas that apply while coding a Chrome extension',
-    excludes: 'store submission, packaging, versioning and privacy disclosure — that is chrome-extension-release',
+    belongs: 'writing and shipping a Chrome extension: MV3 service-worker, permission, content-script and auth gotchas, plus Web Store release, versioning and privacy',
+    excludes: 'generic workflow lint rules — git-github; shipping to a different store — the app-store-release and play-store-release packs',
   },
   badge: 'badge.svg',
   marker: 'a manifest.json declaring manifest_version',
   detect: (ctx) => findExtensionManifest(ctx) !== null,
   prose: 'RULES.md',
-  worldRules: [contentScriptModuleSyntax, declarativeContentSetIcon],
+  worldRules: [contentScriptModuleSyntax, declarativeContentSetIcon, releaseWorkflows],
+  // Delivery, not state: the tree always carries a version, and only the diff
+  // says whether it moved with the shipped files beside it.
+  workRules: [versionBumped],
+  // The standard itself — the pipeline's contract, the setup for a new extension
+  // repo, and the store steps no automation can take. A skill rather than prose: it
+  // is long, and only the checks need to be eager.
+  skills: ['chrome-store-releases'],
+  // Pack-contributed task: `tasks/store-release/` — the scheduler's filesystem scan
+  // (engine/scheduler/discover.mjs) picks it up on any repo declaring this pack, so
+  // its own precondition is what keeps it off a repo that does not publish.
 };

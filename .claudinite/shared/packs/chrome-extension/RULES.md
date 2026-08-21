@@ -6,8 +6,8 @@ true for any extension read cold.
 
 > **Releasing, versioning, and Chrome Web Store publication are standardized** — before building
 > or changing any release/publish machinery in an extension repo, read the
-> [chrome-extension-release standard](../chrome-extension-release/RELEASE.md) (its pack, declared
-> when you're ready to ship) and copy its canonical workflows instead of re-deriving them.
+> [chrome-store-releases standard](skills/chrome-store-releases/SKILL.md) and copy its canonical
+> workflows instead of re-deriving them.
 
 ## Service worker
 
