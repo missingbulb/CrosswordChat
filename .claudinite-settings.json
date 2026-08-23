@@ -49,6 +49,9 @@
       "version": "60823.1",
       "config": {
         "repo": "missingbulb/Shepherd"
+      },
+      "answers": {
+        "store": "missingbulb/Shepherd"
       }
     },
     {

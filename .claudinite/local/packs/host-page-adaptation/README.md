@@ -3,7 +3,7 @@
 A pack for **being a guest in a web app you do not own**: reading its DOM, driving it with
 synthetic input, watching it change, injecting your own UI into its chrome, and surviving the
 day it is redesigned. Declared by hand as `local/host-page-adaptation` in
-`.claudinite-checks.json`.
+`.claudinite-settings.json`.
 
 **Every rule judges a DOM/API contract, not a product decision.** Each one holds for any code
 driving a third-party page — a userscript, a browser-automation layer, an extension's content
