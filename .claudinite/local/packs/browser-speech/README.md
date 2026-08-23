@@ -2,7 +2,7 @@
 
 A pack for the **browser speech surfaces**: `SpeechRecognition` / `webkitSpeechRecognition`,
 `chrome.tts`, `speechSynthesis`, and the microphone capture behind them. Declared by hand as
-`local/browser-speech` in `.claudinite-checks.json`.
+`local/browser-speech` in `.claudinite-settings.json`.
 
 **Every rule judges a browser API contract, not a product decision.** Each one holds in any
 voice-driven web app — nothing in a rule's logic, rationale, or fix text is specific to this

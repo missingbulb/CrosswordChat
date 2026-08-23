@@ -14,7 +14,7 @@ import syntheticInputEventsBubble from './synthetic-input-events-bubble.mjs';
 // (how to get your code onto the page) and says nothing about what to do once it
 // is there, and node / github-actions / chrome-extension-release /
 // spec-driven-product / executable-requirements are orthogonal. Declared by hand
-// as `local/host-page-adaptation` in .claudinite-checks.json.
+// as `local/host-page-adaptation` in .claudinite-settings.json.
 export default {
   id: 'host-page-adaptation',
   ruleRoutingGuidance: {

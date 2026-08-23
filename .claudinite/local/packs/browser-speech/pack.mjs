@@ -16,7 +16,7 @@ import sttInterimResultsGated from './stt-interim-results-gated.mjs';
 // home for this facet yet — the chrome-extension pack covers MV3 build/runtime
 // gotchas and says nothing about speech, and `node` / `github-actions` /
 // `spec-driven-product` are orthogonal. Declared by hand as
-// `local/browser-speech` in .claudinite-checks.json.
+// `local/browser-speech` in .claudinite-settings.json.
 export default {
   id: 'browser-speech',
   ruleRoutingGuidance: {

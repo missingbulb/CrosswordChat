@@ -1,0 +1,74 @@
+{
+  "packs": [
+    {
+      "id": "basics",
+      "version": "60823.1"
+    },
+    {
+      "id": "barriers",
+      "version": "60823.1",
+      "via": [
+        "basics"
+      ]
+    },
+    {
+      "id": "chrome-extension",
+      "version": "60823.1"
+    },
+    {
+      "id": "git-github",
+      "version": "60822.2"
+    },
+    {
+      "id": "node",
+      "version": "60823.1"
+    },
+    {
+      "id": "spec-driven-product",
+      "version": "60822.1"
+    },
+    {
+      "id": "executable-requirements",
+      "version": "60822.1",
+      "via": [
+        "spec-driven-product"
+      ]
+    },
+    {
+      "id": "tidy-repo",
+      "version": "60823.1"
+    },
+    {
+      "id": "claudinite-growth",
+      "version": "60823.2"
+    },
+    "local/browser-speech",
+    "local/host-page-adaptation",
+    {
+      "id": "claude-code-web-users-support",
+      "version": "60823.1",
+      "config": {
+        "repo": "missingbulb/Shepherd"
+      },
+      "answers": {
+        "store": "missingbulb/Shepherd"
+      }
+    },
+    {
+      "id": "claudinite-lifecycle",
+      "version": "60823.1"
+    }
+  ],
+  "taskScheduler": {
+    "agenticTaskInvocationEndpoints": {
+      "default": {
+        "url": "https://api.anthropic.com/v1/claude_code/routines/trig_01BEUALUT7wNtoSETJPtbKaw/fire",
+        "tokenSecret": "CCR_ROUTINE_TOKEN"
+      }
+    },
+    "dailyHour": 4,
+    "weeklyDay": "Sun",
+    "monthlyDay": 1
+  },
+  "engineVersion": "60823.1"
+}

@@ -216,7 +216,7 @@ in the repo's first-publication issue).*
 
 ## Setting up a new extension repo
 
-1. Declare the pack in `.claudinite-checks.json`; baselining then **vendors the release set** — the
+1. Declare the pack in `.claudinite-settings.json`; baselining then **vendors the release set** — the
    [orchestrator](../../stubs/workflows/chrome-extension-release.yml) plus the reusable workflows under
    [`stubs/workflows/`](../../stubs/workflows/) and the composite actions under
    [`stubs/actions/`](../../stubs/actions/) — into this repo's own `.github/`. (Setting up before the next

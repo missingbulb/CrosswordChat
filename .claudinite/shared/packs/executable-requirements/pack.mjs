@@ -1,4 +1,3 @@
-import featureRequirementsFirst from './feature-requirements-first.mjs';
 
 // The executable-requirements framework standard: the concrete, portable
 // conventions — layout, naming, gates, kinds, gallery, determinism — shared by
@@ -7,17 +6,14 @@ import featureRequirementsFirst from './feature-requirements-first.mjs';
 // is the mechanics that implement it. Fingerprinted by the framework's one
 // structural constant: the spec file itself.
 export default {
-  id: 'executable-requirements',
-  version: '60820.1',
-  minEngineVersion: 1,
+  version: '60822.1',
+  minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'running a numbered spec as tests: dev/requirements layout, requirement ids, kinds, coverage and gallery gates, determinism rules',
     excludes: 'doc-first judgment, owner-owned expecteds and honest-gap tracking — spec-driven-product; general test practice — basics writing-tests',
   },
-  badge: 'badge.svg',
   marker: 'dev/requirements/requirements.md',
   detect: (ctx) => ctx.tracked.includes('dev/requirements/requirements.md'),
-  prose: 'RULES.md',
   // Adoption interview: the spec runs AS tests, so two decisions must be made
   // before the first requirement is authored — how a UI requirement becomes an
   // assertion (the harness), and where the requirements come from (a new file,
@@ -35,5 +31,4 @@ export default {
       distill: "record the source; set config.spec to the executable spec's home (default dev/requirements/requirements.md) and extract the initial requirements from the named source",
     },
   ],
-  workRules: [featureRequirementsFirst],
 };
