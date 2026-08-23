@@ -1,8 +1,4 @@
 import { findExtensionManifest } from '../../engine/checks/helpers/chrome-manifest.mjs';
-import contentScriptModuleSyntax from './content-script-module-syntax.mjs';
-import declarativeContentSetIcon from './declarative-content-set-icon.mjs';
-import releaseWorkflows from './release-workflows.mjs';
-import versionBumped from './version-bumped.mjs';
 
 // Everything about a Chrome extension in one pack: the MV3 build/runtime gotchas
 // that apply while you are writing one, and the Chrome-Web-Store release standard
@@ -22,26 +18,20 @@ import versionBumped from './version-bumped.mjs';
 // by id, and renaming one silently orphans an acceptance — the finding comes back
 // with nothing to carry the member across. A prefix outliving the pack it was named
 // for is the cheaper of those two.
+// The release standard itself — the pipeline's contract, the setup for a new
+// extension repo, and the store steps no automation can take — is skills/, not
+// prose: it is long, and only the checks need to be eager.
 export default {
-  id: 'chrome-extension',
-  version: '60821.1',
-  minEngineVersion: 1,
+  version: '60823.1',
+  minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'writing and shipping a Chrome extension: MV3 service-worker, permission, content-script and auth gotchas, plus Web Store release, versioning and privacy',
     excludes: 'generic workflow lint rules — git-github; shipping to a different store — the app-store-release and play-store-release packs',
   },
-  badge: 'badge.svg',
   marker: 'a manifest.json declaring manifest_version',
   detect: (ctx) => findExtensionManifest(ctx) !== null,
-  prose: 'RULES.md',
-  worldRules: [contentScriptModuleSyntax, declarativeContentSetIcon, releaseWorkflows],
   // Delivery, not state: the tree always carries a version, and only the diff
   // says whether it moved with the shipped files beside it.
-  workRules: [versionBumped],
-  // The standard itself — the pipeline's contract, the setup for a new extension
-  // repo, and the store steps no automation can take. A skill rather than prose: it
-  // is long, and only the checks need to be eager.
-  skills: ['chrome-store-releases'],
   // Pack-contributed task: `tasks/store-release/` — the scheduler's filesystem scan
   // (engine/scheduler/discover.mjs) picks it up on any repo declaring this pack, so
   // its own precondition is what keeps it off a repo that does not publish.
