@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60823.1"
+      "version": "60824.1"
     },
     {
       "id": "barriers",
@@ -13,7 +13,7 @@
     },
     {
       "id": "chrome-extension",
-      "version": "60823.1"
+      "version": "60824.1"
     },
     {
       "id": "git-github",
@@ -36,11 +36,11 @@
     },
     {
       "id": "tidy-repo",
-      "version": "60823.1"
+      "version": "60824.1"
     },
     {
       "id": "claudinite-growth",
-      "version": "60823.2"
+      "version": "60824.1"
     },
     "local/browser-speech",
     "local/host-page-adaptation",
@@ -56,7 +56,7 @@
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60823.1"
+      "version": "60824.3"
     }
   ],
   "taskScheduler": {
