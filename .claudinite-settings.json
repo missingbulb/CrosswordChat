@@ -57,6 +57,10 @@
     {
       "id": "claudinite-lifecycle",
       "version": "60824.3"
+    },
+    {
+      "id": "claudinite-tasks",
+      "version": "60824.5"
     }
   ],
   "taskScheduler": {

@@ -29,6 +29,7 @@ import { mostRecentAnchor, nextAnchor } from './anchors.mjs';
 import { EXECUTING_LEASH_MS } from './leases.mjs';
 import { swapStatus } from './apply-status.mjs';
 import { isReleasable } from './readiness.mjs';
+import { pickOrder } from './executor.mjs';
 import { lastLivenessAt } from './heartbeat.mjs';
 import {
   WORK_PREFIX, BLOCKED, READY, NEEDS_HUMAN, TASK_OBSOLETE,
@@ -638,13 +639,22 @@ async function main() {
     await ensureLabels(gh, repo, QUEUE_LABELS.filter((l) => ORIGIN_LABELS.includes(l.name)));
   }
 
+  // WHAT THIS RUN ITSELF LEFT READY. The gate below reads the queue back from
+  // GitHub, and that read is eventually consistent — it can miss an item created
+  // milliseconds earlier (#1340). The run does not need the read to know what it
+  // wrote, so every issue it readies is recorded here and counted regardless.
+  const readied = new Set();
+
   for (const op of ops) {
     if (op.kind === 'create') {
       const res = await createIssue(gh, repo, { title: op.title, body: op.body, labels: op.labels });
-      if (res.number) console.log(`- created #${res.number} ${op.pack}/${op.task} [${op.labels.join(' ')}]`);
-      else console.log(`! could not create the work item for ${op.pack}/${op.task}: ${res.status}`);
+      if (res.number) {
+        if (op.labels.includes(READY)) readied.add(res.number);
+        console.log(`- created #${res.number} ${op.pack}/${op.task} [${op.labels.join(' ')}]`);
+      } else console.log(`! could not create the work item for ${op.pack}/${op.task}: ${res.status}`);
     } else if (op.kind === 'ready') {
       await swapStatus({ addLabel, removeLabel }, gh, repo, { number: op.issue }, STATUS_BLOCKED, READY);
+      readied.add(op.issue);
       console.log(`- readied #${op.issue}`);
     } else if (op.kind === 'reclaim') {
       // The reclaim comment is also the EPISODE BOUNDARY: every claim before it is
@@ -653,6 +663,7 @@ async function main() {
       await comment(gh, repo, op.issue, `${EPISODE_MARKER}\n${op.reason}`);
       await swapStatus({ addLabel, removeLabel }, gh, repo, { number: op.issue }, STATUS_RUNNING_EXECUTOR, op.to);
       if (op.triage) await addLabel(gh, repo, op.issue, op.triage);
+      if (op.to === READY) readied.add(op.issue);
       console.log(`- reclaimed #${op.issue} -> ${op.to}`);
     } else if (op.kind === 'adopt') {
       // THE ISSUE IS THE ITEM, so adoption writes to it rather than filing anything:
@@ -740,6 +751,7 @@ async function main() {
     const { wake, create, already, unmatched } = planWake(spec, tasks, current);
     for (const w of wake) {
       const res = await wakeItem(gh, repo, w.issue);
+      if (res.ok) readied.add(w.issue);
       console.log(res.ok ? `- woke #${w.issue} ${w.id}` : `! could not wake #${w.issue} ${w.id}: ${res.error}`);
     }
     if (create.length) await ensureLabels(gh, repo, QUEUE_LABELS);
@@ -749,8 +761,10 @@ async function main() {
         body: workItemBody({ taskPath: c.taskPath, context: [FORCED_WAKE_CONTEXT] }),
         labels: [READY],
       });
-      if (res.number) console.log(`- created #${res.number} ${c.id} (forced: it had no open standing item)`);
-      else { console.log(`! could not create a work item for ${c.id}: ${res.status}`); process.exitCode = 1; }
+      if (res.number) {
+        readied.add(res.number);
+        console.log(`- created #${res.number} ${c.id} (forced: it had no open standing item)`);
+      } else { console.log(`! could not create a work item for ${c.id}: ${res.status}`); process.exitCode = 1; }
     }
     for (const a of already) console.log(`- ${a.id} is already in flight on #${a.issue} — left alone`);
     for (const u of unmatched) console.log(`! nothing woken for "${u.id}": ${u.why}`);
@@ -760,7 +774,7 @@ async function main() {
   }
 
   // LAST, AFTER THE WAKE: whether this run leaves anything for an executor to do.
-  await announcePickable(gh, repo, tasks);
+  await announcePickable(gh, repo, tasks, readied);
 }
 
 // THE DRAIN GATE (§15.30). Every workflow run is a billed invocation whatever it
@@ -778,23 +792,33 @@ async function main() {
 // output cannot be written (a run outside Actions, an older member workflow that
 // maps no output) the drain job's own default decides, and the run says which
 // happened rather than going quiet about it.
-async function announcePickable(gh, repo, tasks) {
-  const { pickOrder } = await import('./executor.mjs');
+// THE VERDICT IS A UNION, not a read. What the list returns is one source; what
+// this run itself readied is the other, and the second needs no confirmation —
+// GitHub's issue list is eventually consistent, so an item created milliseconds
+// earlier can be absent from it (#1340). Trusting the read alone left a forced
+// `update` sitting `task:ready` until the next cron fire on three members at once.
+// Ordering stays the executor's job: this only decides whether to start one.
+export function pickableCount(open, readiedThisRun = [], opts = {}) {
+  const listed = pickOrder(open, opts).map((i) => i.number);
+  return new Set([...listed, ...readiedThisRun]).size;
+}
+
+async function announcePickable(gh, repo, tasks, readiedThisRun = new Set()) {
   const { listOpenWorkItems } = await import('./read.mjs');
   const byId = new Map(tasks.map((t) => [`${t.pack}/${t.id}`, t]));
   const byPath = new Map(tasks.map((t) => [t.taskPath, `${t.pack}/${t.id}`]));
-  const pickable = pickOrder(await listOpenWorkItems(gh, repo), {
+  const pickable = pickableCount(await listOpenWorkItems(gh, repo), readiedThisRun, {
     taskAfter: (id) => byId.get(id)?.decl?.schedule_after ?? [],
     frequencyOf: (id) => byId.get(id)?.decl?.frequency ?? null,
     pathTo: (p) => byPath.get(p) ?? null,
   });
-  console.log(pickable.length
-    ? `- ${pickable.length} item(s) pickable — the drain job dispatches an executor`
+  console.log(pickable
+    ? `- ${pickable} item(s) pickable — the drain job dispatches an executor`
     : '- nothing pickable — no executor is dispatched this run');
   const out = process.env.GITHUB_OUTPUT;
   if (!out) return;
   const { appendFileSync } = await import('node:fs');
-  appendFileSync(out, `pickable=${pickable.length ? 'true' : 'false'}\n`);
+  appendFileSync(out, `pickable=${pickable ? 'true' : 'false'}\n`);
 }
 
 // Run only when invoked directly (the workflow's `node scheduler-run.mjs`), never on
