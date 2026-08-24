@@ -48,12 +48,6 @@ jobs:
           # to be named statically, so this list is the whole delivery mechanism; a
           # worker then reads process.env.<NAME>.
           #
-          # NOT `toJSON(secrets)` (#1336). Serialising the whole secrets context is
-          # the shape GitHub's malicious-workflow detection flags, and a flagged
-          # workflow does not run until a person clicks Approve — which an unattended
-          # queue can neither absorb nor even see: the run parks with zero jobs and
-          # reads exactly like "nothing was pickable".
-          #
           # The converge writes the list directly beneath this line, so it stays last.
           # claudinite:secrets
         run: node .claudinite/shared/packs/claudinite-tasks/queue/executor.mjs
