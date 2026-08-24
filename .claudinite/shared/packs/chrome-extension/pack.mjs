@@ -22,7 +22,7 @@ import { findExtensionManifest } from '../../engine/checks/helpers/chrome-manife
 // extension repo, and the store steps no automation can take — is skills/, not
 // prose: it is long, and only the checks need to be eager.
 export default {
-  version: '60823.1',
+  version: '60824.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'writing and shipping a Chrome extension: MV3 service-worker, permission, content-script and auth gotchas, plus Web Store release, versioning and privacy',
@@ -33,6 +33,6 @@ export default {
   // Delivery, not state: the tree always carries a version, and only the diff
   // says whether it moved with the shipped files beside it.
   // Pack-contributed task: `tasks/store-release/` — the scheduler's filesystem scan
-  // (engine/scheduler/discover.mjs) picks it up on any repo declaring this pack, so
+  // (packs/claudinite-tasks/discover.mjs) picks it up on any repo declaring this pack, so
   // its own precondition is what keeps it off a repo that does not publish.
 };
