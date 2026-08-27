@@ -7,6 +7,5 @@
 @shared/packs/executable-requirements/RULES.md
 @shared/packs/node/RULES.md
 @shared/packs/spec-driven-product/RULES.md
-@shared/packs/tidy-repo/RULES.md
 @local/packs/browser-speech/RULES.md
 @local/packs/host-page-adaptation/RULES.md
