@@ -17,6 +17,7 @@ import pack from './pack.mjs';
 import { isSource } from './lib.mjs';
 import pageObserversDisconnected from './page-observers-disconnected.mjs';
 import syntheticInputEventsBubble from './synthetic-input-events-bubble.mjs';
+import syntheticInputEventsTargetAppNode from './synthetic-input-events-target-app-node.mjs';
 
 // A check context over a literal file map — the same {files, read} surface the
 // engine's runner passes, with nothing else the rules are allowed to touch.
@@ -36,6 +37,7 @@ describe('host-page-adaptation pack manifest', () => {
     expect(pack.worldRules.map((r) => r.id).sort()).toEqual([
       'page-observers-disconnected',
       'synthetic-input-events-bubble',
+      'synthetic-input-events-target-app-node',
     ]);
   });
 });
@@ -240,6 +242,73 @@ describe('synthetic-input-events-bubble', () => {
     const found = run(syntheticInputEventsBubble, {
       'src/notes.js': `
         // Do not write el.dispatchEvent(new MouseEvent('click')) — bubbles defaults to false.
+        export const nothing = 1;
+      `,
+    });
+    expect(found).toEqual([]);
+  });
+});
+
+describe('synthetic-input-events-target-app-node', () => {
+  test('fires on an input event dispatched directly at document', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/drive.js': "document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'A' }));",
+    });
+    expect(found.map((f) => f.rule)).toEqual(['synthetic-input-events-target-app-node']);
+    expect(found[0].what).toContain('document');
+  });
+
+  test('fires on an input event dispatched at document.body', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/drive.js': "document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));",
+    });
+    expect(found.length).toBe(1);
+    expect(found[0].what).toContain('document.body');
+  });
+
+  test('fires through a one-hop alias to document.body', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/drive.js': `
+        const root = document.body;
+        root.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      `,
+    });
+    expect(found.length).toBe(1);
+  });
+
+  test('fires through one variable hop on the dispatched event too', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/drive.js': "const ev = new KeyboardEvent('keydown', { bubbles: true });\ndocument.dispatchEvent(ev);",
+    });
+    expect(found.length).toBe(1);
+  });
+
+  test('quiet when the same event is dispatched at a real element', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/drive.js': "cellEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'A' }));",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet on a CustomEvent dispatched at document — your own signal has no delegation contract', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/drive.js': "document.dispatchEvent(new CustomEvent('cc:ready', { detail: { ok: true } }));",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet when document.dispatchEvent carries no readable input-event construction', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/drive.js': "const ev = makeEvent('keydown');\ndocument.dispatchEvent(ev);",
+    });
+    expect(found).toEqual([]);
+  });
+
+  test('quiet on a comment describing the trap', () => {
+    const found = run(syntheticInputEventsTargetAppNode, {
+      'src/notes.js': `
+        // Do not write document.dispatchEvent(new KeyboardEvent('keydown')) — it
+        // bubbles past the app's delegated listener.
         export const nothing = 1;
       `,
     });
