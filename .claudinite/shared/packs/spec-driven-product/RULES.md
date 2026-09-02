@@ -34,9 +34,9 @@ code produces every actual, and the product ships on green.**
   testable statements (exact strings, placement, semantics). A statement no kind can prove isn't a
   leaf yet: it stays prose, or it's the trigger to add the kind that can prove it.
 - **Every leaf carries a stable id.** Add new requirements under new numbers; never renumber or reuse
-  a retired one — the ids are what cases, commits, and review discussion key on.
+  a retired one — the ids are what cases, commits, and review discussion key on. (1)
 - **Doc-first, red by default.** Adding a leaf with no executable proof fails the build until a case
-  claims it.
+  claims it. (2)
 - **The spec drives the tests, never the other way around.** A behavior change starts by editing the
   leaf, watching the gate go red, then changing product and proof to match. A test changed without its
   leaf — or a leaf reworded to match what the code happens to do — inverts the authority.
@@ -48,7 +48,7 @@ code produces every actual, and the product ships on green.**
   runner. The gate is part of the project's own suite.
 - **A *kind* is one way a requirement can be asserted** — a rendered-state snapshot, a driven gesture,
   a pure rule, a boundary-enforced rule. Route each leaf to the kind that can actually observe what it
-  asserts. Keep kinds **extensible** — adding one is a self-contained drop.
+  asserts. Keep kinds **extensible** — adding one is a self-contained drop. (3)
 - **A kind may be a singleton.** "The product loads in the real environment" is a perfectly good leaf
   whose mechanism is one end-to-end case; the kind names the *way of asserting*, not a population of
   cases.
@@ -62,7 +62,7 @@ code produces every actual, and the product ships on green.**
 ## 3. Expected results are owner-owned
 
 - **The committed expecteds are the owner's approval record of the product.** A case's success
-  criterion encodes what the owner accepted.
+  criterion encodes what the owner accepted. (4)
 - **The contract takes two honest shapes.** *Artifact-expected* (a committed render, an exact-values
   file): the owner approves a committed file — an agent may **propose** the expected for a brand-new
   leaf, but never modifies a committed one to make a failing case pass. *Coded-expected* (an
@@ -70,7 +70,7 @@ code produces every actual, and the product ships on green.**
   whatever writes the product code, so passing by weakening the check isn't even expressible.
 - **On a mismatch, surface actual vs. expected (and the diff) and ask.** The re-baselining procedure —
   diff shown, owner approves, only then re-baseline — is canon in the writing-tests skill, and it
-  applies uniformly: to a moved render, a changed values file, and a failing assertion alike.
+  applies uniformly: to a moved render, a changed values file, and a failing assertion alike. (5)
 - **Expected changes ride the normal review flow** — they land in the diff like code, so the owner
   approves the product change and its new expected together, once.
 
@@ -115,7 +115,7 @@ code produces every actual, and the product ships on green.**
   doubles as a gallery of what the product actually shows, generated from the shipped code, so
   approving the spec *is* approving the product's appearance.
 - **Regenerate, never hand-edit.** The gallery is derived output of a committed generator; fixing it
-  means fixing the source (or the generator) and regenerating.
+  means fixing the source (or the generator) and regenerating. (6)
 - **The deterministic golden-image method this leans on is canon in the writing-tests skill** —
   matching the render engine to the surface (a bit-exact rasterizer for inline-styled/SVG surfaces, a
   headless browser for pages that use grid/vars/emoji/form-widgets), bundled fonts, capturing a

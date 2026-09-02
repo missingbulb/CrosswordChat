@@ -4,7 +4,7 @@
 // re-baselining approval) stay in the writing-tests skill; release mechanics
 // stay in the platform's release surface (e.g. the chrome-extension pack's).
 export default {
-  version: '60822.1',
+  version: '60901.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'playbook for shipping a small end-user product from an executable spec — leaf claims, owner-owned expecteds, green-main releases',
