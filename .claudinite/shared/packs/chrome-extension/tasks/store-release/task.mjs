@@ -6,52 +6,26 @@
 // workflow_dispatch only, and this task is the one place that fires its daily
 // leg, so the scheduler stays the repo's only cron (DESIGN §3, decision §11.6).
 //
-// Self-contained (imports nothing): the whole contract is this default export.
-
-const norm = (v) => String(v ?? '').replace(/^v/, '').trim(); // compare tags/versions modulo a leading 'v'
+// The whole contract is this default export; the unreleased-bump condition it
+// names lives in preconditions.mjs beside it.
 
 export default {
   id: 'store-release',
   frequency: 'daily',              // the 04:00 anchor (DESIGN §2) — replaces the workflow's own 00:30 cron
-  precondition_signals: ['release', 'commits'],
+  // Either an unreleased manifest bump (preconditions.mjs beside this file), or a
+  // substantive change the dispatched workflow can diff shipped files against.
+  // Ship-path precision is deliberately NOT re-derived here: the daily workflow
+  // does the authoritative shipped-file diff against the latest release tag and
+  // no-ops when nothing shippable moved, so this is the cheap pre-filter and the
+  // workflow is the exact gate.
+  //
+  // A repo that carries this pack but does NOT ship the Chrome Web Store pipeline
+  // has no daily workflow for this task to fire. That is a fact adoption settled,
+  // not a question worth re-asking nightly: such a repo names
+  // `chrome-extension/store-release` in its `taskScheduler.disabledTasks`.
+  preconditions: ['manifest-ahead || substantive-change'],
   agent_model: 'none',                   // pure code — no agent (task-code-work DESIGN §4)
   expected_outcome: 'none',                 // it only TRIGGERS the gated publish workflow; publishing stays behind that workflow's own guards
   code_work: 'node worker.mjs',      // the executor runs this as code_work (cwd = this task dir) — DESIGN §3
   code_work_timeout: 120,            // the dispatch is a quick REST call; a tight bound (the await-the-run Stage 2 would widen it)
-
-  // Detect a deployable change since the last release, entirely in code:
-  //   (a) the manifest version has advanced past the latest published release
-  //       (an unreleased bump — the same signal the old run_daily gate used), OR
-  //   (b) a substantive default-branch commit landed in the window (a real ship).
-  // Ship-path precision (the daily job's `ship_paths` filter) is NOT re-derived
-  // here — .github/release.config isn't in a precondition's scope — because the
-  // dispatched daily workflow does the authoritative shipped-file diff vs the
-  // latest release tag and no-ops when nothing shippable moved. So the
-  // precondition is the cheap pre-filter; the workflow is the exact gate.
-  precondition(signals) {
-    const rel = signals.release ?? {};
-
-    // Does this repo publish at all? The pack is fingerprinted on the manifest, so
-    // it is active on every extension repo, including the ones that only code one —
-    // and the daily leg this task fires is a workflow such a repo does not have.
-    // `shipsPipeline` is the same orchestrator-name test the release checks gate on
-    // (#1057); null means the collector could not read the checkout, which is not a
-    // reason to fire a release.
-    if (rel.shipsPipeline !== true) {
-      return { run: false, reason: 'this repo does not ship the Chrome Web Store pipeline' };
-    }
-
-    const shipped = norm(rel.manifestVersion);
-    const released = norm(rel.latestTag);
-    const manifestAhead = shipped !== '' && shipped !== released;
-    const substantive = signals.commits?.substantiveChange === true;
-
-    if (manifestAhead) {
-      return { run: true, reason: released ? `manifest ${shipped} is ahead of released ${released}` : `manifest ${shipped}, no release yet` };
-    }
-    if (substantive) {
-      return { run: true, reason: 'substantive default-branch change in the window — let the daily release workflow diff shipped files' };
-    }
-    return { run: false, reason: 'manifest matches the latest release and no substantive change in the window' };
-  },
 };

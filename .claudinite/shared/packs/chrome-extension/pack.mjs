@@ -22,7 +22,7 @@ import { findExtensionManifest } from '../../engine/checks/helpers/chrome-manife
 // extension repo, and the store steps no automation can take — is skills/, not
 // prose: it is long, and only the checks need to be eager.
 export default {
-  version: '60901.1',
+  version: '60902.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'writing and shipping a Chrome extension: MV3 service-worker, permission, content-script and auth gotchas, plus Web Store release, versioning and privacy',
