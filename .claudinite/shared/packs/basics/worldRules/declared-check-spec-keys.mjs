@@ -1,5 +1,11 @@
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
-import { unplacedSpecKeys } from '../../../engine/checks/helpers/pattern-rules.mjs';
+// A NAMESPACE import, and the guard below, because the two lanes deliver on
+// separate cycles: a member takes this pack version nightly and the engine only
+// on a release, so a window exists where this file sits beside an engine with no
+// `unplacedSpecKeys` to export. A named import of an absent export is a link-time
+// SyntaxError, which the loader records as a fault, which fails the self-test,
+// which parks the converge — #1400's own wedge, from the other lane.
+import * as patternRules from '../../../engine/checks/helpers/pattern-rules.mjs';
 
 // A declared check's keys ARE its vocabulary: write `scanFile` for `scanFiles`
 // and the assertion the key carried is simply not there, asserting nothing and
@@ -16,6 +22,14 @@ import { unplacedSpecKeys } from '../../../engine/checks/helpers/pattern-rules.m
 // per-container vocabulary the declaration language cannot express — and the
 // vocabulary itself is the engine's, read from it here rather than restated.
 const DECLARED = /(^|\/)declared-checks\.json$/;
+
+// The unplaceable keys of one declaration, or none from an engine that predates
+// the split. That engine still throws on such a key at load, so the silence
+// costs nothing: it is the pre-#1400 behaviour, and this rule starts reporting
+// the moment the engine release carrying the export arrives.
+export function unplacedKeysWith(engine, spec) {
+  return typeof engine.unplacedSpecKeys === 'function' ? engine.unplacedSpecKeys(spec) : [];
+}
 
 const rule = {
   id: 'declared-check-spec-keys',
@@ -34,7 +48,7 @@ const rule = {
       for (const spec of specs) {
         if (!spec || typeof spec !== 'object' || typeof spec.id !== 'string') continue;
         const anchor = text.slice(0, text.indexOf(`"${spec.id}"`)).split('\n').length;
-        for (const { key, container, allowed } of unplacedSpecKeys(spec)) {
+        for (const { key, container, allowed } of unplacedKeysWith(patternRules, spec)) {
           out.push(finding(rule, {
             file,
             line: anchor,
