@@ -104,7 +104,7 @@ The browser fills in the deprecated `keyCode`/`which`/`charCode` on every real k
 a synthetic one they are plain init fields that default to 0, so
 `new KeyboardEvent('keydown', { key: 'A' })` reaches the page as a keystroke whose keyCode is
 0. Deprecated is not the same as unread: hosts with a long-lived key-handling layer still
-branch on the legacy fields — this one does (verified live, MT-02) — and a 0 matches nothing,
+branch on the legacy fields — this one does (1) — and a 0 matches nothing,
 so the handler runs and nothing happens, indistinguishable from "the app ignores untrusted
 events". Mirror the real event instead: `keyCode` and `which` alongside `key`/`code`,
 `charCode` on `keypress`, and the full keydown → keypress → keyup sequence a real keystroke

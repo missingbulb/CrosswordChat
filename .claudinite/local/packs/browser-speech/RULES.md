@@ -23,7 +23,7 @@ nobody. Design each of these surfaces so every path produces exactly one observa
   relay: the content script sends `cc:speak` over the long-lived `cc-session` port and the
   service worker calls `chrome.tts` — `speech/remote-tts-port.js` presents the same contract as
   `speech/tts-port.js` so the orchestrator can't tell the difference. Prefer `chrome.tts` over
-  `speechSynthesis` because it is immune to the page's autoplay rules (decision D2).
+  `speechSynthesis` because it is immune to the page's autoplay rules. (1)
 
 ## Self-echo is an application problem, not a constraints problem
 
@@ -32,7 +32,7 @@ nobody. Design each of these surfaces so every path produces exactly one observa
 its default AEC (a loopback of playout audio) to that capture, which already attenuates
 `speechSynthesis`, but it misses `chrome.tts`'s OS-rendered output. So the residual echo is
 handled at the app level by a string-match echo guard (REQ-SPCH-005), and that is the design,
-not a stopgap (decision D11).
+not a stopgap. (2)
 
 Two traps around this:
 
@@ -87,9 +87,8 @@ Treat biasing as strictly best-effort:
 voice on first speak and, on an empty list, use the default and try again next time rather than
 caching the empty answer. The OS default is often the most robotic voice installed, so carry an
 ordered preference list and take the first installed match. That list is **taste, and taste has
-been wrong here before** (`Google US English` led it, sounded bad, and was demoted): treat both
-the voice order and the speaking rate as user-facing settings with a modest default, not as
-constants to tune once.
+been wrong here before**: treat both the voice order and the speaking rate as user-facing
+settings with a modest default, not as constants to tune once. (3)
 
 ## Give recognition errors a taxonomy
 
