@@ -6,7 +6,7 @@
 // is the mechanics that implement it. Fingerprinted by the framework's one
 // structural constant: the spec file itself.
 export default {
-  version: '60822.1',
+  version: '60902.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'running a numbered spec as tests: dev/requirements layout, requirement ids, kinds, coverage and gallery gates, determinism rules',

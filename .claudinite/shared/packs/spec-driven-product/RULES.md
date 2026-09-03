@@ -1,28 +1,4 @@
-# Spec-Driven Product Working Procedures — a portable playbook
-
-This document defines **how the owner wants a spec-driven product project run**, as a **bootstrap to
-drop into a new project of this class** from day one. The class: **build and ship a small end-user
-product against an executable specification — every requirement is a numbered leaf claimed by exactly
-one executable proof of the right kind, expected results are owned by the owner, and releases cut
-automatically while `main` stays green.** The archetype is a UI-centric product (a browser-extension
-panel, a small web or mobile app) and the examples lean that way, but the discipline applies wherever
-observable behavior can be specified leaf by leaf — read "surface", "render", and "server" as whatever
-they mean for your project.
-
-It is written to be project-agnostic: it carries the durable working procedures and none of the
-product, stack, or harness specifics of any particular project. Those live elsewhere — platform
-gotchas in the project's technology packs, release mechanics in its release pack or release doc, and
-the concrete spec, harness, and commands in the project's own docs. General test-trust practices
-(see-it-fail, snapshot hygiene, the re-baselining approval procedure, capture-artifact-first) are
-corpus canon in the writing-tests skill; this pack assumes them and adds the class's development loop
-on top.
-
-Treat it as a **default to adapt, not a contract**: when a rule here doesn't fit, say why and drop it;
-when the project needs a rule this document lacks, add it in the project's own docs first. The
-non-negotiable is the spirit: **the spec is executable, the expecteds belong to the owner, the real
-code produces every actual, and the product ships on green.**
-
----
+# spec-driven-product — shipping against an executable spec
 
 ## 1. The executable spec is the backbone
 

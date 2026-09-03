@@ -1,12 +1,5 @@
 # Executable requirements — the framework standard
 
-The concrete conventions for running a numbered spec as tests — the mechanics only. The judgment
-layer they implement — doc-first red-by-default, owner-owned expecteds, honest-gap tracking — is
-not here, so a new project or a new stack adopts the framework by convention instead of
-re-deriving it. Worked implementations: GoogleCalendarEventCreator (origin; extension/jsdom
-rendering), TLDR (adds a cross-tier `server` kind), ShoutsAndWhispers (Flutter port; first `saga`
-kind).
-
 ## 1. The layout is the contract
 
 - Everything lives under **`dev/requirements/`**: `requirements.md` (the numbered prose spec),

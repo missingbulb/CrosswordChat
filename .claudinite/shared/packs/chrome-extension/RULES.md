@@ -1,9 +1,5 @@
 # Chrome extensions
 
-Portable, project-agnostic practices for building Chrome (and Chromium) extensions — manifest
-versions, background/service workers, content scripts, permissions, packaging and store review —
-true for any extension read cold.
-
 > **Releasing, versioning, and Chrome Web Store publication are standardized** — before building
 > or changing any release/publish machinery in an extension repo, read the
 > [chrome-store-releases standard](skills/chrome-store-releases/SKILL.md) and copy its canonical
