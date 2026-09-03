@@ -1,14 +1,17 @@
 ---
 name: chrome-store-releases
 description: The Chrome Web Store release standard every extension repo of ours ships — the vendored release workflows and composite actions, .github/release.config, versioning and the packaged artifact, the store secrets, the README install sections, and the manual Chrome Web Store steps. Use when setting up an extension repo to publish, changing or debugging its release pipeline, when asked to "bump version" on an extension repo, or when a cer/ check fires.
+metadata:
+  force-load-on-file-edits-paths:
+    - ".github/release.config"
+    - ".github/workflows/chrome-extension-*.yml"
 ---
 
 # Releasing a Chrome extension to the Web Store
 
 Every Chrome-extension repo of ours ships the **same** release pipeline: same workflows, same
 Chrome Web Store API usage, same secrets, same versioning and artifact rules, same README install
-sections. This skill is that contract, the setup steps for a new extension repo, and the manual
-Chrome Web Store actions the automation can't do. The workflow **logic** is authored once, in this
+sections — so set a new repo up against that contract rather than authoring its pipeline. The workflow **logic** is authored once, in this
 pack's [`stubs/`](../../stubs/) — the [orchestrator](../../stubs/workflows/chrome-extension-release.yml), the
 five `workflow_call`-only **reusable workflows**, and the
 [report-failure](../../stubs/actions/report-failure/action.yml),
