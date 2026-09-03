@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../claudinite-tasks/task.schema.json",
+  "id": "store-release",
+  "description": "Fires the Chrome Web Store release leg for an extension repository, so the release workflow keeps only its push and manual triggers and the scheduler stays the repository's only cron. The workflow itself does the authoritative shipped-file diff.",
+  "frequency": "daily",
+  "preconditions": [
+    "manifest-ahead || substantive-change"
+  ],
+  "expected_outcome": "none",
+  "code_work": "node worker.mjs",
+  "code_work_timeout": 120
+}

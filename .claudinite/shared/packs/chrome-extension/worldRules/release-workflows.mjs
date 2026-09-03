@@ -28,11 +28,13 @@ import { migrationActive } from '../../../engine/checks/helpers/active-migration
 // still on @main is flagged.
 export const STUB_FILE = 'chrome-extension-release.yml';
 export const STUB_NAME = 'Release to Chrome Store';
+// @legacy-tolerance advisory:cer/release-workflows retire:#1643
 export const LEGACY_STUB_NAMES = ['Release'];
 export const STUB_CRON = '30 0 * * *';
 
 // The create-package reusable's canon filename (pre-vendoring), still the name a
 // legacy orchestrator calls @main — kept for the fingerprint + tolerance.
+// @legacy-tolerance advisory:cer/release-workflows retire:#1643
 export const LEGACY_CREATE_PACKAGE = 'chrome-extension-release.yml';
 // Its vendored filename (renamed to avoid colliding with the orchestrator).
 export const VENDORED_CREATE_PACKAGE = 'chrome-extension-create-package.yml';
@@ -86,6 +88,7 @@ export function shipsReleasePipeline(ctx) {
 
 // A repo is on the pre-vendoring shape when its orchestrator still calls one of
 // Claudinite's core release workflows @main.
+// @legacy-tolerance advisory:cer/release-workflows retire:#1643
 const LEGACY_CANON_REF = /missingbulb\/Claudinite\/\.github\/workflows\/chrome-extension-[a-z-]+\.yml@/;
 
 const rule = {
@@ -151,7 +154,18 @@ const rule = {
 
     // Pre-vendoring shape: the orchestrator still calls Claudinite core @main.
     if (LEGACY_CANON_REF.test(text)) {
-      if (tolerateLegacy) return out; // rollout in flight — baselining vendors it
+      // Rollout in flight: baselining vendors the set, so this is not the repo's
+      // fault and must not block it — but a tolerance that says nothing leaves the
+      // repo holding the shape its removal is gated on, so it says something.
+      if (tolerateLegacy) {
+        out.push(finding(rule, {
+          file: path,
+          severity: 'advisory',
+          what: 'still calls Claudinite\'s core release workflows @main, which the vendoring is retiring',
+          fix: 'let baselining vendor the pack\'s stubs/workflows/ + stubs/actions/ into this repo\'s .github/, or copy them by hand — the tolerance for the @main calls ends one convergence window after this advisory ships (#1643)',
+        }));
+        return out;
+      }
       out.push(finding(rule, {
         file: path,
         what: 'still calls Claudinite\'s core release workflows @main, which the vendoring has retired',
