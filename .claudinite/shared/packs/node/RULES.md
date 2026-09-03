@@ -1,7 +1,5 @@
 # Node.js
 
-Portable, project-agnostic practices for working in Node.js / npm codebases — package management, scripts, module resolution, runtime gotchas — true for any Node project read cold.
-
 ## Module resolution
 
 - **A *named* import from a package's CommonJS entry can silently yield `undefined`.** Node recovers named bindings from a CJS module by static analysis, and that analysis fails on plenty of real entry points (a re-export built at runtime, a conditional assignment) — with no error: the import resolves, the binding is `undefined`, and the failure surfaces later as "x is not a function". When a package ships both entries, import the **ESM** one explicitly (`…/package/index.mjs`, or the `import` condition of its `exports`) for named bindings; when it doesn't, `import pkg from '…'` and destructure off the default. Resolve the package's own directory (`$(npm root -g)/<pkg>` for a global install) rather than hardcoding an absolute path into a version-pinned layout, which moves under you on the next image or upgrade.
@@ -21,8 +19,6 @@ Portable, project-agnostic practices for working in Node.js / npm codebases — 
   in the tree.
 
 ## jsdom diverges from a real browser in ways a green test can hide
-
-Two that recur:
 
 - **`body.innerText` is null in jsdom.** Code reading `el.innerText || el.textContent` therefore falls through to `textContent` under test, which *includes* the `<script>` / `<style>` text, `<select>` / `<option>` text, and CSS-hidden text a real browser's `innerText` omits. Treat body-text results as jsdom-optimistic; never add a test that only passes because of it. (1)
 - **`runScripts: "outside-only"` (the default) parses `<noscript>` into live DOM — the opposite of a real browser.** A `textContent` read looks clean under test but splices the `<noscript>` markup into the value in Chrome, which keeps `<noscript>` as raw text. Parse a script-free fragment with `runScripts: "dangerously"` to reproduce the browser. (2)
