@@ -92,10 +92,6 @@
   approving the spec *is* approving the product's appearance.
 - **Regenerate, never hand-edit.** The gallery is derived output of a committed generator; fixing it
   means fixing the source (or the generator) and regenerating. (6)
-- **The deterministic golden-image method this leans on is canon in the writing-tests skill** —
-  matching the render engine to the surface (a bit-exact rasterizer for inline-styled/SVG surfaces, a
-  headless browser for pages that use grid/vars/emoji/form-widgets), bundled fonts, capturing a
-  host-page surface with styles inlined, and a drift gate on the embedded gallery.
 
 ## 8. Ship automatically while `main` stays green
 
