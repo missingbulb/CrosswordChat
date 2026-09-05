@@ -28,8 +28,6 @@ hand-kept one drifted into claiming a prose rule that never existed (#777).
 | Adding an import to a content-script module | high | correctness | prose: 30 words |
 | Keeping that webaccessibleresources list correct | high | correctness | prose: 29 words |
 | Matching a host with chrome.events.UrlFilter | high | correctness | prose: 63 words |
-| Running on third-party pages without a warning | high | legal | prose: 60 words |
-| Starting the worker on a granted permission | medium | correctness | prose: 43 words |
 | A listed host's fetch failing in-browser | medium | correctness | prose: 42 words |
 | Reaching your own backend | medium | correctness | prose: 35 words |
 | Authenticating an extension to a JWT-validating backend | critical | correctness | prose: 83 words |
@@ -44,6 +42,10 @@ hand-kept one drifted into claiming a prose rule that never existed (#777).
 | Awaiting a chrome. callback API inside Runtime.evaluate | low | correctness | prose: 34 words |
 | Reading a worker value over CDP | low | correctness | prose: 30 words |
 | Attaching to a dormant worker | low | correctness | prose: 39 words |
+
+Runtime host access — the two rules that concern `host_permissions` — is the
+[`extension-host-permissions`](skills/extension-host-permissions/SKILL.md) skill, forced for any
+`manifest.json` edit.
 
 ## Checks
 

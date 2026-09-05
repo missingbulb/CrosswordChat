@@ -10,7 +10,7 @@ const hasMarkerNearRoot = (ctx, marker) =>
   });
 
 export default {
-  version: '60902.1',
+  version: '60903.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'conventions for a Node/npm project — module resolution, ESM vs CJS, dependency justification, jsdom test divergences',
