@@ -20,9 +20,9 @@ import { shipsReleasePipeline } from '../worldRules/release-workflows.mjs';
 // free, exactly as it is for the release trigger.
 //
 // WORK SCOPE: the tree always carries a version; only the diff says whether it
-// moved with the shipped files beside it. The pack-side twin in Claudinite's own
-// canon is `pack-version-bumped`, which holds the identical line for a pack
-// directory.
+// moved with the shipped files beside it. (A canon pack's version is not held this
+// way: it is cut on the base branch after the change lands, by the canon-curation
+// pack's `pack-version-bump` task.)
 
 export function shipPaths(cfg) {
   return (cfg.ship_paths ?? '').split(/\s+/).filter(Boolean);
