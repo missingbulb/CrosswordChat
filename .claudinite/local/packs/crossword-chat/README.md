@@ -13,6 +13,10 @@ the pencil button's unreadable ON state, the measured 1.8 s pause window, the fi
 `localhost:8787` dev build, the `selectors.js` provenance record, and the REQ and MT ids that
 carry the evidence.
 
+**No `references.md`:** every rule here cites the file, requirement or manual test that records
+it, so no rationale needed a separate entry; the pack gains one the first time a rule's reason
+outgrows its citation.
+
 **No checks.** Every check this pack's predecessors ran is now canon's, running here through the
 `host-page` and `web-speech` declarations. The one repo-specific scan — the `xwd__` quarantine —
 is the project's own test (`extension-test/unit/arch.test.js`), where it belongs.
