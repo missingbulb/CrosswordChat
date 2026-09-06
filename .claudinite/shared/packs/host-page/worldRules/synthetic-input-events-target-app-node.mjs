@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf, balanced, inputEventCtors } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf, balanced, inputEventCtors } from '../lib.mjs';
 
 // A host page delegates input handling to ONE listener near its own root — a
 // descendant of `<body>` — so a bubbling event only reaches it when the event's
@@ -56,7 +58,7 @@ const rule = {
   id: 'synthetic-input-events-target-app-node',
   severity: 'blocking',
   description: 'A synthetic input event is dispatched at a node inside the app, not document/body',
-  doc: '.claudinite/local/packs/host-page-adaptation/RULES.md',
+  doc: 'packs/host-page/RULES.md',
   why: 'a host page handles input by delegation, one listener near its own root — an event dispatched at document or document.body bubbles past that root and never arrives, silently, and reads exactly like "the app ignores untrusted events"',
 
   run(ctx) {

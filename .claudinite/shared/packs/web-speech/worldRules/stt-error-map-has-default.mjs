@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf, balanced } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf, balanced } from '../lib.mjs';
 
 // The Web Speech error-name set is OPEN. `SpeechRecognitionErrorEvent.error` is a
 // spec enum today, but browsers extend it — Chrome has shipped names outside the
@@ -11,9 +13,9 @@ import { finding, stripComments, isSource, lineOf, balanced } from './lib.mjs';
 // notices. The dialog policy branches on the kind — "was the mic refused?", "did
 // we abort on purpose?" — and every one of those comparisons is simply false, so
 // the policy takes its do-nothing arm. Nothing throws, nothing logs, the UI keeps
-// showing a live session, and the user is heard by nobody. That is this pack's
-// whole subject: speech failures are silent, so every path must produce exactly
-// one observable outcome, including the path a browser invented after you shipped.
+// showing a live session, and the user is heard by nobody. Speech failures are
+// silent, so every path must produce exactly one observable outcome — including
+// the path a browser invented after you shipped.
 //
 // PARSED, NOT GREPPED — three ways, each killing a false alarm a text scan makes:
 //
@@ -91,7 +93,7 @@ const rule = {
   id: 'stt-error-map-has-default',
   severity: 'blocking',
   description: 'A speech-recognition error mapping is total — every name maps to a kind',
-  doc: '.claudinite/local/packs/browser-speech/RULES.md',
+  doc: 'packs/web-speech/RULES.md',
   why: 'the Web Speech error-name set is open — browsers extend it — so a mapping switch with no catch-all returns undefined for a name it does not enumerate; the dialog policy then compares undefined against every kind it knows, takes its do-nothing arm, and the session dies without throwing, logging, or changing the UI',
 
   run(ctx) {

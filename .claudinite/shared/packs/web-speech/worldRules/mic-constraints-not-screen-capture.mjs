@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf, balanced } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf, balanced } from '../lib.mjs';
 
 // `suppressLocalAudioPlayback` and `restrictOwnAudio` are `getDisplayMedia`
 // SCREEN-CAPTURE constraints. They filter the playout of a captured tab out of
@@ -9,9 +11,9 @@ import { finding, stripComments, isSource, lineOf, balanced } from './lib.mjs';
 // through the mic reads "suppress local audio playback" / "restrict own audio"
 // as exactly the fix, sets it on the mic capture, and ships believing self-echo
 // is handled at the capture layer. It isn't, and the code that would have
-// handled it (an application-level echo guard) never gets written. That is the
-// silent-failure shape this whole pack is about: nothing throws, nothing logs,
-// the feature simply doesn't exist.
+// handled it (an application-level echo guard) never gets written. Speech
+// failures are silent: nothing throws, nothing logs, and the feature simply
+// does not exist.
 //
 // PARSED, NOT GREPPED. The names are only wrong where they reach a microphone
 // capture, so the scan is the balanced argument list of a `getUserMedia(` call —
@@ -60,7 +62,7 @@ const rule = {
   id: 'mic-constraints-not-screen-capture',
   severity: 'blocking',
   description: 'A microphone capture never asks for getDisplayMedia-only constraints',
-  doc: '.claudinite/local/packs/browser-speech/RULES.md',
+  doc: 'packs/web-speech/RULES.md',
   why: 'suppressLocalAudioPlayback and restrictOwnAudio are getDisplayMedia screen-capture constraints — they filter a captured tab\'s own playout, not a microphone — so getUserMedia silently ignores them while the author believes self-echo is now handled at the capture layer and never writes the guard that would have handled it',
 
   run(ctx) {

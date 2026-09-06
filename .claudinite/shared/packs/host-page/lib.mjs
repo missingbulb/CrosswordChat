@@ -1,58 +1,10 @@
-// Shared plumbing for this pack's checks.
-//
-// Deliberately dependency-free, and deliberately NOT importing the sibling
-// browser-speech pack's copy of the same helpers: a pack composes by declaration,
-// never by importing another pack's code (pack independence), and a local pack's
-// check modules must load even when the gitignored canon mount is absent — the
-// project's own vitest run is exactly that situation.
+// Shared plumbing for this pack's checks. The two general helpers every check
+// needs — `finding` and `stripComments` — come from the engine's own helpers;
+// what stays here is the part specific to reading host-page call sites.
 
-/** The plain finding object the checks runner consumes (engine/checks/README.md). */
-export function finding(rule, { file, line = null, what, fix, why = null, severity = null }) {
-  return {
-    rule: rule.id,
-    severity: severity || rule.severity,
-    file,
-    line,
-    what,
-    why: why || rule.why,
-    fix,
-    doc: rule.doc,
-  };
-}
-
-// String-aware comment stripper. Every rule here matches against source *code*: a
 // comment that merely names `dispatchEvent` or `MutationObserver` describes the
 // trap, it doesn't spring it — and this pack's own prose would otherwise fire its
 // own checks. Newlines are preserved so line numbers survive the strip.
-export function stripComments(source) {
-  let out = '';
-  let state = 'code'; // code | line | block | sq | dq | tpl
-  for (let i = 0; i < source.length; i++) {
-    const c = source[i];
-    const c2 = source[i + 1];
-    if (state === 'code') {
-      if (c === '/' && c2 === '/') { state = 'line'; i++; continue; }
-      if (c === '/' && c2 === '*') { state = 'block'; i++; continue; }
-      if (c === "'") state = 'sq';
-      else if (c === '"') state = 'dq';
-      else if (c === '`') state = 'tpl';
-      out += c;
-    } else if (state === 'line') {
-      if (c === '\n') { state = 'code'; out += c; }
-    } else if (state === 'block') {
-      if (c === '*' && c2 === '/') { state = 'code'; i++; }
-      else if (c === '\n') out += c;
-    } else {
-      out += c;
-      if (c === '\\') { out += c2 ?? ''; i++; }
-      else if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) {
-        state = 'code';
-      }
-    }
-  }
-  return out;
-}
-
 // What counts as shipped browser source. Deliberately NOT a hard-coded project
 // root: every rule in this pack is gated on the DOM API it judges actually
 // appearing in the file, so the trigger is the API usage itself and the scan can

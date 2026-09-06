@@ -1,7 +1,6 @@
-import {
-  finding, stripComments, isSource, lineOf, balanced,
-  inputEventCtors, eventConstructions, hasSpread,
-} from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf, balanced, inputEventCtors, eventConstructions, hasSpread } from '../lib.mjs';
 
 // A real click or keystroke bubbles. A synthetic one only bubbles if you say so:
 // `bubbles` defaults to FALSE on every DOM event constructor, so
@@ -41,7 +40,7 @@ const rule = {
   id: 'synthetic-input-events-bubble',
   severity: 'blocking',
   description: 'A dispatched user-input event sets bubbles: true',
-  doc: '.claudinite/local/packs/host-page-adaptation/RULES.md',
+  doc: 'packs/host-page/RULES.md',
   why: 'bubbles defaults to false on every event constructor, and a host page handles input by delegation near its own root — a non-bubbling synthetic event never reaches the handler, silently, and reads as "the app ignores untrusted events"',
 
   run(ctx) {

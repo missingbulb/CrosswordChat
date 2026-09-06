@@ -5,7 +5,8 @@
 @shared/packs/claudinite-growth/RULES.md
 @shared/packs/claudinite-lifecycle/RULES.md
 @shared/packs/executable-requirements/RULES.md
+@shared/packs/host-page/RULES.md
 @shared/packs/node/RULES.md
 @shared/packs/spec-driven-product/RULES.md
-@local/packs/browser-speech/RULES.md
-@local/packs/host-page-adaptation/RULES.md
+@shared/packs/web-speech/RULES.md
+@local/packs/crossword-chat/RULES.md
