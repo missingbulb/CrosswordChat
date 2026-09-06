@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf } from '../lib.mjs';
 
 // Interim hypotheses arrive on the SAME `result` event as the finished
 // utterance. Turning `interimResults` on does not open a second channel: the
@@ -8,7 +10,7 @@ import { finding, stripComments, isSource, lineOf } from './lib.mjs';
 // therefore just handed the caller a half-heard fragment — and will hand it the
 // next fragment, and the next, several times per utterance.
 //
-// The failure is silent in this pack's usual way: nothing throws, nothing logs,
+// The failure is silent in the usual way: nothing throws, nothing logs,
 // and the transcript even looks plausible. The app simply acts on words the user
 // had not finished saying, and repeats itself as the guess is revised — the
 // `"heart heart"` shape a mid-utterance pause monitor exists to prevent. Interim
@@ -72,7 +74,7 @@ const rule = {
   id: 'stt-interim-results-gated',
   severity: 'blocking',
   description: 'A recognizer that enables interim results gates its handler on isFinal',
-  doc: '.claudinite/local/packs/browser-speech/RULES.md',
+  doc: 'packs/web-speech/RULES.md',
   why: 'interim hypotheses are delivered on the same result event as the final transcript, so a handler that never checks isFinal treats every half-formed guess as a finished utterance — the app acts on words the user has not said yet and repeats itself as the guess is revised, with nothing thrown and nothing logged',
 
   run(ctx) {

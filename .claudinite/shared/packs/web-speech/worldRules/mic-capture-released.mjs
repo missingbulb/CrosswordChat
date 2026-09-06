@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf } from '../lib.mjs';
 
 // A getUserMedia stream is only released when its TRACKS are stopped. Dropping
 // the reference, closing an AudioContext, unsetting a srcObject, or letting the
@@ -28,7 +30,7 @@ const rule = {
   id: 'mic-capture-released',
   severity: 'blocking',
   description: 'A file that opens a getUserMedia capture also stops its tracks',
-  doc: '.claudinite/local/packs/browser-speech/RULES.md',
+  doc: 'packs/web-speech/RULES.md',
   why: 'a media stream is freed only by stopping its tracks — dropping the reference leaves the browser and OS microphone indicators lit and the device claimed, which on anything voice-driven reads to the user as "it is still listening to me"',
 
   run(ctx) {

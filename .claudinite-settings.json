@@ -5,12 +5,16 @@
       "version": "60906.3"
     },
     {
-      "id": "chrome-extension",
-      "version": "60905.2"
+      "id": "claudinite-lifecycle",
+      "version": "60906.3"
     },
     {
       "id": "git-github",
       "version": "60906.1"
+    },
+    {
+      "id": "chrome-extension",
+      "version": "60905.2"
     },
     {
       "id": "node",
@@ -35,8 +39,7 @@
       "id": "claudinite-growth",
       "version": "60906.3"
     },
-    "local/browser-speech",
-    "local/host-page-adaptation",
+    "local/crossword-chat",
     {
       "id": "claude-code-web-users-support",
       "version": "60902.1",
@@ -48,12 +51,16 @@
       }
     },
     {
-      "id": "claudinite-lifecycle",
-      "version": "60906.3"
-    },
-    {
       "id": "claudinite-tasks",
       "version": "60906.5"
+    },
+    {
+      "id": "web-speech",
+      "version": "60906.1"
+    },
+    {
+      "id": "host-page",
+      "version": "60904.1"
     }
   ],
   "taskScheduler": {

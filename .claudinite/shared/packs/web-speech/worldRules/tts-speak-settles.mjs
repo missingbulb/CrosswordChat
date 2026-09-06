@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf, balanced, wires, quoted } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf, balanced, wires, quoted } from '../lib.mjs';
 
 // Speaking is asynchronous, and both browser TTS engines end an utterance in
 // more ways than "it finished". A caller that awaits completion — anything with
@@ -39,7 +41,7 @@ const rule = {
   id: 'tts-speak-settles',
   severity: 'blocking',
   description: 'A TTS completion handler settles on every terminal outcome, not just "end"',
-  doc: '.claudinite/local/packs/browser-speech/RULES.md',
+  doc: 'packs/web-speech/RULES.md',
   why: 'a speak promise settles only from the outcome its handler recognises, so one that ignores interrupted/cancelled/error leaves every awaiting caller pending forever — with nothing thrown and nothing logged',
 
   run(ctx) {

@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf, wires } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf, wires } from '../lib.mjs';
 
 // The mirror of tts-speak-settles on the input side. A recognition cycle has
 // three ways to finish, only one of which is `result`:
@@ -28,7 +30,7 @@ const rule = {
   id: 'stt-terminal-handlers',
   severity: 'blocking',
   description: 'A speech recognizer handles the end and error events, not just result',
-  doc: '.claudinite/local/packs/browser-speech/RULES.md',
+  doc: 'packs/web-speech/RULES.md',
   why: 'a recognition cycle that ends with no transcript fires only `end`, so a recognizer wired for result alone leaves the listen promise pending forever — the UI shows a live mic while nothing is listening, with no error anywhere',
 
   run(ctx) {

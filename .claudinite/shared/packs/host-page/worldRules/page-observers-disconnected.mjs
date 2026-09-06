@@ -1,4 +1,6 @@
-import { finding, stripComments, isSource, lineOf } from './lib.mjs';
+import { finding } from '../../../engine/checks/helpers/findings.mjs';
+import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
+import { isSource, lineOf } from '../lib.mjs';
 
 // A DOM observer you start on a page you do not own runs until you disconnect it
 // or the document dies — and the document of a single-page app you are a guest in
@@ -30,7 +32,7 @@ const rule = {
   id: 'page-observers-disconnected',
   severity: 'blocking',
   description: 'A file that starts a DOM observer also disconnects one',
-  doc: '.claudinite/local/packs/host-page-adaptation/RULES.md',
+  doc: 'packs/host-page/RULES.md',
   why: 'an observer on a host page outlives whatever started it — the single-page app never unloads, so "stopped" work keeps waking on every host mutation and the guest is never really inert',
 
   run(ctx) {

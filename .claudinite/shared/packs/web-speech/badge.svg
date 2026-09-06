@@ -1,0 +1,12 @@
+<!-- A Claudinite pack badge. The colour and glyph below are this file's own — dev/tools/badges/render.mjs re-renders the template around them. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Claudinite pack: web-speech">
+  <title>web-speech</title>
+  <defs>
+    <linearGradient id="b-web-speech" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#db2777"/>
+      <stop offset="1" stop-color="#ab1e5d"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#b-web-speech)"/>
+  <path d="M10.6 16a1.4 1.4 0 1 0 2.8 0 1.4 1.4 0 1 0-2.8 0 M16 12.4a5 5 0 0 1 0 7.2 M20 9.6a9.5 9.5 0 0 1 0 12.8" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
