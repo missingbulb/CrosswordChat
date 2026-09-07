@@ -53,6 +53,22 @@ function stripComments(source) {
 
 const readCode = (p) => stripComments(readFileSync(p, 'utf8'));
 
+// A port's contract is the method set on the object its factory's "return {" literal
+// exposes. Read only the keys at that literal's own indent depth (4 spaces, one level
+// inside the factory), so a same-named helper nested inside a method body — itself
+// indented deeper — is never mistaken for a contract entry.
+function portContractMethods(path) {
+  const source = readCode(path);
+  const start = source.indexOf('return {');
+  if (start === -1) throw new Error(`${rel(path)}: no "return {" factory result found`);
+  const end = source.indexOf('\n  };', start);
+  if (end === -1) throw new Error(`${rel(path)}: "return {" literal never closes with "  };"`);
+  const block = source.slice(start, end);
+  const names = new Set();
+  for (const m of block.matchAll(/^ {4}(?:async\s+)?([a-zA-Z_$][\w$]*)\s*\(/gm)) names.add(m[1]);
+  return names;
+}
+
 describe('architecture rules', () => {
   test('REQ-PAGE-011: NYT DOM specifics (xwd__) live only in page-adapter', () => {
     const offenders = sourceFiles()
@@ -96,5 +112,15 @@ describe('architecture rules', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  test('speech/remote-tts-port.js presents the same contract as speech/tts-port.js', () => {
+    const direct = join(SRC, 'speech/tts-port.js');
+    const relayed = join(SRC, 'speech/remote-tts-port.js');
+    const directMethods = portContractMethods(direct);
+    const relayedMethods = portContractMethods(relayed);
+    const missingFromRelay = [...directMethods].filter((m) => !relayedMethods.has(m));
+    const extraOnRelay = [...relayedMethods].filter((m) => !directMethods.has(m));
+    expect({ missingFromRelay, extraOnRelay }).toEqual({ missingFromRelay: [], extraOnRelay: [] });
   });
 });

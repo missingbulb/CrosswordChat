@@ -18,7 +18,8 @@ it, so no rationale needed a separate entry; the pack gains one the first time a
 outgrows its citation.
 
 **No checks.** Every check this pack's predecessors ran is now canon's, running here through the
-`host-page` and `web-speech` declarations. The one repo-specific scan — the `xwd__` quarantine —
-is the project's own test (`extension-test/unit/arch.test.js`), where it belongs.
+`host-page` and `web-speech` declarations. The repo-specific scans — the `xwd__` quarantine and
+the `tts-port`/`remote-tts-port` contract parity — are the project's own tests
+(`extension-test/unit/arch.test.js`), where they belong.
 
 **Adding to it:** a rule that reads as true of any repo belongs in canon, not here.
