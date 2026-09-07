@@ -24,9 +24,8 @@ measured doing, and which files carry the evidence.
   The keystroke fidelity that makes those events land is `page-adapter/writer.js`'s
   `keyEventInit`/`typeKey`, verified live in MT-02.
 
-- **Borrowing pencil mode for a write** — restore it afterwards (REQ-PAGE-012), and expect not
-  to be able to read it: the live button's ON state is unreadable, so click parity is the normal
-  path and the pencil softening degrades rather than failing the write (REQ-ANS-019).
+- **Borrowing pencil mode for a write** — restore it afterwards (REQ-PAGE-012); the write's
+  pencil-mode fallback is REQ-ANS-019.
 
 - **Keeping a voice session alive on nytimes.com** — the host auto-pauses a quiet puzzle after
   ~30 s of no keyboard input and a voice solver touches no keyboard, so the adapter sends a bare
@@ -41,14 +40,12 @@ measured doing, and which files carry the evidence.
   `cc-session` port: `speech/remote-tts-port.js` presents the same contract as
   `speech/tts-port.js`, so the orchestrator cannot tell the difference.
 
-- **Tuning the speech windows** — the missed-endpoint pause window is 1.8 s, measured here:
-  1.2 s cut real commands off solvers who paused to think mid-instruction. The echo the relay's
-  OS-rendered audio leaves behind is the string-match guard's, REQ-SPCH-005.
+- **Guarding against hearing our own TTS as a transcript** — the echo the relay's OS-rendered
+  audio leaves behind is the string-match guard's, REQ-SPCH-005.
 
 - **Rehearsing the read/write/watch cycle** — drive `extension-test/fixtures/fake-nyt/`
-  (`npm run fixture`), and `npm run build:dev` to widen the matches to `localhost:8787` (MT-23).
-  It only ever shows markup we already knew about, so what only the real host can answer lives
-  in `dev/docs/MANUAL-TESTS.md`, and every live finding is a fixture update.
+  (`npm run fixture`), and `npm run build:dev` to widen the matches to `localhost:8787` (MT-23);
+  `dev/docs/MANUAL-TESTS.md` is the manual-test document.
 
 - **Adding anything at load time** — there is exactly one carve-out, mounting the toolbar button
   (REQ-LIFE-012); nothing else runs between sessions (REQ-NFR-004).
