@@ -2,23 +2,23 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60906.3"
+      "version": "60906.13"
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60906.3"
+      "version": "60907.1"
     },
     {
       "id": "git-github",
-      "version": "60906.1"
+      "version": "60906.4"
     },
     {
       "id": "chrome-extension",
-      "version": "60905.2"
+      "version": "60906.1"
     },
     {
       "id": "node",
-      "version": "60903.1"
+      "version": "60906.2"
     },
     {
       "id": "spec-driven-product",
@@ -32,12 +32,8 @@
       ]
     },
     {
-      "id": "tidy-repo",
-      "version": "60906.1"
-    },
-    {
       "id": "claudinite-growth",
-      "version": "60906.3"
+      "version": "60907.2"
     },
     "local/crossword-chat",
     {
@@ -52,7 +48,7 @@
     },
     {
       "id": "claudinite-tasks",
-      "version": "60906.5"
+      "version": "60907.2"
     },
     {
       "id": "web-speech",
