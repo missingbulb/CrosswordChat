@@ -130,7 +130,7 @@ const rule = {
     // The orchestrator's own cron is a cutover flip. Before a repo adopts the
     // per-repo scheduler, the orchestrator IS the release schedule and must carry the
     // contract cron. Once the vendored claudinite-scheduler.yml is present, the
-    // store-release task drives the daily release (per-project-scheduling §6) and the
+    // store-release task drives the daily release and the
     // scheduler is the repo's only cron — so the orchestrator must be dispatch-only,
     // no `schedule:` at all. Gating on the scheduler's presence makes the flip travel
     // WITH the de-cron'd stub into a repo's mount, never before it.

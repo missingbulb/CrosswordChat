@@ -5,12 +5,12 @@
 Carried over from the declaration's comments when it became `task.json`.
 
 chrome-extension task: store-release — the pack-contributed release
-trigger (per-project-scheduling DESIGN §6). STRUCTURAL Stage 2: `model: 'none'`
+trigger. STRUCTURAL Stage 2: `model: 'none'`
 means the whole decision is code and there is NO agent phase —
 the executor runs `worker.mjs` as code-work. This task ABSORBS the
 release workflow's own independent 00:30 cron: the workflow becomes push +
 workflow_dispatch only, and this task is the one place that fires its daily
-leg, so the scheduler stays the repo's only cron (DESIGN §3, decision §11.6).
+leg, so the scheduler stays the repo's only cron.
 
 The whole contract is this default export; the unreleased-bump condition it
 names lives in preconditions.mjs beside it.

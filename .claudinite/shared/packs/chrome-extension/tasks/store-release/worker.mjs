@@ -1,4 +1,4 @@
-// store-release worker (task-code-work DESIGN §3/§4). This task is
+// store-release worker. This task is
 // `agent_model: 'none'` with `code_work: 'node worker.mjs'`, so the
 // scheduler runs THIS FILE as a subprocess (cwd = this task dir) bounded by
 // `code_work_timeout` — there is no agent phase on
@@ -7,14 +7,14 @@
 // does the authoritative shipped-file diff, patch bump, and gated submission, so
 // this worker never decides what ships and never publishes anything itself.
 //
-// This absorbs the release workflow's retired 00:30 cron (per-project-scheduling
-// decision §11.6): the scheduler is the repo's only cron, and this is the surface
+// This absorbs the release workflow's retired 00:30 cron:
+// the scheduler is the repo's only cron, and this is the surface
 // that fires the daily release.
 //
 // Self-contained — imports only node builtins (the pack-independence barrier
 // forbids reaching into the engine). It reads its context from the CLAUDINITE_* /
 // GITHUB_* env the scheduler injects and calls the Actions REST API directly over
-// the injected GITHUB_TOKEN, the one sanctioned non-MCP surface (DESIGN §10). A
+// the injected GITHUB_TOKEN, the one sanctioned non-MCP surface. A
 // non-204 dispatch, or a throw, exits non-zero — the scheduler then converges the
 // task to needs-human.
 
