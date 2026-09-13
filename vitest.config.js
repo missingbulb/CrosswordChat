@@ -5,6 +5,7 @@ export default defineConfig({
     include: [
       'extension-test/**/*.test.js',
       'dev/requirements/**/*.test.js',
+      '.claudinite/local/packs/**/*.test.mjs',
     ],
     environment: 'node',
   },
