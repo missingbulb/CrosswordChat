@@ -36,10 +36,6 @@ measured doing, and which files carry the evidence.
   (`page-adapter/watcher.js`): it empties the visible entries, which reads as the user having
   cleared everything.
 
-- **Speaking from the content script** — `chrome.tts` is not exposed there, so relay it over the
-  `cc-session` port: `speech/remote-tts-port.js` presents the same contract as
-  `speech/tts-port.js`, so the orchestrator cannot tell the difference.
-
 - **Guarding against hearing our own TTS as a transcript** — the echo the relay's OS-rendered
   audio leaves behind is the string-match guard's, REQ-SPCH-005.
 
