@@ -18,6 +18,7 @@ import {
 import { isQueueItem } from '../queue/read.mjs';
 import { APPROVAL_RE } from '../built-in-tasks.mjs';
 import { taskFromMessage } from '../task-trailer.mjs';
+import { isSubstantiveCommit, HOUSEKEEPING } from '../substantive-commit.mjs';
 
 // How far back the run history reads (docs/PRINCIPLES.md): the longest any
 // cadence term looks, a month, plus slack. A run older than this is not in the
@@ -25,45 +26,10 @@ import { taskFromMessage } from '../task-trailer.mjs';
 // state-free answer. The scheduler's own queue read is bounded by the same figure.
 export const RUN_HORIZON_DAYS = 40;
 
-// A default-branch commit is genuine project work unless it is bot/CI
-// housekeeping or one of Claudinite's own automated writes — the same exclusions
-// the fleet planner applies (kept in sync), extended with the scheduler's own
-// `[claudinite-task]` and `[claudinite-work]` writes so neither dispatch
-// mechanism ever self-triggers. The queue's vocabulary is excluded HERE, before
-// any repo flips (tasks-dispatch F8): a queue-mode repo's own work items are
-// repo activity to every precondition watching issues, so a collector that had
-// not learned the new title would wake tasks on the queue's own churn.
-const HOUSEKEEPING = /\[skip ci\]|(^|\n)\s*baselin(e|ing)\b|claudinite[ -](baselin|maintenance|growth|task|work)|seed default-on/i;
-
-// …and a THIRD exclusion the message cannot express: a commit that touched
-// nothing outside `.claudinite/` moved the repo's own working rules, not the
-// project. Every consumer of `substantiveChange` means "genuine project work" by
-// it — something shippable changed (store-release), there is a lesson to extract
-// (growth-extract), a comment may have drifted (improve-comments) — and none of
-// those is true of a corpus edit. Message and author cannot catch it: a human
-// landing a lesson PR writes an ordinary message under their own login, so the
-// growth lifecycle's own landed output re-armed it the next night and a repo
-// could never go quiet (TLDR #319).
-//
-// `files` is `[]` when the commit's detail read failed, which is UNKNOWN, not
-// "touched only .claudinite/" — a bare `every` is vacuously true on it and would
-// silently retire the trigger for every commit the API would not detail. Require
-// at least one known path before the exclusion can apply.
-const CORPUS_ONLY = (files) => files.length > 0 && files.every((f) => f.startsWith('.claudinite/'));
-
-// …and the AUTHORITY over all of them for anything written after the trailer
-// exists: a commit a scheduled task wrote says so itself
-// (`Claudinite-Task: <pack>/<task>`, task-trailer.mjs). The message and author
-// exclusions above stay because history predating the trailer still needs
-// classifying and because they also cover non-task housekeeping — but a NEW task
-// no longer has to be spelled into a regex to stop waking its neighbours.
-const isSubstantive = (c, files) => {
-  const login = c.author?.login ?? '';
-  if (login.endsWith('[bot]')) return false;
-  if (taskFromMessage(c.commit?.message ?? '')) return false;
-  if (CORPUS_ONLY(files)) return false;
-  return !HOUSEKEEPING.test(c.commit?.message ?? '');
-};
+// What counts as genuine project work, and what is the machinery moving, is
+// substantive-commit.mjs's test — shared with the readers outside this pack that must
+// classify a member's commits the same way. Here the file list is always resolved, so
+// its corpus-only exclusion applies in full.
 
 // The capture stamp a conversation log's filename leads with:
 // `2026-07-19T0940Z--issue-123--<session>.jsonl` — minute precision, optionally
@@ -116,7 +82,7 @@ async function pagedWindow(gh, path, inWindow) {
 }
 
 // A merged PR is mineable unless it is bot work or one of Claudinite's own
-// automated writes — the same author/message exclusions `isSubstantive` and the
+// automated writes — the same author/message exclusions `isSubstantiveCommit` and the
 // `issues` collector apply, kept together on purpose. It does NOT carry the
 // corpus-only exclusion: the PR listing has no file list, and resolving one per
 // PR would cost a read per PR across the whole window. It does not need to —
@@ -148,7 +114,7 @@ async function windowCommits(gh, repo, branch, sinceIso) {
       // classification, carried through so a consumer can say WHY a commit did
       // not count rather than only that it did not.
       task: taskFromMessage(c.commit?.message ?? ''),
-      substantive: isSubstantive(c, files),
+      substantive: isSubstantiveCommit(c, files),
       files,
     });
   }

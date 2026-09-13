@@ -12,8 +12,7 @@
   ],
   "expected_outcome": "amend_existing_or_create_new_pr",
   "automerge": [
-    "claudinite-local-pack-md-changes",
-    "claudinite-local-pack-check-changes"
+    "under:.claudinite/local"
   ],
   "agent_model": "opus",
   "agent_instructions": "task.md",

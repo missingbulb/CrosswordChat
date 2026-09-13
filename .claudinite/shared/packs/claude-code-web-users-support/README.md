@@ -16,7 +16,9 @@ name a pack — `bootstrap.md` and the engine's env check reach it by its unique
 
 Declared, and seeded by `--init`. The pack holds an **address**, not the content: `config.repo` (and
 an optional `config.path`, default `preferences`) name the store that holds one `<email>.md` per
-person. Every miss — no identity, no configured store, no file, a failed fetch — is one plain-text
+person. They load only into an attended session: a routine fired under a person's account carries
+their identity but not their presence, and the harness's attended flag is what the step reads. Every
+miss — unattended, no identity, no configured store, no file, a failed fetch — is one plain-text
 note and the session proceeds on default interaction behaviour.
 
 Preferences are **personal, not project conventions**: conventions belong to the packs that own

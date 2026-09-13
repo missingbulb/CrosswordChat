@@ -45,6 +45,8 @@ equivalent surface by existing.
 | `preconditions.mjs` | the precondition vocabulary, the expression grammar, and the one seam that turns a task plus its signals into a verdict — the call the executor makes at pick | every pack with tasks, in its own tests |
 | `merge-policy.mjs` | the auto-merge policy verdict (`automerge`, the `Merge:` field, the arming trailer) and the `merge-rules.json` compiler | any pack declaring policies or merge rules, in its own tests |
 | `usage-format.mjs` | the usage aggregate's codec | claudinite-fleet-sheepdog's fleet-wide aggregator |
+| `dormancy.mjs` | whether a repo's scheduler is dormant, by the same test the scheduler stops itself with | claudinite-dashboard, claudinite-fleet-sheepdog |
+| `substantive-commit.mjs` | whether a commit was genuine project work rather than the machinery moving — the test a `commits`-gated precondition is decided by | claudinite-dashboard, for the fleet view's `sleepy` mark |
 
 A pack whose **non-task** code reads any of these declares `requires: ['claudinite-tasks']`. A
 pack's `tasks/` folder needs no declaration: a mount without this pack carries no `tasks/` at all,

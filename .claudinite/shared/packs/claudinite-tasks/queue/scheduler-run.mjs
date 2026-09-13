@@ -648,12 +648,17 @@ async function main() {
   // milliseconds earlier (#1340). The run does not need the read to know what it
   // wrote, so every issue it readies is recorded here and counted regardless.
   const readied = new Set();
+  // WHAT THIS RUN ITSELF FILED, in the shape `listWorkItems` projects. The forced
+  // wake below plans over the same eventually-consistent read, where a miss is not
+  // a skipped dispatch but a SECOND standing item beside the one just filed (#1979).
+  const minted = [];
 
   for (const op of ops) {
     if (op.kind === 'create') {
       const res = await createIssue(gh, repo, { title: op.title, body: op.body, labels: op.labels });
       if (res.number) {
         if (op.labels.includes(READY)) readied.add(res.number);
+        minted.push({ number: res.number, title: op.title, body: op.body, state: 'open', labels: op.labels });
         console.log(`- created #${res.number} ${op.pack}/${op.task} [${op.labels.join(' ')}]`);
       } else console.log(`! could not create the work item for ${op.pack}/${op.task}: ${res.status}`);
     } else if (op.kind === 'ready') {
@@ -721,8 +726,10 @@ async function main() {
   const spec = process.env.CLAUDINITE_WAKE ?? '';
   if (spec.trim()) {
     const { wakeItem } = await import('./create-work-item.mjs');
-    // Re-read: the ops above may have created or readied the very items named.
-    const current = await listWorkItems(gh, repo, { since });
+    // Re-read for what the ops above readied, unioned with what they created: the
+    // read alone can miss an item filed seconds earlier, and the force then mints a
+    // duplicate of it rather than waking it (#1979).
+    const current = withOwnWrites(await listWorkItems(gh, repo, { since }), minted);
     const { wake, create, already, unmatched } = planWake(spec, tasks, current);
     for (const w of wake) {
       const res = await wakeItem(gh, repo, w.issue);
@@ -782,6 +789,15 @@ async function main() {
 export function pickableCount(open, readiedThisRun = [], opts = {}) {
   const listed = pickOrder(open, opts).map((i) => i.number);
   return new Set([...listed, ...readiedThisRun]).size;
+}
+
+// THE QUEUE AS THIS RUN KNOWS IT: what the list returned, plus the items this run
+// itself created and the read has not caught up to (#1979). Only the ones the read
+// missed are added — where both name an issue the read wins, since it is the later
+// truth about one this run is no longer writing to.
+export function withOwnWrites(listed, mintedThisRun = []) {
+  const seen = new Set(listed.map((i) => i.number));
+  return [...listed, ...mintedThisRun.filter((i) => !seen.has(i.number))];
 }
 
 async function announcePickable(gh, repo, tasks, readiedThisRun = new Set()) {
