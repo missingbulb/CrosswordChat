@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // SessionStart step: state, in one line, WHAT ACTUALLY LOADED this session —
-// the active packs, the checks they arm, the token weight of the prose injected,
-// the skills mounted, plus whatever facet an active pack contributes about
+// which repo, the active packs, the token weight of the prose injected, the guards
+// and checks they arm, the skills mounted (the ones the hooks load on their own
+// apart from the rest), plus whatever facet an active pack contributes about
 // itself. Its stdout becomes session context, and it carries the directive that
 // makes the session open with the line, so the person in front of it sees the
 // load stated back rather than having to trust that it happened.
@@ -32,18 +33,31 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { settingsPath } from '../settings-file.mjs';
 
+import { spawnSync } from 'node:child_process';
+
 // The prose is reported in TOKENS because that is the unit of the cost it
 // imposes — a context window, not a disk. The estimate goes through WORDS at the
 // standard English ratio of roughly 0.75 words per token: prose is words, and a
 // character count is thrown off by exactly what this corpus is full of — code
-// fences, paths, punctuation-dense Markdown. Rounded, because a session summary
-// is a sense of scale, not an accounting.
+// fences, paths, punctuation-dense Markdown. Rounded to the hundred and shown in
+// thousands (`14.3k`), because a session summary is a sense of scale, not an
+// accounting.
 const WORDS_PER_TOKEN = 0.75;
-const TOKEN_ROUNDING = 500;
-// The per-pack split's own step. A pack's share rounded to the total's would read as
-// zero for most of them, which is the one thing the split exists to prevent.
-const PACK_TOKEN_ROUNDING = 100;
+const TOKEN_ROUNDING = 100;
 const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
+const thousands = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+
+// Which repo this is, as `owner/repo`: the checkout's own origin remote, or the
+// Actions environment naming it. Neither known is no facet — the line never guesses
+// a name, and a directory name is not one.
+function repoName(projectRoot) {
+  const fromEnv = process.env.GITHUB_REPOSITORY;
+  const git = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: projectRoot, encoding: 'utf8' });
+  const url = git.status === 0 ? git.stdout.trim() : '';
+  const m = /[:/]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/.exec(url);
+  if (m) return `${m[1]}/${m[2]}`;
+  return typeof fromEnv === 'string' && fromEnv.includes('/') ? fromEnv : null;
+}
 
 try {
   const loaderDir = dirname(fileURLToPath(import.meta.url)); // <corpus>/engine/pack_loader
@@ -81,34 +95,40 @@ try {
   const estimate = (words, rounding) => Math.round(words / WORDS_PER_TOKEN / rounding) * rounding;
   const tokens = estimate(proseWords, TOKEN_ROUNDING);
 
-  // Checks are the active packs' rules, both scopes — what check_the_world and
-  // check_the_work between them will run against this repo.
-  const checks = active.reduce((n, pack) => n + (pack.rules?.length ?? 0), 0);
+  // What the active packs arm, split by WHEN it judges: a GUARD is a `scope: "action"`
+  // declaration (`guardToolCalls`), judged per tool call by the PreToolUse hook; every
+  // other rule — coded or declared, the pack's own or a skill's — is a CODE CHECK that
+  // check_the_world and check_the_work between them run against this repo.
+  let guards = 0;
+  let checks = 0;
+  for (const pack of active) {
+    for (const rule of [...(pack.rules ?? []), ...(pack.skillChecks ?? [])]) {
+      if (rule?.spec?.scope === 'action') guards += 1;
+      else checks += 1;
+    }
+  }
+
+  // The mounted skills, split by HOW they load: an AUTO-TRIGGER skill carries a
+  // `force-load-on-*` trigger, so a hook loads it deterministically at the moment it
+  // names; a REGULAR skill is offered on its description and loaded on judgment.
+  const { skillMetadata } = await import(join(loaderDir, 'skill-frontmatter.mjs'));
+  let autoTrigger = 0;
+  let regular = 0;
+  for (const dir of bundledSkillSources(active).values()) {
+    const m = skillMetadata(dir);
+    const triggers = m.forceLoadPaths.length + m.toolCallTriggers.length + m.promptTriggers.length + m.toolResultTriggers.length;
+    if (triggers > 0) autoTrigger += 1;
+    else regular += 1;
+  }
 
   const facets = [
     plural(active.length, 'pack'),
-    plural(checks, 'check'),
-    `${tokens.toLocaleString('en-US')} rule tokens`,
-    plural(bundledSkillSources(active).size, 'available skill'),
+    `${thousands(tokens)} context tokens`,
+    plural(guards, 'guard'),
+    plural(checks, 'code check'),
+    plural(autoTrigger, 'auto-trigger skill'),
+    plural(regular, 'regular skill'),
   ];
-
-  // WHERE that weight comes from, pack by pack — the facet that turns the total into
-  // something anyone can act on: a corpus growing is only a problem when you can see
-  // which pack is growing it.
-  //
-  // Finer-grained than the total, because a pack's own share rounded to the total's
-  // step would read as zero for most of them. Heaviest first, since the question this
-  // answers is which pack to look at.
-  //
-  // NO THOUSANDS SEPARATORS, deliberately: the facets are joined with commas, so a
-  // comma is this segment's own terminator and cannot also appear inside one of its
-  // numbers. Anything reading the line back splits on that.
-  const byPack = [...wordsByPack.entries()]
-    .map(([id, words]) => [id, estimate(words, PACK_TOKEN_ROUNDING)])
-    .filter(([, n]) => n > 0)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([id, n]) => `${id} ${n}`);
-  if (byPack.length) facets.push(`rule tokens by pack: ${byPack.join(' \u00b7 ')}`);
 
   // Whatever the active packs' steps said about themselves, in the order the
   // runner ran them. Absent file, unreadable file, no channel at all: the engine
@@ -126,10 +146,11 @@ try {
   // a reader picking the nearest line then picks the summary. Said the other way round,
   // with the summary above and a "repeat that line" below it, the nearest line is the
   // directive itself — and sessions duly opened their replies by reciting it.
+  const repo = repoName(projectRoot);
   process.stdout.write(
     'SESSION-START SUMMARY — an instruction to you, not text to repeat. '
     + 'Open your first reply of this session with exactly this line, and nothing before it:\n\n'
-    + `Claudinite loaded, ${facets.join(', ')}.\n`,
+    + `Loaded Claudinite${repo ? ` from repo ${repo}` : ''}: ${facets.join(', ')}.\n`,
   );
 } catch {
   // fail soft — a broken summary must never block a session

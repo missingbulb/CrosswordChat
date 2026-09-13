@@ -568,6 +568,7 @@ The scheduler run asks, readies and reclaims nothing, and the executor picks not
 sessions are unaffected. Delete it to wake — a dormant spell is not replayed, so the repo
 simply starts scheduling again from now.
 
-What it does **not** cover matters as much: the repo stays a member, its mount is still
-measured against canon, and one that has fallen behind is still reported as behind. A
-stopped scheduler buys quiet about the scheduler, and nothing else.
+What it buys is quiet about **upkeep**, and that is whole: nothing scheduled runs, no
+fleet-wide operation is run against it, and nothing outside measures either its scheduler or
+its mount. What it does not touch is membership — a fleet's coverage census still names
+it. (3)

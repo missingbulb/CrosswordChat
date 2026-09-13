@@ -38,15 +38,15 @@
 // window — it reads from the oldest end of the branch every run — not because the
 // two tasks hand anything to each other.
 //
-// And it owns the SKILL-USAGE metric the promotion ladder's skill-vs-prose call was
-// missing: usage-fold (tasks/usage-fold/) counts skill loads and their activity
-// denominators out of those same captured logs into a small tracked aggregate.
-// Fleet-wide aggregation is NOT here — the canon knows mechanisms, never repos; that
-// is the claudinite-fleet-sheepdog pack's job, in the fleet-enforcer repo.
+// THE SKILL-USAGE METRIC IS NOT HERE, though it is the promotion ladder's
+// skill-vs-prose call that wants it: the per-repo usage aggregate is folded out of
+// the captured logs by the claudinite-tasks pack, and fleet-wide aggregation by the
+// claudinite-fleet-sheepdog pack, in the fleet-enforcer repo — the canon knows
+// mechanisms, never repos.
 //
-// ADOPTION IS NOT HERE. `adopt-claudinite`, `adopt-pack` and the
-// adopt-requested-packs task were bundled in this pack for want of a better home;
-// their subject is Claudinite's own surface, so they moved to the `core` pack.
+// ADOPTION IS NOT HERE EITHER. `adopt-claudinite`, `adopt-pack` and the
+// adopt-requested-packs task belong to the claudinite-lifecycle pack: their subject
+// is Claudinite's own surface in a repo, not the lessons that repo produces.
 //
 // rule-revalidation (tasks/rule-revalidation/) covers the failure mode the other
 // stages structurally cannot see: a rule that was right, and whose ENVIRONMENT
@@ -58,7 +58,7 @@
 //
 // A declared pack (no fingerprint), seeded like the baseline: --init seeds it into every
 // new repo, the one-time grow-with-claudinite-seed migration seeds the existing fleet,
-// and baselining never re-adds it — so removing it is a durable opt-out.
+// and the update flows never re-add it — so removing it is a durable opt-out.
 //
 // No adoption question over config.retention_days — the task carries the default
 // (DEFAULT_RETENTION_DAYS, in tasks/logs-prune/prune-logs.mjs) rather than something
@@ -67,7 +67,7 @@
 // fail-safe and behaved as an unbounded leak, since no adoption flow asked for the
 // value and nothing seeded it (#1620). Capture-only is now declared, not inferred.
 export default {
-  version: '60913.1',
+  version: '60913.4',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'authoring Claudinite content here — lesson extraction, dedup, revalidation, conversation logs, skill-usage folding, the task contract',
@@ -75,8 +75,8 @@ export default {
   },
   seededByDefault: true,
   // Growth builds on Claudinite's own surface — a lesson is routed by reading the
-  // pack catalog and landed by adopting or authoring a pack — so `core` is a
-  // prerequisite rather than an ambient assumption.
+  // pack catalog and landed by adopting or authoring a pack — so
+  // `claudinite-lifecycle` is a prerequisite rather than an ambient assumption.
   requires: ['claudinite-lifecycle'],
   // The task contract (the writing-tasks skill). Relevance-first — inert until
   // the repo carries a tasks/<name>/task.json of its own — and here rather than in

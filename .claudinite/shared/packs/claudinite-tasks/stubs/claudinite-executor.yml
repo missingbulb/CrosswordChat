@@ -63,6 +63,7 @@ jobs:
     if: failure() || cancelled()
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       actions: write
       issues: write
     steps:

@@ -3,7 +3,7 @@
 Opt into the **growth lifecycle** — declaring this pack enrolls a repo in contributing its hard-won
 lessons up to the shared Claudinite canon, and in pruning its local packs once the canon owns them.
 Seeded by default (`--init` + the one-time `grow-with-claudinite-seed` baseline migration for the
-existing fleet), and **opt-out by removal**: baselining never re-adds it.
+existing fleet), and **opt-out by removal**: the update flows never re-add it.
 
 This pack carries the **repo-side** stages of the growth lifecycle: capturing a repo's own
 lessons into its local packs, and pruning them once the shared canon covers them. The central
@@ -20,8 +20,10 @@ scheduler (`packs/claudinite-tasks/discover.mjs`) wherever the pack is declared:
 | `prose-to-checks-sweep` ([tasks/prose-to-checks-sweep/task.md](tasks/prose-to-checks-sweep/task.md)) | weekly (no-ops cheaply on a quiet corpus) | a PR converting always-testable pack prose into checks |
 | `rule-revalidation` ([tasks/rule-revalidation/task.md](tasks/rule-revalidation/task.md)) | weekly | corrections to rules whose environment claim no longer probes true — auto-merging inside the repo's own local packs, reviewed where they reach a canon pack |
 
-(Plus two agentless tasks over the conversation-logs branch: [usage-fold](../claudinite-tasks/tasks/usage-fold/README.md) hourly,
-described below, and `logs-prune` — retention, [tasks/logs-prune/worker.mjs](tasks/logs-prune/worker.mjs).)
+(Plus `logs-prune`, agentless — retention over the conversation-logs branch,
+[tasks/logs-prune/worker.mjs](tasks/logs-prune/worker.mjs). The hourly
+[usage-fold](../claudinite-tasks/tasks/usage-fold/README.md) reads that same branch and is
+described below, but it is the claudinite-tasks pack's task, not this one's.)
 
 ## Extraction is one task over two sources
 

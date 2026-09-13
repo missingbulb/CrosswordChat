@@ -22,7 +22,7 @@ The claims are about the world, but a repo nobody works in has nothing riding
 on them: the sweep sleeps while it is silent and resumes on the first active
 window. Which pack paths it revalidates is task.md's.
 
-The `automerge` scope is the local-pack tree, `under:.claudinite/local/packs` —
+The `automerge` scope is the repo's own Claudinite tree, `under:.claudinite/local` —
 any change of any kind inside it, because this task's write surface is wider
 than prose: a disproved premise takes its check and its fixture with it, and a
 claim whose surface is gone takes its file. The canon shelf is covered by no

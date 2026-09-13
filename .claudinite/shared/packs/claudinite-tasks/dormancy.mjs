@@ -16,11 +16,13 @@
 //     precondition, so no work item is instantiated, no agent session is started, and
 //     no maintenance PR is opened. Nothing scheduled runs "for nothing" on a repo
 //     nobody is working on.
-//   - NO SCHEDULER CEREMONY FROM OUTSIDE. Whatever looks at this repo from the outside
-//     reads the same declaration and does not report a stopped scheduler as unhealthy —
-//     a scheduler TOLD to stop must not then be nagged for stopping. It says nothing
-//     about the repo's other health: a dormant member whose mount has fallen behind
-//     canon is still behind, and is still reported as behind.
+//   - NO UPKEEP CEREMONY FROM OUTSIDE. Whatever looks at this repo from the outside
+//     reads the same declaration and asks it nothing about its upkeep: neither its
+//     scheduler nor its mount is judged, and no fleet-wide operation is run against it
+//     (owner, 2026-09-13). A scheduler TOLD to stop must not then be nagged for
+//     stopping, and a mount nothing will converge cannot be behind in a way anyone is
+//     going to fix — both verdicts would be findings with no owner. What a reader owes
+//     such a repo instead is the word "dormant" where those verdicts would have sat.
 //   - EVERYTHING ELSE STAYS ON. Claudinite is not switched off: the session hooks, the
 //     checks engine, the mounted skills and pack prose all work exactly as before the
 //     moment someone opens a session on the repo. Dormancy is about unattended upkeep,

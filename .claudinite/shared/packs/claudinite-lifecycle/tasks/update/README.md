@@ -4,7 +4,7 @@
 
 Carried over from the declaration's comments when it became `task.json`.
 
-basics task: update — the versioned engine/pack update flows, run by a repo on
+claudinite-lifecycle task: update — the versioned engine/pack update flows, run by a repo on
 itself (#768 — see the versioned-updates design there). The successor to
 `baselining`, and since Phase 5 deleted that, the only thing that maintains a
 member's mount: there is no mechanism flag left to consult, and the block that
@@ -43,7 +43,6 @@ workflows' staging directory, and a member's own local packs where a record
 normalizes one. The test tree is named by kind rather than by folder because a
 member's tests live wherever that member puts them.
 
-it standalone — the whole contract lives in this default export.
 The input is the CANON, which moves when this repo does not — so no repo-side
 condition may gate it, and a silent repo is exactly when the mount most needs
 the pass. A repo with no vendored mount to update is a fact adoption settled,

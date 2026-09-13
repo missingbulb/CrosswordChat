@@ -61,7 +61,6 @@ export const USAGE_FIELDS = Object.freeze({
   // CAPTURE_DAY_FIELDS.
   day: Object.freeze([
     'captures', 'merges', 'sessions', 'userMessages', 'userCommands',
-    'ruleTokens', 'ruleTokenSessions',
     'tokensIn', 'tokensOut', 'tokenSessions',
     'commits', 'linesAdded', 'linesRemoved', 'releases',
     'humanSeconds', 'agentSeconds',
@@ -70,7 +69,6 @@ export const USAGE_FIELDS = Object.freeze({
   // sum of the day-level distinct-session counts, which is not a distinct count.
   week: Object.freeze([
     'days', 'captures', 'merges', 'sessionDays', 'userMessages', 'userCommands',
-    'ruleTokens', 'ruleTokenSessions',
     'tokensIn', 'tokensOut', 'tokenSessions',
     'commits', 'linesAdded', 'linesRemoved', 'releases',
     'humanSeconds', 'agentSeconds',
@@ -107,14 +105,14 @@ export const USAGE_FIELDS = Object.freeze({
 });
 
 // The day fields the capture files themselves answer, and therefore the ones a day row
-// always carries a real number for — zero included, because "no session loaded a rule
+// always carries a real number for — zero included, because "no session typed a command
 // that day" is a fact the captures state. Every OTHER day field comes from a source
 // that can be absent (a shallow checkout with no history that far back, a releases
 // listing that could not be read, a transcript shape carrying no token usage), and an
 // absent source must leave NO KEY rather than a zero: `unknown` is a state of its own,
 // and a fold that wrote 0 for it would report a busy day as an idle one.
 export const CAPTURE_DAY_FIELDS = Object.freeze([
-  'captures', 'merges', 'sessions', 'userMessages', 'userCommands', 'ruleTokens', 'ruleTokenSessions',
+  'captures', 'merges', 'sessions', 'userMessages', 'userCommands',
 ]);
 
 // The week field each day field folds into. Same name throughout except the two the
@@ -130,7 +128,7 @@ export const COUNTER_GROUPS = Object.freeze([
 // The row's sub-maps whose values are BARE NUMBERS — no vocabulary, nothing to expand,
 // written and read as they stand. Keyed by a name that varies (a skill, a pack), like
 // the counter groups beside them.
-export const BARE_MAPS = Object.freeze(['skillLoads', 'ruleTokensByPack']);
+export const BARE_MAPS = Object.freeze(['skillLoads']);
 
 // The bounds a reader would otherwise have to guess, declared in the file beside
 // `fields` for the same reason: a figure computed under a cap means nothing without

@@ -4,7 +4,7 @@
 
 Carried over from the declaration's comments when it became `task.json`.
 
-claudinite-growth task: growth-dedup — the growth lifecycle's PRUNING stage
+claudinite-growth task: growth-dedup — the growth lifecycle's PRUNING stage.
 Prunes local-pack items the canon now
 covers, keeping items the canon states too generally; lands the prunes through
 one PR against the default branch, delivered per the repo's delivery settings.
@@ -16,7 +16,7 @@ mounts changed" — so movement, never the calendar, is what wakes this: a quiet
 repo with no local packs skips.
 
 The cadence is WEEKLY, not daily (#582). A member's mount moves most nights —
-baselining converges it daily — so a daily anchor started this opus session, and
+the `update` task converges it daily — so a daily anchor started this opus session, and
 the PR behind it, nearly every night. Pruning is not latency-sensitive: a
 local item the canon has already absorbed stays harmlessly correct until it goes,
 so the daily anchor bought noise rather than freshness. Nothing is missed by the
@@ -39,4 +39,4 @@ the brief the agentic phase starts from. Reading a diff is code work, and the
 pack owns it: the `sharedMount` signal names the packs that moved and stops
 there, deliberately, because a signal is a cheap gate any task may declare,
 not one task's research. The hand-off is unconditional (worker.mjs) —
-the precondition below is the only place this run may be declined.
+the preconditions in `task.json` are the only place this run may be declined.

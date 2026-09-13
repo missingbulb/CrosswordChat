@@ -11,9 +11,9 @@
   skill's own text carries (to a sibling doc, a sibling skill) was written for its real home and
   dangles from that announced base — resolve such links against the canon path instead.
 
-- **Wanting a pack's rules to apply here** — declare its id in `.claudinite-settings.json`. Nothing
-  activates by being mounted, fingerprinted or present on disk, so a pack whose files you can see
-  but whose id is undeclared contributes no prose, no checks, no skills and no tasks.
+- **Wanting a pack's rules to apply here** — declare its id in `.claudinite-settings.json`.
+  Nothing activates by being mounted, fingerprinted or present on disk, so a pack whose files you
+  can see but whose id is undeclared contributes no prose, no checks, no skills and no tasks.
 
 - **Adding a pack** — run the `adopt-pack` skill, which declares it, asks its adoption questions,
   re-vendors and scaffolds. Never hand-copy a pack's content into the repo.

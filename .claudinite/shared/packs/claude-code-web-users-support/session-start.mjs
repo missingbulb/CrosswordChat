@@ -18,6 +18,12 @@
 // reading and editing — a fetch would serve the default branch and quietly hide the
 // edit in progress.
 //
+// ATTENDED SESSIONS ONLY. A routine fired under a person's account carries their
+// identity but not their presence, and preferences written for a present person (a
+// popup for every decision, a callout closing every turn) misdirect a run nobody is
+// watching. The harness says which it is in CLAUDE_CODE_SESSION_ATTENDED; only an
+// explicit "not attended" declines, so an older harness that never sets it still loads.
+//
 // FAIL-SOFT ON EVERY MISS. No identity, no configured store, no file, a fetch that
 // fails: one plain-text note, and the session proceeds on default interaction
 // behavior. Nothing here is load-bearing — the packs, checks and skills a session
@@ -63,6 +69,11 @@ try { config = JSON.parse(process.env.CLAUDINITE_PACK_CONFIG || '{}'); } catch {
 const store = resolveStore(config);
 if (!store) {
   note('this project declares no preferences store (the pack entry\'s "config": { "repo": … }) — proceeding with default interaction behavior.');
+  process.exit(0);
+}
+
+if (process.env.CLAUDE_CODE_SESSION_ATTENDED === '0') {
+  note('the session is unattended (CLAUDE_CODE_SESSION_ATTENDED=0) — personal preferences are for a present person; proceeding with default interaction behavior.');
   process.exit(0);
 }
 

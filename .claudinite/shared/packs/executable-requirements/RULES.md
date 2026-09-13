@@ -5,10 +5,12 @@
 - Everything lives under **`dev/requirements/`**: `requirements.md` (the numbered prose spec),
   one **top-level folder per kind**, `shared/` for cross-kind infra, and the runners/gates. The
   spec file's path is the framework's structural fingerprint — this pack activates on it.
+
 - **The folder is the kind.** A case's kind is the directory it lives in; the case declares no
   kind field. Cases are
   `<kind>/cases/<slug>.<leaf-id>.case.<ext>`: a stable feature slug (so retitling a spec section
   never forces renames), then the dotted leaf id.
+
 - **Artifact expecteds live beside their case** (`<slug>.<id>.png`, `expected/<name>.json`);
   failure artifacts (actual/diff renders) go to a gitignored dir, never beside the goldens.
 
@@ -17,6 +19,7 @@
 - The spec doubles as a visual gallery: under every image-kind leaf, machine-managed image lines
   (tagged with an HTML comment marker) embed the committed goldens — saga leaves get their full
   captioned storyboard strip.
+
 - A committed **gallery gate** keeps the doc equal to the generator's output byte-for-byte.
   Regenerate via the tool, never by hand.
 
