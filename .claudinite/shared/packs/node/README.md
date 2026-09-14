@@ -6,12 +6,13 @@ Active when the repo has a root `package.json`. The module-resolution and jsdom 
 
 | Rule | Severity | Reason | Enforcement |
 |---|---|---|---|
-| A named CJS import can yield undefined | high | correctness | prose: 130 words |
-| Node detects ES-module syntax on its own | medium | correctness | prose: 79 words |
-| A scratchpad script can't reach node_modules | medium | correctness | prose: 81 words |
-| Check what Node version CI pins | medium | correctness | prose: 57 words |
-| body.innerText is null in jsdom. | medium | correctness | prose: 53 words |
-| jsdom parses <noscript> into live DOM | medium | correctness | prose: 52 words |
+| A named CJS import can yield undefined | high | correctness | prose: <200 words |
+| Node detects ES-module syntax on its own | medium | correctness | prose: <100 words |
+| A scratchpad script can't reach node_modules | medium | correctness | prose: <100 words |
+| Check what Node version CI pins | medium | correctness | prose: <100 words |
+| Declare setup-node caching either way | medium | performance | prose: <100 words |
+| body.innerText is null in jsdom. | medium | correctness | prose: <100 words |
+| jsdom parses <noscript> into live DOM | medium | correctness | prose: <100 words |
 
 The `node --test` discovery rule is the [`node-test-discovery`](skills/node-test-discovery/SKILL.md)
 skill, forced for `.github/workflows/**` and `package.json`.

@@ -17,31 +17,31 @@ rules both build on are corpus canon already, and are pointed to rather than res
 
 | Rule | Severity | Reason | Enforcement |
 |---|---|---|---|
-| One numbered document states the product | medium | complexity | prose: 38 words |
-| A leaf is what the harness asserts | medium | complexity | prose: 67 words |
-| Every leaf carries a stable id. | high | complexity | prose: 33 words |
-| Doc-first, red by default. | high | correctness | prose: 21 words |
-| The spec drives the tests | high | correctness | prose: 54 words |
-| Enforce the bijection with a coverage gate | high | correctness | prose: 42 words |
-| A kind is one way to assert | low | complexity | prose: 48 words |
-| A kind may be a singleton. | low | complexity | prose: 37 words |
-| Give each kind's runner a named lane | medium | performance | prose: 44 words |
-| Actuals come from the real code. | high | correctness | prose: 38 words |
-| Committed expecteds are the owner's approval record | high | correctness | prose: 22 words |
-| The contract takes two honest shapes. | medium | complexity | prose: 75 words |
-| On a mismatch, surface both and ask | high | correctness | prose: 49 words |
-| Expected changes ride the normal review flow | high | correctness | prose: 29 words |
-| One rule, sibling leaves per enforcing tier | medium | complexity | prose: 46 words |
-| Prove a rule where it is enforced | medium | correctness | prose: 45 words |
-| When breadth of targets is the value | medium | complexity | prose: 40 words |
-| Prove each target against a real sample | high | correctness | prose: 56 words |
-| Adding a target is a documented flow | low | complexity | prose: 22 words |
-| Name what the harness cannot reach | high | correctness | prose: 78 words |
-| Mark a deliberate gap at its leaf | high | correctness | prose: 79 words |
-| Embed regenerated renders in the spec | medium | complexity | prose: 40 words |
-| Regenerate, never hand-edit. | high | correctness | prose: 25 words |
-| main is always releasable, automation releases | high | correctness | prose: 53 words |
-| The version users see moves deliberately. | medium | correctness | prose: 48 words |
+| One numbered document states the product | medium | complexity | prose: <50 words |
+| A leaf is what the harness asserts | medium | complexity | prose: <100 words |
+| Every leaf carries a stable id. | high | complexity | prose: <50 words |
+| Doc-first, red by default. | high | correctness | prose: <50 words |
+| The spec drives the tests | high | correctness | prose: <100 words |
+| Enforce the bijection with a coverage gate | high | correctness | prose: <50 words |
+| A kind is one way to assert | low | complexity | prose: <50 words |
+| A kind may be a singleton. | low | complexity | prose: <50 words |
+| Give each kind's runner a named lane | medium | performance | prose: <50 words |
+| Actuals come from the real code. | high | correctness | prose: <50 words |
+| Committed expecteds are the owner's approval record | high | correctness | prose: <50 words |
+| The contract takes two honest shapes. | medium | complexity | prose: <100 words |
+| On a mismatch, surface both and ask | high | correctness | prose: <50 words |
+| Expected changes ride the normal review flow | high | correctness | prose: <50 words |
+| One rule, sibling leaves per enforcing tier | medium | complexity | prose: <50 words |
+| Prove a rule where it is enforced | medium | correctness | prose: <50 words |
+| When breadth of targets is the value | medium | complexity | prose: <50 words |
+| Prove each target against a real sample | high | correctness | prose: <100 words |
+| Adding a target is a documented flow | low | complexity | prose: <50 words |
+| Name what the harness cannot reach | high | correctness | prose: <100 words |
+| Mark a deliberate gap at its leaf | high | correctness | prose: <100 words |
+| Embed regenerated renders in the spec | medium | complexity | prose: <50 words |
+| Regenerate, never hand-edit. | high | correctness | prose: <50 words |
+| main is always releasable, automation releases | high | correctness | prose: <100 words |
+| The version users see moves deliberately. | medium | correctness | prose: <50 words |
 
 The deterministic golden-image method the gallery leans on is canon in the writing-tests skill —
 matching the render engine to the surface (a bit-exact rasterizer for inline-styled/SVG surfaces, a

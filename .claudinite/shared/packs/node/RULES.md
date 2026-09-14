@@ -30,6 +30,12 @@
   session's own Node can be newer than CI's pin, so a local green run proves nothing about the
   version that will execute the code in CI.
 
+- **Adding a `setup-node` step to a workflow** — declare its caching either way, `cache: npm` with a
+  committed lockfile and `package-manager-cache: false` without: v5 caches by itself once
+  `package.json` names `packageManager: npm`, and a cache with no lockfile fails the step. A
+  workflow that can't assume a lockfile decides at run time:
+  `cache: ${{ <has-lockfile> && 'npm' || '' }}`. (3)
+
 ## jsdom diverges from a real browser in ways a green test can hide
 
 - **`body.innerText` is null in jsdom.** Code reading `el.innerText || el.textContent` therefore

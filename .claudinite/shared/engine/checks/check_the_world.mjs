@@ -36,8 +36,25 @@ const value = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : nu
 // this way; this closes the disagreement for every caller, not just that one.
 const root = value('--root') || process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
+// A pack that fails to load — a pack.mjs whose import throws, a rule module that
+// won't load, an unparseable declared-checks.json — is absent from `packs`, with
+// the reason on `errors`. So a caller reading one without the other cannot tell a
+// pack that was never there from one that did not load: it emits a short answer
+// and reports success. The full run below turns those errors into findings; these
+// two entry points would otherwise be the ones that swallow them (#2008).
+async function wholeRegistryOr(exit) {
+  const { packs, errors } = await discoverPacks({ localRoot: root });
+  if (errors.length) {
+    console.error(`${errors.length} pack(s) failed to load, so ${exit} cannot answer for this repo:`);
+    for (const e of errors) console.error(`  ${e.what}\n    Fix: ${e.fix}`);
+    process.exit(1);
+  }
+  return packs;
+}
+
 if (has('--list')) {
-  const { packs } = await discoverPacks({ localRoot: root });
+  // stdout stays the machine-readable channel; the diagnostic above goes to stderr.
+  const packs = await wholeRegistryOr('--list');
   for (const r of packRules(packs)) {
     // A declared check carries neither a description nor a doc pointer — it
     // states its own case — so the catalog prints its failure message in that
@@ -49,7 +66,10 @@ if (has('--list')) {
 
 if (has('--init')) {
   const { seedDeclaration } = await import('./helpers/seed-declaration.mjs');
-  const { packs } = await discoverPacks({ localRoot: root });
+  // A declaration seeded from a partial registry omits the packs that did not
+  // load, and a member copies that file once and never again — so refuse rather
+  // than write one.
+  const packs = await wholeRegistryOr('--init');
   const { path, existed, declared } = seedDeclaration(root, packs);
   if (existed) {
     console.log(`${path} already exists — leaving it as-is.`);

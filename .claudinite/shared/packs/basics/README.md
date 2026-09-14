@@ -6,65 +6,65 @@ The baseline pack — the `RULES.md` prose every session loads (injected by the 
 
 | Rule | Severity | Reason | Enforcement |
 |---|---|---|---|
-| Starting any requested change | high | correctness | prose: 59 words |
-| Replying to an owner comment | high | complexity | prose: 109 words |
-| Acting on a correction | high | correctness | prose: 39 words |
-| Acting on a feature | high | correctness | prose: 39 words |
-| Acting on a process change | medium | complexity | prose: 69 words |
-| Choosing what goes on that ladder | medium | complexity | prose: 82 words |
-| Landing a rule anywhere on the ladder | high | correctness | prose: 64 words |
-| Building a mechanism for a behavior | medium | complexity | prose: 18 words |
-| Building release, deploy, versioning or CI plumbing | medium | complexity | prose: 46 words |
-| Finishing a change | high | correctness | prose: 33 words |
-| Changing scheduled or unattended machinery | high | correctness | prose: 36 words |
-| Planning a migration | medium | complexity | prose: 99 words + skill (`writing-migration-plans`) |
-| Filing a plan's issues | high | correctness | prose: 65 words + skill (`writing-migration-plans`) |
-| Adding a legacy tolerance | high | complexity | prose: 59 words |
-| Choosing an automerge policy | high | correctness | prose: 65 words |
-| Predicting an irreversible change | critical | correctness | prose: 42 words |
-| Handing over a wider diff than asked | medium | complexity | prose: 63 words |
-| Retiring a system into another | high | correctness | prose: 52 words |
-| When verifying now is genuinely impossible | high | correctness | prose: 138 words + skill (`verify-in-production`) |
-| Finishing a larger element | medium | correctness | prose: 94 words + skill (`production-retrospective`) |
-| Receiving feedback that flags a misunderstanding | medium | complexity | prose: 29 words |
-| Writing anything | low | complexity | prose: 18 words |
-| A blocked source about a person | high | correctness | prose: 55 words |
-| Auditing an artifact against its source | high | correctness | prose: 35 words |
-| Acting on an approval | high | correctness | prose: 69 words |
-| Calling Edit | low | complexity | prose: 55 words |
-| Polling with an until loop | high | correctness | prose: 57 words + check (`bare-wait-in-fresh-shell`) |
-| Handing the owner a terminal command | medium | correctness | prose: 48 words |
-| Seeing a build, test or CI warning | medium | correctness | prose: 28 words |
-| Suppressing a warning | medium | complexity | prose: 74 words + check (`warning-suppression`) |
-| Waiving a finding on text | low | complexity | prose: 26 words |
-| Working around a vendored check's finding | medium | complexity | prose: 29 words |
-| Deferring a warning you can't fix now | medium | complexity | prose: 55 words |
-| Finding a finding's existing issue | medium | complexity | prose: 205 words |
-| Spotting a change that should wait | medium | complexity | prose: 46 words + skill (`do-later`) |
-| Filing anything into the ad-hoc queue | high | correctness | prose: 95 words |
-| The queue cannot reach the work | high | correctness | prose: 40 words |
-| Handing over a human-only step | high | complexity | prose: 96 words + skill (`writing-handover-issues`) |
-| Naming a file, module, or symbol | low | complexity | prose: 22 words |
-| Referring to a value from two places | high | correctness | prose: 65 words + check (`shared-constants`) |
-| Writing that drift guard | high | correctness | prose: 57 words |
-| Guarding copies in two languages | high | correctness | prose: 40 words |
-| Writing a file that depends on another | medium | complexity | prose: 97 words |
-| Depending on platform or runtime behaviour | high | correctness | prose: 31 words |
-| Optimising | high | correctness | prose: 53 words |
-| Needing a library for a narrow job | medium | complexity | prose: 27 words |
-| Answering an edge case a review raised | medium | complexity | prose: 55 words |
-| Documenting a procedure | medium | complexity | prose: 40 words |
-| Writing code that can silently do nothing | high | correctness | prose: 76 words |
-| Persisting anything on a user's machine | medium | correctness | prose: 43 words |
-| Changing what you do with user data | critical | legal | prose: 90 words |
-| Changing a behavior your docs claim | medium | correctness | prose: 55 words |
-| Driving an external runtime repeatedly | low | complexity | prose: 51 words |
-| Automating something that needs live conversation context | medium | complexity | prose: 46 words |
-| Writing a pipeline step's exit path | medium | correctness | prose: 26 words |
-| Working in a fresh checkout or sandbox | low | complexity | prose: 54 words |
-| Deciding where a config value lives | medium | complexity | prose: 69 words |
-| Handling a value that can be unknown | high | correctness | prose: 103 words |
-| Writing a comment | low | complexity | prose: 93 words |
+| Starting any requested change | high | correctness | prose: <100 words |
+| Replying to an owner comment | high | complexity | prose: <200 words |
+| Acting on a correction | high | correctness | prose: <50 words |
+| Acting on a feature | high | correctness | prose: <50 words |
+| Acting on a process change | medium | complexity | prose: <100 words |
+| Choosing what goes on that ladder | medium | complexity | prose: <100 words |
+| Landing a rule anywhere on the ladder | high | correctness | prose: <100 words |
+| Building a mechanism for a behavior | medium | complexity | prose: <20 words |
+| Building release, deploy, versioning or CI plumbing | medium | complexity | prose: <50 words |
+| Finishing a change | high | correctness | prose: <50 words |
+| Changing scheduled or unattended machinery | high | correctness | prose: <50 words |
+| Planning a migration | medium | complexity | prose: <100 words + skill (`writing-migration-plans`) |
+| Filing a plan's issues | high | correctness | prose: <100 words + skill (`writing-migration-plans`) |
+| Adding a legacy tolerance | high | complexity | prose: <100 words |
+| Choosing an automerge policy | high | correctness | prose: <100 words |
+| Predicting an irreversible change | critical | correctness | prose: <50 words |
+| Handing over a wider diff than asked | medium | complexity | prose: <100 words |
+| Retiring a system into another | high | correctness | prose: <100 words |
+| When verifying now is genuinely impossible | high | correctness | prose: <200 words + skill (`verify-in-production`) |
+| Finishing a larger element | medium | correctness | prose: <100 words + skill (`production-retrospective`) |
+| Receiving feedback that flags a misunderstanding | medium | complexity | prose: <50 words |
+| Writing anything | low | complexity | prose: <20 words |
+| A blocked source about a person | high | correctness | prose: <100 words |
+| Auditing an artifact against its source | high | correctness | prose: <50 words |
+| Acting on an approval | high | correctness | prose: <100 words |
+| Calling Edit | low | complexity | prose: <100 words |
+| Polling with an until loop | high | correctness | prose: <100 words + check (`bare-wait-in-fresh-shell`) |
+| Handing the owner a terminal command | medium | correctness | prose: <50 words |
+| Seeing a build, test or CI warning | medium | correctness | prose: <50 words |
+| Suppressing a warning | medium | complexity | prose: <100 words + check (`warning-suppression`) |
+| Waiving a finding on text | low | complexity | prose: <50 words |
+| Working around a vendored check's finding | medium | complexity | prose: <50 words |
+| Deferring a warning you can't fix now | medium | complexity | prose: <100 words |
+| Finding a finding's existing issue | medium | complexity | prose: <500 words |
+| Spotting a change that should wait | medium | complexity | prose: <50 words + skill (`do-later`) |
+| Filing anything into the ad-hoc queue | high | correctness | prose: <100 words |
+| The queue cannot reach the work | high | correctness | prose: <50 words |
+| Handing over a human-only step | high | complexity | prose: <100 words + skill (`writing-handover-issues`) |
+| Naming a file, module, or symbol | low | complexity | prose: <50 words |
+| Referring to a value from two places | high | correctness | prose: <100 words + check (`shared-constants`) |
+| Writing that drift guard | high | correctness | prose: <100 words |
+| Guarding copies in two languages | high | correctness | prose: <50 words |
+| Writing a file that depends on another | medium | complexity | prose: <100 words |
+| Depending on platform or runtime behaviour | high | correctness | prose: <50 words |
+| Optimising | high | correctness | prose: <100 words |
+| Needing a library for a narrow job | medium | complexity | prose: <50 words |
+| Answering an edge case a review raised | medium | complexity | prose: <100 words |
+| Documenting a procedure | medium | complexity | prose: <50 words |
+| Writing code that can silently do nothing | high | correctness | prose: <100 words |
+| Persisting anything on a user's machine | medium | correctness | prose: <50 words |
+| Changing what you do with user data | critical | legal | prose: <100 words |
+| Changing a behavior your docs claim | medium | correctness | prose: <100 words |
+| Driving an external runtime repeatedly | low | complexity | prose: <100 words |
+| Automating something that needs live conversation context | medium | complexity | prose: <50 words |
+| Writing a pipeline step's exit path | medium | correctness | prose: <50 words |
+| Working in a fresh checkout or sandbox | low | complexity | prose: <100 words |
+| Deciding where a config value lives | medium | complexity | prose: <100 words |
+| Handling a value that can be unknown | high | correctness | prose: <200 words |
+| Writing a comment | low | complexity | prose: <100 words |
 
 Two rules are skills the guard forces for the files they concern: writing a check that scans the
 repo ([`writing-repo-scanning-checks`](skills/writing-repo-scanning-checks/SKILL.md), for any coded
