@@ -172,9 +172,9 @@ here: its subject is Claudinite's own surface, not lesson capture.
 
 | Rule | Severity | Reason | Enforcement |
 |---|---|---|---|
-| Recording a local pack change | high | complexity | prose: 71 words |
-| Wanting a job to run in Actions | high | complexity | prose: 55 words + check (`scheduler-workflow-shape`) |
-| Describing another pack's artifact | medium | complexity | prose: 37 words |
+| Recording a local pack change | high | complexity | prose: <100 words |
+| Wanting a job to run in Actions | high | complexity | prose: <100 words + check (`scheduler-workflow-shape`) |
+| Describing another pack's artifact | medium | complexity | prose: <50 words |
 
 ## Coded rules
 

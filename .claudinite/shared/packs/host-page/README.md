@@ -17,17 +17,17 @@ that cannot tell a guest from a host would suspect the pack in every DOM repo in
 
 | Rule | Severity | Reason | Enforcement |
 |---|---|---|---|
-| Quarantine host DOM knowledge in one module | high | complexity | prose: 96 words |
-| Identify host UI by a net | high | correctness | prose: 85 words |
-| Record what selectors were verified against | medium | complexity | prose: 93 words |
-| Ship a probe that never throws | medium | correctness | prose: 101 words |
-| Mirror the host in a fixture | medium | correctness | prose: 76 words |
-| Verify every write by re-reading | critical | correctness | prose: 91 words |
-| A synthetic keystroke carries the legacy fields | high | correctness | prose: 97 words |
-| Restore borrowed host state | medium | correctness | prose: 78 words |
-| Check the host's overlay states before diffing | high | correctness | prose: 68 words |
-| Nudge the host's idle timers | medium | correctness | prose: 77 words |
-| Be inert when you are off | high | performance | prose: 102 words |
+| Quarantine host DOM knowledge in one module | high | complexity | prose: <100 words |
+| Identify host UI by a net | high | correctness | prose: <100 words |
+| Record what selectors were verified against | medium | complexity | prose: <100 words |
+| Ship a probe that never throws | medium | correctness | prose: <200 words |
+| Mirror the host in a fixture | medium | correctness | prose: <100 words |
+| Verify every write by re-reading | critical | correctness | prose: <100 words |
+| A synthetic keystroke carries the legacy fields | high | correctness | prose: <100 words |
+| Restore borrowed host state | medium | correctness | prose: <100 words |
+| Check the host's overlay states before diffing | high | correctness | prose: <100 words |
+| Nudge the host's idle timers | medium | correctness | prose: <100 words |
+| Be inert when you are off | high | performance | prose: <200 words |
 
 ## Checks
 

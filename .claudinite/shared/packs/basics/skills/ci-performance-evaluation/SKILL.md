@@ -18,6 +18,13 @@ each step's `started_at`/`completed_at`; the difference per step is the breakdow
 State the split before going further ("checkout 4s, setup 5s, tests 48s, sweep 2s"). Only the
 dominant step is worth profiling; time spent on a 2s step is time wasted whatever you find.
 
+When setup and install dominate rather than the tests, stop here: that is a caching finding, not a
+profiling one. Give the setup action its `cache:` input where a lockfile exists, warm the cache from
+a run that may write the default-branch scope, and read the scoping rules in
+[git-github-advanced](../../../git-github/skills/git-github-advanced/SKILL.md) before calling a
+cache that never hits a key problem. None of steps 2–8 can recover time spent before the tests
+start. (1)
+
 ## 2. Reproduce the dominant step locally — and check the local run is comparable
 
 Profile locally, but establish the gap first: a local run and a runner differ in core count, in

@@ -33,9 +33,9 @@ address, so the store is flat and each name is one person's exact identity, whic
 
 | Rule | Severity | Reason | Enforcement |
 |---|---|---|---|
-| Changing a person's preferences | medium | complexity | prose: 53 words |
-| A person's first preferences file | high | correctness | prose: 44 words + check (`preferences-store-file-names`) |
-| A web session's missing toolchain | medium | complexity | prose: 38 words |
+| Changing a person's preferences | medium | complexity | prose: <100 words |
+| A person's first preferences file | high | correctness | prose: <50 words + check (`preferences-store-file-names`) |
+| A web session's missing toolchain | medium | complexity | prose: <50 words |
 
 ## Checks
 

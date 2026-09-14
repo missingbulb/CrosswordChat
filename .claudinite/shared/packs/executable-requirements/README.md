@@ -23,8 +23,8 @@ The always-on rules — the layout every case lands in, the gallery and the refr
 
 | Rule | Severity | Reason | Enforcement |
 |---|---|---|---|
-| The folder is the kind. | medium | complexity | prose: 41 words |
-| Artifact expecteds live beside their case | medium | complexity | prose: 22 words |
+| The folder is the kind. | medium | complexity | prose: <50 words |
+| Artifact expecteds live beside their case | medium | complexity | prose: <50 words |
 
 Everything an author needs while *writing* a leaf or a case lives in the skills below: the
 leaf-line convention and the kind vocabulary in `write-a-requirement-leaf`, the storyboard and
