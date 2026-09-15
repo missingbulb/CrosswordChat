@@ -13,8 +13,8 @@
 
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { makeGh } from '../../../claudinite-tasks/shared-code/github.mjs';
-import { findOrCreateTracker, writeTracker } from '../../../claudinite-tasks/shared-code/github.mjs';
+import { makeGh } from '../../../claudinite-tasks/public/github.mjs';
+import { findOrCreateTracker, writeTracker } from '../../../claudinite-tasks/public/github.mjs';
 
 const item = process.env.CLAUDINITE_ITEM || '';
 const log = (s) => console.log(`ci-performance${item ? ` [#${item}]` : ''}: ${s}`);

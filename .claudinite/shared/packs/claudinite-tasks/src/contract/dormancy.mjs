@@ -35,7 +35,7 @@
 // dormancy would nag exactly the repos that had already opted out.
 //
 // Import-light and free of `node:` on purpose: the dashboard page reads this in the
-// browser through the pack's published shared-code/, and a `node:` import anywhere in
+// browser through the pack's published public/, and a `node:` import anywhere in
 // that graph blocks the page's first module load.
 import { RENAMED_PACKS } from '../../../../engine/pack_loader/renamed-packs.mjs';
 

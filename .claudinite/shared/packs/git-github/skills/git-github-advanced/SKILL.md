@@ -9,7 +9,7 @@ A GitHub procedure the consuming repo's own docs set — its merge command, when
 
 ## Updating an issue's status: comment, don't overwrite
 
-To post a **status update** on an issue (the lifecycle's "update the issue's status" step), use `add_issue_comment`. **Don't** reach for `issue_write` with `method: update` — that edits the issue itself and **replaces the whole body**, silently wiping the original description. Reserve `issue_write`/`update` for genuinely editing the issue (retitling, rewriting the body on purpose).
+To post a **status update** on an issue (the lifecycle's "update the issue's status" step, for a change that has one), use `add_issue_comment`. **Don't** reach for `issue_write` with `method: update` — that edits the issue itself and **replaces the whole body**, silently wiping the original description. Reserve `issue_write`/`update` for genuinely editing the issue (retitling, rewriting the body on purpose).
 
 ## An auto-merge refusal is not a verdict — read the PR's state, then act
 
@@ -149,7 +149,7 @@ GitHub **Actions** reports results as **check runs**, not the legacy **commit st
 
 ## To confirm a non-PR run (push / dispatch), read its job logs — it has no PR check runs
 
-A `push` or `workflow_dispatch` run isn't attached to a PR, so the PR-scoped check-run query above doesn't apply to it. Confirm such a run through the GitHub API/MCP tools: `get_job_logs(run_id, failed_only: true)` — "0 failed jobs" means green — or, for a release build, `get_release_by_tag`. `get_job_logs` needs more than a bare `run_id`: it rejects with "job_id is required when failed_only is false" unless you pass `failed_only: true` or fetch a `job_id` first (`list_workflow_jobs`), and it 404s for a job still `in_progress` — wait for the job to finish. Don't `curl` the run's status instead: in a sandboxed session every repo-scoped `api.github.com` path 403s with an error body that never matches a success pattern, so a `curl`/`Monitor` poll silently reports "still running" until it times out. Reaching the host proves nothing — the unscoped `/rate_limit` answers 200 in the same session. The same error body fails the other way too: a loop deriving a pending-*count* from it reads the absent fields as zero pending and reports "all checks concluded" within a second, while the real checks are still `in_progress`. Verify any curl-based result against `get_check_runs` before acting on it.
+A `push` or `workflow_dispatch` run isn't attached to a PR, so the PR-scoped check-run query above doesn't apply to it. Confirm such a run through the GitHub API/MCP tools: `get_job_logs(run_id, failed_only: true)` — "0 failed jobs" means green — or, for a release build, `get_release_by_tag`. `get_job_logs` needs more than a bare `run_id`: it rejects with "job_id is required when failed_only is false" unless you pass `failed_only: true` or fetch a `job_id` first (`actions_list`, method `list_workflow_jobs`), and it 404s for a job still `in_progress` — wait for the job to finish. Prefer those tools to a `curl` of the run's status, because what the shell can reach depends on a scope the poll itself never reports: the sandbox's egress proxy authenticates `api.github.com` as the session's own GitHub identity, so a repo **in the session's scope** answers 200 with no `Authorization` header of its own, while a repo **outside** it 403s with `GitHub access to this repository is not enabled for this session. Use add_repo to request access.` — an error body that never matches a success pattern, so a `curl`/`Monitor` poll on an out-of-scope repo silently reports "still running" until it times out. Reaching the host proves nothing either way: the unscoped `/rate_limit` and `/user` answer 200 in the same session. The same error body fails the other way too: a loop deriving a pending-*count* from it reads the absent fields as zero pending and reports "all checks concluded" within a second, while the real checks are still `in_progress`. Verify any curl-based result against the PR's check runs before acting on it.
 
 ## Waiting on a run or check: one mechanism, never two at once
 
@@ -157,7 +157,7 @@ Resolve the wait through exactly one path — a `Monitor` until-loop, **or** dir
 
 ## A run artifact resolves to a blob-storage URL a sandboxed session can't reach
 
-`download_workflow_run_artifact` hands back a `*.blob.core.windows.net`-style URL that a sandbox's egress proxy denies at CONNECT, so chasing it burns a call for nothing. Read `get_job_logs` with a generous `tail_lines` to learn which step or case failed, then reproduce it locally.
+`actions_get`'s `download_workflow_run_artifact` hands back a `*.blob.core.windows.net`-style URL that a sandbox's egress proxy denies at CONNECT, so chasing it burns a call for nothing. Read `get_job_logs` with a generous `tail_lines` to learn which step or case failed, then reproduce it locally.
 
 ## A long-running workflow that commits generated files will race a more-frequent scheduled writer
 

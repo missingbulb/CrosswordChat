@@ -7,7 +7,7 @@
 // IT DOES NOT CLAIM. The claim protocol (read labels → swap ready → agent-running
 // → post a claim comment → re-read, earliest claim wins) needs GitHub WRITES,
 // which the executor session can only make through its MCP tools, so it stays
-// agent-driven prose in executor.md. This shell only decides "is there a dispatch
+// agent-driven prose in public/instructions.md. This shell only decides "is there a dispatch
 // here, is it mine, and is it legal".
 //
 // TWO TRIGGER SOURCES, because the same `issues.labeled` webhook reaches an
@@ -139,7 +139,7 @@ export const scopeForLabel = (label) =>
 // vendored engine at `<root>/.claudinite/shared/packs/claudinite-tasks/`, the canon
 // repo runs its own at `<root>/packs/claudinite-tasks/`. Deriving it from the module's
 // own location means whichever copy the executor invoked resolves against that
-// copy's own repo, with nothing to pass — and nothing for executor.md to explain.
+// copy's own repo, with nothing to pass — and nothing for the instructions to explain.
 const MOUNT_SUFFIX = sep + SHARED_SUBDIR;
 export function repoRootFrom(moduleUrl) {
   // <home>/packs/claudinite-tasks/src/session/<this file>

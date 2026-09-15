@@ -31,6 +31,7 @@ import { isReleasable } from './readiness.mjs';
 import { isQueueItem } from '../items/read.mjs';
 import { pickOrder } from '../items/pick-order.mjs';
 import { lastLivenessAt } from '../items/heartbeat.mjs';
+import { startRunCost } from '../items/run-record.mjs';
 import {
   WORK_PREFIX, BLOCKED, READY, TASK_OBSOLETE,
   NEEDS_HUMAN_DECISION, LIVE_STATUSES,
@@ -533,41 +534,35 @@ export function blockersToResolve(items, requests, known) {
   return wanted;
 }
 
-async function main() {
-  // THE OPERATOR HOLD, FIRST ACT (PRINCIPLES.md) — before the config load, before the
-  // first API call, so a held queue reads nothing and writes nothing rather than
-  // deriving the world and then declining to act on it.
-  if (isSuspended()) { console.log('## Claudinite scheduler run\n'); console.log(suspendedNotice()); return; }
-  const { makeGh } = await import('../world/github.mjs');
-  const { actionRepoContext, repoRoot } = await import('../world/actions.mjs');
-  const { discoverTasks } = await import('../contract/discover.mjs');
-  const { loadConfig } = await import('../../../../engine/checks/helpers/repo-context.mjs');
-  const { isDormant, dormancyErrors } = await import('../contract/dormancy.mjs');
+// THE RUN ITSELF, over an injected world. Everything between the task list and the
+// drain gate: the two listings, the ask, the ops the plan emits and the forced
+// wake. It takes the world it acts on — the GitHub reader, the repo, the checkout,
+// the task set, the instant, the signal collector — so the same code that a member's
+// workflow drives is what the scenario harness drives against the fake world
+// (`test/sim/`), rather than a second copy of the applier written to look like it.
+//
+// `collectSignalsFor({ items })` is the signal seam, a factory rather than a
+// function because the collector binds the queue this run already holds: the run
+// history of every task then costs no read of its own.
+//
+// It returns what the run decided — `ops`, `asked`, the `pickable` count the drain
+// gate published, and `problems`, the failures that make the job red. The CLI shell
+// below is what turns the last of those into an exit code; nothing here touches the
+// process.
+// `phase(name)` is the run-cost timer (run-record.mjs), injected for the same
+// reason the rest is: a harness driving this run keeps no cost record, and the
+// three phases are boundaries inside this function rather than around it.
+export async function schedulerRun({
+  gh, repo, root, config, tasks, defaultBranch = 'main', now,
+  collectSignalsFor, wake = '', log = console.log, setOutput = setStepOutput,
+  phase = () => () => {},
+}) {
   const { ensureLabels, addLabel, removeLabel, comment, closeIssue, createIssue, listComments } = await import('../world/github.mjs');
-
-  const root = repoRoot();
-  const { repo, defaultBranch } = actionRepoContext();
-  if (!repo) { console.error('GITHUB_REPOSITORY not set — not in an Actions context'); process.exit(1); }
-  const config = loadConfig(root);
-
-  console.log('## Claudinite scheduler run\n');
-  // Reported before the gate, never after: a mis-typed value reads as AWAKE, so a
-  // project that believes it is asleep would otherwise watch a full run go by with
-  // nothing saying why.
-  for (const e of dormancyErrors(config)) console.log(`! ${e.what} — ${e.fix}`);
-  if (isDormant(config)) {
-    console.log('- this project declares its scheduler dormant — no items instantiated, readied or reclaimed');
-    return;
-  }
-
-  const gh = makeGh();
-  const { tasks, errors } = await discoverTasks(root, config);
-  for (const e of errors) console.log(`! ${e.what}`);
-
-  const now = clockNow();
+  const problems = [];
   // Closed items matter only back to the run-history horizon — the longest any
   // cadence term looks; older history can never change a verdict.
-  const since = new Date(now.getTime() - RUN_HORIZON_DAYS * 86400e3).toISOString();
+  const since = new Date(new Date(now).getTime() - RUN_HORIZON_DAYS * 86400e3).toISOString();
+  const endList = phase('list');
   const items = await listWorkItems(gh, repo, { since });
   const requests = await listMarkedIssues(gh, repo);
 
@@ -583,6 +578,7 @@ async function main() {
     if (item.state !== 'open' || !isStatus(item, STATUS_RUNNING_EXECUTOR)) continue;
     item.livenessAt = lastLivenessAt(await listComments(gh, repo, item.number));
   }
+  endList();
 
   // THE ASK (PRINCIPLES.md), in two passes. The task's run-history terms — its
   // cadence, its view of its last failure — read only the queue this run already
@@ -593,8 +589,8 @@ async function main() {
   // is an `error`, which fails OPEN in the plan. The scheduler stub holds no
   // FLEET_GITHUB_TOKEN (unlike the executor workflow), so a fleet task fails open
   // here on exactly the ticks its cadence holds and the executor decides.
-  const { collectSignalsForTask, windowDaysOf } = await import('../signals/for-task.mjs');
-  const collectFor = collectSignalsForTask({ gh, repo, root, config, defaultBranch, items });
+  const { windowDaysOf } = await import('../signals/for-task.mjs');
+  const collectFor = collectSignalsFor({ items });
   const evaluate = async (task) => {
     if (task.decl.preconditions === undefined) return { error: 'the task declares no "preconditions"' };
     const packConfig = config.packConfig?.[task.pack] ?? {};
@@ -632,13 +628,16 @@ async function main() {
     return judge(signals, false);
   };
 
+  const endAsk = phase('ask');
   const { ops, asked } = await planSchedulerRun({
     tasks, items, requests, now, schedule: config.taskScheduler, stateOf: (n) => known.get(n) ?? null,
     evaluate,
   });
+  endAsk();
   // The whole record of an ask is this line — a decline writes nothing durable.
-  for (const a of asked) console.log(`- asked ${a.task}: ${a.verdict}${a.reason ? ` — ${a.reason}` : ''}`);
+  for (const a of asked) log(`- asked ${a.task}: ${a.verdict}${a.reason ? ` — ${a.reason}` : ''}`);
 
+  const endDrain = phase('drain');
   if (ops.some((o) => o.kind === 'create' || o.kind === 'adopt')) await ensureLabels(gh, repo, QUEUE_LABELS);
   // The mark is ensured whenever the mode can run here at all, not only when
   // something was marked: `task:origin:ad-hoc` is the entry point, and a label that
@@ -663,12 +662,12 @@ async function main() {
       if (res.number) {
         if (op.labels.includes(READY)) readied.add(res.number);
         minted.push({ number: res.number, title: op.title, body: op.body, state: 'open', labels: op.labels });
-        console.log(`- created #${res.number} ${op.pack}/${op.task} [${op.labels.join(' ')}]`);
-      } else console.log(`! could not create the work item for ${op.pack}/${op.task}: ${res.status}`);
+        log(`- created #${res.number} ${op.pack}/${op.task} [${op.labels.join(' ')}]`);
+      } else log(`! could not create the work item for ${op.pack}/${op.task}: ${res.status}`);
     } else if (op.kind === 'ready') {
       await swapStatus({ addLabel, removeLabel }, gh, repo, { number: op.issue }, STATUS_BLOCKED, READY);
       readied.add(op.issue);
-      console.log(`- readied #${op.issue}`);
+      log(`- readied #${op.issue}`);
     } else if (op.kind === 'reclaim') {
       // The reclaim comment is also the EPISODE BOUNDARY: every claim before it is
       // dead, and arbitrating over dead claims makes one outrank every future live
@@ -676,7 +675,7 @@ async function main() {
       await comment(gh, repo, op.issue, `${EPISODE_MARKER}\n${op.reason}`);
       await swapStatus({ addLabel, removeLabel }, gh, repo, { number: op.issue }, STATUS_RUNNING_EXECUTOR, op.to);
       if (op.to === READY) readied.add(op.issue);
-      console.log(`- reclaimed #${op.issue} -> ${op.to}`);
+      log(`- reclaimed #${op.issue} -> ${op.to}`);
     } else if (op.kind === 'adopt') {
       // THE ISSUE IS THE ITEM, so adoption writes to it rather than filing anything:
       // the machine block first, the status second. That order is what makes a torn
@@ -684,8 +683,8 @@ async function main() {
       // run (which rewrites it), while a status with no block would name no task.
       const res = await setIssueBody(gh, repo, op.request, op.body);
       if (res.status !== 200) {
-        console.log(`! could not adopt #${op.request}: its body could not be written (${res.status})`);
-        process.exitCode = 1;
+        log(`! could not adopt #${op.request}: its body could not be written (${res.status})`);
+        problems.push(`could not adopt #${op.request} (${res.status})`);
         continue;
       }
       if (op.origin) await addLabel(gh, repo, op.request, op.origin);
@@ -703,31 +702,31 @@ async function main() {
           ? '\n\nThe `Task:`/`Model:`/`Automerge:` fields in this body were ignored: they are honoured only for an author with push access on this repository, so this run takes the defaults. '
           : '')
         + `To withdraw the request before it starts, remove the \`${ORIGIN_AD_HOC}\` mark and the status beside it.`);
-      console.log(`- adopted #${op.request} for ${op.task} (${op.model ?? 'default model'}${op.blockedBy.length ? `, blocked on ${op.blockedBy.map((n) => `#${n}`).join(' ')}` : ''}${op.merge ? `, may merge: ${op.merge}` : ''})`);
+      log(`- adopted #${op.request} for ${op.task} (${op.model ?? 'default model'}${op.blockedBy.length ? `, blocked on ${op.blockedBy.map((n) => `#${n}`).join(' ')}` : ''}${op.merge ? `, may merge: ${op.merge}` : ''})`);
     } else if (op.kind === 'supersede') {
       await comment(gh, repo, op.issue, op.reason);
       await addLabel(gh, repo, op.issue, TASK_OBSOLETE);
       await closeIssue(gh, repo, op.issue, 'not_planned');
-      console.log(`- superseded #${op.issue} — #${op.request} was re-marked`);
+      log(`- superseded #${op.issue} — #${op.request} was re-marked`);
     } else if (op.kind === 'dedupe') {
       await comment(gh, repo, op.issue, op.reason);
       await addLabel(gh, repo, op.issue, TASK_OBSOLETE);
       await closeIssue(gh, repo, op.issue, 'not_planned');
-      console.log(`- deduped #${op.issue}`);
+      log(`- deduped #${op.issue}`);
     } else if (op.kind === 'retire-orphan') {
       await comment(gh, repo, op.issue, op.reason);
       await addLabel(gh, repo, op.issue, TASK_OBSOLETE);
       await closeIssue(gh, repo, op.issue, 'not_planned');
-      console.log(`- reaped #${op.issue} — ${op.pack}/${op.task} is not declared at HEAD`);
+      log(`- reaped #${op.issue} — ${op.pack}/${op.task} is not declared at HEAD`);
     }
   }
 
-  if (!ops.length) console.log('- nothing to do: no task said yes, nothing is marked, nothing is due to be readied, no claim is dead');
+  if (!ops.length) log('- nothing to do: no task said yes, nothing is marked, nothing is due to be readied, no claim is dead');
 
   // The forced wake, last: an item this run just instantiated is wakeable in the
   // same run, so a force never has to be pressed twice. The drain job that follows
   // picks up whatever this readies.
-  const spec = actionsEnv().CLAUDINITE_WAKE ?? '';
+  const spec = wake ?? '';
   if (spec.trim()) {
     const { wakeItem } = await import('./create-work-item.mjs');
     // Re-read for what the ops above readied, unioned with what they created: the
@@ -738,7 +737,7 @@ async function main() {
     for (const w of wake) {
       const res = await wakeItem(gh, repo, w.issue);
       if (res.ok) readied.add(w.issue);
-      console.log(res.ok ? `- woke #${w.issue} ${w.id}` : `! could not wake #${w.issue} ${w.id}: ${res.error}`);
+      log(res.ok ? `- woke #${w.issue} ${w.id}` : `! could not wake #${w.issue} ${w.id}: ${res.error}`);
     }
     if (create.length) await ensureLabels(gh, repo, QUEUE_LABELS);
     for (const c of create) {
@@ -747,7 +746,7 @@ async function main() {
         // `Woken:` is what lets the task's cadence terms hold at pick — a person's
         // wake stands in for the cadence — while everything else it requires
         // still applies (docs/PRINCIPLES.md).
-        body: workItemBody({ taskPath: c.taskPath, context: [FORCED_WAKE_CONTEXT], woken: now.toISOString() }),
+        body: workItemBody({ taskPath: c.taskPath, context: [FORCED_WAKE_CONTEXT], woken: new Date(now).toISOString() }),
         // A forced mint stands in for the occurrence the schedule would have filed,
         // so it wears the same origin: the task IS on the schedule, and this item is
         // its current occurrence (PRINCIPLES.md).
@@ -755,18 +754,20 @@ async function main() {
       });
       if (res.number) {
         readied.add(res.number);
-        console.log(`- created #${res.number} ${c.id} (forced: it had no open standing item)`);
-      } else { console.log(`! could not create a work item for ${c.id}: ${res.status}`); process.exitCode = 1; }
+        log(`- created #${res.number} ${c.id} (forced: it had no open standing item)`);
+      } else { log(`! could not create a work item for ${c.id}: ${res.status}`); problems.push(`could not create a work item for ${c.id} (${res.status})`); }
     }
-    for (const a of already) console.log(`- ${a.id} is already in flight on #${a.issue} — left alone`);
-    for (const u of unmatched) console.log(`! nothing woken for "${u.id}": ${u.why}`);
+    for (const a of already) log(`- ${a.id} is already in flight on #${a.issue} — left alone`);
+    for (const u of unmatched) log(`! nothing woken for "${u.id}": ${u.why}`);
     // A force that woke nothing is a failed force, and a green run saying so in a
     // log line is how it goes unnoticed by the fleet lever that pressed it.
-    if (unmatched.length) process.exitCode = 1;
+    if (unmatched.length) problems.push(`the wake matched nothing for ${unmatched.map((u) => `"${u.id}"`).join(', ')}`);
   }
 
   // LAST, AFTER THE WAKE: whether this run leaves anything for an executor to do.
-  await announcePickable(gh, repo, tasks, readied);
+  const pickable = await announcePickable(gh, repo, tasks, readied, { log, setOutput });
+  endDrain();
+  return { ops, asked, pickable, problems };
 }
 
 // THE DRAIN GATE (PRINCIPLES.md). Every workflow run is a billed invocation whatever it
@@ -804,7 +805,7 @@ export function withOwnWrites(listed, mintedThisRun = []) {
   return [...listed, ...mintedThisRun.filter((i) => !seen.has(i.number))];
 }
 
-async function announcePickable(gh, repo, tasks, readiedThisRun = new Set()) {
+async function announcePickable(gh, repo, tasks, readiedThisRun = new Set(), { log = console.log, setOutput = setStepOutput } = {}) {
   const { listOpenWorkItems } = await import('../items/read.mjs');
   const byId = new Map(tasks.map((t) => [`${t.pack}/${t.id}`, t]));
   const byPath = new Map(tasks.map((t) => [t.taskPath, `${t.pack}/${t.id}`]));
@@ -813,10 +814,70 @@ async function announcePickable(gh, repo, tasks, readiedThisRun = new Set()) {
     scheduledOf: (id) => (byId.has(id) ? isScheduledTask(byId.get(id).decl) : null),
     pathTo: (p) => byPath.get(p) ?? null,
   });
-  console.log(pickable
+  log(pickable
     ? `- ${pickable} item(s) pickable — the drain job dispatches an executor`
     : '- nothing pickable — no executor is dispatched this run');
-  setStepOutput('pickable', pickable ? 'true' : 'false');
+  setOutput('pickable', pickable ? 'true' : 'false');
+  return pickable;
+}
+
+// --- CLI: the argless wrapper the vendored scheduler workflow invokes -----------
+// It builds the real world — the operator hold, the checkout, the config, the
+// discovered tasks, the Action's own token — and hands it to `schedulerRun` above.
+// Nothing here decides anything; every decision is in the run it calls.
+async function main() {
+  // THE OPERATOR HOLD, FIRST ACT (PRINCIPLES.md) — before the config load, before the
+  // first API call, so a held queue reads nothing and writes nothing rather than
+  // deriving the world and then declining to act on it.
+  if (isSuspended()) { console.log('## Claudinite scheduler run\n'); console.log(suspendedNotice()); return; }
+  const { makeGh, apiCallCount } = await import('../world/github.mjs');
+  const { actionRepoContext, repoRoot } = await import('../world/actions.mjs');
+  const { discoverTasks } = await import('../contract/discover.mjs');
+  const { loadConfig } = await import('../../../../engine/checks/helpers/repo-context.mjs');
+  const { isDormant, dormancyErrors } = await import('../contract/dormancy.mjs');
+  const { collectSignalsForTask } = await import('../signals/for-task.mjs');
+
+  const root = repoRoot();
+  const { repo, defaultBranch } = actionRepoContext();
+  if (!repo) { console.error('GITHUB_REPOSITORY not set — not in an Actions context'); process.exit(1); }
+  const config = loadConfig(root);
+
+  console.log('## Claudinite scheduler run\n');
+  // Reported before the gate, never after: a mis-typed value reads as AWAKE, so a
+  // project that believes it is asleep would otherwise watch a full run go by with
+  // nothing saying why.
+  for (const e of dormancyErrors(config)) console.log(`! ${e.what} — ${e.fix}`);
+  if (isDormant(config)) {
+    console.log('- this project declares its scheduler dormant — no items instantiated, readied or reclaimed');
+    return;
+  }
+
+  const gh = makeGh();
+  const { tasks, errors } = await discoverTasks(root, config);
+  for (const e of errors) console.log(`! ${e.what}`);
+
+  // WHAT THIS TICK COSTS, timed as it runs (run-record.mjs). The three phases are
+  // the three things a tick does — read the queue, ask the tasks, act on the answer
+  // — and the record is printed at the end of the run, into this job's log, which is
+  // the only place a tick's cost can live: a tick owns no work item to write it on.
+  const cost = startRunCost({
+    workflow: 'scheduler', runId: actionsEnv().GITHUB_RUN_ID ?? null, apiCalls: apiCallCount,
+  });
+
+  const { problems } = await schedulerRun({
+    gh, repo, root, config, tasks, defaultBranch, now: clockNow(),
+    collectSignalsFor: ({ items }) => collectSignalsForTask({ gh, repo, root, config, defaultBranch, items }),
+    wake: actionsEnv().CLAUDINITE_WAKE ?? '',
+    phase: cost.phase,
+  });
+
+  // The tick's own cost, printed once, at the end. A `console.log` and nothing else:
+  // the fold reads it out of this job's log, bounded at the scheduler's own cadence.
+  console.log(`\n${cost.record()}`);
+
+  // A force that woke nothing, or a write the run could not make, is a failed run:
+  // a green job saying so in a log line is how it goes unnoticed by whoever pressed it.
+  if (problems.length) process.exitCode = 1;
 }
 
 // Run only when invoked directly (the workflow's `node scheduler-run.mjs`), never on

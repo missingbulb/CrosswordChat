@@ -85,15 +85,15 @@ The one check no Action can make. This repo's executor routine is fired by an AP
 call to the endpoint its config names, and it is not a GitHub artifact — only a
 session can see it. Confirm it exists and that its whole stored prompt is the one
 line pointing at the mounted queue instructions
-(`.claudinite/shared/packs/claudinite-tasks/queue/instructions.md`): everything a task
+(`.claudinite/shared/packs/claudinite-tasks/public/instructions.md`): everything a task
 session does comes from that file, so a prompt carrying instructions of its own is
 behavior nobody reviews. Report what you found either way.
 
 ## 6. End green, or park
 
 Run this repo's checks, and its tests (§4). Green: push to the branch, then hand the
-PR to the shared delivery procedure — `deliver-pr.md`, at the root of the claudinite-tasks pack
-(`.claudinite/shared/packs/claudinite-tasks/deliver-pr.md`; the canon runs it from
+PR to the shared delivery procedure — `deliver-pr.md`, beside the landing lane it describes
+(`.claudinite/shared/packs/claudinite-tasks/src/deliver/deliver-pr.md`; the canon runs it from
 `packs/claudinite-tasks/`) — and do what it says. Nothing else will land this PR:
 the deterministic half arms auto-merge only on a `merge` terminal, and yours was
 `apply-stage`, so it sits unarmed until you deliver it.

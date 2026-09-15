@@ -132,7 +132,9 @@ export async function createWorkItem(gh, repo, { pack, task, taskPath, scheduled
   return { ok: true, number: res.number };
 }
 
-async function main() {
+// Exported because `public/create-work-item.mjs` runs it: prose in a member's own local
+// packs still addresses this command at that path, and nothing here can rewrite it.
+export async function runCreateWorkItem() {
   const { makeGh } = await import('../world/github.mjs');
   const { actionRepoContext, repoRoot } = await import('../world/actions.mjs');
   const { discoverTasks } = await import('../contract/discover.mjs');
@@ -165,5 +167,5 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(e); process.exit(1); });
+  runCreateWorkItem().catch((e) => { console.error(e); process.exit(1); });
 }

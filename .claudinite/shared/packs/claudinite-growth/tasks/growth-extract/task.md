@@ -19,9 +19,9 @@ too. Do not widen past that window.
   **local git** in the checkout: the commits, the `conversation-logs` branch and its files
   (`git fetch`/`show` — read-only), and staging the lesson edits onto a branch. Reading issue/PR activity,
   opening the PR and delivering it, posting the exchange summaries and the tracking-issue log go
-  through the session's **GitHub MCP tools** (`mcp__github__*`). The unattended run has no shell GitHub
-  access — the shell reaches only a git-over-HTTPS proxy scoped to one repo, with no REST credential — so
-  never reach for `gh`/`curl` or a cross-repo clone.
+  through the session's **GitHub MCP tools** (`mcp__github__*`). The unattended run carries no `gh` CLI
+  and an empty `GITHUB_TOKEN`, so never reach for `gh`/`curl`; and never clone another repo, which the
+  shell's git can still reach — that boundary is the session's granted scope, not a missing capability.
 - **The repo's local packs.** The set identified in
   [this pack's README](../../README.md#identifying-a-projects-capture-surface-its-local-packs) — everything
   under `.claudinite/local/packs/`, the repo's own packs; never the read-only mounted canon
@@ -56,9 +56,9 @@ If the run found at least one genuinely new lesson, it lands **all** of it — b
 upgrade pass produced — through a **single PR**: one commit for the whole run on the branch your item names
 (`Target-branch:`), not one per lesson and not one per half. Push it onto `Target-pr:` where one is named —
 the run then joins the review already pending — and otherwise open the PR on that branch (title
-`Claudinite growth: extract lessons`, its commit referencing the tracking issue so the `task-lifecycle` gate
-passes); never search for an open pull request or pick a branch of your own. Then **deliver it by the shared
-procedure — [deliver-pr.md](../../../claudinite-tasks/deliver-pr.md)** — that procedure, never this
+`Claudinite growth: extract lessons`, its commit referencing the tracking issue); never search for an
+open pull request or pick a branch of your own. Then **deliver it by the shared procedure —
+[deliver-pr.md](../../../claudinite-tasks/src/deliver/deliver-pr.md)** — that procedure, never this
 file, owns whether and how the PR lands. This writes only the repo's *own* local
 packs (not the shared canon). A run that finds nothing and opens nothing is fine — and common.
 

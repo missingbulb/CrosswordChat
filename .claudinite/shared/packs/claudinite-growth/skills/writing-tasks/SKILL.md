@@ -236,7 +236,7 @@ where the mechanics belong: `agent_model`, `schedule_after`, `expected_outcome` 
 merges itself, not what it authorizes to land unreviewed, not what becomes of an
 earlier run's still-open one. Say what this run must do (open a PR, never merge
 it, what its body must carry), point at the shared delivery procedure
-([deliver-pr.md](../../../claudinite-tasks/deliver-pr.md)) where the run must
+([deliver-pr.md](../../../claudinite-tasks/src/deliver/deliver-pr.md)) where the run must
 invoke one, and stop. Watch for the spelled-out form, which names no field and so
 reads as ordinary instruction: "an earlier round's pull request closes as
 superseded once yours exists" *is* `expected_outcome`. (2)
@@ -308,6 +308,11 @@ no read:
 - `last-run-not-failed` — the newest run does not stand at a failure park.
   Declare it where a run past the task's own failure would repeat the fault;
   absent it, the next occurrence is filed beside the park.
+- `last-run-not-parked` — the newest run stands at no park at all, the three a
+  person's inbox owns included. Declare it where a round is not finished until a
+  person has dealt with it — an unmerged pull request parks on approval, which
+  `last-run-not-failed` reads as clear — and the next run would stack a second
+  round behind an unanswered one.
 
 A `due:` or `last-run-over:` term holds on a woken item — the wake stands in for
 the cadence — while every other condition still applies. A scheduled task with a
@@ -342,7 +347,7 @@ mistake:
 - **Scope.** Which files, PRs or members a granted run works on is the worker's
   decision, made in the work sections from the same signals. The conditions decide
   run or no-run, nothing else.
-- **Standing instruction and config** — a `pack_paths` list, a read-only
+- **Standing instruction and config** — the corpus a sweep writes, a read-only
   constraint. Those belong in `task.md`, where they hold on every run.
 
 ### No task runs on a silent repo unless its declaration says so
@@ -540,8 +545,8 @@ closing or running anything.
   occurrence is the task's own declaration, `last-run-not-failed`, with no default:
   declare it where a queue of items that will break the same way helps nobody and
   the silence is the signal; leave it out where the next run is what clears a
-  transient fault. The other three parks are one person's inbox, not a fault in
-  the task, and no term reads them.
+  transient fault. The other three parks are one person's inbox rather than a
+  fault in the task, so only the wider `last-run-not-parked` reads them.
 - **Never ran** → `task:status:rejected`, closed as not planned: the precondition
   declined, or the task is gone (file removed, pack undeclared). An obsolete item
   is not an anomaly and gets no park. A scheduled task's next occurrence is the

@@ -2,7 +2,7 @@
 
 Active when a browser speech API — `webkitSpeechRecognition` / `SpeechRecognition`, `speechSynthesis` / `SpeechSynthesisUtterance`, or `chrome.tts` — is referenced in JS/TS source. Portable runtime gotchas for browser voice I/O (speech-to-text and text-to-speech).
 
-Most gotchas are runtime browser behaviours with no repo-state signature a static check could read, so they live as prose (`RULES.md`). Nine call-site contracts **do** have a file-scoped signature — three in the [`web-speech-io`](skills/web-speech-io/SKILL.md) skill's bundle and six pack-level — and run as checks at every Stop and in CI; each failure message is the rule.
+Most gotchas are runtime browser behaviours with no repo-state signature a static check could read, so they live as prose (`RULES.md`). The call-site contracts that **do** have a file-scoped signature — some in the [`web-speech-io`](skills/web-speech-io/SKILL.md) skill's bundle, the rest pack-level — run as checks at every Stop and in CI; each failure message is the rule.
 
 Some of these APIs are extension-only, and where a rule touches MV3 service-worker or content-script mechanics this pack owns the speech-API facet of it specifically — never the general extension gotcha underneath.
 
@@ -22,7 +22,7 @@ Some of these APIs are extension-only, and where a rule touches MV3 service-work
 | Mic permission is per-origin | high | correctness | prose: <200 words + check (`mic-capture-released`) |
 | Prefer chrome.tts over speechSynthesis | medium | correctness | prose: <100 words |
 | Relay chrome.tts from a content script | high | correctness | prose: <100 words + skill check (`web-speech-no-window-api-in-service-worker`) |
-| An empty getVoices() means not-ready | high | correctness | prose: <50 words |
+| An empty getVoices() means not-ready | high | correctness | prose: <50 words + check (`tts-voices-cached-empty`) |
 | Don't trust the default voice | low | correctness | prose: <100 words |
 | Never reject a speak() promise | high | correctness | prose: <50 words + check (`tts-speak-settles`) |
 | Neither engine reliably supports SSML | low | correctness | prose: <50 words |
@@ -34,11 +34,12 @@ Distilled from `missingbulb/CrosswordChat` — a Chrome extension that solves th
 ## Checks
 
 The first three ride the [`web-speech-io`](skills/web-speech-io/SKILL.md) skill's bundle, and
-judge whether the APIs are reachable and released where the code runs. The six below them are
+judge whether the APIs are reachable and released where the code runs. The ones below them are
 pack-level and judge the API *contracts* themselves — read at the call site, comments stripped
 first, and parsed rather than grepped so the legitimate spellings stay quiet: a wrapper that
 delegates its terminal handling, a constraints object hoisted into a constant, a switch that
-dispatches side effects rather than mapping a value.
+dispatches side effects rather than mapping a value, a voice cache a `voiceschanged` listener
+keeps current.
 
 | Check | Severity | Reason | Enforcement |
 |---|---|---|---|
@@ -51,7 +52,8 @@ dispatches side effects rather than mapping a value.
 | `stt-interim-results-gated` | high | correctness | check: blocking |
 | `stt-terminal-handlers` | high | correctness | check: blocking |
 | `tts-speak-settles` | high | correctness | check: blocking |
+| `tts-voices-cached-empty` | high | correctness | check: blocking |
 
-What unites all six is that their breach is **silent**: nothing throws, nothing logs, and the
-app keeps showing a live session while the user is heard by nobody, or hears nothing. That is
-what earns them a scan rather than prose.
+What unites the pack-level ones is that their breach is **silent**: nothing throws, nothing logs,
+and the app keeps showing a live session while the user is heard by nobody, hears nothing, or
+hears every line in a voice nobody chose. That is what earns them a scan rather than prose.

@@ -403,12 +403,16 @@ export const isWorkItemTitle = (title) => parseWorkItemTitle(title) !== null;
 // resolves the path against the discovered task set instead (the executor does).
 const PACK_TASK_PATH_RE = /^(?:\.claudinite\/shared\/)?packs\/([^/]+)\/tasks\/([^/]+)\/[^/]+$/;
 const BUILT_IN_TASK_PATH_RE = /^(?:\.claudinite\/shared\/)?(?:engine\/scheduler|packs\/claudinite-tasks)\/queue\/tasks\/([^/]+)\/[^/]+$/;
+// The built-in spec's `public/` home, which new items name. `taskIdFromPath` is the
+// DECODE side, so this is read forever beside the two above: an item minted today
+// outlives any number of moves, and an undecodable path leaves it unattributable.
+const BUILT_IN_PUBLIC_TASK_PATH_RE = /^(?:\.claudinite\/(?:shared|local)\/)?packs\/claudinite-tasks\/public\/(implement-request)\.md$/;
 
 export function taskIdFromPath(path) {
   const p = String(path ?? '');
   const pack = PACK_TASK_PATH_RE.exec(p);
   if (pack) return { pack: canonicalPackId(pack[1]), task: pack[2] };
-  const builtIn = BUILT_IN_TASK_PATH_RE.exec(p);
+  const builtIn = BUILT_IN_TASK_PATH_RE.exec(p) ?? BUILT_IN_PUBLIC_TASK_PATH_RE.exec(p);
   return builtIn ? { pack: 'engine', task: builtIn[1] } : null;
 }
 
@@ -914,8 +918,20 @@ export function withSection(body, heading, lines, aliases = []) {
 // is a request awaiting adoption, not yet an item, and reading it as one would have
 // the janitor's stateless-repair rule park the person's issue for having no status.
 //
+// WHAT SAYS IT WAS ADOPTED IS EITHER ARTIFACT, and that is the point: adoption
+// writes the machine block AND the first status, and the mark beside them is a
+// LABEL a person can take off at any moment. Gated on the mark alone, an adopted
+// item whose requester removed it drops out of every read of the queue at once —
+// the executor never picks it, the precondition never gets to see the withdrawal
+// and decline it, and the janitor's rules cannot sweep what they cannot list, so
+// the item sits `waiting-for-executor` forever with nothing left to move it. Same
+// shape as `converge-item`'s refusal (missingbulb/Shepherd#360): a membership test
+// gated on the single artifact it exists to validate refuses exactly the items
+// that artifact went missing from.
+//
 // It lives with the vocabulary rather than with the listing that applies it because
 // the dashboard asks it in a BROWSER, where the listing's GitHub port does not load.
 export const isQueueItem = (issue) =>
   String(issue?.title ?? '').startsWith(WORK_PREFIX)
+  || machineBlockOf(issue?.body) !== null
   || (labelNames(issue).includes(ORIGIN_AD_HOC) && statusOf(issue) !== null);

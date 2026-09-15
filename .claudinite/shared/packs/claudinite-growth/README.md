@@ -18,7 +18,7 @@ scheduler (`packs/claudinite-tasks/discover.mjs`) wherever the pack is declared:
 | `growth-extract` ([tasks/growth-extract/task.md](tasks/growth-extract/task.md)) | the project changed in the window | the repo's own local packs, via a PR that auto-merges after CI |
 | `growth-dedup` ([tasks/growth-dedup/task.md](tasks/growth-dedup/task.md)) | weekly, when the canon or the project's local packs moved in the week | the repo's own local packs, via a PR that auto-merges after CI |
 | `prose-to-checks-sweep` ([tasks/prose-to-checks-sweep/task.md](tasks/prose-to-checks-sweep/task.md)) | weekly (no-ops cheaply on a quiet corpus) | a PR converting always-testable pack prose into checks |
-| `rule-revalidation` ([tasks/rule-revalidation/task.md](tasks/rule-revalidation/task.md)) | weekly | corrections to rules whose environment claim no longer probes true — auto-merging inside the repo's own local packs, reviewed where they reach a canon pack |
+| `rule-revalidation` ([tasks/rule-revalidation/task.md](tasks/rule-revalidation/task.md)) | weekly | corrections to rules whose environment claim no longer probes true, in the repo's own local packs |
 
 (Plus `logs-prune`, agentless — retention over the conversation-logs branch,
 [tasks/logs-prune/worker.mjs](tasks/logs-prune/worker.mjs). The hourly
@@ -37,7 +37,7 @@ described below, but it is the claudinite-tasks pack's task, not this one's.)
    whether any of it upgrades to a check before the PR opens.
 
 Everything lands in **one** PR, delivered to land where the repo's delivery settings allow
-(`packs/claudinite-tasks/deliver-pr.md`). The two extraction halves used to be two tasks firing in
+(`packs/claudinite-tasks/src/deliver/deliver-pr.md`). The two extraction halves used to be two tasks firing in
 the same nightly anchor against the same local packs; they share the lesson bar, the promotion ladder
 and the dedup surface ([extracting-lessons.md](extracting-lessons.md)), so the split bought nothing
 and cost a second opus dispatch, a second PR, and two runs deduping against a corpus the other was
@@ -63,15 +63,18 @@ GitHub MCP tools.
 
 1. **Capture — a step in the merge-to-main skill** (in-session, where the transcript lives).
    Right after a merge lands:
-   `node .claudinite/shared/packs/claudinite-growth/capture-log.mjs --issue <n>`
-   (in the canon repo itself: `node packs/claudinite-growth/capture-log.mjs --issue <n>`).
+   `node .claudinite/shared/packs/claudinite-growth/capture-log.mjs --pr <n>`
+   (in the canon repo itself: `node packs/claudinite-growth/capture-log.mjs --pr <n>`), `<n>` the
+   pull request the merge landed.
    Deterministic, seconds; it bundles the session transcript (sidechains inline, timestamp
    order), **scrubs enumeration-first** (every value the environment holds — `process.env`
    minus a short named allowlist of structural values, plus known credential stores — is
    redacted wherever it appears, with credential-shape patterns as the backstop; a secret the
    session itself transformed is beyond any static scrub, and push protection is the last
    net), and pushes one file per **capture event** onto the orphan **`conversation-logs`**
-   branch: `<stamp>--issue-<n>--<session>.jsonl`, commits marked `[skip ci]`.
+   branch: `<stamp>--pr-<n>--<session>.jsonl`, commits marked `[skip ci]`. A capture no merge
+   produced is keyed to an issue instead, `<stamp>--issue-<n>--<session>.jsonl`; every reader of
+   the branch takes both spellings.
    **Delta-aware, keyed on the session id:** every capture pushes only the entries after this
    session's previous capture, whatever event produced it, so any two events chain into
    disjoint files and a zero delta pushes nothing at all. Double-writing is therefore safe by
@@ -81,14 +84,12 @@ GitHub MCP tools.
    session clones and retention keeps them bounded.
 1. **Capture — again, when the session ends** ([session-end.mjs](session-end.mjs), invoked by the
    engine's SessionEnd hook runner for every active pack that ships one). Same capture, with
-   `--issue 0`: **`0` means "no associated issue"**, and the filename shape stays byte-identical
-   on purpose — the retention prune, the `conversationLogs` signal and the extract's filename
-   parse all already accept it, whereas a *new* shape would be invisible to the prune and become
-   immortal on the branch. This event is what captures the sessions that never merge (a review, an
-   investigation, a session that ended in a question) and the post-merge **tail** of the ones that
-   do. **Best effort:** a container reclaimed by timeout never fires it, so nothing depends on it
+   `--issue 0`: **`0` means "no associated issue"**, in the same filename shape the retention
+   prune, the `conversationLogs` signal and the extract's filename parse read. This event is what
+   captures the sessions that never merge (a review, an investigation, a session that ended in a
+   question) and the post-merge **tail** of the ones that do. **Best effort:** a container reclaimed by timeout never fires it, so nothing depends on it
    having run — every firing enriches the record, every miss leaves exactly the merge-only
-   behaviour. An `issue-0` log has no issue for the extract to post its exchange
+   behaviour. An `issue-0` log has no PR or issue for the extract to post its exchange
    summary on; nothing else about its lifecycle differs.
    **Unattended sessions capture through the same step, deliberately not through the hook.** A
    scheduled task's executor session ends by having its container reclaimed, which is exactly
@@ -97,11 +98,11 @@ GitHub MCP tools.
    place of `0`. Those logs therefore file under the task that ran (the item's title
    names `pack/task`), and the work no human watched becomes as countable as the work one did.
 2. **The pass — the conversation half of [growth-extract](tasks/growth-extract/task.md)**
-   (precondition: a substantive merge; local git on the repo's working tree, MCP only for the issue comment). It
+   (precondition: a substantive merge; local git on the repo's working tree, MCP only for the provenance comment). It
    applies the [extract-from-conversations](skills/extract-from-conversations/SKILL.md) skill (the
    friction signals and the measured efficiency analysis, computable from the log's timestamps and
    token usage) over [extracting-lessons.md](extracting-lessons.md)'s shared bar, routes keepers into
-   the member's local packs, and posts on the worked issue, for each rule that landed, a
+   the member's local packs, and posts on the worked PR or issue, for each rule that landed, a
    **200-word-max** summary of the slice of conversation that caused it — the dialogue itself is
    never pasted there, it is far too verbose for an issue —
    **extraction is the only path to permanence**: a log that yields no rule gets no comment,
@@ -146,9 +147,14 @@ it belongs to the fleet-enforcer repo, the only place that knows who the members
 ## Skills
 
 Each stage's **method** lives in a skill, so the task doc frames the unattended run and the same
-method is available to an owner asking in-session. Extract's three are listed above;
+method is available to an owner asking in-session. A skill states the **action** and names no
+corpus, so the canon-side twin of a stage — `claudinite-canon-curation`'s tasks over a `packs/`
+shelf — loads the same skill and supplies its own. Extract's three are listed above;
 [**growth-dedup**](skills/growth-dedup/SKILL.md) is the dedup stage's — what to prune, strip, or
 rephrase, the keep-test, and the shrink-only discipline.
+[**revalidating-rules**](skills/revalidating-rules/SKILL.md) is the revalidation stage's — what
+counts as a claim whose truth lives outside the repo, the two probe rules, and the four verdicts a
+run reports.
 [**writing-pack-prose**](skills/writing-pack-prose/SKILL.md) owns how pack prose is *written* —
 the rule format, findability, and the per-pack `references.md` that carries each rule's
 reaffirmable rationale behind an end-of-line `(n)` marker (checks join via `check:<id>` entries);
@@ -174,6 +180,7 @@ here: its subject is Claudinite's own surface, not lesson capture.
 |---|---|---|---|
 | Recording a local pack change | high | complexity | prose: <100 words |
 | Wanting a job to run in Actions | high | complexity | prose: <100 words + check (`scheduler-workflow-shape`) |
+| A task writes only local packs | high | correctness | prose: <50 words + check (`growth-write-scope`) |
 | Describing another pack's artifact | medium | complexity | prose: <50 words |
 
 ## Coded rules
@@ -181,11 +188,13 @@ here: its subject is Claudinite's own surface, not lesson capture.
 | Rule | Kind | What |
 |---|---|---|
 | `dedup-prune-integrity` | work-scope ([dedup-integrity.mjs](workRules/dedup-integrity.mjs)) | a dedup edit only removes portable text — never grows a local pack or re-imports a canon rule |
-| `growth-write-scope` | work-scope ([growth-write-scope.mjs](workRules/growth-write-scope.mjs)) | a capture run (extract, dedup) writes only the repo's own local packs |
+| `growth-write-scope` | work-scope ([growth-write-scope.mjs](workRules/growth-write-scope.mjs)) | a growth run (extract, dedup, either sweep) writes only the repo's own local packs |
 
-The capture runs' write surface is the local packs and nothing else — a run improves the repo's
-**packs**, never the canon it prunes against or the project's own code. `growth-write-scope` is
-the machine guarantee behind that, keyed on the pinned commit titles of exactly those two runs.
+Every run this pack schedules writes the local packs and nothing else — a run improves the repo's
+own **packs**, never the canon it reads against or the project's own code. `growth-write-scope` is
+the machine guarantee behind that, keyed on those runs' pinned commit titles; the same actions over
+a canon's `packs/` shelf are `claudinite-canon-curation` tasks, titled so this gate reads them as
+somebody else's business.
 
 ## Rules expire when the environment moves — revalidation
 
@@ -201,11 +210,11 @@ environment-dependent claim in the capture surface — the judgment prose that m
 is out of scope, so that set is far smaller than the corpus — **runs** the smallest read-only thing
 that would distinguish true from false for each, and corrects what the probe contradicts, in a PR
 whose body carries the probe evidence, since that is the one thing a reviewer cannot re-derive from
-the diff. Corrections confined to the repo's own local packs land on that evidence alone; a run that
-rewrote a canon pack — rules this repo publishes to every member — parks for the owner, and that is
-the whole PR, since one run delivers one branch. Its scope is the same `pack_paths` config
-`prose-to-checks-sweep` reads, so a repo names its capture surface once. Covering the whole set every run is what lets the task hold
-no state between runs: there is no "what did I probe last time" to remember.
+the diff. Its scope is `.claudinite/local/packs/`, the same corpus `prose-to-checks-sweep` works and
+the only one this pack ever writes; a canon pack's environmental claims are re-probed on the shelf
+that publishes them, by `claudinite-canon-curation/canon-rule-revalidation`, through the same
+[revalidating-rules](skills/revalidating-rules/SKILL.md) skill. Covering the whole set every run is
+what lets the task hold no state between runs: there is no "what did I probe last time" to remember.
 
 The dangerous verdict is the one it refuses to reach. An executor session carries the reach its
 repo's routine was provisioned with, which is not the reach every rule was written under, so a probe

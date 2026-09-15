@@ -133,10 +133,10 @@
 ## Harness-tool contracts
 
 
-- **Calling `Edit`** — the file's content must be current in the session, which a read *or* a
-  write in this session gives it. When neither has happened, read that exact path first; a narrow
-  offset window satisfies it. Read it anyway whenever you need to see it — Edit's tracking shows
-  you nothing. (3)
+- **Calling `Edit` on a path outside the working directory and the session scratchpad** — a `Read`
+  or a `Write` in this session is required first, and a shell write does not count; a narrow offset
+  window satisfies it. Inside either root nothing is required, so read a file when you need to see
+  it rather than to unlock it — Edit's tracking shows you nothing. (3)
 
 
 - **Polling with an `until` loop** — write a condition that names the state awaited (a file's
@@ -180,17 +180,21 @@
 
 # The task lifecycle
 
-For every new task:
+- **Starting a change you will work on now** — track it by its pull request: open the PR right
+  after the first commit and keep it current as the work moves, so its body and thread carry the
+  context; open no issue for it. An issue is for work that does *not* start now (a deferral, a
+  queued item, a step only a person can do, one phase of a plan), or one that already exists for
+  the change. When the change has one:
+  1. Reference it in commit messages (e.g. `Refs #123`, `Fixes #123`, or `Closes #123`).
+  2. Open the PR with a closing keyword for that issue on its own line in the **body** —
+     `Closes #123`. That is what fills GitHub's *Development* panel, the link between PR and
+     issue that anyone browsing either one follows; `Refs #123` is a cross-reference and links
+     nothing there. A PR that must not close its issue — one slice of a longer plan, one of
+     several against a tracker — closes nothing, and says in its body which issue it advances.
+  3. Update the issue's status (comments / close) as work progresses and when it's done.
 
-1. Create a GitHub issue describing the task before starting work.
-2. Develop on a branch; reference that issue number in commit messages (e.g. `Refs #123`,
-   `Fixes #123`, or `Closes #123`).
-3. Open the PR with a closing keyword for that issue on its own line in the **body** —
-   `Closes #123`. That is what fills GitHub's *Development* panel, the link between PR and issue
-   that anyone browsing either one follows; `Refs #123` is a cross-reference and links nothing
-   there. A PR that must not close its issue — one slice of a longer plan, one of several against
-   a tracker — still links: give the slice its own issue and close that one.
-4. Update the issue's status (comments / close) as work progresses and when it's done.
+- **Ending a session with the change unfinished** — write the state where the change is tracked:
+  its PR, or its issue when it has one; the next session opens from that number.
 
 - **Spotting a change that should wait until the work in flight lands** — file it as work that
   comes back on its own rather than doing it now or trusting anyone to remember it: the

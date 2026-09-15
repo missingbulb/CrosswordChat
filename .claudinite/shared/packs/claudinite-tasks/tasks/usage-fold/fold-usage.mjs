@@ -400,6 +400,12 @@ export const emptyTaskExec = () => Object.fromEntries(TASK_EXEC_STATUSES.map((s)
 // stdout and the harness's copy of it, collapses to the one execution it names;
 // a retry of the same slot is a different session, hence a different capture
 // file, and still counts.
+// @deprecated The `taskExec` rows have a successor: the `queue` rows of
+// `.claudinite/local/tasks-usage.GENERATED.json`, which read what each occurrence
+// came to off the item itself rather than off whether its session happened to
+// capture (`packs/claudinite-tasks/tasks/tasks-usage-fold/README.md`). Still
+// written, and still a sample of the sessions that captured; retiring it is a later
+// plan of its own.
 export function countTaskExecs(entries) {
   const seen = new Set();
   const taskExec = {};
@@ -523,17 +529,26 @@ export function turnSeconds(entries, cap = USAGE_CAPS.humanSeconds) {
 // the same pass — so this costs nothing beyond reading its keys.
 //
 // The two synthetic keys are states, not fallbacks: `(none)` is a session a PERSON
-// started (its capture names no issue), which is the human-driven share and worth
-// seeing; `(unresolved)` is a session that names an issue but attests no execution
-// record, which is a gap in the record rather than a person at the keyboard, and must
-// never be quietly filed as one.
+// started (its capture names no issue and no PR), which is the human-driven share and
+// worth seeing; `(unresolved)` is a session that names an issue or a PR but attests no
+// execution record, which is a gap in the record rather than a person at the keyboard,
+// and must never be quietly filed as one.
 export const TASK_COST_NONE = '(none)';
 export const TASK_COST_UNRESOLVED = '(unresolved)';
 
-export function taskCostKey(counts, issue) {
+// `keyed` is the number the capture's filename carries — its PR, or its issue.
+//
+// @deprecated The `taskCost` rows have a successor for the cost half of the
+// question: `.claudinite/local/tasks-usage.GENERATED.json` carries what each run of
+// the machinery was billed and what it spent in API calls, per workflow and per run
+// (`packs/claudinite-tasks/tasks/tasks-usage-fold/README.md`). The TOKEN share these
+// rows carry has no successor there and is not meant to gain one — that is what the
+// sessions spent, which is the session fold's subject. Still written; retiring it is
+// a later plan of its own.
+export function taskCostKey(counts, keyed) {
   const named = Object.keys(counts?.taskExec ?? {}).sort();
   if (named.length) return named[0];
-  return issue > 0 ? TASK_COST_UNRESOLVED : TASK_COST_NONE;
+  return keyed > 0 ? TASK_COST_UNRESOLVED : TASK_COST_NONE;
 }
 
 // How much a key is worth when a session's captures disagree: a named task beats
@@ -609,7 +624,7 @@ function addCounters(into, from) {
 }
 
 // Recompute the day rows from scratch, from the live capture files. `files` is
-// `[{ date, issue, sessionId, counts }]` — one entry per capture file in the raw
+// `[{ date, issue, pr, sessionId, counts }]` — one entry per capture file in the raw
 // window, `counts` being that file's `countEntries` result.
 //
 // Stateless by construction: a day is a pure function of the files stamped with it,
@@ -634,7 +649,9 @@ export function foldDays(files) {
   for (const file of files) {
     const day = (days[file.date] ??= emptyDay());
     day.captures += 1;
-    if (file.issue > 0) day.merges += 1;      // issue 0 = a capture with no merge behind it
+    // A capture keyed to a PR or an issue has work behind it; issue 0 is a tail
+    // capture with no merge behind it.
+    if (file.pr > 0 || file.issue > 0) day.merges += 1;
     day.userMessages += file.counts.userMessages;
     day.userCommands += file.counts.userCommands;
     addLoads(day.skillLoads, file.counts.skillLoads);
@@ -657,10 +674,10 @@ export function foldDays(files) {
     }
     // The task the session belongs to, resolved ACROSS its captures rather than per
     // capture: a session has one dispatch, but its captures disagree about the evidence
-    // — the tail capture is filed under issue 0 where the merge capture named the
-    // issue, and a capture written mid-run can predate the execution record the tail
+    // — the tail capture is filed under issue 0 where the merge capture named the PR,
+    // and a capture written mid-run can predate the execution record the tail
     // carries. So the most-informed answer any of them gives wins.
-    const key = taskCostKey(file.counts, file.issue);
+    const key = taskCostKey(file.counts, file.pr ?? file.issue);
     if (taskCostRank(key) > taskCostRank(s.task)) s.task = key;
     // Summed over the session's captures rather than deduped, so the per-task column
     // adds up to the day's own `userMessages` scalar, which is summed the same way.
@@ -732,6 +749,12 @@ export function foldDayFields(days, bySource = {}) {
 // any point in its life, each counted ONCE for it — an item bounced between a person
 // and the machine twice is one park of that kind, not two — or `null` where the item's
 // event listing could not be read, which costs its parks and not its outcome.
+// @deprecated The `queue` and `parks` rows have a successor:
+// `.claudinite/local/tasks-usage.GENERATED.json`, which counts the same outcomes and
+// the same parks beside the latencies and costs they belong with
+// (`packs/claudinite-tasks/tasks/tasks-usage-fold/README.md`). This writer keeps
+// running — the rows it has already written are real and its readers still read them
+// — and retiring it is a later plan of its own rather than a window this one closes.
 export function foldQueueOutcomes(days, priorDays = {}, records = [], today) {
   for (const [date, row] of Object.entries(priorDays)) {
     if (!withinTaskWindow(date, today, DAY_WINDOW_DAYS)) continue;

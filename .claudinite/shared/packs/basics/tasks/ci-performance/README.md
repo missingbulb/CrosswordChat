@@ -22,11 +22,20 @@ method for finding the cause.
 
 WHY sonnet: the finding arrives already localized to a workflow and a delta, and
 the skill states the method step by step; what remains is profiling and a bounded
-fix. Ceilinged at `pr`; what it may land unattended is the `automerge` policy below.
+fix. What it may land unattended is the `automerge` policy below.
 
 Movement, not standing state: CI runtime only changes when something lands, so
 a week where nothing moved has the same runs, the same medians and the same
 verdict as last week.
+
+`fresh_pr`, and `last-run-not-parked`, so a week whose round is still waiting on
+a person does not run at all: a performance fix is argued from an A/B this run
+measured, so a second round cannot be folded into the first one's review, and a
+task that stacks rounds behind an unanswered one buries the week that needed
+attention. The wider term rather than `last-run-not-failed`, because the round
+this task most needs to wait for is the one that left a pull request unmerged —
+that parks on approval, which is not a fault. Re-queueing the parked item is
+what puts the next run in front of it.
 A couple of hundred run records plus one job breakdown, against this repo's own
 API. Seconds in practice; the bound is for a rate-limited or wedged read.
 Profiling a suite means running it, more than once, in both arms of an A/B.

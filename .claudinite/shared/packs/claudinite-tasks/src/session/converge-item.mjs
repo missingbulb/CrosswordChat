@@ -9,7 +9,7 @@
 // formality; both of the first two live agentic runs got part of it wrong,
 // silently, in different ways.
 //
-// THIS FILE RUNS IN ONE PLACE: INSIDE A WORK-ITEM SESSION. `queue/instructions.md`
+// THIS FILE RUNS IN ONE PLACE: INSIDE A WORK-ITEM SESSION. `public/instructions.md`
 // step 6 is its only caller — no workflow invokes it, no module imports it. The
 // Actions side converges through `executor.mjs`, which owns that path entirely.
 //
@@ -43,7 +43,7 @@ import {
   NEEDS_HUMAN_ACTION, NEEDS_HUMAN_APPROVAL, NEEDS_HUMAN_DECISION, NEEDS_HUMAN_FAILURE,
   QUEUED_LABEL, IN_REVIEW_LABEL, ORIGIN_LABELS, hasLabel,
   parseWorkItemTitle, parseWorkItemBody, spellingsOf, labelNames,
-  editItemBody, withEndsWhen,
+  editItemBody, withEndsWhen, EPISODE_MARKER,
 } from '../items/work-item.mjs';
 
 // What a session may claim, and what each one means for the item. `record` is the
@@ -115,11 +115,25 @@ export const recordLine = (item, status) => {
 
 // The comment one converge writes: the session's account, then the record, so a
 // reader and a parser both find what they came for in one place.
-export function convergeComment(item, { summary, pr, record }) {
+// THE EPISODE ENDS WHERE THE ITEM IS LET GO OF (F18/F24). An executor that parks
+// an item strikes its own claim on the way out; a SESSION cannot — its claim is
+// the executor's, and it has no edit for it — so the boundary rides its own
+// comment instead. `claimWinner` reads the last comment carrying the marker
+// whatever wrote it, so this is the same mechanism, not a second one.
+//
+// Without it every claim from the parked episode outlives the park: a person
+// re-queues the item, the next executor claims it, and `claimWinner` hands the
+// episode to the dead claim that is still the earliest one on the issue. The item
+// then loses every race it will ever have — which is the livelock F18 describes,
+// reached through the one converge that had no way to say it had let go.
+export function convergeComment(item, { summary, pr, record, boundary = false }) {
   const rec = recordLine(item, record);
   const line = rec ? `\n\n\`\`\`\n${rec}\n\`\`\`` : '';
   const waiting = pr ? `\n\nWaiting on a person: merge or close #${pr}, then close this item.` : '';
-  return `${summary.trim()}${waiting}${line}`;
+  const ends = boundary
+    ? `\n\n${EPISODE_MARKER}\nThis session released the item without closing it; every claim before this line is spent.`
+    : '';
+  return `${summary.trim()}${waiting}${line}${ends}`;
 }
 
 // THE TRANSITION AS DATA (#1374). The side effects were a straight line of
@@ -137,7 +151,9 @@ export function convergeComment(item, { summary, pr, record }) {
 // items outlive its converges, so an item may wear an older engine's spelling).
 export function convergeOps(item, plan) {
   const spec = OUTCOMES[plan.outcome];
-  const ops = [{ kind: 'comment', issue: item.number, body: convergeComment(item, { ...plan, record: spec.record }) }];
+  // A park leaves the item open for somebody else to claim, so its comment carries
+  // the episode boundary; a close needs none — nothing re-claims a closed item.
+  const ops = [{ kind: 'comment', issue: item.number, body: convergeComment(item, { ...plan, record: spec.record, boundary: !spec.closes }) }];
 
   // The record goes to BOTH sinks, and neither is redundant: the comment above is
   // the durable one (Actions logs expire, the item does not), while this printed

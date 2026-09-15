@@ -39,7 +39,9 @@ The baseline pack — the `RULES.md` prose every session loads (injected by the 
 | Waiving a finding on text | low | complexity | prose: <50 words |
 | Working around a vendored check's finding | medium | complexity | prose: <50 words |
 | Deferring a warning you can't fix now | medium | complexity | prose: <100 words |
-| Finding a finding's existing issue | medium | complexity | prose: <500 words |
+| Finding a finding's existing issue | medium | complexity | prose: <100 words |
+| Starting a change worked on now | high | complexity | prose: <200 words |
+| Ending a session with the change unfinished | medium | complexity | prose: <50 words |
 | Spotting a change that should wait | medium | complexity | prose: <50 words + skill (`do-later`) |
 | Filing anything into the ad-hoc queue | high | correctness | prose: <100 words |
 | The queue cannot reach the work | high | correctness | prose: <50 words |
@@ -96,7 +98,6 @@ The working-discipline rules with a deterministic signature. The world rules rea
 | `comment-classification-form` | medium | complexity | check: advisory |
 | `reference-integrity` | medium | correctness | check: blocking |
 | `runnable-doc-commands` | high | correctness | check: blocking |
-| `task-lifecycle` | medium | complexity | check: blocking |
 | `squash-merge-history` | high | correctness | check: blocking |
 | `barrier` | high | complexity | check: blocking |
 | `schema-conformance` | high | correctness | check: blocking |
@@ -106,7 +107,6 @@ The working-discipline rules with a deterministic signature. The world rules rea
 | `wakeup-without-prompt` | high | correctness | guard: blocking |
 | `pipe-tail-hides-exit` | low | complexity | guard: advisory |
 | `pkill-pattern-self-match` | low | correctness | guard: advisory |
-| `pull-request-without-closing-line` | medium | complexity | guard: advisory |
 | `github-list-without-fields` | low | complexity | guard: advisory |
 | `ask-user-question-already-decided` | medium | complexity | guard: advisory |
 | `bare-wait-in-fresh-shell` | high | correctness | guard: blocking |

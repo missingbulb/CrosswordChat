@@ -12,11 +12,11 @@
 //   loudly when it cannot — never proceeds baseless.
 //
 //   THE AUTOMATION BRANCHES. A member's maintenance and update PRs are opened by
-//   the engine on `claudinite/…` branches, with no session and no issue behind
-//   them. Judged as work, they fail task-lifecycle for lacking a task they never
-//   had — and since delivery arms auto-merge, which is a queue for CHECKS, a red
-//   check there does not annoy anyone: it stops the repo updating, permanently
-//   and quietly. So they are skipped, out loud.
+//   the engine on `claudinite/…` branches, with no session behind them. Judged
+//   as work, a finding there answers nobody — and since delivery arms auto-merge,
+//   which is a queue for CHECKS, a red check there does not annoy anyone: it
+//   stops the repo updating, permanently and quietly. So they are skipped, out
+//   loud.
 //
 //   THE PUSH ONTO THE BASE BRANCH. Sitting on the base branch used to mean
 //   "nothing to judge", and on a developer's clone it does. In CI it is a PUSH
@@ -97,7 +97,7 @@ export function pushedFrom(root, { eventPath = process.env.GITHUB_EVENT_PATH } =
 // on. `code` is the process exit; `run` is the only outcome that sweeps.
 export function decide(root, { branch, fetch = true, eventPath = process.env.GITHUB_EVENT_PATH } = {}) {
   if (isAutomationBranch(branch)) {
-    return { run: false, code: 0, say: `work scope: skipped on ${branch} — an engine-authored branch has no session and no issue behind it` };
+    return { run: false, code: 0, say: `work scope: skipped on ${branch} — an engine-authored branch has no session behind it` };
   }
   let base = resolveBase(root, { fetch });
   if (!base) {

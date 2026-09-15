@@ -22,7 +22,7 @@ import { pathToFileURL } from 'node:url';
 import { removeTree } from '../../../../engine/remove-tree.mjs';
 import {
   deliveryFor, pullCreateError, landDelivery, openDeliveredPull, disposeOpenPull, withTaskTrailer,
-} from '../../../claudinite-tasks/shared-code/delivery.mjs';
+} from '../../../claudinite-tasks/public/delivery.mjs';
 import { settingsPath, SETTINGS_FILE } from '../../../../engine/settings-file.mjs';
 
 const CANON_URL = 'https://github.com/missingbulb/Claudinite.git'; // public — no token
@@ -141,16 +141,15 @@ export async function main() {
   const delivery = deliveryFor(declaration);
 
   // THE TARGET. Which branch this run pushes to, and which pull request it delivers
-  // on, is the executor's decision: the task declares
-  // `amend_existing_or_create_new_pr`, the executor resolved it before this
-  // subprocess started — this cycle's own branch where the last one's pull request
-  // is gone or conflicted, that pull request's own branch otherwise — and handed
-  // both in. Nothing here reads the open pull requests or picks a name.
+  // on, is the executor's decision: the task declares `supersede_existing_pr`, the
+  // executor resolved it before this subprocess started — this cycle's own fresh
+  // branch, with the last cycle's pull request closed once this one's exists (or
+  // landed first, where it had concluded green) — and handed it in. Nothing here
+  // reads the open pull requests or picks a name.
   //
-  // Reusing it is what keeps a member that cannot land from accumulating a line of
-  // obsolete pull requests, one a night: the converge is a full recompute from the
-  // base, so the force-push below REWRITES the open one into this cycle's answer
-  // rather than stacking a second delivery beside it.
+  // That disposal is what keeps a member that cannot land from accumulating a line
+  // of obsolete pull requests, one a night: the converge is a full recompute from
+  // the base, so the one left standing is always this cycle's answer.
   const targetBranch = process.env.CLAUDINITE_TARGET_BRANCH || null;
   const targetPr = process.env.CLAUDINITE_TARGET_PR || null;
   if (!targetBranch) {
@@ -254,12 +253,12 @@ export async function main() {
       'commit', ...(staged.length ? [] : ['--allow-empty']), '-m', withTaskTrailer(title, UPDATE_TASK_ID)]);
     // A REWRITE THAT CHANGES NOTHING IS NOT A REWRITE, and force-pushing one is not
     // free: it gives the pull request a new head, which discards every check that had
-    // already run on it. The converge recomputes the same tree from the same base
-    // every night, so a member whose pull request is waiting — on slow CI, or on a
-    // person — would have its checks reset on every cycle and could never reach
-    // green. Compared as TREES rather than commits: this cycle's commit is new by
-    // construction (its own timestamp), and it is the content that decides whether
-    // anything is owed.
+    // already run on it. This worker delivers on whatever branch the executor handed
+    // it and never on one of its own, so a branch it is handed twice — the target
+    // protocol's to decide, not this file's — must not have its checks reset by a
+    // cycle that recomputed the same tree from the same base. Compared as TREES
+    // rather than commits: this cycle's commit is new by construction (its own
+    // timestamp), and it is the content that decides whether anything is owed.
     const remote = `https://x-access-token:${token}@github.com/${repo}.git`;
     let standing = null;
     try {

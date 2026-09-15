@@ -19,7 +19,7 @@
 //
 // `manual` is the one non-cadence: a manual task has no occurrence at all, so the
 // scheduler run never instantiates it and it runs only from an item created by hand
-// (`queue/create-work-item.mjs`). It exists for operator levers — work that
+// (`public/create-work-item.mjs`). It exists for operator levers — work that
 // answers no recurring question but wants a task's whole apparatus (declaration,
 // contract validation, code-work, the work item) when a human pulls it.
 export const FREQUENCIES = ['daily', 'weekly', 'monthly', 'manual'];
@@ -154,6 +154,7 @@ export const CADENCES = ['daily', 'weekly', 'monthly'];
 export const DUE_TERM = 'due';
 export const ELAPSED_TERM = 'last-run-over';
 export const NOT_FAILED_TERM = 'last-run-not-failed';
+export const NOT_PARKED_TERM = 'last-run-not-parked';
 
 // `12h`, `1d`, `7d` — a whole number of hours or days, nothing else.
 const DURATION_RE = /^(\d+)(h|d)$/;
@@ -199,8 +200,16 @@ const gatesOn = (preconditions, term) =>
   entriesOf(preconditions).some((alts) => alts.length === 1 && alts[0].name === term && alts[0].arg === null);
 
 // A task stops past its own failure park only when it says so: nothing holds a
-// task's lane but its own `last-run-not-failed`.
-export const holdsOnFailure = (preconditions) => gatesOn(preconditions, NOT_FAILED_TERM);
+// task's lane but its own word — `last-run-not-failed` for that park alone, or
+// `last-run-not-parked`, which holds behind all four and so answers this too.
+export const holdsOnFailure = (preconditions) =>
+  gatesOn(preconditions, NOT_FAILED_TERM) || gatesOn(preconditions, NOT_PARKED_TERM);
+
+// Whether the declaration holds its lane behind EVERY park, the three a person's
+// inbox owns included. A reader showing what happens next needs the wider answer
+// as well: a task held behind an approval park is not being asked on schedule,
+// and an anchor shown there promises a run the task declines.
+export const holdsOnAnyPark = (preconditions) => gatesOn(preconditions, NOT_PARKED_TERM);
 
 // What the retired `frequency` field always meant, as the term that now says it —
 // or null for `manual`, which meant no schedule at all and so adds no term.

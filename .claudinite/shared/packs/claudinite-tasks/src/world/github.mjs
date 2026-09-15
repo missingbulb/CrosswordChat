@@ -22,6 +22,24 @@
 
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 
+// --- how many calls this process has made ---------------------------------------
+// Every REST and GraphQL request this pack makes passes through one of the three
+// functions below, which is what makes the outward edge countable at all: a run's
+// API spend is a property of the PORT, not of any caller, and asking each caller to
+// report its own would be a second count to drift.
+//
+// Process-wide because a run IS a process — the scheduler and the executor each get
+// a fresh one — and the cost record the run prints is about that process. A request
+// that failed still counts: it was made, it was billed against the rate limit, and
+// a run that spent its budget on refusals spent it.
+let apiCalls = 0;
+
+export const apiCallCount = () => apiCalls;
+
+// For a test driving several runs through one process. Nothing in a real run calls
+// it: a run that reset its own counter mid-flight would report the remainder.
+export const resetApiCallCount = () => { apiCalls = 0; };
+
 // The Action-side reader/writer. `packs/claudinite-tasks/` is the one place that
 // legitimately uses the Action's `GITHUB_TOKEN` — everything session-side stays
 // MCP-only (docs/PRINCIPLES.md).
@@ -31,6 +49,7 @@ const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 export function makeGh({ token = process.env.GITHUB_TOKEN, api = API, fetchImpl = fetch } = {}) {
   // `gh(path)` reads; `gh(path, { method, body })` writes (body JSON-encoded).
   return async function gh(path, { method = 'GET', body } = {}) {
+    apiCalls += 1;
     const res = await fetchImpl(`${api}${path}`, {
       method,
       headers: {
@@ -52,6 +71,7 @@ export function makeGh({ token = process.env.GITHUB_TOKEN, api = API, fetchImpl 
 // delivery lane, which is handed one per run. One implementation of the headers,
 // so a client the landing lane uses cannot drift from the one the executor uses.
 export async function restCall(token, path, { method = 'GET', body, api = API, fetchImpl = fetch } = {}) {
+  apiCalls += 1;
   const res = await fetchImpl(`${api}${path}`, {
     method,
     headers: {
@@ -70,6 +90,7 @@ export async function restCall(token, path, { method = 'GET', body, api = API, f
 // The GraphQL endpoint, for the two mutations REST does not offer. Returns the
 // parsed body; the caller decides what an `errors` array means.
 export async function graphqlCall(token, query, variables, { api = API, fetchImpl = fetch } = {}) {
+  apiCalls += 1;
   const res = await fetchImpl(`${api}/graphql`, {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },

@@ -68,15 +68,22 @@ const git = (root, args) => execFileSync('git', ['-C', root, ...args], {
 
 // --- the raw window -----------------------------------------------------------
 
-// The capture filename standard (packs/claudinite-growth/README.md). Issue `0`
-// means "no associated issue" — a SessionEnd capture. Exported for the tests.
+// The capture filename standard (packs/claudinite-growth/README.md): keyed to the
+// pull request a merge landed (`pr-<n>`) or to an issue (`issue-<n>`), where `0`
+// means "no associated issue" — a SessionEnd capture. The other key is `null`.
+// Exported for the tests.
 //
 // The `stamp` is the same name read to the minute, which is what files the session
 // into an HOUR row. The name is machine-written by the capture step, so reading the
 // clock off it costs nothing and agrees with the retention rules that read it too.
 export function parseLogName(name) {
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})Z(?:-\d+)?--issue-(\d+)--(.+)\.jsonl$/.exec(name);
-  return m ? { date: m[1], stamp: `${m[1]}T${m[2]}:${m[3]}:00Z`, issue: Number(m[4]), sessionId: m[5] } : null;
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})Z(?:-\d+)?--(pr|issue)-(\d+)--(.+)\.jsonl$/.exec(name);
+  if (!m) return null;
+  const n = Number(m[5]);
+  return {
+    date: m[1], stamp: `${m[1]}T${m[2]}:${m[3]}:00Z`,
+    issue: m[4] === 'issue' ? n : null, pr: m[4] === 'pr' ? n : null, sessionId: m[6],
+  };
 }
 
 export function parseEntries(text) {
