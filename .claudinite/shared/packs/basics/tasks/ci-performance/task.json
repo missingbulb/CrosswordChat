@@ -5,9 +5,10 @@
   "trigger": "schedule",
   "preconditions": [
     "due:weekly",
-    "substantive-change || prs-touched"
+    "substantive-change || prs-touched",
+    "last-run-not-parked"
   ],
-  "expected_outcome": "amend_existing_or_create_new_pr",
+  "expected_outcome": "fresh_pr",
   "automerge": "anything",
   "code_work": "node worker.mjs",
   "code_work_timeout": 300,

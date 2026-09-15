@@ -9,21 +9,20 @@ A completeness-critic over a repo's own packs: prose that is always-testable but
 becomes a check, so the packs keep shedding context over time instead of only at the moment a rule is
 first learned.
 
-## Two callers, differing only in scope
+## The corpus is the caller's, the method is this skill's
+
+**This skill never decides which packs to read.** A caller says that — a task's `task.md`, or whoever
+asked — and the two shapes it comes in differ only in how wide the prose is:
 
 - **The upgrade pass**, as the last step of a
   [growth-extract](../../tasks/growth-extract/task.md) run: the scope is the prose **that run just
   wrote**. Extraction already descends the promotion ladder per lesson, but a lesson written as prose
   under time pressure is exactly where a convertible rule hides, so it gets asked once more before the
   PR opens. Never widen from here into the standing backlog.
-- **The weekly [prose-to-checks-sweep](../../tasks/prose-to-checks-sweep/task.md)**: the scope is the
-  **standing backlog** — everything under the pack paths configured for this repo, which the task
-  passes in its Context. A consuming repo's own **local packs** (`.claudinite/local/packs/`) by
-  default — projects don't improve core canon packs — while **Claudinite itself** also sweeps its core
-  `packs/`. Read the prose under those paths (each pack's `RULES.md`, and any `SKILL.md` beside them).
+- **A standing sweep** over a named corpus: everything under it — each pack's `RULES.md`, and any
+  `SKILL.md` beside them — whatever was converted before. A sweep holds no state between runs.
 
-Plus on demand, when someone asks. Either way: never edit a read-only mounted canon pack under
-`.claudinite/shared/`. Everything below is identical for both callers.
+Plus on demand, when someone asks. Everything below is identical for every caller.
 
 ## First gate — a working rule, not a product statement
 

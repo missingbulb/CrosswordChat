@@ -2,7 +2,7 @@
 // that fetches them ([`read-prs.mjs`](read-prs.mjs)) for the same reason the fold's
 // counting core is separated from its worker — and for one more: these two are the
 // only part of the merged-PR read another pack needs, and they are published through
-// `shared-code/` to a PAGE that runs in a browser, where a module reaching for
+// `public/` to a PAGE that runs in a browser, where a module reaching for
 // `process.env` or a node builtin does not load at all.
 
 // The closing keyword GitHub itself acts on, which is also what this repo's lifecycle

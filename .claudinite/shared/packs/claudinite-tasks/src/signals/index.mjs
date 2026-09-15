@@ -33,7 +33,7 @@ export const RUN_HORIZON_DAYS = 40;
 // its corpus-only exclusion applies in full.
 
 // The capture stamp a conversation log's filename leads with:
-// `2026-07-19T0940Z--issue-123--<session>.jsonl` — minute precision, optionally
+// `2026-07-19T0940Z--pr-1583--<session>.jsonl` (or `--issue-123--`) — minute precision, optionally
 // `-<k>` suffixed on a same-minute collision. Anything else on the logs branch
 // (its README) is not a log and has no age. The writer of that name is the
 // capture step in the pack that owns the branch, which core deliberately does not
@@ -41,7 +41,7 @@ export const RUN_HORIZON_DAYS = 40;
 // packs/claudinite-tasks/test/signals.test.mjs pins this parse to that writer, so
 // changing one without the other fails loudly rather than silently retiring the
 // prune trigger.
-const LOG_STAMP = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})Z(?:-\d+)?--issue-\d+--.+\.jsonl$/;
+const LOG_STAMP = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})Z(?:-\d+)?--(?:pr|issue)-\d+--.+\.jsonl$/;
 function logStampMs(name) {
   const m = LOG_STAMP.exec(name);
   if (!m) return null;

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // The capture step (claudinite-growth pack): push this session's conversation
 // onto the repo's orphan `conversation-logs` branch as one JSONL file named
-// `<stamp>--issue-<n>--<session>.jsonl` (README.md owns the standard). Two events
-// invoke it — merge-to-main, with the issue the merge closed, and the SessionEnd
-// hook (session-end.mjs), with `--issue 0`.
+// `<stamp>--pr-<n>--<session>.jsonl` or `<stamp>--issue-<n>--<session>.jsonl`
+// (README.md owns the standard). Two events invoke it — merge-to-main, with the
+// pull request the merge landed, and the SessionEnd hook (session-end.mjs), with
+// the issue its launcher named or `--issue 0`.
 //
 // Delta-aware, keyed on the SESSION ID: every capture refetches the branch tip,
 // finds all prior files for this session (whatever event or issue produced them),
@@ -19,7 +20,7 @@
 // touched, and there is no worktree to clean up.
 //
 // Usage (from the repo root, right after the merge lands):
-//   node capture-log.mjs --issue <n> [--transcript <path>] [--branch <name>] [--session <id>]
+//   node capture-log.mjs (--pr <n> | --issue <n>) [--transcript <path>] [--branch <name>] [--session <id>]
 //
 // The session id (CLAUDE_CODE_SESSION_ID, or --session) names the transcript file
 // exactly, so discovery searches every project directory for it — a remote/web
@@ -160,18 +161,29 @@ export function scrub(text, redactions = []) {
   return out;
 }
 
-// `2026-07-19T0940Z--issue-123--<session>.jsonl` — minute-precision stamp first
-// (a bare listing sorts and ages by name), then the issue the merge closed, then
-// the session id (the delta lookup key).
-export function logFilename(nowIso, issue, sessionId) {
+// `2026-07-19T0940Z--pr-1583--<session>.jsonl` — minute-precision stamp first (a
+// bare listing sorts and ages by name), then what the capture is keyed to, then the
+// session id (the delta lookup key). The key is the pull request the merge landed
+// (`pr-<n>`), or an issue (`issue-<n>`) for a capture no merge produced: the work
+// item an unattended session ran for, or `issue-0` for none at all.
+export function logFilename(nowIso, ref, sessionId) {
   const stamp = `${nowIso.slice(0, 10)}T${nowIso.slice(11, 13)}${nowIso.slice(14, 16)}Z`;
-  return `${stamp}--issue-${issue}--${sessionId}.jsonl`;
+  const key = ref.pr > 0 ? `pr-${ref.pr}` : `issue-${ref.issue}`;
+  return `${stamp}--${key}--${sessionId}.jsonl`;
 }
 
+// The other side of the key is `null`, never 0: a PR-keyed capture says nothing about
+// an issue, and `issue: 0` is the stated "none" of an issue-keyed one.
 export function parseLogFilename(name) {
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})Z(?:-\d+)?--issue-(\d+)--(.+)\.jsonl$/.exec(name);
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})Z(?:-\d+)?--(pr|issue)-(\d+)--(.+)\.jsonl$/.exec(name);
   if (!m) return null;
-  return { capturedAt: `${m[1]}T${m[2]}:${m[3]}:00Z`, issue: Number(m[4]), sessionId: m[5] };
+  const n = Number(m[5]);
+  return {
+    capturedAt: `${m[1]}T${m[2]}:${m[3]}:00Z`,
+    issue: m[4] === 'issue' ? n : null,
+    pr: m[4] === 'pr' ? n : null,
+    sessionId: m[6],
+  };
 }
 
 // --- git plumbing -------------------------------------------------------------
@@ -234,7 +246,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // `retryBackoffMs` scales the wait between attempts (attempt N waits N x it). Only
 // the tests set it, so a suite covering the retry path costs milliseconds instead
 // of sitting through the real outage timings it is describing.
-export async function capture({ root, branch, sessionId, bundled, issue, now, redactions = [], retryBackoffMs = 2000 }) {
+export async function capture({ root, branch, sessionId, bundled, issue = null, pr = null, now, redactions = [], retryBackoffMs = 2000 }) {
+  const ref = { issue, pr };
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const fetched = fetchTip(root, branch);
@@ -260,8 +273,8 @@ export async function capture({ root, branch, sessionId, bundled, issue, now, re
     const delta = sliceAfter(bundled, lastTs);
     if (delta.length === 0) return { name: null, lastTs };
 
-    let name = logFilename(now, issue, sessionId);
-    for (let k = 2; names.includes(name); k += 1) name = logFilename(now, issue, sessionId).replace('Z--', `Z-${k}--`);
+    let name = logFilename(now, ref, sessionId);
+    for (let k = 2; names.includes(name); k += 1) name = logFilename(now, ref, sessionId).replace('Z--', `Z-${k}--`);
     const content = delta.map((l) => scrub(l.raw, redactions)).join('\n') + '\n';
 
     const blob = git(root, ['hash-object', '-w', '--stdin'], { input: content }).stdout.trim();
@@ -370,14 +383,18 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  // `0` is a legal issue: it means "no associated issue" — the shape a capture
-  // takes when no merge produced it (the SessionEnd capture, session-end.mjs).
-  // The filename stays byte-identical in shape, which is the point: the retention
-  // prune, the conversationLogs signal and the extract's filename parse all already
-  // accept `0`, whereas any NEW filename shape would be invisible to the prune and
-  // become immortal on the branch.
-  if (!/^(0|[1-9]\d*)$/.test(args.issue ?? '')) {
-    console.error('required: --issue <n> — the issue number the merged PR closes (from its "Closes #<n>"), or 0 when no issue is associated');
+  // Exactly one key. `--pr` is the pull request a merge landed; `--issue` is for a
+  // capture no merge produced — the work item an unattended session ran for, or
+  // `0`, which is legal and means "no associated issue" (the SessionEnd capture,
+  // session-end.mjs). Every reader of the branch (the retention prune, the
+  // conversationLogs signal, the fold, the extract's filename parse) takes both
+  // spellings, so neither is invisible to the prune.
+  const hasPr = args.pr !== undefined;
+  const hasIssue = args.issue !== undefined;
+  const prOk = hasPr && /^[1-9]\d*$/.test(args.pr);
+  const issueOk = hasIssue && /^(0|[1-9]\d*)$/.test(args.issue);
+  if (hasPr === hasIssue || !(prOk || issueOk)) {
+    console.error('required: exactly one of --pr <n> (the pull request the merge landed) or --issue <n> (the issue an unmerged capture is about, or 0 for none)');
     process.exit(2);
   }
   const root = git(process.cwd(), ['rev-parse', '--show-toplevel']).stdout.trim();
@@ -410,7 +427,8 @@ async function main() {
     branch: args.branch ?? DEFAULT_BRANCH,
     sessionId: resolvedSession,
     bundled,
-    issue: Number(args.issue),
+    issue: hasIssue ? Number(args.issue) : null,
+    pr: hasPr ? Number(args.pr) : null,
     now: new Date().toISOString(),
     redactions: buildRedactionValues(process.env, credentialStoreValues()),
   });

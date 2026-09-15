@@ -7,10 +7,10 @@ Carried over from the declaration's comments when it became `task.json`.
 claudinite-growth task: prose-to-checks-sweep — mine a repo's EXISTING pack
 prose for always-testable rules the conversion missed and convert the strongest
 ones (per-project-scheduling redesign). A per-repo task: every repo declaring the
-growth pack sweeps its OWN packs. Which pack paths it works is a config setting,
-`pack_paths`, defaulting to the repo's own local packs; Claudinite itself sets it
-to ALSO include its core `packs/` (projects are not expected to improve core canon
-packs — only Claudinite does). The method is owned by the prose-to-checks skill.
+growth pack sweeps its own `.claudinite/local/packs/`, and no config widens that —
+a canon's shelf is swept by the canon-curation task that owns it, in the repo
+that can actually fix a canon rule. The method is owned by the prose-to-checks
+skill, which names no corpus of its own.
 
 The subject is the world's, but the value is zero on a repo nobody works in:
 no new prose is written where nothing happens, and the first active window

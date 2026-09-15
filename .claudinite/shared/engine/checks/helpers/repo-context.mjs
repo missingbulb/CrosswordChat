@@ -168,7 +168,7 @@ const KNOWN_CONFIG_KEYS = [...CONFIG_KEYS, ...LEGACY_CONFIG_KEYS];
 // and nothing new may call it.
 //
 // @deprecated Use the `isDormant` the scheduler's own pack publishes from its
-// shared-code surface, which is where the live definition lives.
+// public surface, which is where the live definition lives.
 // @legacy-tolerance advisory:legacy-shape-in-use retire:#1846
 export const isDormant = (config) => config?.dormant === true;
 

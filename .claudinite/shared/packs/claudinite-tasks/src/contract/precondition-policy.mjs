@@ -32,7 +32,7 @@
 // Import-light and pure over the signals: no I/O, so the same evaluation runs at
 // the scheduler's tick and at the executor's pick.
 
-import { anchorInstant, CADENCES, DUE_TERM, ELAPSED_TERM, NOT_FAILED_TERM, parseDuration } from './calendar.mjs';
+import { anchorInstant, CADENCES, DUE_TERM, ELAPSED_TERM, NOT_FAILED_TERM, NOT_PARKED_TERM, parseDuration } from './calendar.mjs';
 
 // The retired empty precondition. The contract's door still strips it from a
 // declaration that carries a `frequency` (the cadence term takes its place); on
@@ -307,6 +307,23 @@ const BUILTIN_TERMS = new Map(Object.entries({
       return newest.park === 'failure'
         ? { holds: false, reason: `the newest run, #${newest.number}, stands at a failure park — this task declares it does not run past its own failure` }
         : { holds: true, reason: `the newest run, #${newest.number}, did not fail` };
+    },
+  },
+
+  // The wider statement of the same thing: this task does not run while its
+  // newest run stands at ANY of the four parks — the three a person's inbox owns
+  // as much as the failure. What a task states when its round is not finished
+  // until a person has dealt with it, an unmerged pull request above all: that
+  // run parks on approval, which is not a fault and which `last-run-not-failed`
+  // reads as clear. Re-queueing the parked item is what puts a run in front of it.
+  [NOT_PARKED_TERM]: {
+    signals: ['runs'],
+    holds(s) {
+      const newest = newestRun(s);
+      if (!newest) return { holds: true, reason: 'no run of this task to be parked' };
+      return newest.park
+        ? { holds: false, reason: `the newest run, #${newest.number}, stands at a ${newest.park} park — this task declares it does not run past a park of its own` }
+        : { holds: true, reason: `the newest run, #${newest.number}, is not parked` };
     },
   },
 

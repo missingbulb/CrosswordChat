@@ -15,7 +15,7 @@
 import { normalizeTaskDeclaration, validateTaskDeclaration } from '../contract/task-contract.mjs';
 import { siblingTaskDeclaration } from '../contract/task-declaration.mjs';
 import { resolveModel } from '../contract/model-map.mjs';
-import { BUILT_IN_PACK, BUILT_IN_PATH_RE } from '../contract/built-in-tasks.mjs';
+import { BUILT_IN_PACK, BUILT_IN_PATH_RE, BUILT_IN_PUBLIC_PATH_RE } from '../contract/built-in-tasks.mjs';
 import { parseWorkItemBody } from '../items/work-item.mjs';
 
 // The only shape a dispatch first line may take (PRINCIPLES.md). Anchored end to
@@ -51,7 +51,7 @@ export function validateDispatchBody(body, { exists, isPackDeclared, loadTask, l
   // (docs/PRINCIPLES.md). The built-in one is not a pack and is never declared — wherever the
   // queue runs it is active — so it skips the declaration check rather than failing
   // it, and nothing else about validation differs.
-  const builtIn = BUILT_IN_PATH_RE.exec(firstLine);
+  const builtIn = BUILT_IN_PATH_RE.exec(firstLine) ?? BUILT_IN_PUBLIC_PATH_RE.exec(firstLine);
   const m = builtIn ? [firstLine, BUILT_IN_PACK, builtIn[1]] : DISPATCH_PATH_RE.exec(firstLine);
   if (!m) return reject(`first line "${firstLine}" is not a valid task path (${DISPATCH_PATH_RE})`);
 

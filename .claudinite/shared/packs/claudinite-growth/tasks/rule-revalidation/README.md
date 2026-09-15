@@ -12,11 +12,11 @@ moves under it: the prose stays green, sessions keep following it, and the cost
 lands as a session spent on a path that closed months ago. This task re-runs the
 probe behind each such claim and corrects what no longer holds.
 
-Scope is the pack's existing `pack_paths` config — the same key the sibling
-prose-to-checks-sweep reads, so a repo names its capture surface once: a
-consuming repo revalidates only its OWN local packs, and Claudinite (which
-configures `packs`) revalidates the whole canon — so every pack's claims are
-re-probed in the one repo that can fix them, exactly once across the fleet.
+Scope is `.claudinite/local/packs/`, and no config widens it. Every pack's
+claims are re-probed in the one repo that can fix them: a member's own local
+packs here, a canon pack's by the canon-curation task that owns the shelf. A
+member editing a rule it merely mounts would lose the edit at the next converge
+anyway.
 
 The claims are about the world, but a repo nobody works in has nothing riding
 on them: the sweep sleeps while it is silent and resumes on the first active

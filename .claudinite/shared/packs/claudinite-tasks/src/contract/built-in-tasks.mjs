@@ -46,9 +46,16 @@ export function builtInTasksRoot(root) {
 
 // The request task's repo-relative worker path, in the form a work item's first
 // line carries. Null where the engine is not inside this root (see above).
+//
+// It names `public/`, not the task folder beside the declaration: an item's machine
+// block is written into an issue body, which this repository can never rewrite, so
+// the path it carries has to be one that does not move. The task folder keeps a
+// `task.md` redirect for items minted before the move (retired 2026-10-15).
 export function requestTaskPath(root) {
   const dir = builtInTasksRoot(root);
-  return dir ? `${relative(root, join(dir, REQUEST_TASK)).split('\\').join('/')}/task.md` : null;
+  if (!dir) return null;
+  const doc = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', `${REQUEST_TASK}.md`);
+  return relative(root, doc).split('\\').join('/');
 }
 
 // THE APPROVAL PHRASE. A comment beginning `/claude go` is how somebody with push
@@ -68,3 +75,12 @@ export const APPROVAL_RE = /^\s*\/claude\s+go\b/im;
 // not a decoder: a shape it does not know is rejected outright, so dropping either one
 // stops that half of the ad-hoc request lane on every single request.
 export const BUILT_IN_PATH_RE = /^(?:\.claudinite\/shared\/)?(?:engine\/scheduler|packs\/claudinite-tasks)\/queue\/tasks\/([^/]+)\/task\.md$/;
+
+// THE THIRD ROOT, and the one new items carry: the spec moved into `public/`, where a
+// path does not move. Its own pattern rather than a third alternative above, because a
+// caller reads the task name out of group 1 and two alternatives cannot both be it.
+//
+// Permanent for the same reason as the other two — an item's machine block is an issue
+// body this repository can never rewrite, so every shape any live item carries has to
+// stay valid however long that item sits open.
+export const BUILT_IN_PUBLIC_PATH_RE = /^(?:\.claudinite\/(?:shared|local)\/)?packs\/claudinite-tasks\/public\/(implement-request)\.md$/;

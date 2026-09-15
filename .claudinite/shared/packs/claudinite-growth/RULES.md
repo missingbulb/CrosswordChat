@@ -11,6 +11,10 @@
   secrets and the failure reporting. Work with no cadence is a task too, with no
   `preconditions`, woken by whatever knows the event happened.
 
+- **Writing a task here, or the skill one loads** — the corpus is `.claudinite/local/packs/` and
+  no config widens it; a skill states the method and names no corpus, so the same action over a
+  canon's `packs/` shelf is a `claudinite-canon-curation` task loading that same skill. (RULES-3)
+
 - **Describing another pack's artifact** — point at the pack that owns it
   instead: the parenthetical costs this pack a version and a `VERSIONS.md` row every time that
   artifact changes, and the reader rarely needed it. (RULES-2)

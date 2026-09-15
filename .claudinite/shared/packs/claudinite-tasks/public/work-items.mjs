@@ -4,6 +4,10 @@
 // Re-exported rather than reimplemented so a consumer and the queue can never disagree
 // about what a title means.
 //
+// `isDispatchTitle` rides here for the same reason: a consumer listing a repo's issues
+// has to tell the scheduler's own dispatch issues from the work, and one that decided
+// that by its own regex would count the machinery as a member's activity.
+//
 // NAMED, not `export *`: what this file lists IS the promise, so a reader sees the
 // whole of it here and an internal rename cannot quietly widen or narrow it. The
 // queue's own GitHub listings are deliberately absent — reading the queue is this
@@ -28,5 +32,5 @@ export {
   pickOrder,
 } from '../src/items/pick-order.mjs';
 export {
-  NEEDS_HUMAN_LABEL,
+  NEEDS_HUMAN_LABEL, isDispatchTitle,
 } from '../src/session/dispatch.mjs';

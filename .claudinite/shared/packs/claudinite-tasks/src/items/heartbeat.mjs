@@ -42,15 +42,24 @@ export function lastLivenessAt(comments = []) {
   return times.length ? new Date(Math.max(...times)).toISOString() : null;
 }
 
+// The timer the beat hangs on. A seam for the same reason the clock beside it is
+// one: a harness that runs a work step in virtual minutes has no wall clock for a
+// real interval to fire against, so the beats would be missing from exactly the
+// timeline the executing leash is reading.
+export const realTimers = Object.freeze({
+  setInterval: (fn, ms) => setInterval(fn, ms),
+  clearInterval: (id) => clearInterval(id),
+});
+
 // Run `work` while beating. The beat is FAIL-SOFT — a comment that does not post
 // must never sink a run that is otherwise fine — but never silent: a run whose
 // heartbeat failed is one the leash may reclaim underneath it, and the log line is
 // the only way to tell that from a run that simply finished quickly.
-export async function withHeartbeat(work, { beat, intervalMs = HEARTBEAT_MS, log = () => {} }) {
+export async function withHeartbeat(work, { beat, intervalMs = HEARTBEAT_MS, log = () => {}, timers = realTimers }) {
   if (!beat || !(intervalMs > 0)) return work();
   const startedAt = nowMs();
   let beats = 0;
-  const timer = setInterval(() => {
+  const timer = timers.setInterval(() => {
     const minutes = Math.round((nowMs() - startedAt) / 60e3);
     Promise.resolve()
       .then(() => beat(minutes))
@@ -58,11 +67,11 @@ export async function withHeartbeat(work, { beat, intervalMs = HEARTBEAT_MS, log
       .catch((e) => log(`! heartbeat ${beats + 1} did not post (${e?.message ?? e}) — the leash may reclaim this item mid-work`));
   }, intervalMs);
   // `unref` so a beat pending at exit cannot hold the process open past its work.
-  timer.unref?.();
+  timer?.unref?.();
   try {
     return await work();
   } finally {
-    clearInterval(timer);
+    timers.clearInterval(timer);
     const minutes = Math.round((nowMs() - startedAt) / 60e3);
     if (beats) log(`- work step ran ${minutes} minute(s) and beat ${beats} time(s)`);
   }

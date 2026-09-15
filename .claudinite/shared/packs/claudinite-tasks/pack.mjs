@@ -17,7 +17,7 @@
 // checks (from claudinite-growth). The simulator and its scenario suite — the
 // mechanism's executable spec — are in this pack's own test/.
 //
-// SHARED-CODE IS THE PUBLISHED SURFACE. `shared-code/` is the one place in the corpus
+// SHARED-CODE IS THE PUBLISHED SURFACE. `public/` is the one place in the corpus
 // another pack's code may import across a pack boundary (the `pack-independence`
 // barrier's allow list names it, and nothing else). Everything of this pack outside
 // it stays off-limits.
@@ -31,7 +31,7 @@
 // Adoption is still a moment a person is present, because it wires two workflow files
 // and the routine endpoints a member cannot converge into place.
 export default {
-  version: '60915.1',
+  version: '60915.8',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'scheduled work — the work-item queue, the executor, the task contract and its signals, run records, code-work, delivery',

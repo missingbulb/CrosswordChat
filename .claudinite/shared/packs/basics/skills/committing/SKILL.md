@@ -10,8 +10,8 @@ metadata:
 
 - **One concern per commit.** If two changes could each stand alone, split them; a message that
   wants numbered items is the split talking.
-- **Reference the issue** — `Refs #n`, or `Fixes #n` / `Closes #n` where the commit finishes it;
-  the `task-lifecycle` check reads it off the branch.
+- **Reference the issue, when the change has one** — `Refs #n`, or `Fixes #n` / `Closes #n` where
+  the commit finishes it. A change tracked by its PR alone references nothing.
 - **A landed commit is revised by a new commit**, never a rewrite of that one.
 - **Stage by name** — `git add <paths>` for the files this commit is about; `-a` sweeps in whatever
   else was in progress.

@@ -150,7 +150,9 @@ export function stubsDir(root) {
 // CLI: `node converge-workflows.mjs [owner/repo]` — scaffold THIS repo's two workflow
 // files. The full name comes from argv or GITHUB_REPOSITORY/CLAUDINITE_REPO, and the
 // cron it stamps from the repo's own `taskScheduler.dailyHour`.
-async function main() {
+// Exported because `converge-workflows.mjs` at the pack root runs it: `adopt-pack`'s own
+// prose, and the copies members took of it, still address this command at that path.
+export async function runConvergeWorkflows() {
   const argv = process.argv.slice(2);
   const fullName = argv.find((a) => !a.startsWith('--')) || actionsEnv().GITHUB_REPOSITORY || actionsEnv().CLAUDINITE_REPO;
   if (!fullName) { console.error('converge-workflows: need owner/repo (argv or GITHUB_REPOSITORY)'); process.exit(1); }
@@ -169,4 +171,4 @@ async function main() {
   console.log(changed.length ? `converge-workflows: ${changed.join(', ')}` : 'converge-workflows: already converged');
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) runConvergeWorkflows();

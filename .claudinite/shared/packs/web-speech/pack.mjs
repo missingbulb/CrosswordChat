@@ -2,13 +2,14 @@
 // Speech SpeechRecognition API) and text-to-speech (chrome.tts / speechSynthesis)
 // runtime gotchas that apply whenever an app reads or listens through the browser.
 // Most rules stay prose — runtime browser behaviours, not repo-state signatures a
-// static check could test — but two groups do have a static signature: the six
+// static check could test — but three groups do have a static signature: the
 // call-site contracts in worldRules/ (mic release, mic constraints not confused
 // with screen-capture ones, a total error-name mapping, an interim-results gate,
-// the STT terminal-handler pair, and TTS promise settlement), and the
-// web-speech-io skill's three rules (a Window-scoped speech API in the MV3
+// the STT terminal-handler pair, and TTS promise settlement), the
+// web-speech-io skill's rules (a Window-scoped speech API in the MV3
 // service worker, a bare webkit-prefixed recognizer construction, and a mic
-// capture the whole repo releases nowhere on pagehide). Fingerprinted by an
+// capture the whole repo releases nowhere on pagehide), and the module-scope
+// voice-list cache in declared-checks.json beside this file. Fingerprinted by an
 // actual speech-API reference in JS/TS source (the marker only *suspects* the
 // pack; declaring it is the project's call, like every pack).
 const SPEECH_API =
@@ -16,7 +17,7 @@ const SPEECH_API =
 const SOURCE = /\.(mjs|cjs|js|jsx|ts|tsx)$/;
 
 export default {
-  version: '60913.2',
+  version: '60915.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'browser voice I/O gotchas — SpeechRecognition results and errors, speechSynthesis and chrome.tts, mic permission and lifecycle',

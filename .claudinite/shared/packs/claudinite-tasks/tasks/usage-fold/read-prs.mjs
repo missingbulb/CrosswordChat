@@ -66,22 +66,27 @@ export async function readMergedPrs({ reader, repo, since, now, maxPages = 5 }) 
 // The listing and the capture files, joined into the day-row records `foldPrs` takes.
 //
 // `sessionToMergeHours` is the one figure neither source answers alone: the session
-// that did the work is the capture file whose NAME carries the closing issue's number
-// (the same join `merges` is counted on), and its earliest stamp is when that work
-// started. A PR whose issue never captured — or whose capture has aged out of the logs
-// branch's retention — has no session end, and the slot is `null` rather than a zero.
+// that did the work is the capture file whose NAME carries this PR's number — or,
+// for a capture keyed to an issue, the number of the issue this PR closes — and its
+// earliest stamp is when that work started. A PR nothing captured under — or whose
+// capture has aged out of the logs branch's retention — has no session end, and the
+// slot is `null` rather than a zero.
 export function prRecordsFrom({ prs = [], files = [] }) {
-  const started = new Map();
+  const startedByPr = new Map();
+  const startedByIssue = new Map();
   for (const file of files) {
-    if (!file?.stamp || !(file.issue > 0)) continue;
-    const first = started.get(file.issue);
-    if (first === undefined || file.stamp < first) started.set(file.issue, file.stamp);
+    if (!file?.stamp) continue;
+    const [map, key] = file.pr > 0 ? [startedByPr, file.pr] : file.issue > 0 ? [startedByIssue, file.issue] : [];
+    if (!map) continue;
+    const first = map.get(key);
+    if (first === undefined || file.stamp < first) map.set(key, file.stamp);
   }
+  const started = (pr) => startedByPr.get(pr.number) ?? (pr.closesIssue ? startedByIssue.get(pr.closesIssue) : null) ?? null;
   return prs.map((pr) => ({
     date: pr.mergedAt.slice(0, 10),
     number: pr.number,
     leadHours: hoursBetween(pr.createdAt, pr.mergedAt),
     issueLeadHours: hoursBetween(pr.issueCreatedAt, pr.mergedAt),
-    sessionToMergeHours: hoursBetween(started.get(pr.closesIssue) ?? null, pr.mergedAt),
+    sessionToMergeHours: hoursBetween(started(pr), pr.mergedAt),
   }));
 }

@@ -3,7 +3,7 @@
 // the same arithmetic the scheduler decides with.
 export {
   ACCEPTED_FREQUENCIES, DUE_TERM, ELAPSED_TERM, cadenceOf, cadenceTermFor, holdsOnFailure,
-  statesConditions,
+  holdsOnAnyPark, statesConditions,
 } from '../src/contract/calendar.mjs';
 export {
   periodMs, taskPeriodMs, mostRecentAnchor, nextAnchor,

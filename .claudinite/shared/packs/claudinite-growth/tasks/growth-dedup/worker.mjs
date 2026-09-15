@@ -23,7 +23,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { makeGh } from '../../../claudinite-tasks/shared-code/github.mjs';
+import { makeGh } from '../../../claudinite-tasks/public/github.mjs';
 import { loadConfig } from '../../../../engine/checks/helpers/repo-context.mjs';
 
 const log = (s) => console.log(`growth-dedup code_work: ${s}`);

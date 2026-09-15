@@ -22,7 +22,7 @@ a concrete next-time saving, it found nothing — and that's fine.
 
 ## Where the conversation comes from
 
-- **A captured log** on the repo's orphan `conversation-logs` branch (`<stamp>--issue-<n>--<session>.jsonl`),
+- **A captured log** on the repo's orphan `conversation-logs` branch (`<stamp>--pr-<n>--<session>.jsonl`, or `--issue-<n>--` for a capture no merge produced),
   read with plain git in the checkout — `git show origin/conversation-logs:<file>`. The log carries
   per-entry timestamps, per-message token usage, and the `tool_use`/`tool_result` pairs behind every
   wall-time number, which is exactly what the measured analysis below needs. This is the routine path.
@@ -110,9 +110,9 @@ breaks that; reading more is only wasted effort.
 
 ## Provenance: summarize the exchange, never paste it
 
-For each rule that actually **lands** from a log, post one short comment on the issue the log names
-(`--issue-<n>--` in its filename; **`--issue-0--` means the capture had no associated issue**, so there is
-nothing to post on and the rule simply lands without a comment):
+For each rule that actually **lands** from a log, post one short comment on the PR or issue the log
+names (`--pr-<n>--` or `--issue-<n>--` in its filename; **`--issue-0--` means the capture had neither**,
+so there is nothing to post on and the rule simply lands without a comment):
 
 - one provenance line — the rule added, the capture date, the session id;
 - then a **200-word-max** description of just the slice of conversation that caused the rule: what was

@@ -1,15 +1,15 @@
-// WORKFLOW AND ROUTINE ABI — an entry point, never logic.
+// PUBLIC ENTRY POINT — a command, never logic.
 //
-// Every module in this folder is named as a literal path by a file this repository
-// cannot push to: a member's `.github/workflows/`, which lands only as a pull
-// request somebody merges, or a routine's stored prompt, which is a per-repo
-// console setting. A member therefore spends every window between its mount
-// refreshing (nightly) and its workflows being re-merged (whenever) running the
-// new code from the old path — so these paths are frozen, and a run that finds
-// nothing here is a repo whose queue stops silently with no run left to fix it.
+// Named as a literal path by something this repository cannot rewrite: a member's
+// `.github/workflows/`, which lands only as a pull request somebody merges; a
+// routine's stored prompt, which is a per-repo console setting; or prose in a
+// member's own local pack, which no converge may touch. A member spends every
+// window between its mount refreshing (nightly) and those being re-pointed
+// (whenever) running whichever path it still names — so a run that finds nothing
+// here is a repo whose queue stops silently, with no run left to fix it.
 //
-// They are the ABI, not a compatibility tolerance: nothing retires them, and
-// nothing may put behaviour behind one. The mechanism lives under `src/`.
+// `public/` is where that promise is kept: a name here does not move, and nothing
+// may put behaviour behind one. The mechanism lives under `src/`.
 //
 // The scheduler workflow's `report-failure` job: a run that went red as a whole
 // reaches a person as one open issue rather than an unwatched red tab.
