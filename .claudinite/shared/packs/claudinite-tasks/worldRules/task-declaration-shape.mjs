@@ -1,13 +1,13 @@
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
 import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
-import { ACCEPTED_FREQUENCIES, cadenceTermFor, cadenceOf } from '../../claudinite-tasks/calendar.mjs';
-import { MODEL_FAMILIES } from '../../claudinite-tasks/model-map.mjs';
+import { ACCEPTED_FREQUENCIES, cadenceTermFor, cadenceOf } from '../src/contract/calendar.mjs';
+import { MODEL_FAMILIES } from '../src/contract/model-map.mjs';
 import {
   OUTCOMES, LEGACY_OUTCOMES, LEGACY_CEILINGS, OUTCOME_NO_PR, DEFAULT_AGENT_MODEL, descriptionProblem, normalizeTaskDeclaration,
   TRIGGERS, TRIGGER_SCHEDULE, TRIGGER_REQUEST,
-} from '../../claudinite-tasks/task-contract.mjs';
-import { validatePreconditions, termsMap, preconditionNeedsItem } from '../../claudinite-tasks/precondition-policy.mjs';
-import { TASK_DECLARATION_PATH_RE, readDeclarationFields } from '../../claudinite-tasks/task-declaration-text.mjs';
+} from '../src/contract/task-contract.mjs';
+import { validatePreconditions, termsMap, preconditionNeedsItem } from '../src/contract/precondition-policy.mjs';
+import { TASK_DECLARATION_PATH_RE, readDeclarationFields } from '../src/contract/task-declaration-text.mjs';
 
 // Every scheduler task is a `tasks/<name>/task.json` carrying the declaration
 // contract (docs/PRINCIPLES.md) with legal enum values. This

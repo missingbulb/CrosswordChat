@@ -9,4 +9,4 @@
 // Re-exported from the pure module rather than from the reader beside it: the consumer
 // is a page that runs in a browser, where the reader's `process.env` and its listing
 // would not load.
-export { closesIssueIn, hoursBetween } from '../tasks/usage-fold/pr-fields.mjs';
+export { closesIssueIn, hoursBetween } from '../src/items/pr-fields.mjs';

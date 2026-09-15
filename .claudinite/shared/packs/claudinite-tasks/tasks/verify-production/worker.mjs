@@ -15,8 +15,9 @@
 //              the item, and exit clean.
 
 import { pathToFileURL } from 'node:url';
-import { humanTextOf } from '../../queue/work-item.mjs';
+import { humanTextOf } from '../../src/items/work-item.mjs';
 import { parseVerificationSpec, runProbes, renderResult } from './probes.mjs';
+import { getIssue, reopenIssue, comment as ghComment } from '../../src/world/github.mjs';
 
 const FETCH_TIMEOUT_MS = 30_000;
 const BODY_CAP = 2 * 1024 * 1024;
@@ -38,7 +39,7 @@ export async function fetchOnce(url) {
 // probes, and lands the verdict's writes. Returns what main() turns into markers
 // and an exit code.
 export async function runVerification({ gh, repo, itemNumber, fetchUrl, now = () => new Date(), log = console.log }) {
-  const { status, json: item } = await gh(`/repos/${repo}/issues/${itemNumber}`);
+  const { status, json: item } = await getIssue(gh, repo, itemNumber);
   if (status !== 200) throw new Error(`could not read item #${itemNumber}: ${status}`);
   const spec = parseVerificationSpec(humanTextOf(item.body));
   if (spec.problems.length) return { outcome: 'invalid', problems: spec.problems };
@@ -58,27 +59,18 @@ export async function runVerification({ gh, repo, itemNumber, fetchUrl, now = ()
   for (const r of verify) log(`verify: ${renderResult(r)}`);
   const evidence = verify.map((r) => `- ${renderResult(r)}`).join('\n');
   if (verify.every((r) => r.ok)) {
-    await gh(`/repos/${repo}/issues/${itemNumber}/comments`, {
-      method: 'POST',
-      body: { body: `Production verification PASSED. What was read:\n\n${evidence}` },
-    });
+    await ghComment(gh, repo, itemNumber, `Production verification PASSED. What was read:\n\n${evidence}`);
     return { outcome: 'pass' };
   }
 
   // The verification did its job by finding the fault — which is now the
   // original issue's, reopened with what was asserted and what was read.
-  await gh(`/repos/${repo}/issues/${spec.originalIssue}`, { method: 'PATCH', body: { state: 'open' } });
-  await gh(`/repos/${repo}/issues/${spec.originalIssue}/comments`, {
-    method: 'POST',
-    body: {
-      body: `The production verification filed for this change (#${itemNumber}) FAILED against the live artifact:\n\n${evidence}\n\n`
-        + 'The release is live (every liveness probe passed), so this is a fault in production, not a wait.',
-    },
-  });
-  await gh(`/repos/${repo}/issues/${itemNumber}/comments`, {
-    method: 'POST',
-    body: { body: `Verification FAILED — reopened #${spec.originalIssue} with the evidence:\n\n${evidence}` },
-  });
+  await reopenIssue(gh, repo, spec.originalIssue);
+  await ghComment(gh, repo, spec.originalIssue,
+    `The production verification filed for this change (#${itemNumber}) FAILED against the live artifact:\n\n${evidence}\n\n`
+    + 'The release is live (every liveness probe passed), so this is a fault in production, not a wait.');
+  await ghComment(gh, repo, itemNumber,
+    `Verification FAILED — reopened #${spec.originalIssue} with the evidence:\n\n${evidence}`);
   return { outcome: 'fail', originalIssue: spec.originalIssue };
 }
 
@@ -87,7 +79,7 @@ export async function main() {
   const itemNumber = Number(process.env.CLAUDINITE_ITEM);
   if (!repo || !itemNumber) throw new Error('CLAUDINITE_REPO / CLAUDINITE_ITEM not set — not running under the executor');
   if (!process.env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN is not set — the verification cannot read its item');
-  const { makeGh } = await import('../../signals/gh.mjs');
+  const { makeGh } = await import('../../src/world/github.mjs');
   const verdict = await runVerification({ gh: makeGh(), repo, itemNumber, fetchUrl: fetchOnce });
 
   if (verdict.outcome === 'invalid') {

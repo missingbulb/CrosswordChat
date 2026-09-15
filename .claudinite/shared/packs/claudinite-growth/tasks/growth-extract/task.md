@@ -58,7 +58,7 @@ upgrade pass produced — through a **single PR**: one commit for the whole run 
 the run then joins the review already pending — and otherwise open the PR on that branch (title
 `Claudinite growth: extract lessons`, its commit referencing the tracking issue so the `task-lifecycle` gate
 passes); never search for an open pull request or pick a branch of your own. Then **deliver it by the shared
-procedure — [deliver-pr.md](../../../../packs/claudinite-tasks/deliver-pr.md)** — that procedure, never this
+procedure — [deliver-pr.md](../../../claudinite-tasks/deliver-pr.md)** — that procedure, never this
 file, owns whether and how the PR lands. This writes only the repo's *own* local
 packs (not the shared canon). A run that finds nothing and opens nothing is fine — and common.
 

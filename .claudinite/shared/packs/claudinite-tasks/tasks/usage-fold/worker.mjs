@@ -25,7 +25,7 @@
 //      (skill-usage-metrics DESIGN §5);
 //   7. deliver the regenerated `.claudinite/local/usage.GENERATED.json` on a PR
 //      that lands itself where this repo's delivery settings allow (the shared
-//      landing helper owns those nuances — packs/claudinite-tasks/land-pr.mjs) — and
+//      landing helper owns those nuances — packs/claudinite-tasks/src/deliver/land-pr.mjs) — and
 //      open NOTHING when the recompute is byte-identical apart from its stamp.
 //
 // The aggregate lives under `.claudinite/local/` because that is the repo-owned area
@@ -35,17 +35,17 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { deliverGenerated, baseTip, readAt, remoteUrl } from '../../../claudinite-tasks/deliver-generated.mjs';
-import { AUTOMERGE_TRAILER, policyExpression } from '../../../claudinite-tasks/merge-policy.mjs';
+import { deliverGenerated, baseTip, readAt, remoteUrl } from '../../src/deliver/deliver-generated.mjs';
+import { AUTOMERGE_TRAILER, policyExpression } from '../../src/contract/merge-policy.mjs';
 import taskJson from './task.json' with { type: 'json' };
-import { normalizeTaskDeclaration } from '../../task-contract.mjs';
+import { normalizeTaskDeclaration } from '../../src/contract/task-contract.mjs';
 
 // The declaration as the loader sees it, defaults filled.
 const task = normalizeTaskDeclaration(taskJson);
 import {
   countEntries, foldUsage, encodeUsage, decodeUsage, mountedSkillNames, DAY_WINDOW_DAYS,
 } from './fold-usage.mjs';
-import { renderUsageFile, withoutStamp } from './usage-format.mjs';
+import { renderUsageFile, withoutStamp } from '../../src/items/usage-format.mjs';
 import { makeReader, readRuns } from './read-runs.mjs';
 import { makeReader as makeQueueReader, readQueueOutcomes } from './read-queue.mjs';
 import { readMergedPrs, prRecordsFrom } from './read-prs.mjs';

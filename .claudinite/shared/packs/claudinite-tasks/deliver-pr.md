@@ -19,7 +19,7 @@ newest open pull request when it had no conflicts, and a fresh one otherwise;
 request already exists and your push updates it. Where there is none, open your pull
 request on that branch. Never mint a branch name, never search for an open pull
 request to reuse, and never close an earlier run's pull request yourself: the converge
-(`converge-item.mjs`, handed `--pr`) closes what `Supersedes:` names once yours
+(`src/session/converge-item.mjs`, handed `--pr`) closes what `Supersedes:` names once yours
 exists, and a run that delivered nothing leaves them where they were.
 
 ## Say which task wrote it
@@ -54,9 +54,9 @@ Whichever source it came from:
   `['under:product-wiki && doc-changes']`) — the task may
   land its PR only when the diff sits inside the policy, and the policy engine decides
   that, never your reading of the diff. Before step 2, run it from the repository root —
-  `merge-policy.mjs` at the root of the claudinite-tasks pack (probe
-  `.claudinite/shared/packs/claudinite-tasks/merge-policy.mjs`, falling back to
-  `packs/claudinite-tasks/merge-policy.mjs` in the canon):
+  `src/session/merge-policy-run.mjs` in the claudinite-tasks pack (probe
+  `.claudinite/shared/packs/claudinite-tasks/src/session/merge-policy-run.mjs`, falling back to
+  `packs/claudinite-tasks/src/session/merge-policy-run.mjs` in the canon):
 
   ```
   node <that file> --base <the PR's base branch> --policy '<the terms, ;-joined>'

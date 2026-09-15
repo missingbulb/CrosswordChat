@@ -1,7 +1,7 @@
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
 import {
   AUTOMERGE_TRAILER, AUTOMERGE_TRAILER_RE, policyVerdict, declaredMergeRules,
-} from '../merge-policy.mjs';
+} from '../src/contract/merge-policy.mjs';
 
 // The armed-auto-merge gate: when a branch says it intends to land itself under
 // a granular policy, the diff must actually sit inside that policy — re-checked

@@ -1,10 +1,10 @@
 import { relative, sep } from 'node:path';
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
 import { isActive } from '../../../engine/pack_loader/pack-registry.mjs';
-import { taskDeclarationFiles } from '../discover.mjs';
-import { parseTaskDeclaration } from '../task-declaration.mjs';
-import { normalizeTaskDeclaration } from '../task-contract.mjs';
-import { EXECUTOR_WORKFLOW, taskSecretNames, secretEnvLine, passesSecret } from '../converge-workflows.mjs';
+import { taskDeclarationFiles } from '../src/contract/discover.mjs';
+import { parseTaskDeclaration } from '../src/contract/task-declaration.mjs';
+import { normalizeTaskDeclaration } from '../src/contract/task-contract.mjs';
+import { EXECUTOR_WORKFLOW, taskSecretNames, secretEnvLine, passesSecret } from '../src/adopt/converge-workflows.mjs';
 
 // A secret reaches a task only if the executor workflow names it STATICALLY — that
 // is Actions' rule, and the reason the wiring converge stamps one env line per
