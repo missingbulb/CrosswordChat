@@ -21,18 +21,19 @@ import {
   supersededItems, supersededComment, orphanedParkItems, orphanedParkComment, taskPathIndex,
   endedParkItems, endedParkComment, unclosedTerminalItems, unclosedTerminalComment, periodForTasks,
   abandonedParkItems, abandonedParkComment, scheduledForTasks,
-} from '../../../claudinite-tasks/queue/janitor-rules.mjs';
+} from '../../src/recover/janitor-rules.mjs';
 import {
   QUEUE_LABELS, HANDOFF_MARKER, TASK_OBSOLETE, TASK_DONE, IN_REVIEW_LABEL,
   NEEDS_HUMAN_ACTION, NEEDS_HUMAN_FAILURE,
   STATUS_BLOCKED, STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT,
   isStatus, isParked, statusOf,
   parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
-} from '../../../claudinite-tasks/queue/work-item.mjs';
-import { listOpenWorkItems, listDoneWorkItems } from '../../../claudinite-tasks/queue/read.mjs';
-import { lastProgressAt } from '../../../claudinite-tasks/queue/heartbeat.mjs';
-import { ensureLabels, addLabel, removeLabel, comment, listComments, readIssue, closeIssue } from '../../../claudinite-tasks/github.mjs';
-import { clearStatus } from '../../../claudinite-tasks/queue/apply-status.mjs';
+} from '../../src/items/work-item.mjs';
+import { listOpenWorkItems, listDoneWorkItems } from '../../src/items/read.mjs';
+import { lastProgressAt } from '../../src/items/heartbeat.mjs';
+import { ensureLabels, addLabel, removeLabel, comment, listComments, readIssue, closeIssue } from '../../src/world/github.mjs';
+import { clearStatus } from '../../src/items/apply-status.mjs';
+import { getIssue } from '../../src/world/github.mjs';
 
 export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log } = {}) {
   const open = await listOpenWorkItems(gh, repo);
@@ -43,7 +44,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
   for (const i of open) {
     for (const n of parseWorkItemBody(i.body).blockedBy) {
       if (known.has(n)) continue;
-      const res = await gh(`/repos/${repo}/issues/${n}`);
+      const res = await getIssue(gh, repo, n);
       known.set(n, res.status === 200 ? res.json?.state ?? null : null);
     }
   }
@@ -74,7 +75,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
   for (const item of open) {
     const { endsWhen } = parseWorkItemBody(item.body);
     if (endsWhen == null || resolutions.has(endsWhen)) continue;
-    const res = await gh(`/repos/${repo}/issues/${endsWhen}`);
+    const res = await getIssue(gh, repo, endsWhen);
     const target = res.status === 200 ? res.json : null;
     resolutions.set(endsWhen, target?.state !== 'closed' ? null
       : (target.pull_request?.merged_at ? 'merged' : 'closed'));

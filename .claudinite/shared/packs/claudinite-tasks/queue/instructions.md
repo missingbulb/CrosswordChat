@@ -88,9 +88,9 @@ instructions.
 6. **Converge the issue exactly once — in code, not by hand.** `<here>` in the
    commands below is **the directory this file sits in** —
    `packs/claudinite-tasks/queue/` in the canon, the same path under
-   `.claudinite/shared/` in a member's mount — and `<engine>` is
-   `<here>/../../../engine`. Derive both from where you found this file rather
-   than from any root you were told.
+   `.claudinite/shared/` in a member's mount — `<pack>` is `<here>/..`, the tasks
+   pack itself, and `<engine>` is `<here>/../../../engine`. Derive all three from
+   where you found this file rather than from any root you were told.
 
    **The command decides the transition; you perform it.** It does not touch
    GitHub, and it is not trying to: your GitHub access is yours, and a subprocess
@@ -104,7 +104,7 @@ instructions.
    save it as JSON — `issue_read`, method `get` — then:
 
    ```bash
-   node <here>/converge-item.mjs --issue <n> \
+   node <pack>/src/session/converge-item.mjs --issue <n> \
      --outcome done|approval|action|decision|failure \
      --summary '<what happened>' [--pr <n>] \
      --repo <owner/name> --item-file <path to that JSON>

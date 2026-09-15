@@ -2,9 +2,9 @@ import { finding } from '../../../engine/checks/helpers/findings.mjs';
 // Namespace-imported and guarded for the same reason legacy-shape-in-use is: a
 // member's pack lane and engine lane converge on separate cycles, and this pack
 // can sit beside a task-contract that predates either export.
-import * as contract from '../task-contract.mjs';
-import * as calendar from '../calendar.mjs';
-import * as declarationText from '../task-declaration-text.mjs';
+import * as contract from '../src/contract/task-contract.mjs';
+import * as calendar from '../src/contract/calendar.mjs';
+import * as declarationText from '../src/contract/task-declaration-text.mjs';
 
 // THE ADVISORY HALF OF THE TASK CONTRACT'S FIELD TOLERANCES. `normalizeTaskDeclaration`
 // accepts two generations of field names, the retired one-word outcome ceilings,

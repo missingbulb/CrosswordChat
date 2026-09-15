@@ -24,14 +24,14 @@
 // has exactly one home too: the scheduler that prints those records, so the counter
 // keys here cannot drift from the words the runs actually emit.
 import { loadPacks, isActive, bundledSkillSources } from '../../../../engine/pack_loader/pack-registry.mjs';
-import { TASK_EXEC_STATUSES, parseTaskExecs } from '../../../claudinite-tasks/run-record.mjs';
+import { TASK_EXEC_STATUSES, parseTaskExecs } from '../../src/items/run-record.mjs';
 // The file's on-disk shape is its SIBLING here (usage-format.mjs). Everything below
 // works in the NAMED counter shape and meets the tuples only at the two boundary
 // functions at the foot of this file.
 import {
   USAGE_FIELDS, USAGE_VERSION, CAPTURE_DAY_FIELDS, WEEK_FROM_DAY, QUEUE_OUTCOMES,
   COUNTER_GROUPS, BARE_MAPS, USAGE_CAPS, hourKey, encodeUsageFile, decodeUsageFile,
-} from './usage-format.mjs';
+} from '../../src/items/usage-format.mjs';
 
 // --- entry classification -----------------------------------------------------
 // Every shape below was verified against real captured transcripts on a

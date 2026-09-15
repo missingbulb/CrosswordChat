@@ -19,8 +19,9 @@
 
 import path from 'node:path';
 import {
-  COMMENT_CHECKABLE, commentOnly, classifyPath, diffEntries,
-} from '../../../merge-policy.mjs';
+  COMMENT_CHECKABLE, commentOnly, classifyPath,
+} from '../../../src/contract/merge-policy.mjs';
+import { diffEntries } from '../../../src/session/merge-policy-run.mjs';
 
 // Re-exported so a caller that asked this module keeps getting the same answers
 // the policy engine gives.

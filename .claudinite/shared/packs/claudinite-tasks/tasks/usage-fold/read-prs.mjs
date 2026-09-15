@@ -17,7 +17,7 @@
 import { lookbackFrom } from './read-queue.mjs';
 // The two pure field derivations, in their own module so the page that shares them
 // never loads this file's reader with them.
-import { closesIssueIn, hoursBetween } from './pr-fields.mjs';
+import { closesIssueIn, hoursBetween } from '../../src/items/pr-fields.mjs';
 
 export { closesIssueIn, hoursBetween };
 

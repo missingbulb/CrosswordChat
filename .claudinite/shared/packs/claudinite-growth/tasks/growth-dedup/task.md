@@ -68,7 +68,7 @@ worker only frames the unattended run around it.
   **Title the commit and the PR
   `Claudinite growth: dedup local packs`** — the `growth-write-scope` check keys on that title to certify the
   run pruned only the repo's local packs. Then **deliver it by the shared procedure —
-  [deliver-pr.md](../../../../packs/claudinite-tasks/deliver-pr.md)** — that procedure, never this file, owns
+  [deliver-pr.md](../../../claudinite-tasks/deliver-pr.md)** — that procedure, never this file, owns
   whether and how the PR lands. What holds the prune bar is the quote-the-canon-line discipline above, the
   `dedup-prune-integrity` and `growth-write-scope` checks, and CI — never a reviewer's second look, which a
   wrongful prune is easy to wave through anyway. **Put the issue reference in the commit message** —
@@ -99,7 +99,7 @@ what the run got wrong: a real lesson pruned on a claim the canon does not actua
 - **Never edit the read-only canon** — it only prunes the repo's *local packs* against it, and the
   `growth-write-scope` check reds a run that touches anything outside them.
 - **Never land a prune outside a PR** — every prune rides the run's single PR, delivered by
-  [deliver-pr.md](../../../../packs/claudinite-tasks/deliver-pr.md); a direct push to `main` is never in scope.
+  [deliver-pr.md](../../../claudinite-tasks/deliver-pr.md); a direct push to `main` is never in scope.
 - **Never prune a local item without quoting the mounted-canon line (or covering check rule id) that covers
   it** — when unsure, leave it.
 - **Never widen the dispatch's Context.** If it named the changed canon packs, a prune citing coverage from

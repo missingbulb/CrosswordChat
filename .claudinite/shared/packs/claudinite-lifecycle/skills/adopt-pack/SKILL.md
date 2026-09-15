@@ -90,7 +90,7 @@ record in between.
 its drain, and the label-event executor:
 
 ```
-node .claudinite/shared/packs/claudinite-tasks/converge-workflows.mjs <owner/repo>
+node .claudinite/shared/packs/claudinite-tasks/src/adopt/converge-workflows.mjs <owner/repo>
 ```
 
 `.github/workflows/` is the one directory a member's nightly may never push to, so these arrive

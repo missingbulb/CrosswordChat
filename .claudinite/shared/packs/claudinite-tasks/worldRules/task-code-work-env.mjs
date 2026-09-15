@@ -1,6 +1,6 @@
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
 import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
-import { CODE_WORK_ENV_VARS } from '../../claudinite-tasks/queue/code-work-run.mjs';
+import { CODE_WORK_ENV_VARS } from '../src/execute/code-work-run.mjs';
 
 // A task's code may read only the CLAUDINITE_* variables code-work is actually
 // handed (`codeWorkEnv`, docs/PRINCIPLES.md). Anything else is a variable

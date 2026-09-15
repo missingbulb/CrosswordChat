@@ -30,7 +30,7 @@ goes through your GitHub tools.
 1. **Resolve and validate your dispatch — in code, before anything else.**
 
    ```bash
-   node <here>/resolve-dispatch.mjs <scope>
+   node <here>/src/session/resolve-dispatch.mjs <scope>
    ```
 
    `<here>` is **the directory this file sits in** — `packs/claudinite-tasks/` in the canon,
@@ -136,7 +136,7 @@ goes through your GitHub tools.
    minutes pass, do both:
 
    - **Append one dated line to the issue body's `### Progress` section**, keeping the lines
-     already there — `withProgress` in `queue/heartbeat.mjs` builds the new body. It is the one
+     already there — `withProgress` in `src/execute/heartbeat.mjs` builds the new body. It is the one
      surface a run can grow in place: a posted comment cannot be edited, so the body carries the
      account.
    - **Post the beat comment** `agentBeatComment({ session, at, note })` from the same module,
@@ -151,7 +151,7 @@ goes through your GitHub tools.
    is a **ceiling, not a target**: it is the most a task may do, and **"no change" is always
    legal** — a run that found nothing worth changing is a success, never a reason to
    manufacture work. Determine what the run did to pull requests and check it against that
-   ceiling with `verify-outcome.mjs` — a `no_code_changes` task that opened a PR, or a task whose
+   ceiling with `src/session/verify-outcome.mjs` — a `no_code_changes` task that opened a PR, or a task whose
    `automerge` authorizes nothing that merged one, **fails the run**. Then:
    - Success within ceiling → comment the result, remove `agent-running`, and **close** the
      issue.
@@ -173,7 +173,7 @@ goes through your GitHub tools.
    Then **record the execution in code** — one command, whichever way it went:
 
    ```bash
-   node <here>/record-exec.mjs <pack>/<task> <slot> <success|failed>
+   node <here>/src/session/record-exec.mjs <pack>/<task> <slot> <success|failed>
    ```
 
    It prints the machine-readable execution record (`claudinite-task-exec …`) into this
@@ -206,5 +206,5 @@ goes through your GitHub tools.
 by a session that died mid-run, not a dispatch whose label event never landed, not a sibling
 issue that looks abandoned. This session cares about its one task and nothing else — no
 cleanups, no merging of tasks (owner, 2026-08-06). Recovery is the **task-janitor's**, a
-separate daily task whose worker runs `dispatch.mjs`'s rules in code, once, in one place —
+separate daily task whose worker runs `src/session/dispatch.mjs`'s rules in code, once, in one place —
 and it is not here.

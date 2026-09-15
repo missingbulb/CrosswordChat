@@ -22,7 +22,7 @@
 // and leaves the watermark where it was; the capture-derived counts do not depend on
 // it and must not be lost with it.
 
-import { SCHEDULER_WORKFLOW_FILE, EXECUTOR_WORKFLOW_FILE } from '../../../claudinite-tasks/signals/gh.mjs';
+import { SCHEDULER_WORKFLOW_FILE, EXECUTOR_WORKFLOW_FILE } from '../../src/world/actions.mjs';
 
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 

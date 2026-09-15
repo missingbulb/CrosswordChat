@@ -1,5 +1,10 @@
-// The auto-merge policy engine, published for other packs: the verdict a
-// `automerge` declaration compiles to, and the merge-rules.json compiler, so
-// a pack's own tests can assert its policies and declared rules against the same
-// evaluator the landing lane and the automerge-policy-scope gate apply.
-export * from '../merge-policy.mjs';
+// The auto-merge policy engine, published for other packs: the verdict an `automerge`
+// declaration compiles to, and the merge-rules.json compiler, so a pack's own tests can
+// assert its policies and declared rules against the same evaluator the landing lane and
+// the automerge-policy-scope gate apply.
+export {
+  policyVerdict, policyExpression, declaredMergeRules, AUTOMERGE_TRAILER,
+} from '../src/contract/merge-policy.mjs';
+export {
+  diffEntries,
+} from '../src/session/merge-policy-run.mjs';
