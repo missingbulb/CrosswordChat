@@ -97,9 +97,9 @@ node .claudinite/shared/packs/claudinite-tasks/src/adopt/converge-workflows.mjs 
 here or not at all. They are static from this moment: the cron minute is hashed from the repo's
 full name, both anchor hours come from its `taskScheduler.dailyHour`, and every `run:` names a
 mount path behind which the code converges nightly. The command is a no-op when both files are
-already right. A repo adopting this pack also needs its two CCR routine endpoints — the executor's
-and the work-item session's — pointed at `executor.md` and `public/instructions.md` in its own
-mount; that is a console setting, so it belongs in the handover issue §4b files.
+already right. A repo adopting this pack also needs its CCR routine endpoints — the executor's and
+the work-item session's — pointed at `public/instructions.md` in its own mount; that is a console
+setting, so it belongs in the handover issue §4b files.
 
 ## 4. Scaffold what the pack now demands
 
