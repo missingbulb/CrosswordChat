@@ -15,6 +15,17 @@
 import { itemFacts } from '../items/work-item.mjs';
 import { taskSignalNames } from '../contract/task-contract.mjs';
 import { DAY_MS, defaultWindowMs, windowDaysOf } from '../contract/precondition.mjs';
+import { localSignalContext } from '../world/git.mjs';
+
+// The collectors and the ctx builder, loaded on the first collection and shared by
+// every one after it. Lazy rather than a static or top-level-awaited import because
+// a module under `packs/` may do no work while it is being evaluated: discovery
+// imports every `pack.mjs` before activation is consulted.
+let modulesPromise = null;
+function signalModules() {
+  modulesPromise ??= Promise.all([import('./index.mjs'), import('./context.mjs')]);
+  return modulesPromise;
+}
 
 // Republished from the contract that owns them: a caller reading a task's window
 // off its collected signals asks the collector, not two modules.
@@ -42,11 +53,17 @@ export function windowFromRuns(task, runs, now) {
 // the named signals — the scheduler's cheap first pass asks for `['runs']` alone
 // and judges the run-history terms before anything else is collected.
 export function collectSignalsForTask({ gh, repo, root, config, defaultBranch, items = null }) {
+  const packConfigFor = (packId) => config.packConfig?.[packId] ?? {};
+  // The checkout probes are pure over `root`, so they are read once for this
+  // collector and passed into every context it builds. They are held by the
+  // COLLECTOR and not by the module because the tree can be rewritten under a
+  // running process — a `code_work` step does exactly that — so how long a probe
+  // may be trusted is the caller's call: a collector answers for the span it was
+  // built for and nothing outside it.
+  const local = localSignalContext(root, { packIds: config.packs ?? [], packConfigFor });
   return async function collectFor(task, now, item = null, { only = null } = {}) {
-    const { collectSignals } = await import('./index.mjs');
-    const { buildSignalContext } = await import('./context.mjs');
+    const [{ collectSignals }, { buildSignalContext }] = await signalModules();
     const names = taskSignalNames(task.decl, task.terms);
-    const packConfigFor = (packId) => config.packConfig?.[packId] ?? {};
     const nowIso = new Date(now).toISOString();
     const facts = itemFacts(item);
     const taskRef = { pack: task.pack, id: task.id };
@@ -58,8 +75,8 @@ export function collectSignalsForTask({ gh, repo, root, config, defaultBranch, i
     // (the request implementer) pages no issue list at every pick.
     const windowless = new Set(['request']);
     const needsHistory = names.includes('runs') || rest.some((n) => !windowless.has(n));
-    if (!needsHistory) return rest.length ? await collectSignals(gh, buildSignalContext({ root, repo, defaultBranch, now: nowIso, sinceIso: null, config, packConfigFor, item: facts, task: taskRef, items }), rest) : {};
-    const history = buildSignalContext({ root, repo, defaultBranch, now: nowIso, sinceIso: null, config, packConfigFor, item: facts, task: taskRef, items });
+    if (!needsHistory) return rest.length ? await collectSignals(gh, buildSignalContext({ root, repo, defaultBranch, now: nowIso, sinceIso: null, config, packConfigFor, item: facts, task: taskRef, items, local }), rest) : {};
+    const history = buildSignalContext({ root, repo, defaultBranch, now: nowIso, sinceIso: null, config, packConfigFor, item: facts, task: taskRef, items, local });
     const { runs } = await collectSignals(gh, history, ['runs']);
     const window = windowFromRuns(task, runs?.error ? null : runs, now);
     const out = { runs: { ...runs, window } };
@@ -85,7 +102,7 @@ export function collectSignalsForTask({ gh, repo, root, config, defaultBranch, i
       root, repo, defaultBranch, now: nowIso, sinceIso: window.sinceIso, config, fleet, packConfigFor,
       // The occurrence's own facts, for the collector that reads one named object
       // rather than a window (the request read, PRINCIPLES.md).
-      item: facts, task: taskRef, items,
+      item: facts, task: taskRef, items, local,
     });
     return { ...out, ...(await collectSignals(gh, ctx, rest)) };
   };

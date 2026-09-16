@@ -87,7 +87,7 @@ import aimed anywhere else is one this repository cannot repair when the layout 
 | `github.mjs` | the GitHub client, the workflow dispatch, the two workflow file names, and the tracker issue a worker records on | any pack whose tasks reach GitHub |
 | `signals.mjs` | the signal shapes a precondition is handed | packs asserting what their own tasks will see |
 | `task-contract.mjs` | task-declaration validation, and the signal union either precondition form resolves to | every pack with tasks, in its own tests |
-| `preconditions.mjs` | the precondition vocabulary, the expression grammar, and the one seam that turns a task plus its signals into a verdict — the call the executor makes at pick | every pack with tasks, in its own tests |
+| `preconditions.mjs` | the precondition vocabulary, the expression grammar, and both evaluators — the seam the executor calls at pick over a discovered task, and the raw-fields one a pack asserts its own declarations with | every pack with tasks, in its own tests |
 | `merge-policy.mjs` | the auto-merge policy verdict (`automerge`, the `Merge:` field, the arming trailer) and the `merge-rules.json` compiler | any pack declaring policies or merge rules, in its own tests |
 | `task-declaration.mjs` | the declaration as text — the reader that lifts its fields out and the agentic defaults the loader fills, reaching no Node built-in so a browser bundle can load it | claudinite-dashboard |
 | `task-discovery.mjs` | where a task's declaration lives on disk and how it is read — kept apart from `task-declaration.mjs`, which reaches no Node built-in | a member's own worker needing its task's declared fields at run time |

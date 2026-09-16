@@ -42,79 +42,97 @@ const root = value('--root') || process.env.CLAUDE_PROJECT_DIR || process.cwd();
 // pack that was never there from one that did not load: it emits a short answer
 // and reports success. The full run below turns those errors into findings; these
 // two entry points would otherwise be the ones that swallow them (#2008).
+// A null return means the caller prints NOTHING and the run ends on the exit code
+// set here. It cannot call process.exit itself: see the note on exiting below.
 async function wholeRegistryOr(exit) {
   const { packs, errors } = await discoverPacks({ localRoot: root });
   if (errors.length) {
     console.error(`${errors.length} pack(s) failed to load, so ${exit} cannot answer for this repo:`);
     for (const e of errors) console.error(`  ${e.what}\n    Fix: ${e.fix}`);
-    process.exit(1);
+    process.exitCode = 1;
+    return null;
   }
   return packs;
 }
 
+// EXITING: set process.exitCode and let the process end on its own — never
+// process.exit(). When stdout is a PIPE (which is every caller that captures the
+// output: a test's spawnSync, a shell pipeline, an Actions step) a write is
+// ASYNCHRONOUS, and process.exit() drops whatever is still queued. That is not
+// theoretical: the catalog below is ~150 rows, and under load a quarter of runs
+// handed the caller a catalog cut off at a row boundary — status 0, empty stderr,
+// a silently short answer, which is the worst shape a machine-readable channel can
+// fail in. The branches below are an if/else chain for the same reason: an exit
+// code does not stop the script the way process.exit did.
 if (has('--list')) {
   // stdout stays the machine-readable channel; the diagnostic above goes to stderr.
   const packs = await wholeRegistryOr('--list');
-  for (const r of packRules(packs)) {
+  if (packs) {
+    // One write rather than one per rule — less for the exit to have to flush, and
+    // a catalog is a single document, not a stream.
     // A declared check carries neither a description nor a doc pointer — it
     // states its own case — so the catalog prints its failure message in that
     // column and leaves the pointer empty.
-    console.log(`${r.id}\t${r.severity}\t${r.description ?? r.why ?? ''}\t${r.doc ?? ''}`);
+    console.log(packRules(packs)
+      .map((r) => `${r.id}\t${r.severity}\t${r.description ?? r.why ?? ''}\t${r.doc ?? ''}`)
+      .join('\n'));
   }
-  process.exit(0);
-}
-
-if (has('--init')) {
+} else if (has('--init')) {
   const { seedDeclaration } = await import('./helpers/seed-declaration.mjs');
   // A declaration seeded from a partial registry omits the packs that did not
   // load, and a member copies that file once and never again — so refuse rather
   // than write one.
   const packs = await wholeRegistryOr('--init');
-  const { path, existed, declared } = seedDeclaration(root, packs);
-  if (existed) {
-    console.log(`${path} already exists — leaving it as-is.`);
-    process.exit(0);
+  if (packs) {
+    const { path, existed, declared } = seedDeclaration(root, packs);
+    // The adoption interview (surfacing each declared pack's pending questions) is
+    // driven by the adopt-claudinite skill / bootstrap.md, and nudged every session
+    // by the SessionStart interview-check step — not printed here, so this runner
+    // imports no pack.
+    console.log(existed
+      ? `${path} already exists — leaving it as-is.`
+      : `Wrote ${path} (packs: ${declared.map(packEntryId).join(', ')}).`);
   }
-  console.log(`Wrote ${path} (packs: ${declared.map(packEntryId).join(', ')}).`);
-  // The adoption interview (surfacing each declared pack's pending questions) is
-  // driven by the adopt-claudinite skill / bootstrap.md, and nudged every session
-  // by the SessionStart interview-check step — not printed here, so this runner
-  // imports no pack.
-  process.exit(0);
+} else {
+  await sweep();
 }
 
-const { packs, errors: packErrors } = await discoverPacks({ localRoot: root });
-const ctx = buildContext({ root, mode: has('--changed') ? 'changed' : 'all', baseOverride: value('--base') });
+// The sweep itself. A function only so the branches above can end the run without
+// process.exit — see the note on exiting.
+async function sweep() {
+  const { packs, errors: packErrors } = await discoverPacks({ localRoot: root });
+  const ctx = buildContext({ root, mode: has('--changed') ? 'changed' : 'all', baseOverride: value('--base') });
 
-// Settings/load integrity — pack-agnostic, so the world runner owns them.
-// Settings validity is checked at load: malformed JSON, an unknown
-// property, and a wrong pack name are all equally settings errors. loadConfig
-// reports the first two; the runner adds unknown pack names (only it holds the
-// registry) and broken/duplicate local pack.mjs faults.
-const findings = [];
-for (const e of ctx.config.errors) findings.push(configError(e.what, e.fix));
-for (const e of packErrors) findings.push(configError(e.what, e.fix));
-// knownIds spans canon AND local packs, so a declared local pack id is valid and
-// the unknown-pack message lists it among the declarable packs. ctx.config.packs
-// is loadConfig's normalized view — bare ids, a namespaced local_packs/<name>
-// declaration already resolved through packEntryId.
-const knownIds = new Set(packs.map((p) => p.id));
-for (const name of ctx.config.packs) {
-  if (typeof name === 'string' && !knownIds.has(name)) {
-    findings.push(configError(`declares unknown pack "${name}"`, `remove it or fix the name — declarable packs: ${[...knownIds].sort().join(', ')}`));
+  // Settings/load integrity — pack-agnostic, so the world runner owns them.
+  // Settings validity is checked at load: malformed JSON, an unknown
+  // property, and a wrong pack name are all equally settings errors. loadConfig
+  // reports the first two; the runner adds unknown pack names (only it holds the
+  // registry) and broken/duplicate local pack.mjs faults.
+  const findings = [];
+  for (const e of ctx.config.errors) findings.push(configError(e.what, e.fix));
+  for (const e of packErrors) findings.push(configError(e.what, e.fix));
+  // knownIds spans canon AND local packs, so a declared local pack id is valid and
+  // the unknown-pack message lists it among the declarable packs. ctx.config.packs
+  // is loadConfig's normalized view — bare ids, a namespaced local_packs/<name>
+  // declaration already resolved through packEntryId.
+  const knownIds = new Set(packs.map((p) => p.id));
+  for (const name of ctx.config.packs) {
+    if (typeof name === 'string' && !knownIds.has(name)) {
+      findings.push(configError(`declares unknown pack "${name}"`, `remove it or fix the name — declarable packs: ${[...knownIds].sort().join(', ')}`));
+    }
   }
+  // (Adoption-interview hygiene is a skill-owned check that runs below with the
+  // other active-pack rules; a malformed `questions` field arrives as a load fault
+  // in packErrors above. Neither names a pack here.)
+
+  // The world rules: everything not scoped to the work. A broken contributedRules
+  // seam is a config-level fault surfaced here (the world runner owns diagnostics).
+  findings.push(...runActivePackRules(ctx, packs, {
+    includeRule: (rule) => rule.scope !== 'work' && rule.scope !== 'action',
+    onContributeError: (pack, e) => findings.push(configError(
+      `the "${pack.id}" pack's contributedRules failed: ${e.message}`, 'fix the pack manifest, or the contribution it interprets')),
+  }));
+
+  const blocking = reportFindings(findings, ctx.config, { scopeLabel: 'world', mode: ctx.mode, baseRef: ctx.baseRef });
+  process.exitCode = blocking ? 1 : 0;
 }
-// (Adoption-interview hygiene is a skill-owned check that runs below with the
-// other active-pack rules; a malformed `questions` field arrives as a load fault
-// in packErrors above. Neither names a pack here.)
-
-// The world rules: everything not scoped to the work. A broken contributedRules
-// seam is a config-level fault surfaced here (the world runner owns diagnostics).
-findings.push(...runActivePackRules(ctx, packs, {
-  includeRule: (rule) => rule.scope !== 'work' && rule.scope !== 'action',
-  onContributeError: (pack, e) => findings.push(configError(
-    `the "${pack.id}" pack's contributedRules failed: ${e.message}`, 'fix the pack manifest, or the contribution it interprets')),
-}));
-
-const blocking = reportFindings(findings, ctx.config, { scopeLabel: 'world', mode: ctx.mode, baseRef: ctx.baseRef });
-process.exit(blocking ? 1 : 0);

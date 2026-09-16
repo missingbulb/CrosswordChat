@@ -22,10 +22,14 @@ import { localSignalContext } from '../world/git.mjs';
 // `task` is `{ pack, id }`, the task whose run history is being read, and `items`
 // the queue where the caller already fetched it (the scheduler run) — null where
 // the collector reads it for itself (the executor at pick).
+//
+// `local` is the checkout half of the ctx (world/git.mjs) where the caller already
+// has it: a collector that builds several contexts over one `root` probes the disk
+// once instead of once per context. Absent, it is read here.
 export function buildSignalContext({
-  root, repo, defaultBranch, now, sinceIso, config, fleet = null, item = null, task = null, items = null, packConfigFor = () => ({}),
+  root, repo, defaultBranch, now, sinceIso, config, fleet = null, item = null, task = null, items = null, packConfigFor = () => ({}), local = null,
 }) {
-  const local = localSignalContext(root, { packIds: config.packs ?? [], packConfigFor });
+  local ??= localSignalContext(root, { packIds: config.packs ?? [], packConfigFor });
   return {
     repo, defaultBranch, now, sinceIso, config, item, task, items,
     activePacks: config.packs, fleet,
