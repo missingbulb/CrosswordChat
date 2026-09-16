@@ -755,7 +755,12 @@ export async function runExecutorJob() {
     gh, repo, root, config, tasks,
     executorId: actionsEnv().CLAUDINITE_EXECUTOR_ID || `actions-${actionsEnv().GITHUB_RUN_ID ?? 'local'}`,
     runUrl,
-    collectSignalsFor: collectSignalsForTask({ gh, repo, root, config, defaultBranch }),
+    // A COLLECTOR PER PICK. The collector holds the checkout's facts for the span
+    // it was built for, and a `code_work` step during a pick rewrites that
+    // checkout — one built for the whole drain would answer the next item from the
+    // pre-edit tree. The executor asks for an item exactly once, so building it
+    // per ask is building it per pick.
+    collectSignalsFor: (task, at, item) => collectSignalsForTask({ gh, repo, root, config, defaultBranch })(task, at, item),
     runTaskCodeWork: codeWorkRunner({ root, repo, defaultBranch }),
     invokeAgent: agentInvoker({ repo, config }),
     heldNow: liveSuspendReader(gh, repo, { log: console.log }),

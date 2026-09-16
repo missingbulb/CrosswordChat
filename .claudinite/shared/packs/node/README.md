@@ -11,6 +11,7 @@ Active when the repo has a root `package.json`. The module-resolution and jsdom 
 | A scratchpad script can't reach node_modules | medium | correctness | prose: <100 words |
 | Check what Node version CI pins | medium | correctness | prose: <100 words |
 | Declare setup-node caching either way | medium | performance | prose: <100 words |
+| A printing script must not process.exit() | high | correctness | prose: <50 words |
 | body.innerText is null in jsdom. | medium | correctness | prose: <100 words |
 | jsdom parses <noscript> into live DOM | medium | correctness | prose: <100 words |
 

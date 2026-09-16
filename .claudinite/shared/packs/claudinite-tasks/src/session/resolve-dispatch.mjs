@@ -283,24 +283,26 @@ export function parseIssueJson(raw) {
 // runs must see exactly what changed.
 const block = (fields) => Object.entries(fields).map(([k, v]) => `${k}: ${v}`).join('\n');
 
-function done(code, fields, advice) {
-  console.log(block(fields));
-  if (advice) console.error(`resolve-dispatch: ${advice}`);
-  process.exit(code);
-}
+// A decided verdict, as a value: the `code` the process must exit with, the
+// `fields` block to print on stdout (absent for a usage error, which prints no
+// block at all), and the `advice` line for stderr. The decision is returned
+// rather than printed so a caller can judge it without a process: printing and
+// exiting belong to the shell wrapper at the foot of this file, and are the only
+// things it does.
+const done = (code, fields, advice) => ({ code, fields, advice });
+const usage = (advice) => ({ code: EXIT.usage, advice });
 
-async function main() {
-  const { positional, flags } = parseArgs(process.argv.slice(2));
+export async function resolveDispatch(argv = process.argv.slice(2), env = actionsEnv()) {
+  const { positional, flags } = parseArgs(argv);
   const scopeGiven = positional.length > 0;
   const scope = positional[0] ?? 'self';
   if (!SESSION_SCOPES.includes(scope)) {
-    console.error(`resolve-dispatch: unknown scope "${scope}" — usage: node resolve-dispatch.mjs [${SESSION_SCOPES.join('|')}] [--issue-json <path> | --issue-body-file <path> --issue-labels <csv>]`);
-    process.exit(EXIT.usage);
+    return usage(`unknown scope "${scope}" — usage: node resolve-dispatch.mjs [${SESSION_SCOPES.join('|')}] [--issue-json <path> | --issue-body-file <path> --issue-labels <csv>]`);
   }
 
-  const { trigger, error: triggerError } = resolveTrigger();
+  const { trigger, error: triggerError } = resolveTrigger(env);
   if (triggerError) {
-    done(EXIT.noTrigger, { dispatch: 'no-trigger', scope, reason: triggerError },
+    return done(EXIT.noTrigger, { dispatch: 'no-trigger', scope, reason: triggerError },
       `${triggerError}. No trigger source names an issue, so this session cannot know which dispatch it was started for. STOP: run nothing, change nothing, comment nothing, end the session. There is NO fallback — never pick an issue by listing ${readyLabelForScope(scope)}; every dispatch in that list already has its own session, and the task-janitor re-arms an unrun one on its next daily run.`);
   }
 
@@ -320,17 +322,14 @@ async function main() {
       try {
         raw = readFileSync(jsonFile, 'utf8');
       } catch (e) {
-        console.error(`resolve-dispatch: --issue-json ${jsonFile} is unreadable: ${e.message}`);
-        process.exit(EXIT.usage);
+        return usage(`--issue-json ${jsonFile} is unreadable: ${e.message}`);
       }
       const { issue, error } = parseIssueJson(raw);
       if (error) {
-        console.error(`resolve-dispatch: --issue-json ${jsonFile} is ${error}`);
-        process.exit(EXIT.usage);
+        return usage(`--issue-json ${jsonFile} is ${error}`);
       }
       if (issue.number !== null && issue.number !== number) {
-        console.error(`resolve-dispatch: --issue-json carries issue #${issue.number}, but this session's trigger names #${number} — that is the wrong issue. Fetch #${number} alone and re-run.`);
-        process.exit(EXIT.usage);
+        return usage(`--issue-json carries issue #${issue.number}, but this session's trigger names #${number} — that is the wrong issue. Fetch #${number} alone and re-run.`);
       }
       ({ body, title } = issue);
       labels = issue.labels;
@@ -338,17 +337,16 @@ async function main() {
       try {
         body = readFileSync(bodyFile, 'utf8');
       } catch (e) {
-        console.error(`resolve-dispatch: --issue-body-file ${bodyFile} is unreadable: ${e.message}`);
-        process.exit(EXIT.usage);
+        return usage(`--issue-body-file ${bodyFile} is unreadable: ${e.message}`);
       }
       labels = labelsCsv.split(',').map((l) => l.trim()).filter(Boolean);
     } else {
-      done(EXIT.ok, { dispatch: 'needs-issue', issue: number, scope, source: 'ccr', repo: trigger.repo || '(unset)' },
+      return done(EXIT.ok, { dispatch: 'needs-issue', issue: number, scope, source: 'ccr', repo: trigger.repo || '(unset)' },
         `the CCR trigger names issue #${number} but carries neither its body nor its labels. Fetch ISSUE #${number} ALONE over MCP (the issue-get tool), save the tool's raw JSON response verbatim to a file, then re-run: node <engine>/scheduler/resolve-dispatch.mjs ${scope} --issue-json <path>. Do not list, select, or touch any other issue.`);
     }
     const { label: ready, error: labelError } = readyLabelAmong(labels);
     if (labelError) {
-      done(EXIT.ok, { dispatch: 'not-mine', issue: number, scope, labels: labels.join('|') || '(none)' },
+      return done(EXIT.ok, { dispatch: 'not-mine', issue: number, scope, labels: labels.join('|') || '(none)' },
         `issue #${number}: ${labelError}. Stop: change nothing, comment nothing.`);
     }
     label = ready;
@@ -356,7 +354,7 @@ async function main() {
 
   const labelScope = scopeForLabel(label);
   if (labelScope === null) {
-    done(EXIT.ok, { dispatch: 'not-mine', issue: number, scope, label },
+    return done(EXIT.ok, { dispatch: 'not-mine', issue: number, scope, label },
       `issue #${number} was labeled "${label}", which is not a ready label — this is not an executor dispatch. Stop: change nothing, comment nothing.`);
   }
   // The one stop that is NOT ordinary. Each executor routine fires on its own
@@ -365,14 +363,14 @@ async function main() {
   // GitHub will ever say so. Hence non-zero: the session is the only place a
   // human can read it, and a green exit there reads as "nothing to see".
   if (labelScope !== scope) {
-    done(EXIT.scopeMismatch, { dispatch: 'scope-mismatch', issue: number, scope, label, labelScope },
+    return done(EXIT.scopeMismatch, { dispatch: 'scope-mismatch', issue: number, scope, label, labelScope },
       `issue #${number} is labeled "${label}", a ${labelScope}-scoped dispatch, but this session's scope is "${scope}"${scopeGiven ? '' : ' (the default — pass "fleet" if this IS the fleet executor)'}. Each routine fires on its own ready label, so this session's routine is misconfigured — it will decline every ${labelScope} dispatch until a human fixes its launcher prompt. Stop: change nothing, comment nothing, and say so plainly in your final message.`);
   }
 
   // The checkout the dispatch's task path must resolve in. `exists` reads the
   // working tree; in an executor session that IS HEAD (a fresh checkout, nothing
   // written yet), which is what validate-dispatch means by "exists at HEAD".
-  const root = actionsEnv().CLAUDINITE_REPO_ROOT || repoRootFrom(import.meta.url);
+  const root = env.CLAUDINITE_REPO_ROOT || repoRootFrom(import.meta.url);
   const { loadConfig } = await import('../../../../engine/checks/helpers/repo-context.mjs');
   const declared = new Set(loadConfig(root).packs);
 
@@ -416,13 +414,13 @@ async function main() {
       ? renderTaskExec({ pack: verdict.pack, task: verdict.task, slotId: slotForRecord, status: verdict.gone ? 'task-gone' : 'invalid' })
       : null;
     if (verdict.gone) {
-      done(EXIT.ok, {
+      return done(EXIT.ok, {
         dispatch: 'task-gone', issue: number, scope, label, reason: verdict.reason,
         ...(record ? { record } : {}),
       },
         `issue #${number} names a task this repo no longer carries: ${verdict.reason}. It must not run and needs no human: comment the reason, CLOSE the issue (not planned), and end the session. Do not add "needs-human".`);
     }
-    done(EXIT.ok, {
+    return done(EXIT.ok, {
       dispatch: 'invalid', issue: number, scope, label, reason: verdict.reason,
       ...(record ? { record } : {}),
     },
@@ -435,7 +433,7 @@ async function main() {
   // trigger carried one (the Actions payload and --issue-json both do; the
   // manual two-flag fallback does not).
   const slot = slotForRecord;
-  done(EXIT.ok, {
+  return done(EXIT.ok, {
     dispatch: 'valid',
     brief: `Task: ${verdict.pack}/${verdict.task}${slot ? ` (slot ${slot})` : ''} — issue #${number}, model ${verdict.resolvedModel}, outcome ceiling ${verdict.outcome}${opensPullRequest(verdict.outcome) ? ` (may auto-merge: ${policyExpression(verdict.automerge)})` : ''}, timeout ${verdict.executionTimeout ?? 'none'}s`,
     issue: number,
@@ -453,8 +451,18 @@ async function main() {
   });
 }
 
+// The shell around the decision: one write to each channel, one exit. Returns
+// the code rather than exiting so the printing is testable on its own.
+export function emitResult({ code, fields, advice }) {
+  if (fields) console.log(block(fields));
+  if (advice) console.error(`resolve-dispatch: ${advice}`);
+  return code;
+}
+
 // Run only when invoked directly (the executor's `node resolve-dispatch.mjs`),
 // never on import — the exported helpers above are unit-testable without it.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`resolve-dispatch: ${e.stack || e}`); process.exit(EXIT.internal); });
+  resolveDispatch()
+    .then((result) => process.exit(emitResult(result)))
+    .catch((e) => { console.error(`resolve-dispatch: ${e.stack || e}`); process.exit(EXIT.internal); });
 }

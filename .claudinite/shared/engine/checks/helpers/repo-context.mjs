@@ -24,11 +24,20 @@ const gitTry = (root, ...args) => sh(root, 'git', args, { allowFail: true });
 // context resolves can never name different branches.
 export const BASE_REF_CANDIDATES = ['origin/main', 'origin/master', 'main', 'master'];
 
+// All four candidates in ONE subprocess. `cat-file --batch-check` takes revisions on
+// stdin and answers each independently — `<sha> commit <size>` for one that resolves,
+// `<input> missing` for one that does not — so it is the same revision parser
+// `rev-parse --verify` uses, `^{commit}` peeling included, asked four questions at
+// once instead of four times. A repo whose base is a local `main` (every check fixture,
+// and any clone without a remote) missed on both `origin/` candidates first and paid
+// three spawns for an answer that now costs one.
 function resolveBaseRef(root) {
-  for (const ref of BASE_REF_CANDIDATES) {
-    if (gitTry(root, 'rev-parse', '--verify', '--quiet', `${ref}^{commit}`) !== null) return ref;
-  }
-  return null;
+  const answers = (sh(root, 'git', ['cat-file', '--batch-check'],
+    { allowFail: true, input: `${BASE_REF_CANDIDATES.map((ref) => `${ref}^{commit}`).join('\n')}\n` }) || '')
+    .split('\n');
+  // Object-id length is the repo's hash algorithm's, not a constant — sha1 and sha256
+  // repos both answer here, and only the `commit` word decides.
+  return BASE_REF_CANDIDATES.find((_, i) => /^[0-9a-f]+ commit /.test(answers[i] ?? '')) ?? null;
 }
 
 const FETCH_TIMEOUT_MS = 8000;
@@ -79,6 +88,50 @@ function refreshBaseRef(root, ref) {
 
 function lines(out) {
   return (out || '').split('\n').filter(Boolean);
+}
+
+// The tracked and the untracked file list out of ONE subprocess. `-t` prefixes each
+// path with its status tag, and under `-c -o` the only tag an untracked path can
+// carry is `?` — a cached path is `H`, `S` while skip-worktree is set, or `M` per
+// index stage while a merge is unresolved, which is the same one-line-per-stage
+// shape plain `ls-files` prints. So the tag alone separates the two lists, each in
+// git's own order and with its own `core.quotePath` quoting, exactly as the
+// `ls-files` / `ls-files --others --exclude-standard` pair produced them.
+function listFiles(root) {
+  const tracked = [];
+  const untracked = [];
+  for (const line of lines(gitTry(root, 'ls-files', '-c', '-o', '--exclude-standard', '-t'))) {
+    (line.startsWith('? ') ? untracked : tracked).push(line.slice(2));
+  }
+  return { tracked, untracked };
+}
+
+// Both diff lists out of one subprocess where the answer is unambiguous. The pair
+// this replaces asked the same diff twice — `--diff-filter=d` for the files the
+// change touched, `--diff-filter=D` for the ones it removed — and `--name-status`
+// labels every entry, so `D` is the second list and everything else is the first.
+//
+// A rename or copy is the one entry that does not name a single path — git reports
+// it as `R<score>\t<source>\t<destination>`, where the pair named the destination
+// alone — so a change carrying one falls back to the pair. Reading the last field
+// gives the same set, and git 2.43 orders that entry where the pair's output has it
+// (fuzzed over 200 random histories of renames, deletions, additions and edits);
+// but nothing git documents says the two commands order a two-path entry alike, and
+// this list's order reaches ctx.files. A second subprocess on the rare change that
+// renames something is cheaper than depending on that.
+function diffLists(root, diffBase, mergeBase) {
+  const status = gitTry(root, 'diff', '--name-status', diffBase);
+  const entries = lines(status).map((l) => l.split('\t'));
+  if (status !== null && !entries.some(([s]) => s.startsWith('R') || s.startsWith('C'))) {
+    return {
+      vsBase: entries.filter(([s]) => !s.startsWith('D')).map((e) => e[e.length - 1]),
+      deleted: mergeBase ? entries.filter(([s]) => s.startsWith('D')).map((e) => e[1]) : [],
+    };
+  }
+  return {
+    vsBase: lines(gitTry(root, 'diff', '--name-only', '--diff-filter=d', diffBase)),
+    deleted: mergeBase ? lines(gitTry(root, 'diff', '--name-only', '--diff-filter=D', mergeBase)) : [],
+  };
 }
 
 // Files git marks vendored or generated (linguist-vendored / linguist-generated in
@@ -507,29 +560,50 @@ export function loadConfig(root) {
   };
 }
 
+// One derivation, computed on first read and then remembered. Every work-scoping
+// value below costs at least one git subprocess, and a run reads a handful of them:
+// a Stop-hook sweep that only judges the session never asks for the merge-base, and
+// a test that builds a context for one rule pays for the eight lists that rule never
+// looks at. The memo keeps a re-read free, so a rule reading `ctx.files` twice still
+// spawns `check-attr` once — exactly what the eager field did.
+// Derive once, on first read. The flag is set AFTER the call, not before: a
+// derivation that throws must throw again on the next read rather than be
+// remembered as `undefined`, which is what the eager form did — it threw during
+// buildContext and the run stopped there.
+const once = (fn) => {
+  let value, derived = false;
+  return () => {
+    if (!derived) { value = fn(); derived = true; }
+    return value;
+  };
+};
+
+// Replace a lazy accessor with a plain value assigned over it. ESM is strict, so a
+// getter with no setter turns `ctx.files = …` into a TypeError. Nothing in this repo
+// assigns to one, but the engine is vendored into member repos whose own local packs
+// this canon cannot see; the setter keeps such an assignment behaving exactly as it
+// did against the eager data property instead of crashing that member's sweep.
+const overwrite = (ctx, key, value) =>
+  Object.defineProperty(ctx, key, { value, writable: true, enumerable: true, configurable: true });
+
 export function buildContext({ root, mode = 'changed', baseOverride = null, transcriptPath = null }) {
   root = resolve(root);
+  // The base ref and its refresh are the one pair that stays eager. Building a
+  // context is what makes the base branch current — that is the refresh's whole
+  // contract, and a caller that discards the context still wanted it done. Making it
+  // a side effect of reading `ctx.mergeBase` would move that contract instead of
+  // deferring a cost.
   const baseRef = baseOverride || resolveBaseRef(root);
   refreshBaseRef(root, baseRef);
-  const mergeBase = baseRef ? (gitTry(root, 'merge-base', 'HEAD', baseRef) || '').trim() || null : null;
+  const mergeBase = once(() => (baseRef ? (gitTry(root, 'merge-base', 'HEAD', baseRef) || '').trim() || null : null));
   // Diffing against HEAD keeps uncommitted work in scope even when no base branch resolves.
-  const diffBase = mergeBase || 'HEAD';
+  const diffBase = () => mergeBase() || 'HEAD';
   // Is this commit already on the base branch? `--is-ancestor` exits non-zero for "no",
   // which gitTry surfaces as null. No base ref to compare against ⇒ nothing is known to
   // be on it, so nothing is filtered out.
   const onBaseBranch = (sha) =>
     !!baseRef && gitTry(root, 'merge-base', '--is-ancestor', sha, baseRef) !== null;
 
-  const tracked = lines(gitTry(root, 'ls-files'));
-  const untracked = lines(gitTry(root, 'ls-files', '--others', '--exclude-standard'));
-
-  const vsBase = lines(gitTry(root, 'diff', '--name-only', '--diff-filter=d', diffBase));
-  let scanned;
-  if (mode === 'all') {
-    scanned = [...tracked, ...untracked];
-  } else {
-    scanned = [...new Set([...vsBase, ...untracked])];
-  }
   // The vendored corpus under the shared mount is canon-owned, never the
   // project's own code — structurally out of scope for every check, on any git
   // host and any checkout (deliberately not attribute-driven). The consumer's
@@ -538,28 +612,39 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
   // git emits '/'-separated paths on every platform; SHARED_SUBDIR is joined
   // with the platform separator, so normalize before prefix-matching.
   const sharedPrefix = `${SHARED_SUBDIR.split(sep).join('/')}/`;
-  scanned = scanned.filter((f) => !f.startsWith(sharedPrefix));
+
+  const { tracked, untracked } = listFiles(root);
+  // Both diff lists come out of the one call, so whichever is read first pays for the
+  // pair — as the eager form did.
+  const diff = once(() => diffLists(root, diffBase(), mergeBase()));
+  const vsBase = () => diff().vsBase;
+  const deleted = () => diff().deleted;
+  const scanned = once(() => (mode === 'all'
+    ? [...tracked, ...untracked]
+    : [...new Set([...vsBase(), ...untracked])]).filter((f) => !f.startsWith(sharedPrefix)));
   // Every in-scope regular file, vendored/generated included.
-  const allFiles = scanned.filter((f) => existsSync(join(root, f)) && statSync(join(root, f)).isFile());
+  const allFiles = once(() => scanned().filter((f) => existsSync(join(root, f)) && statSync(join(root, f)).isFile()));
   // The default sweep excludes vendored/generated files, so `ctx.files` is the
   // project's OWN authored code and every check skips them for free (see vendoredSet).
-  const vendored = vendoredSet(root, allFiles);
-  const files = allFiles.filter((f) => !vendored.has(f));
+  const files = once(() => {
+    const vendored = vendoredSet(root, allFiles());
+    return allFiles().filter((f) => !vendored.has(f));
+  });
   // The in-scope files the current change touched (vs the scoping base),
   // untracked included — the file set behind lines.mjs addedLines, for
   // check-the-work rules that judge the work rather than re-audit the world.
-  const changedSet = new Set([...vsBase, ...untracked]);
-  const changedFiles = files.filter((f) => changedSet.has(f));
+  const changedFiles = once(() => {
+    const changedSet = new Set([...vsBase(), ...untracked]);
+    return files().filter((f) => changedSet.has(f));
+  });
 
-  const deleted = mergeBase ? lines(gitTry(root, 'diff', '--name-only', '--diff-filter=D', mergeBase)) : [];
+  const commits = once(() => {
+    if (!mergeBase()) return [];
+    const out = gitTry(root, 'log', '--format=%s%n%b%x00', `${mergeBase()}..HEAD`);
+    return (out || '').split('\0').map((m) => m.trim()).filter(Boolean);
+  });
 
-  let commits = [];
-  if (mergeBase) {
-    const out = gitTry(root, 'log', '--format=%s%n%b%x00', `${mergeBase}..HEAD`);
-    commits = (out || '').split('\0').map((m) => m.trim()).filter(Boolean);
-  }
-
-  const branch = (gitTry(root, 'rev-parse', '--abbrev-ref', 'HEAD') || '').trim();
+  const branch = once(() => (gitTry(root, 'rev-parse', '--abbrev-ref', 'HEAD') || '').trim());
 
   // Conversation surface: the Stop hook forwards the session's transcript_path;
   // every other surface (CI, a manual run) has none, and conversation rules must
@@ -573,19 +658,30 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
   const readCache = new Map();
   const readBaseCache = new Map();
 
+  // The work-scoping fields are accessors over the memos above; `root`, `mode`,
+  // `baseRef`, `tracked`, `untracked` and `config` stay plain values, being either
+  // free or read by nearly every rule. Declaring each accessor in place keeps the
+  // key order — and so `Object.keys`, a spread and `JSON.stringify` — what it was.
   return {
     root,
     mode,
     baseRef,
-    mergeBase,
-    files,
-    allFiles,
-    changedFiles,
+    get mergeBase() { return mergeBase(); },
+    set mergeBase(v) { overwrite(this, 'mergeBase', v); },
+    get files() { return files(); },
+    set files(v) { overwrite(this, 'files', v); },
+    get allFiles() { return allFiles(); },
+    set allFiles(v) { overwrite(this, 'allFiles', v); },
+    get changedFiles() { return changedFiles(); },
+    set changedFiles(v) { overwrite(this, 'changedFiles', v); },
     tracked,
     untracked,
-    deleted,
-    commits,
-    branch,
+    get deleted() { return deleted(); },
+    set deleted(v) { overwrite(this, 'deleted', v); },
+    get commits() { return commits(); },
+    set commits(v) { overwrite(this, 'commits', v); },
+    get branch() { return branch(); },
+    set branch(v) { overwrite(this, 'branch', v); },
     config: loadConfig(root),
 
     exists: (path) => existsSync(join(root, path)),
@@ -604,8 +700,8 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
     // the baseline precisely, immune to text-diff line noise (JSON trailing
     // commas make appending an array element re-touch the previous line).
     readBase(path) {
-      if (!mergeBase) return null;
-      if (!readBaseCache.has(path)) readBaseCache.set(path, gitTry(root, 'show', `${mergeBase}:${path}`));
+      if (!mergeBase()) return null;
+      if (!readBaseCache.has(path)) readBaseCache.set(path, gitTry(root, 'show', `${mergeBase()}:${path}`));
       return readBaseCache.get(path);
     },
 
@@ -615,7 +711,7 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
         const text = this.read(file);
         return text === null ? [] : text.split('\n').map((t, i) => ({ line: i + 1, text: t }));
       }
-      const out = gitTry(root, 'diff', '-U0', diffBase, '--', file);
+      const out = gitTry(root, 'diff', '-U0', diffBase(), '--', file);
       const added = [];
       let lineNo = 0;
       for (const l of (out || '').split('\n')) {
@@ -631,8 +727,8 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
     // had them — the diff's "-" side, the mirror of addedLines. A file the
     // base did not hold removed nothing.
     removedLines(file) {
-      if (!mergeBase || !tracked.includes(file)) return [];
-      const out = gitTry(root, 'diff', '-U0', diffBase, '--', file);
+      if (!mergeBase() || !tracked.includes(file)) return [];
+      const out = gitTry(root, 'diff', '-U0', diffBase(), '--', file);
       const removed = [];
       let lineNo = 0;
       for (const l of (out || '').split('\n')) {
@@ -675,17 +771,17 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
     // (ctx.commits keeps only messages). Merges excluded: their file list is
     // empty under --name-only and their content arrives via their parents.
     commitsWithFiles() {
-      if (!mergeBase) return [];
+      if (!mergeBase()) return [];
       const out = gitTry(root, 'log', '--reverse', '--no-merges', '--name-only',
-        '--format=%x00%H%x1f%cI%x1f%s', `${mergeBase}..HEAD`);
-      const commits = [];
+        '--format=%x00%H%x1f%cI%x1f%s', `${mergeBase()}..HEAD`);
+      const parsed = [];
       for (const block of (out || '').split('\0')) {
         if (!block.trim()) continue;
         const [head, ...rest] = block.trim().split('\n');
         const [sha, date, subject] = head.split('\x1f');
-        commits.push({ sha, date, subject, files: rest.map((f) => f.trim()).filter(Boolean) });
+        parsed.push({ sha, date, subject, files: rest.map((f) => f.trim()).filter(Boolean) });
       }
-      return commits;
+      return parsed;
     },
 
     // Merge commits the current change introduces — those on HEAD's first-parent
@@ -700,8 +796,8 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
     // base branch was never introduced here, whatever the range says. Offline and
     // exact, and it holds when refreshBaseRef couldn't run.
     introducedMergeCommits() {
-      if (!mergeBase) return [];
-      const out = gitTry(root, 'log', '--merges', '--first-parent', '--format=%h %s', `${mergeBase}..HEAD`);
+      if (!mergeBase()) return [];
+      const out = gitTry(root, 'log', '--merges', '--first-parent', '--format=%h %s', `${mergeBase()}..HEAD`);
       return lines(out).map((l) => {
         const i = l.indexOf(' ');
         return { sha: l.slice(0, i), subject: l.slice(i + 1) };

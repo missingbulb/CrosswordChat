@@ -28,4 +28,9 @@ const ctx = buildContext({
 
 const findings = runActivePackRules(ctx, packs, { includeRule: (rule) => READS_THE_SESSION.has(rule.scope) });
 const blocking = reportFindings(findings, ctx.config, { scopeLabel: 'work', mode: ctx.mode, baseRef: ctx.baseRef });
-process.exit(blocking ? 1 : 0);
+// An exit CODE, never process.exit(): a findings report can run to hundreds of
+// lines, stdout is a pipe whenever a caller captures it, and a pipe write is
+// asynchronous — process.exit() drops whatever is still queued, which loses the
+// tail of the report while still reporting the right status. The world runner
+// carries the full story.
+process.exitCode = blocking ? 1 : 0;

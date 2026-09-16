@@ -36,6 +36,13 @@
   workflow that can't assume a lockfile decides at run time:
   `cache: ${{ <has-lockfile> && 'npm' || '' }}`. (3)
 
+## Ending a process
+
+- **Ending a script that has printed anything** — set `process.exitCode` and let the process end,
+  rather than `process.exit()`, which discards writes still queued: a write to a *pipe* is
+  asynchronous, so a caller capturing the output silently gets a truncated answer under a
+  successful status. (4)
+
 ## jsdom diverges from a real browser in ways a green test can hide
 
 - **`body.innerText` is null in jsdom.** Code reading `el.innerText || el.textContent` therefore

@@ -40,6 +40,7 @@ not prose: the session that has lost its rules is the session least able to noti
 | `shared-tree-immutable` | high | correctness | check: blocking |
 | `conformance-workflow` | high | correctness | check: advisory |
 | `conformance-work-scope` | high | correctness | check: advisory |
+| `seeded-file-stale` | high | correctness | check: advisory |
 | `scheduler-workflow-shape` | high | correctness | check: blocking |
 | `legacy-shape-in-use` | medium | complexity | check: advisory |
 | `skill-loaded-before-editing` | high | correctness | check: blocking |
@@ -52,6 +53,7 @@ What goes wrong when one fires:
 - `claudinite-isolation` — the repo's own code reaches into `.claudinite/`, so the next canon refactor is a breaking migration for code the canon does not own (a declared `forbidReferences` barrier edge).
 - `conformance-workflow` — nothing in CI runs the world sweep unfiltered on a pull request, so conformance is ungated and the maintenance PR never lands.
 - `conformance-work-scope` — CI gates the tree but not the change, so every commit-scoped rule is enforced only where a session's Stop hook happens to run.
+- `seeded-file-stale` — a file some pack seeded at adoption has fallen behind that pack's template, and since a seeded file is never converged nothing else would ever say so: the member goes on running a copy whose pack has moved.
 - `scheduler-workflow-shape` — the vendored scheduler's cron, concurrency or dispatch guard has drifted: staggering, double-run safety or manual runs break.
 
 The **task contract** and its checks are deliberately NOT here. Those ask whether a task is
