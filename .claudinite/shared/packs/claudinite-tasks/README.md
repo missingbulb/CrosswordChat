@@ -123,12 +123,20 @@ pack paths behind which everything converges nightly.
 | `legacy-task-fields` | low | complexity | check: advisory |
 | `executor-workflow-secrets` | high | correctness | check: advisory |
 | `tasks-pack-read-through-its-surface` | high | correctness | declared check: blocking |
+| `repo-variables-through-the-bag` | high | correctness | declared check: blocking |
 
 `tasks-pack-read-through-its-surface` is this pack's, not the canon's, because the consumers that
 can get it wrong are members: it scans a repo's own `packs/` **and** its `.claudinite/local/packs/`,
 the tree no converge may rewrite, so a deep import written there is caught in that repo's own run
 rather than when it crashes. Declared here so every repo declaring this pack runs it — a canon-only
 pack would never reach them (missingbulb/Shepherd#613).
+
+`repo-variables-through-the-bag` — a module reads a repository variable over the REST variables
+API, which the Actions `GITHUB_TOKEN` is refused on in every member (403, and no `permissions:` key
+grants it), so the read never answers. Every repository variable already travels in the executor's
+vars bag: a task's code-work finds it in `process.env`, engine code reads `varsBag(env)`. Declared
+for the same reason as the check above — a member's own local task is where the next such read is
+written.
 
 The first two are relevance-first — inert until the repo carries a `tasks/<name>/task.json` of its own; the third is self-gating on the branch's own arming trailer.
 

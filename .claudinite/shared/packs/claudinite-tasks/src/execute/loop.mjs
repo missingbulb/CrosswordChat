@@ -17,7 +17,7 @@
 
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { isSuspended, liveSuspendReader, suspendedNotice, SUSPEND_ALL_VAR } from '../world/hold.mjs';
+import { isSuspended, suspendedNotice } from '../world/hold.mjs';
 import { HEARTBEAT_MS, heartbeatComment, withHeartbeat, realTimers } from '../items/heartbeat.mjs';
 import { renderTaskExec, startRunCost } from '../items/run-record.mjs';
 import { evaluatePrecondition } from '../contract/precondition.mjs';
@@ -150,9 +150,7 @@ async function timed(cost, name, fn) {
 // chaining this exists to do. Its outer bound is the workflow's own timeout.
 //
 // Injected seams keep the run testable end to end without GitHub, code-work
-// subprocesses or an invocation endpoint. `heldNow` is the operator hold, asked
-// between items (PRINCIPLES.md): `vars.*` reaches the env at start only, so a drain that
-// outlives the hold's arrival can only see it by asking.
+// subprocesses or an invocation endpoint.
 // `runCost` is the run's own stopwatch (run-record.mjs), supplied by the CLI below
 // and left null everywhere else: a run driven by a test or the simulator is not a
 // billed invocation and has no run id to file a cost under, so it times nothing and
@@ -161,7 +159,7 @@ async function timed(cost, name, fn) {
 export async function runExecutor({
   gh, repo, root, config, tasks, executorId, runUrl = null,
   now = () => clockNow(), random = Math.random, heartbeatMs = HEARTBEAT_MS,
-  collectSignalsFor, runTaskCodeWork, invokeAgent, heldNow = null, log = console.log,
+  collectSignalsFor, runTaskCodeWork, invokeAgent, log = console.log,
   resolveTargetFor = null, runCost = null, timers = realTimers,
 }) {
   const api = await import('../world/github.mjs');
@@ -246,15 +244,6 @@ export async function runExecutor({
       resolveTargetOf, cost: runCost, phase, timers,
     });
     done.push({ issue: candidate.number, outcome });
-
-    // --- the hold, between items (PRINCIPLES.md) -----------------------------------
-    // Asked after the settle rather than before the pick that follows it, so a
-    // run that had nothing more to do never spends the read. The item just
-    // finished is untouched: suspension stops picking, never running work.
-    if (heldNow && await heldNow()) {
-      log(`- ${SUSPEND_ALL_VAR} is set: this drain stops here, holding nothing. Items stay exactly as they are.`);
-      break;
-    }
   }
   return done;
 }
@@ -763,7 +752,6 @@ export async function runExecutorJob() {
     collectSignalsFor: (task, at, item) => collectSignalsForTask({ gh, repo, root, config, defaultBranch })(task, at, item),
     runTaskCodeWork: codeWorkRunner({ root, repo, defaultBranch }),
     invokeAgent: agentInvoker({ repo, config }),
-    heldNow: liveSuspendReader(gh, repo, { log: console.log }),
     runCost,
   });
 
