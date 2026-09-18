@@ -17,7 +17,6 @@
 import { pathToFileURL } from 'node:url';
 import { runDrainDispatch } from '../src/schedule/drain-dispatch.mjs';
 
-export * from '../src/schedule/drain-dispatch.mjs';
 // The surface this path published, named rather than left to the star: a member's
 // own local pack may import it, and `export *` says nothing a reader — or the
 // consumer-safe-change check — can see.

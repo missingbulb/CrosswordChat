@@ -9,9 +9,10 @@
   `Comment class: correction | feature | process-change | other`, where `other` covers questions,
   approvals and command phrases and a mixed comment names each part. An automation dispatch prompt
   is a comment too: class `other`, in your *first* substantive reply rather than at the end of the
-  run. Put the class **alone on the line** and any explanation on the next one: the line is scanned
-  for *every* class token on it, so restating the menu declares all of them. A class cannot be taken
-  back, and a clean re-declaration further down does not override the first.
+  run. Put the class **alone on the line**, any explanation on the next; a class cannot be taken
+  back, and a clean re-declaration further down does not override the first. The line opens that
+  reply and is never the whole of it: a work class — `correction`, `feature`, `process-change` —
+  commits the same turn to the work it names. (6)
 
 - **Acting on a correction** — you misunderstood something. Repair the shared understanding, then
   rework what the misread already touched; the artifact changes as much as the correction demands,

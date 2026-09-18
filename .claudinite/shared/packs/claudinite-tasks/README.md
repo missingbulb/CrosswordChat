@@ -77,29 +77,39 @@ equivalent surface by existing.
 nightly converge replaces `.claudinite/shared/` and may never touch a member's own packs, so an
 import aimed anywhere else is one this repository cannot repair when the layout behind it moves.
 
-| Module | What it publishes | Who reads it |
-|---|---|---|
-| `work-items.mjs` | the title grammar that is a work item's identity, the outcome/status decode over its labels, lease state, the pick order over the open queue, and whether a title is the scheduler's own dispatch issue rather than work | claudinite-dashboard, claudinite-fleet-sheepdog, a member's own packs |
-| `anchors.mjs` | period length, and the instant a task's window last opened at or opens next | claudinite-dashboard |
-| `wake.mjs` | which of a repo's declared tasks a scheduler run would instantiate an item for at a given instant — the plan a forced sweep has to predict | claudinite-fleet-sheepdog |
-| `pull-requests.mjs` | how a merged pull request names the issue it closes, and how a span between two timestamps becomes hours | claudinite-dashboard |
-| `delivery.mjs` | `landPr`, `deliverGenerated` — how a task's output becomes a landed PR or a regenerated file | any pack whose tasks deliver |
-| `github.mjs` | the GitHub client, the workflow dispatch, the two workflow file names, and the tracker issue a worker records on | any pack whose tasks reach GitHub |
-| `signals.mjs` | the signal shapes a precondition is handed | packs asserting what their own tasks will see |
-| `task-contract.mjs` | task-declaration validation, and the signal union either precondition form resolves to | every pack with tasks, in its own tests |
-| `preconditions.mjs` | the precondition vocabulary, the expression grammar, and both evaluators — the seam the executor calls at pick over a discovered task, and the raw-fields one a pack asserts its own declarations with | every pack with tasks, in its own tests |
-| `merge-policy.mjs` | the auto-merge policy verdict (`automerge`, the `Merge:` field, the arming trailer) and the `merge-rules.json` compiler | any pack declaring policies or merge rules, in its own tests |
-| `task-declaration.mjs` | the declaration as text — the reader that lifts its fields out and the agentic defaults the loader fills, reaching no Node built-in so a browser bundle can load it | claudinite-dashboard |
-| `task-discovery.mjs` | where a task's declaration lives on disk and how it is read — kept apart from `task-declaration.mjs`, which reaches no Node built-in | a member's own worker needing its task's declared fields at run time |
-| `usage-format.mjs` | the usage aggregate's codec | **nobody today** — held for the fleet-wide aggregator, which is not a task in the sheepdog pack at present; every live caller reads `src/items/usage-format.mjs` from inside this pack |
-| `verification.mjs` | what a production-verification spec looks like, and the re-arm cadence a not-yet-live run reschedules on | basics, whose skill writes the spec this pack's probes read |
-| `dormancy.mjs` | whether a repo's scheduler is dormant, by the same test the scheduler stops itself with | claudinite-dashboard, claudinite-fleet-sheepdog |
-| `substantive-commit.mjs` | whether a commit was genuine project work rather than the machinery moving — the test a `commits`-gated precondition is decided by | claudinite-dashboard, for the fleet view's `sleepy` mark |
+| Module | What it publishes |
+|---|---|
+| `work-items.mjs` | the title grammar that is a work item's identity, the outcome/status decode over its labels, lease state, the pick order over the open queue, and whether a title is the scheduler's own dispatch issue rather than work |
+| `anchors.mjs` | period length, and the instant a task's window last opened at or opens next |
+| `wake.mjs` | which of a repo's declared tasks a scheduler run would instantiate an item for at a given instant — the plan a forced sweep has to predict |
+| `pull-requests.mjs` | how a merged pull request names the issue it closes, and how a span between two timestamps becomes hours |
+| `delivery.mjs` | `landDelivery`, `deliverGenerated` — how a task's output becomes a landed PR or a regenerated file |
+| `github.mjs` | the GitHub client, the workflow dispatch, the two workflow file names, and the tracker issue a worker records on |
+| `signals.mjs` | the signal shapes a precondition is handed |
+| `task-contract.mjs` | task-declaration validation, and the signal union either precondition form resolves to |
+| `preconditions.mjs` | the precondition vocabulary, the expression grammar, and both evaluators — the seam the executor calls at pick over a discovered task, and the raw-fields one a pack asserts its own declarations with |
+| `merge-policy.mjs` | the auto-merge policy verdict (`automerge`, the `Merge:` field, the arming trailer) and the `merge-rules.json` compiler |
+| `task-declaration.mjs` | the declaration as text — the reader that lifts its fields out and the agentic defaults the loader fills, reaching no Node built-in so a browser bundle can load it |
+| `task-discovery.mjs` | where a task's declaration lives on disk and how it is read — kept apart from `task-declaration.mjs`, which reaches no Node built-in |
+| `usage-format.mjs` | the usage aggregate's codec |
+| `verification.mjs` | what a production-verification spec looks like, and the re-arm cadence a not-yet-live run reschedules on |
+| `dormancy.mjs` | whether a repo's scheduler is dormant, by the same test the scheduler stops itself with |
+| `substantive-commit.mjs` | whether a commit was genuine project work rather than the machinery moving — the test a `commits`-gated precondition is decided by |
 
-Each module publishes **named** exports, never `export *`: the list in the file IS the promise, so a
-reader sees the whole surface in one place and an internal rename can neither widen nor narrow it.
+A module SHOULD publish **named** exports rather than `export *`: the list in the file is then the
+promise, so a reader sees the whole surface in one place and an internal rename can neither widen
+nor narrow it. Four modules still carry a star — `converge-workflows.mjs`, `scheduler-run.mjs`,
+`signals.mjs` and `usage-format.mjs` — and publish more than their lists say;
+[`public/SURFACE.GENERATED.md`](public/SURFACE.GENERATED.md) names them and what each one adds.
 A consumer needing something absent asks for the named export to be added here — never a deeper
 import, which `tasks-pack-read-through-its-surface` refuses.
+
+**Who actually reads each of these is derived, not listed here**: the tables above say what a module
+publishes and why, and [`public/SURFACE.GENERATED.md`](public/SURFACE.GENERATED.md) — regenerated
+from the tree by `packs/claudinite-canon-curation/test/pack-surface.test.mjs` — says who takes it,
+how many of its names anything outside the pack actually imports, and which it publishes for nobody.
+A hand-kept consumer list is the part that goes stale: this one named an export (`landPr`) no file
+has ever had.
 
 A pack whose **non-task** code reads any of these declares `requires: ['claudinite-tasks']`. A
 pack's `tasks/` folder needs no declaration: a mount without this pack carries no `tasks/` at all,

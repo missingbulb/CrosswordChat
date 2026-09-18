@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60915.8"
+      "version": "60917.1"
     },
     {
       "id": "claudinite-lifecycle",
@@ -48,7 +48,7 @@
     },
     {
       "id": "claudinite-tasks",
-      "version": "60916.1"
+      "version": "60918.1"
     },
     {
       "id": "web-speech",
