@@ -12,9 +12,9 @@
 // malicious-workflow detection flags (#1336): the run parks with zero jobs until a
 // person clicks Approve, silently and fleet-wide. `vars` is not that shape. It is the
 // context GitHub's own docs define as non-sensitive and render UNMASKED in build logs,
-// so serialising it exfiltrates nothing the logs do not already show, and the
-// static-website pack has passed `toJSON(vars)` in two stub workflows since before that
-// safeguard shipped without a single park. GitHub publishes no detection signals, so
+// so serialising it exfiltrates nothing the logs do not already show, and vendored
+// site-deploy workflows have passed `toJSON(vars)` since before that safeguard
+// shipped without a single park. GitHub publishes no detection signals, so
 // this is inference plus our own field evidence rather than a guarantee; if it is ever
 // wrong the symptom is #1336's — `action_required` with zero jobs, which reads exactly
 // like an idle queue.

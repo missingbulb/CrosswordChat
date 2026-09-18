@@ -17,7 +17,6 @@
 import { pathToFileURL } from 'node:url';
 import { runCreateWorkItem } from '../src/schedule/create-work-item.mjs';
 
-export * from '../src/schedule/create-work-item.mjs';
 // The surface this path publishes, named rather than left to the star: a member's
 // own local pack may import it, and `export *` says nothing a reader — or the
 // consumer-safe-change check — can see.

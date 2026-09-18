@@ -87,7 +87,7 @@ instructions.
 
 6. **Converge the issue exactly once — in code, not by hand.** `<here>` in the
    commands below is **the directory this file sits in** —
-   `packs/claudinite-tasks/queue/` in the canon, the same path under
+   `packs/claudinite-tasks/public/` in the canon, the same path under
    `.claudinite/shared/` in a member's mount — `<pack>` is `<here>/..`, the tasks
    pack itself, and `<engine>` is `<here>/../../../engine`. Derive all three from
    where you found this file rather than from any root you were told.

@@ -146,10 +146,17 @@ try {
   // a reader picking the nearest line then picks the summary. Said the other way round,
   // with the summary above and a "repeat that line" below it, the nearest line is the
   // directive itself — and sessions duly opened their replies by reciting it.
+  //
+  // It also has to say that the reply CONTINUES. A directive naming only what a reply
+  // opens with is satisfiable by a reply that is nothing but its opening, and a first
+  // turn answering to two such directives — this one and the `Comment class:` line —
+  // has ended right there, both obligations discharged and no work done.
   const repo = repoName(projectRoot);
   process.stdout.write(
     'SESSION-START SUMMARY — an instruction to you, not text to repeat. '
-    + 'Open your first reply of this session with exactly this line, and nothing before it:\n\n'
+    + 'Open your first reply of this session with exactly this line, and nothing before it. '
+    + 'It prefixes that reply and is never the whole of it: the same turn goes on to answer '
+    + 'the owner and act on what they asked. The line:\n\n'
     + `Loaded Claudinite${repo ? ` from repo ${repo}` : ''}: ${facets.join(', ')}.\n`,
   );
 } catch {

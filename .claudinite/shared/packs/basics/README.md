@@ -96,6 +96,7 @@ The working-discipline rules with a deterministic signature. The world rules rea
 | `generated-merge-driver` | medium | correctness | check: advisory |
 | `catalog-completeness` | medium | complexity | check: blocking |
 | `comment-classification-form` | medium | complexity | check: advisory |
+| `work-request-not-started` | high | correctness | check: blocking |
 | `reference-integrity` | medium | correctness | check: blocking |
 | `runnable-doc-commands` | high | correctness | check: blocking |
 | `squash-merge-history` | high | correctness | check: blocking |

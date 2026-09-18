@@ -60,6 +60,9 @@ export const RENAMED_PACKS = Object.freeze({
   // into the baseline, so a member declaring the retired pack activates the pack
   // that now carries the pass rather than activating nothing.
   'tidy-repo': 'basics',
+  // Renamed (#2101): the pack stopped carrying anything about how a site is built,
+  // served or released and took the name of what it is about.
+  'static-website': 'public-website',
 });
 
 // The canon id a spelling resolves to. Canon packs only — a LOCAL pack lives in the

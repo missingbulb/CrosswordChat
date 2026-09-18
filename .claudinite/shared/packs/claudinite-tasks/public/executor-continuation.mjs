@@ -18,7 +18,6 @@
 import { pathToFileURL } from 'node:url';
 import { runExecutorContinuation } from '../src/recover/continuation.mjs';
 
-export * from '../src/recover/continuation.mjs';
 // The surface this path published, named rather than left to the star: a member's
 // own local pack may import it, and `export *` says nothing a reader — or the
 // consumer-safe-change check — can see.
