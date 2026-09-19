@@ -20,12 +20,12 @@ nothing and breaks nothing when the surface moves.
 | `anchors.mjs` | 12 | 11 | `ACCEPTED_FREQUENCIES` | pack: claudinite-dashboard |
 | `converge-workflows.mjs` | 9 named + `export *` from `../src/adopt/converge-workflows.mjs` | — | `EXECUTOR_WORKFLOW`, `SCHEDULER_WORKFLOW`, `convergeExecutorWorkflow`, `convergeSchedulerWorkflow`, `convergeWorkflows`, `declaredSecrets`, `runConvergeWorkflows`, `secretNames`, `stubsDir` | **nobody** |
 | `create-work-item.mjs` | 5 | — | `FORCED_CONTEXT`, `createWorkItem`, `parseArgs`, `runCreateWorkItem`, `wakeItem` | **nobody** |
-| `delivery.mjs` | 10 | 10 | — | pack: claudinite-canon-curation, claudinite-lifecycle, cloudflare-site |
+| `delivery.mjs` | 10 | 10 | — | pack: claudinite-canon-curation, claudinite-lifecycle, cloudflare-site, github-pages |
 | `dormancy.mjs` | 3 | 1 | `TASKS_PACK_ID`, `dormancyErrors` | pack: claudinite-dashboard, claudinite-fleet-sheepdog; pack (test): claudinite-fleet-sheepdog |
 | `drain-dispatch.mjs` | 2 | — | `dispatchDrain`, `runDrainDispatch` | workflow: .github; canon: vendoring |
 | `executor-continuation.mjs` | 5 | — | `CHAIN_FAILURE_TITLE`, `MAX_DEPTH`, `continueOrEscalate`, `nextDepth`, `runExecutorContinuation` | workflow: .github; canon: vendoring |
 | `executor.mjs` | 9 | — | `claimComment`, `claimWinner`, `conflictsWithEarlierClaim`, `evaluatePrecondition`, `noGoPlan`, `pickOrder`, `rollBody`, `runExecutor`, `runExecutorJob` | workflow: .github; canon: vendoring; canon (test): engine-tests; 5 prose mentions |
-| `github.mjs` | 6 | 6 | — | pack: basics, claudinite-dashboard, claudinite-growth; pack (test): claudinite-dashboard |
+| `github.mjs` | 9 | 9 | — | pack: basics, claudinite-dashboard, claudinite-growth, github-pages; pack (test): claudinite-dashboard |
 | `merge-policy.mjs` | 5 | 4 | `diffEntries` | pack: claudinite-canon-curation; pack (test): claudinite-canon-curation, claudinite-growth, claudinite-lifecycle |
 | `preconditions.mjs` | 6 | 2 | `MAX_CONTEXT_ITEMS`, `TASK_TERMS_FILE`, `evaluatePreconditions`, `preconditionSignals` | pack (test): chrome-extension, claudinite-canon-curation, claudinite-growth, claudinite-lifecycle |
 | `pull-requests.mjs` | 2 | 1 | `hoursBetween` | pack: claudinite-dashboard |
