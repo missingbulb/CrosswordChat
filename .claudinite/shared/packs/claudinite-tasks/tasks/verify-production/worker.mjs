@@ -15,7 +15,7 @@
 //              the item, and exit clean.
 
 import { pathToFileURL } from 'node:url';
-import { humanTextOf } from '../../src/items/work-item.mjs';
+import { humanTextOf } from '../../public/work-item-grammar.mjs';
 import { parseVerificationSpec, runProbes, renderResult } from './probes.mjs';
 import { getIssue, reopenIssue, comment as ghComment } from '../../src/world/github.mjs';
 

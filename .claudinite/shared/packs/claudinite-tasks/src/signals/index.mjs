@@ -13,11 +13,13 @@ import { SHARED_SUBDIR } from '../../../../engine/pack_loader/pack-registry.mjs'
 import { LOCAL_PACK_ROOT } from '../world/git.mjs';
 import {
   QUEUED_LABEL, ORIGIN_AD_HOC, REQUEST_LABEL, STATUS_BLOCKED, STATUS_READY,
+} from '../../public/task-constants.mjs';
+import {
   workItemTitle, statusOf, statusesOn, parkKindOf, outcomeOf, parseWorkItemBody,
-} from '../items/work-item.mjs';
+} from '../../public/work-item-grammar.mjs';
 import { isQueueItem } from '../items/read.mjs';
 import { APPROVAL_RE } from '../contract/built-in-tasks.mjs';
-import { taskFromMessage } from '../contract/task-trailer.mjs';
+import { taskFromMessage } from '../../public/work-item-grammar.mjs';
 import { isSubstantiveCommit, HOUSEKEEPING } from './substantive-commit.mjs';
 import { readCommit, latestRelease, readBranch, readTree, getIssue, collaboratorPermission, listIssuesByQuery } from '../world/github.mjs';
 

@@ -16,7 +16,7 @@ import { normalizeTaskDeclaration, validateTaskDeclaration } from '../contract/t
 import { siblingTaskDeclaration } from '../contract/task-declaration.mjs';
 import { resolveModel } from '../contract/model-map.mjs';
 import { BUILT_IN_PACK, BUILT_IN_PATH_RE, BUILT_IN_PUBLIC_PATH_RE } from '../contract/built-in-tasks.mjs';
-import { parseWorkItemBody } from '../items/work-item.mjs';
+import { parseWorkItemBody } from '../../public/work-item-grammar.mjs';
 
 // The only shape a dispatch first line may take (PRINCIPLES.md). Anchored end to
 // end — no query strings, no trailing junk, exactly one pack and one task

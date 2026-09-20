@@ -4,14 +4,33 @@
     "severity": "blocking",
     "since": "2026-09-14",
     "failureMessage": "an import past claudinite-tasks' published public/ couples a consumer to a layout the pack is free to change",
-    "fix": "import it from packs/claudinite-tasks/public/; if nothing there publishes what you need, add the named export to the right public module rather than deepening the reach",
-    "scanFiles": "/^(\\.claudinite\\/(shared|local)\\/)?packs\\/(?!claudinite-tasks\\/).*\\.m?js$/",
+    "fix": "import it from packs/claudinite-tasks/public/, adding the named export there if it is not published yet; a canon pack's own test may reach src/ for a test-only name",
+    "scanFiles": "/^(\\.claudinite\\/(shared|local)\\/packs\\/(?!claudinite-tasks\\/).*\\.m?js|packs\\/(?!claudinite-tasks\\/)(?!.*(\\/test\\/|\\.test\\.m?js$)).*\\.m?js)$/",
     "scanIgnoringComments": true,
     "matchLines": [
       {
         "match": "/(?:from|import\\s*\\()\\s*['\"][^'\"]*claudinite-tasks\\/(?!public\\/)[^'\"]*['\"]/",
         "what": "reads claudinite-tasks past its published surface: \"{match}\"",
         "fix": "reach it through packs/claudinite-tasks/public/, adding the named export there if it is not published yet"
+      }
+    ]
+  },
+  {
+    "id": "tasks-retired-public-paths",
+    "severity": "advisory",
+    "since": "2026-09-18",
+    "failureMessage": "the claudinite-tasks public/ surface was re-laid, and the paths this repo still names are shims scheduled for deletion",
+    "fix": "repoint it: a run: line at the src/ entry the vendored stub names, an import at public/task-constants.mjs, work-item-grammar.mjs, github.mjs, delivery.mjs or task-declaration.mjs",
+    "scanFiles": "/^(\\.github\\/workflows\\/claudinite-(scheduler|executor)\\.yml|(\\.claudinite\\/local\\/)?packs\\/(?!claudinite-tasks\\/).*\\.(m?js|md))$/",
+    "excludeFileClasses": [
+      "testFiles"
+    ],
+    "scanIgnoringComments": true,
+    "matchLines": [
+      {
+        "match": "/claudinite-tasks\\/public\\/(anchors|converge-workflows|create-work-item|dormancy|drain-dispatch|executor-continuation|executor|merge-policy|preconditions|pull-requests|scheduler-run|signals|substantive-commit|task-contract|task-discovery|tick|usage-format|verification|wake|work-items|workflow-failure)\\.mjs/",
+        "what": "names a retired claudinite-tasks public/ path: \"{match}\"",
+        "fix": "repoint it at the path's new home before the shim is deleted (see the rule's fix)"
       }
     ]
   },
@@ -27,7 +46,7 @@
       {
         "match": "/\\/actions\\/(organization-)?variables\\b/",
         "what": "reads a repository variable over the REST API: \"{match}\"",
-        "fix": "take it from the vars bag \u2014 CLAUDINITE_VARS, unpacked into a task's environment by taskEnv and readable in engine code through varsBag(env)"
+        "fix": "take it from the vars bag — CLAUDINITE_VARS, unpacked into a task's environment by taskEnv and readable in engine code through varsBag(env)"
       }
     ]
   }

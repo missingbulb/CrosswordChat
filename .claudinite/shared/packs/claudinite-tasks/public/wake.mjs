@@ -1,5 +1,4 @@
-// Which of a repo's declared tasks a scheduler run would instantiate an item for at a
-// given instant — the plan a forced sweep has to predict. Its own module rather than a
-// line in work-items.mjs: the scheduler run reaches Node built-ins, and the dashboard
-// loads work-items.mjs unbundled in a browser, where only relative specifiers resolve.
+// RETIRED PATH, kept as a shim until #2115 for a member whose own workflow or local
+// pack still names it. `planWake` is the scheduler run's own (`src/schedule/run.mjs`); nothing outside this pack takes it.
+// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
 export { planWake } from '../src/schedule/run.mjs';

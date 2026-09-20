@@ -25,10 +25,10 @@
 // One definition of what a work item is, shared with the queue's own reader — a filed
 // `[claudinite-work]` issue OR an adopted marked issue, which keeps the person's title.
 import { isQueueItem } from '../../src/items/read.mjs';
+import { PARK_PREFIX, PARK_KINDS, NEEDS_HUMAN } from '../../public/task-constants.mjs';
 import {
   parseWorkItemTitle, parseWorkItemBody, taskIdFromPath, outcomeOf,
-  PARK_PREFIX, PARK_KINDS, NEEDS_HUMAN,
-} from '../../src/items/work-item.mjs';
+} from '../../public/work-item-grammar.mjs';
 
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 

@@ -45,7 +45,7 @@
 // keep the promise, so a PR its cycle could not land was superseded by a duplicate
 // the next cycle opened instead. One precedence, one home.
 
-import { taskTrailer } from '../contract/task-trailer.mjs';
+import { taskTrailer } from '../../public/work-item-grammar.mjs';
 import { restCall, graphqlCall } from '../world/github.mjs';
 import { nowMs } from '../world/clock.mjs';
 

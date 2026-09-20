@@ -9,7 +9,8 @@
 // scheduler run's hourly pass ever releases a blocked item, so a chain link
 // waits at most one scheduler run for its dependency to be noticed.
 
-import { STATUS_BLOCKED, isStatus, parseWorkItemBody } from '../items/work-item.mjs';
+import { STATUS_BLOCKED } from '../../public/task-constants.mjs';
+import { isStatus, parseWorkItemBody } from '../../public/work-item-grammar.mjs';
 import { nowMs as clockNowMs } from '../world/clock.mjs';
 
 // Is this item's wait over? `stateOf(n)` answers the state of a `Blocked-by`

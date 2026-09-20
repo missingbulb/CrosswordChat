@@ -1,6 +1,4 @@
-// Whether a member's scheduler is dormant, published for the packs that must ask it
-// from outside: the dashboard (which hides work it knows cannot move) and the fleet
-// sweeps (which must not report a stopped scheduler as unhealthy). Re-exported rather
-// than reimplemented so a consumer and the queue can never disagree about what the
-// declaration means.
+// RETIRED PATH, kept as a shim until #2115 for a member whose own workflow or local
+// pack still names it. The dashboard and the fleet sheepdog keep their own copies of the predicate; the queue's is `src/contract/dormancy.mjs`.
+// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
 export { isDormant, dormancyErrors, TASKS_PACK_ID } from '../src/contract/dormancy.mjs';

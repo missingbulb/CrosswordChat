@@ -54,6 +54,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { COMMENT_CHECKABLE, commentOnly } from '../../../../engine/checks/helpers/code-scanning.mjs';
 import { FILE_CLASSES } from '../../../../engine/checks/helpers/pattern-rules.mjs';
 import { isActive } from '../../../../engine/pack_loader/pack-registry.mjs';
+import { AUTOMERGE_TRAILER } from '../../public/task-constants.mjs';
 
 export { COMMENT_CHECKABLE, commentOnly };
 
@@ -64,7 +65,7 @@ export const POLICY_ANYTHING = 'anything';
 // under a granular policy — what makes the work-scope gate self-gating: no
 // trailer, no armed auto-merge, nothing to judge. The policy expression is the
 // string form below (`a;b;reject:c`).
-export const AUTOMERGE_TRAILER = 'Claudinite-Automerge-Policy';
+export { AUTOMERGE_TRAILER };
 export const AUTOMERGE_TRAILER_RE = /^Claudinite-Automerge-Policy:[ \t]*(\S+)[ \t]*$/m;
 
 // --- path classification (shared with narrow-diff.mjs, which re-exports it) ---

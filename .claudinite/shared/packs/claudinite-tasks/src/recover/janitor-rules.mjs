@@ -24,11 +24,13 @@
 import { taskPeriodMs } from '../items/anchors.mjs';
 import { isScheduledTask } from '../contract/task-contract.mjs';
 import {
-  READY, AGENT, requeueHint,
-  STATUS_READY, STATUS_RUNNING_AGENT, STATUS_BLOCKED, STATUS_DONE, STATUS_REJECTED, isStatus, statusOf,
-  isParked, parkKindOf, originOf, ASKED_FOR_ORIGINS, STATUS_NEEDS_HUMAN_FAILURE, isStandingItem,
-  parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
-} from '../items/work-item.mjs';
+  STATUS_READY, STATUS_RUNNING_AGENT, requeueHint, STATUS_BLOCKED, STATUS_DONE,
+  STATUS_REJECTED, ASKED_FOR_ORIGINS, STATUS_NEEDS_HUMAN_FAILURE,
+} from '../../public/task-constants.mjs';
+import {
+  isStatus, statusOf, isParked, parkKindOf, originOf, isStandingItem, parseWorkItemTitle,
+  parseWorkItemBody, taskIdFromPath,
+} from '../../public/work-item-grammar.mjs';
 
 export const AGENT_LEASH_MS = 3 * 3600e3;
 // The park kinds a later clean run ANSWERS. Both name a broken thing — a failure is
@@ -70,7 +72,7 @@ export function staleReadyItems(open = [], now, { periodFor = () => null, factor
 
 export const staleReadyComment = (item) => {
   const p = parseWorkItemTitle(item.title) ?? taskIdFromPath(parseWorkItemBody(item.body).taskPath);
-  return `This work item for ${p ? `${p.pack}/${p.task}` : 'this task'} has sat \`${READY}\` for over ~${STALE_READY_PERIODS} of its scheduling periods `
+  return `This work item for ${p ? `${p.pack}/${p.task}` : 'this task'} has sat \`${STATUS_READY}\` for over ~${STALE_READY_PERIODS} of its scheduling periods `
     + 'without an executor picking it up. Parking it for a human and taking it out of the queue.';
 };
 
@@ -96,7 +98,7 @@ export function deadAgentItems(open = [], now, { leashMs = AGENT_LEASH_MS, progr
 }
 
 export const deadAgentComment = (item, sessionNote = null, { wedged = false } = {}) =>
-  `This work item has carried \`${AGENT}\` for over ${Math.round(AGENT_LEASH_MS / 3600e3)}h `
+  `This work item has carried \`${STATUS_RUNNING_AGENT}\` for over ${Math.round(AGENT_LEASH_MS / 3600e3)}h `
   + `${wedged ? 'without the work moving — the session kept beating, but every beat said the same thing' : 'with no activity'} — `
   + `the agent session that claimed it${sessionNote ? ` (${sessionNote})` : ''} never converged it. Parking it for a human.`;
 

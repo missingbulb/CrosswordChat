@@ -19,8 +19,8 @@ and `tasks-world-edges-live-in-world` checks are what hold the shape.
 
 | Path | The role |
 |---|---|
-| `src/contract/` | what a task DECLARES and what its declaration means: the declaration's shape and defaults, the term vocabulary and the precondition seam every caller asks through, cadence and anchor arithmetic, the auto-merge policy engine, the commit trailer, task discovery, dormancy |
-| `src/items/` | the work item as DATA: the title grammar that is its identity, the outcome/status decode over its labels, lease state, the queue listings, the run record, the pick order over the open queue, the tracker issue |
+| `src/contract/` | what a task DECLARES and what its declaration means: the declaration's shape and defaults, the term vocabulary and the precondition seam every caller asks through, cadence and anchor arithmetic, the auto-merge policy engine, task discovery, dormancy |
+| `src/items/` | the work item as DATA, over the vocabulary and grammar `public/` defines: the queue listings, the run record, the pick order over the open queue, the heartbeat |
 | `src/world/` | the only outward edges, each a named port — `github.mjs` (every REST path this pack calls, as a named operation), `actions.mjs` (the runner's environment) with `hold.mjs` and the three env bags beside it, `sessions.mjs` (the routine fire that starts an agent), `git.mjs`, `processes.mjs`, `clock.mjs` |
 | `src/signals/` | the collectors a precondition is handed, read through the ports and described in the contract's terms |
 | `src/schedule/` | the tick: which declared tasks have a window open, and the items filed for them |
@@ -31,7 +31,7 @@ and `tasks-world-edges-live-in-world` checks are what hold the shape.
 | `src/adopt/` | what an adopting repo receives: the workflows converged from the stubs, the per-repo cron minute |
 | `queue/` | `tasks/implement-request/` — the engine's own built-in task. Its `task.md` is a redirect kept for work items minted before the move (retired 2026-10-15); the spec itself is `public/implement-request.md` |
 | `stubs/` | the two workflow files an adopting repo receives |
-| `public/` | **everything outside this pack may reference** — the import surface, the commands a workflow or a doc runs, and the documents a routine reads. See below |
+| `public/` | **everything outside this pack may reference** — the vocabulary and grammar `src/` builds on, the import surface, and the documents a routine reads. See below |
 | `tasks/` | this pack's own tasks: `task-janitor` (the queue's sweeps), `usage-fold` (it folds this mechanism's run records and outcome labels), `tasks-usage-fold` (what the machinery itself cost — runs, billed minutes, API calls, outcomes, parks, latencies) and `verify-production` (coded production validations — URL probes judged as code-work) |
 | `worldRules/` | the task-declaration checks |
 | `workRules/` | the armed-auto-merge gate (`automerge-policy-scope`) |
@@ -42,74 +42,70 @@ and `tasks-world-edges-live-in-world` checks are what hold the shape.
 
 ## `public/` — everything outside this pack may reference
 
-One folder, one promise: **a name in `public/` does not move.** Everything a workflow runs, a
-routine reads, another pack imports or a member's own local pack names lives here, and nothing
-else of this pack is addressable from outside.
-
-That promise is what the folder is for. A member's `.github/workflows/`, a routine's stored
-prompt and a member's `.claudinite/local/packs/**` are all things this repository cannot
-rewrite: a converge refreshes `.claudinite/shared/` and touches none of them. Every path any of
-them names therefore has to be one that stays put, and `public/` is where those paths are kept.
+One folder, one promise: **a name in `public/` does not move.** Everything a routine reads, another
+pack imports or a member's own local pack names lives here, and nothing else of this pack is
+addressable from outside. A member's `.github/workflows/` runs the entry points under `src/`
+named by the two stubs, which are this pack's own files and not an outside caller.
 
 Another pack's code may import `packs/claudinite-tasks/public/*` and nothing else of this pack;
 the `pack-independence` barrier's allow list names that directory, and no other pack gains an
-equivalent surface by existing.
+equivalent surface by existing. **A member's own `.claudinite/local/packs/**` reads it the same
+way**, through its mount (`.claudinite/shared/packs/claudinite-tasks/public/*`): the nightly
+converge replaces `.claudinite/shared/` and may never touch a member's own packs, so an import
+aimed anywhere else is one this repository cannot repair when the layout behind it moves.
 
-### Commands and documents named from outside
+### Documents named from outside
 
 | Path | What names it |
 |---|---|
-| `scheduler-run.mjs` | every member's `.github/workflows/claudinite-scheduler.yml` |
-| `drain-dispatch.mjs` | the same workflow's post-scheduler drain |
-| `workflow-failure.mjs` | the same workflow's failure-escalation job |
-| `executor.mjs` | every member's `.github/workflows/claudinite-executor.yml` |
-| `executor-continuation.mjs` | the same workflow's continuation job |
-| `tick.mjs` | the retired scheduler entry, still named by workflows nobody has repointed |
-| `create-work-item.mjs` | prose in members' own local packs — filing an item by hand, and waking a parked one |
-| `converge-workflows.mjs` | the `adopt-pack` skill, run by an operator against a member checkout |
 | `instructions.md` | a repo's work-item routine, as a stored prompt in its console settings |
 | `implement-request.md` | the machine block of every issue adopted into the queue |
 
 ### Modules other packs import
 
-**A member's own `.claudinite/local/packs/**` reads it the same way**, through its mount
-(`.claudinite/shared/packs/claudinite-tasks/public/*`). That is the surface's whole point: the
-nightly converge replaces `.claudinite/shared/` and may never touch a member's own packs, so an
-import aimed anywhere else is one this repository cannot repair when the layout behind it moves.
+Three of the five are the DEFINITION, and `src/` imports them from here: the vocabulary, the
+grammar over it and the GitHub client import nothing of `src/`. The other two are the
+machinery's own operations under a stable name.
 
 | Module | What it publishes |
 |---|---|
-| `work-items.mjs` | the title grammar that is a work item's identity, the outcome/status decode over its labels, lease state, the pick order over the open queue, and whether a title is the scheduler's own dispatch issue rather than work |
-| `anchors.mjs` | period length, and the instant a task's window last opened at or opens next |
-| `wake.mjs` | which of a repo's declared tasks a scheduler run would instantiate an item for at a given instant — the plan a forced sweep has to predict |
-| `pull-requests.mjs` | how a merged pull request names the issue it closes, and how a span between two timestamps becomes hours |
-| `delivery.mjs` | `landDelivery`, `deliverGenerated` — how a task's output becomes a landed PR or a regenerated file |
-| `github.mjs` | the GitHub client, the workflow dispatch, the two workflow file names, and the tracker issue a worker records on |
-| `signals.mjs` | the signal shapes a precondition is handed |
-| `task-contract.mjs` | task-declaration validation, and the signal union either precondition form resolves to |
-| `preconditions.mjs` | the precondition vocabulary, the expression grammar, and both evaluators — the seam the executor calls at pick over a discovered task, and the raw-fields one a pack asserts its own declarations with |
-| `merge-policy.mjs` | the auto-merge policy verdict (`automerge`, the `Merge:` field, the arming trailer) and the `merge-rules.json` compiler |
-| `task-declaration.mjs` | the declaration as text — the reader that lifts its fields out and the agentic defaults the loader fills, reaching no Node built-in so a browser bundle can load it |
-| `task-discovery.mjs` | where a task's declaration lives on disk and how it is read — kept apart from `task-declaration.mjs`, which reaches no Node built-in |
-| `usage-format.mjs` | the usage aggregate's codec |
-| `verification.mjs` | what a production-verification spec looks like, and the re-arm cadence a not-yet-live run reschedules on |
-| `dormancy.mjs` | whether a repo's scheduler is dormant, by the same test the scheduler stops itself with |
-| `substantive-commit.mjs` | whether a commit was genuine project work rather than the machinery moving — the test a `commits`-gated precondition is decided by |
+| `task-constants.mjs` | every value the queue writes and reads: the work item's labels, markers and body fields, the leases, the commit trailers, the declaration defaults, the pack's own parameters, the two workflow file names |
+| `work-item-grammar.mjs` | the parse and serialize over that vocabulary — the title grammar that is an item's identity, the status and outcome decode over its labels (every legacy spelling included), the body fields, the machine block, the commit trailer |
+| `github.mjs` | the GitHub client (`makeGh` and the run's call count), `dispatchWorkflow`, and the tracker issue a recurring task logs every run to |
+| `delivery.mjs` | `deliverGenerated` — a regenerated file landed on a pull request that lands itself — and the landing lane's five names for a worker that lands its own pull request |
+| `task-declaration.mjs` | the declaration's executable contract: the loader, its validation, the precondition evaluator the executor runs at pick, and the auto-merge policy engine |
 
-A module SHOULD publish **named** exports rather than `export *`: the list in the file is then the
-promise, so a reader sees the whole surface in one place and an internal rename can neither widen
-nor narrow it. Four modules still carry a star — `converge-workflows.mjs`, `scheduler-run.mjs`,
-`signals.mjs` and `usage-format.mjs` — and publish more than their lists say;
-[`public/SURFACE.GENERATED.md`](public/SURFACE.GENERATED.md) names them and what each one adds.
-A consumer needing something absent asks for the named export to be added here — never a deeper
-import, which `tasks-pack-read-through-its-surface` refuses.
+A module publishes **named** exports rather than `export *`: the list in the file is the promise,
+so a reader sees the whole surface in one place and an internal rename can neither widen nor
+narrow it. A consumer needing something absent asks for the named export to be added here —
+never a deeper import, which `tasks-pack-read-through-its-surface` refuses. Who reads each name
+is derived on demand: `node packs/claudinite-canon-curation/pack-surface.mjs packs/claudinite-tasks`
+renders the surface and its consumers from the tree.
 
-**Who actually reads each of these is derived, not listed here**: the tables above say what a module
-publishes and why, and [`public/SURFACE.GENERATED.md`](public/SURFACE.GENERATED.md) — regenerated
-from the tree by `packs/claudinite-canon-curation/test/pack-surface.test.mjs` — says who takes it,
-how many of its names anything outside the pack actually imports, and which it publishes for nobody.
-A hand-kept consumer list is the part that goes stale: this one named an export (`landPr`) no file
-has ever had.
+### Retired paths, shimmed until #2115
+
+The surface above replaced a wider one. Every path it retired stays as a one-line shim for a
+member whose own workflow or local pack still names it, and `tasks-retired-public-paths` says so
+where that is the case; the shims go with #2115 once every member's workflow names the `src/`
+entry points.
+
+| Retired command | Runs |
+|---|---|
+| `scheduler-run.mjs` | `src/schedule/run.mjs` |
+| `drain-dispatch.mjs` | `src/schedule/drain-dispatch.mjs` |
+| `workflow-failure.mjs` | `src/recover/workflow-failure.mjs` |
+| `executor.mjs` | `src/execute/loop.mjs` |
+| `executor-continuation.mjs` | `src/recover/continuation.mjs` |
+| `create-work-item.mjs` | `src/schedule/create-work-item.mjs` |
+| `converge-workflows.mjs` | `src/adopt/converge-workflows.mjs` |
+| `tick.mjs` | `src/schedule/run.mjs`, the scheduler run's pre-#877 name |
+
+| Retired module | Where its names live now |
+|---|---|
+| `work-items.mjs` | `task-constants.mjs` and `work-item-grammar.mjs` |
+| `task-contract.mjs`, `preconditions.mjs`, `merge-policy.mjs` | `task-declaration.mjs` |
+| `anchors.mjs`, `dormancy.mjs`, `pull-requests.mjs`, `substantive-commit.mjs` | the dashboard's (and the sheepdog's) own copies, each with a drift guard |
+| `signals.mjs`, `wake.mjs`, `task-discovery.mjs`, `usage-format.mjs`, `verification.mjs` | this pack's own `src/` and `tasks/`; nothing outside the pack took them |
 
 A pack whose **non-task** code reads any of these declares `requires: ['claudinite-tasks']`. A
 pack's `tasks/` folder needs no declaration: a mount without this pack carries no `tasks/` at all,
@@ -134,6 +130,7 @@ pack paths behind which everything converges nightly.
 | `executor-workflow-secrets` | high | correctness | check: advisory |
 | `tasks-pack-read-through-its-surface` | high | correctness | declared check: blocking |
 | `repo-variables-through-the-bag` | high | correctness | declared check: blocking |
+| `tasks-retired-public-paths` | high | correctness | declared check: advisory |
 
 `tasks-pack-read-through-its-surface` is this pack's, not the canon's, because the consumers that
 can get it wrong are members: it scans a repo's own `packs/` **and** its `.claudinite/local/packs/`,

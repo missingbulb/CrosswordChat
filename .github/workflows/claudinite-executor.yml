@@ -58,7 +58,7 @@ jobs:
           # The converge writes the list directly beneath this line, so it stays last.
           # claudinite:secrets
           CCR_ROUTINE_TOKEN: ${{ secrets.CCR_ROUTINE_TOKEN }}
-        run: node .claudinite/shared/packs/claudinite-tasks/public/executor.mjs
+        run: node .claudinite/shared/packs/claudinite-tasks/src/execute/loop.mjs
 
   continue-the-chain:
     needs: execute
@@ -77,4 +77,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CLAUDINITE_CONTINUATION_DEPTH: ${{ inputs.continuation_depth }}
-        run: node .claudinite/shared/packs/claudinite-tasks/public/executor-continuation.mjs
+        run: node .claudinite/shared/packs/claudinite-tasks/src/recover/continuation.mjs

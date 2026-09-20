@@ -11,8 +11,9 @@
 // the whole of when the task runs (docs/PRINCIPLES.md), and an absent one has
 // not said.
 // A task that declares a field keeps it; only an absent one is filled.
-export const DEFAULT_AUTOMERGE = 'nothing';
-export const DEFAULT_AGENT_MODEL = 'none';
+import { DEFAULT_AUTOMERGE, DEFAULT_AGENT_MODEL } from '../../public/task-constants.mjs';
+
+export { DEFAULT_AUTOMERGE, DEFAULT_AGENT_MODEL };
 
 // Fill the absent fields in place and return the declaration.
 export function applyTaskDefaults(out) {

@@ -20,7 +20,7 @@ import { pathToFileURL } from 'node:url';
 import { makeGh } from '../world/github.mjs';
 import { actionRepoContext, runUrl } from '../world/actions.mjs';
 import { ensureLabels, createIssue, comment } from '../world/github.mjs';
-import { ORIGIN_GITHUB, STATUS_NEEDS_HUMAN_FAILURE } from '../items/work-item.mjs';
+import { ORIGIN_GITHUB, STATUS_NEEDS_HUMAN_FAILURE } from '../../public/task-constants.mjs';
 import { searchIssues } from '../world/github.mjs';
 
 // Not a queue label: this one marks the issue as the platform's own failure

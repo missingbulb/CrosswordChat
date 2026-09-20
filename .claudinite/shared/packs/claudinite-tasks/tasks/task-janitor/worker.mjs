@@ -28,7 +28,7 @@ import { pathToFileURL } from 'node:url';
 import {
   staleDispatchIssues, staleEscalationComment, staleClaimedDispatchIssues, staleClaimComment,
   claimedDispatchIssues,
-  rearmDispatchIssues, readyLabelOn, DISPATCH_PREFIX, NEEDS_HUMAN_LABEL, AGENT_RUNNING_LABEL,
+  rearmDispatchIssues, readyLabelOn, DISPATCH_PREFIX, NEEDS_HUMAN, AGENT_RUNNING_LABEL,
   SCHEDULER_LABELS,
 } from '../../src/session/dispatch.mjs';
 import { lastLivenessAt } from '../../src/items/heartbeat.mjs';
@@ -80,17 +80,17 @@ export async function sweep(gh, repo, now) {
   const escalate = async (issue, body, dropLabel) => {
     await comment(gh, repo, issue.number, body);
     if (dropLabel) await removeLabel(gh, repo, issue.number, dropLabel);
-    await addLabel(gh, repo, issue.number, NEEDS_HUMAN_LABEL);
+    await addLabel(gh, repo, issue.number, NEEDS_HUMAN);
   };
 
   for (const issue of stale) {
     await escalate(issue, staleEscalationComment(issue), readyLabelOn(issue));
-    log(`escalated stale dispatch #${issue.number} to ${NEEDS_HUMAN_LABEL}`);
+    log(`escalated stale dispatch #${issue.number} to ${NEEDS_HUMAN}`);
     result.stale.push(issue.number);
   }
   for (const issue of deadClaims) {
     await escalate(issue, staleClaimComment(issue), AGENT_RUNNING_LABEL);
-    log(`reclaimed dead ${AGENT_RUNNING_LABEL} claim on #${issue.number} → ${NEEDS_HUMAN_LABEL}`);
+    log(`reclaimed dead ${AGENT_RUNNING_LABEL} claim on #${issue.number} → ${NEEDS_HUMAN}`);
     result.deadClaims.push(issue.number);
   }
   for (const issue of rearm) {
@@ -108,7 +108,7 @@ export async function sweep(gh, repo, now) {
   const converged = new Set([...result.stale, ...result.deadClaims]);
   const armed = open.filter((i) => readyLabelOn(i) && !converged.has(i.number)).length;
   const running = open.filter((i) => names(i).includes(AGENT_RUNNING_LABEL) && !converged.has(i.number)).length;
-  const needsHuman = open.filter((i) => names(i).includes(NEEDS_HUMAN_LABEL)).length + converged.size;
+  const needsHuman = open.filter((i) => names(i).includes(NEEDS_HUMAN)).length + converged.size;
   log(`health: ${result.open} open dispatch issue(s) — ${armed} armed, ${running} running, ${needsHuman} needs-human; `
     + `this run escalated ${result.stale.length}, reclaimed ${result.deadClaims.length}, re-armed ${result.rearmed.length}`);
   return result;

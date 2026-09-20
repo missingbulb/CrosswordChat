@@ -12,7 +12,7 @@
 // stating none) plus an hour of slack. Overlap at the seam — a run's own duration
 // — is absorbed by the preconditions' own dedupe, as the old fixed lookback's was.
 
-import { itemFacts } from '../items/work-item.mjs';
+import { itemFacts } from '../../public/work-item-grammar.mjs';
 import { taskSignalNames } from '../contract/task-contract.mjs';
 import { DAY_MS, defaultWindowMs, windowDaysOf } from '../contract/precondition.mjs';
 import { localSignalContext } from '../world/git.mjs';

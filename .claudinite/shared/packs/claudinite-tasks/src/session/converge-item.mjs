@@ -39,23 +39,25 @@ import { pathToFileURL } from 'node:url';
 import { renderTaskExec } from '../items/run-record.mjs';
 import { actionsEnv } from '../world/actions.mjs';
 import {
-  AGENT, TASK_DONE, STATUS_RUNNING_AGENT, isStatus, machineBlockOf,
-  NEEDS_HUMAN_ACTION, NEEDS_HUMAN_APPROVAL, NEEDS_HUMAN_DECISION, NEEDS_HUMAN_FAILURE,
-  QUEUED_LABEL, IN_REVIEW_LABEL, ORIGIN_LABELS, hasLabel,
-  parseWorkItemTitle, parseWorkItemBody, spellingsOf, labelNames,
-  editItemBody, withEndsWhen, EPISODE_MARKER,
-} from '../items/work-item.mjs';
+  STATUS_RUNNING_AGENT, STATUS_DONE, STATUS_NEEDS_HUMAN_ACTION, STATUS_NEEDS_HUMAN_APPROVAL,
+  STATUS_NEEDS_HUMAN_DECISION, STATUS_NEEDS_HUMAN_FAILURE, QUEUED_LABEL, IN_REVIEW_LABEL, ORIGIN_LABELS,
+  EPISODE_MARKER,
+} from '../../public/task-constants.mjs';
+import {
+  isStatus, machineBlockOf, hasLabel, parseWorkItemTitle, parseWorkItemBody, spellingsOf,
+  labelNames, editItemBody, withEndsWhen,
+} from '../../public/work-item-grammar.mjs';
 
 // What a session may claim, and what each one means for the item. `record` is the
 // execution-record status, and `null` means no record: an approval park is a run
 // that SUCCEEDED and left a PR, which the record vocabulary has no word for, and
 // a fifth status would be stored data every decoder in the fleet must learn.
 export const OUTCOMES = Object.freeze({
-  done: { label: TASK_DONE, closes: true, stateReason: 'completed', record: 'success' },
-  approval: { label: NEEDS_HUMAN_APPROVAL, closes: false, record: null },
-  action: { label: NEEDS_HUMAN_ACTION, closes: false, record: 'failed' },
-  decision: { label: NEEDS_HUMAN_DECISION, closes: false, record: 'failed' },
-  failure: { label: NEEDS_HUMAN_FAILURE, closes: false, record: 'failed' },
+  done: { label: STATUS_DONE, closes: true, stateReason: 'completed', record: 'success' },
+  approval: { label: STATUS_NEEDS_HUMAN_APPROVAL, closes: false, record: null },
+  action: { label: STATUS_NEEDS_HUMAN_ACTION, closes: false, record: 'failed' },
+  decision: { label: STATUS_NEEDS_HUMAN_DECISION, closes: false, record: 'failed' },
+  failure: { label: STATUS_NEEDS_HUMAN_FAILURE, closes: false, record: 'failed' },
 });
 
 export function parseArgs(argv) {
@@ -100,7 +102,7 @@ export function refusal(item, issue) {
   }
   if (item.state !== 'open') return `#${issue} is already closed — it was converged once already`;
   if (!isStatus(item, STATUS_RUNNING_AGENT)) {
-    return `#${issue} is not with an agent (\`${AGENT}\`) — this session does not hold it, so it is not this session's to converge`;
+    return `#${issue} is not with an agent (\`${STATUS_RUNNING_AGENT}\`) — this session does not hold it, so it is not this session's to converge`;
   }
   return null;
 }
