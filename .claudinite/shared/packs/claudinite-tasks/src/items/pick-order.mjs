@@ -19,9 +19,11 @@
 //    upstream must not halt its dependents indefinitely.
 
 import {
-  URGENT, STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT, isStatus,
-  parseWorkItemTitle, parseWorkItemBody, isStandingItem, hasLabel,
-} from './work-item.mjs';
+  URGENT, STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT,
+} from '../../public/task-constants.mjs';
+import {
+  isStatus, parseWorkItemTitle, parseWorkItemBody, isStandingItem, hasLabel,
+} from '../../public/work-item-grammar.mjs';
 
 export const titleOf = (item) => (item.title ?? '').trim();
 // An item somebody is executing — the executor holds it, or the agent it handed to

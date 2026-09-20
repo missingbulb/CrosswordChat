@@ -1,20 +1,6 @@
-// PUBLIC ENTRY POINT — a command, never logic.
-//
-// Named as a literal path by something this repository cannot rewrite: a member's
-// `.github/workflows/`, which lands only as a pull request somebody merges; a
-// routine's stored prompt, which is a per-repo console setting; or prose in a
-// member's own local pack, which no converge may touch. A member spends every
-// window between its mount refreshing (nightly) and those being re-pointed
-// (whenever) running whichever path it still names — so a run that finds nothing
-// here is a repo whose queue stops silently, with no run left to fix it.
-//
-// `public/` is where that promise is kept: a name here does not move, and nothing
-// may put behaviour behind one. The mechanism lives under `src/`.
-//
-// Writing a member's two workflow files from the stubs — the adoption step an
-// operator runs by hand, because `.github/workflows/` is the one directory a
-// member's nightly converge may never write.
-
+// RETIRED PATH, kept as a shim until #2115 for a member whose own workflow or local
+// pack still names it. The adoption step is `src/adopt/converge-workflows.mjs`, run directly.
+// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
 import { pathToFileURL } from 'node:url';
 import { runConvergeWorkflows } from '../src/adopt/converge-workflows.mjs';
 

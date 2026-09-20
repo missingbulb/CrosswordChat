@@ -19,7 +19,7 @@ import {
   TASKS_USAGE_FIELDS, BUCKET_FIELDS, WORKFLOW_FIELDS, RUN_FIELDS, LATENCY_FIELDS,
   QUEUE_OUTCOMES, COUNTER_GROUPS, WEEK_GROUPS, HOUR_GROUPS, hourKey, sortKeys,
 } from '../../src/items/tasks-usage-format.mjs';
-import { PARK_KINDS } from '../../src/items/work-item.mjs';
+import { PARK_KINDS } from '../../public/task-constants.mjs';
 
 // How long an hour row lives — three days, the session fold's own window, so the
 // two files' live tiers reach the same distance back.

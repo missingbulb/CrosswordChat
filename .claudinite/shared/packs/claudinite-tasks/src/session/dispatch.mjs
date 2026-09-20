@@ -9,6 +9,8 @@
 // All behavior-defining content (agent_model, expected_outcome, agent_instructions) is read from the
 // tracked task files, never from the issue — the body only points at the task
 // file and carries the precondition's binding Context (PRINCIPLES.md).
+import { NEEDS_HUMAN } from '../../public/task-constants.mjs';
+
 
 // The labels this machinery drives. `ready-for-agent` is what the executor
 // routine fires on; `needs-human` is the single triage state every anomaly
@@ -22,7 +24,7 @@ export const READY_LABEL = 'ready-for-agent';
 // this; today just growth-promote.
 export const READY_FLEET_LABEL = 'ready-for-agent-fleet';
 export const AGENT_RUNNING_LABEL = 'agent-running';
-export const NEEDS_HUMAN_LABEL = 'needs-human';
+export { NEEDS_HUMAN };
 export const WORKFLOW_FAILURE_LABEL = 'workflow-failure';
 
 // The ready label a task's dispatch is filed under, from its declared
@@ -43,7 +45,7 @@ export const SCHEDULER_LABELS = [
   { name: READY_LABEL, color: '0e8a16', description: 'Claudinite scheduler: dispatch issue ready for the (self-scoped) executor to run' },
   { name: READY_FLEET_LABEL, color: '1d76db', description: 'Claudinite scheduler: dispatch ready for the FLEET-scoped executor (a task reaching other repos)' },
   { name: AGENT_RUNNING_LABEL, color: 'fbca04', description: 'Claudinite scheduler: the executor has claimed this issue and is running it' },
-  { name: NEEDS_HUMAN_LABEL, color: 'd93f0b', description: 'Claudinite scheduler: an anomaly that converged here for human triage' },
+  { name: NEEDS_HUMAN, color: 'd93f0b', description: 'Claudinite scheduler: an anomaly that converged here for human triage' },
   { name: WORKFLOW_FAILURE_LABEL, color: 'b60205', description: 'Claudinite scheduler: a scheduler run or task failed' },
 ];
 
@@ -194,7 +196,7 @@ export const NEEDS_HUMAN_HOLD = 2;
 const labelNames = (issue) =>
   (issue?.labels ?? []).map((l) => (typeof l === 'string' ? l : l?.name)).filter(Boolean);
 
-const isEscalated = (issue) => labelNames(issue).includes(NEEDS_HUMAN_LABEL);
+const isEscalated = (issue) => labelNames(issue).includes(NEEDS_HUMAN);
 
 export function planDispatch({ existing = [], pack, task, slotId, readyLabel = READY_LABEL, hold = NEEDS_HUMAN_HOLD }) {
   const title = dispatchTitle({ pack, task, slotId });
@@ -253,7 +255,7 @@ export function staleDispatchIssues(openIssues = [], now, { factor = 2 } = {}) {
     const parsed = parseDispatchTitle(issue.title);
     if (!parsed) return false;
     const names = labelNames(issue);
-    if (names.includes(NEEDS_HUMAN_LABEL) || names.includes(AGENT_RUNNING_LABEL)) return false;
+    if (names.includes(NEEDS_HUMAN) || names.includes(AGENT_RUNNING_LABEL)) return false;
     const period = slotPeriodMs(parsed.slotId);
     if (period === null) return false;
     return nowMs - new Date(issue.created_at).getTime() > factor * period;
@@ -265,7 +267,7 @@ export function staleEscalationComment(issue) {
   const parsed = parseDispatchTitle(issue.title);
   const which = parsed ? `${parsed.pack}/${parsed.task} (slot ${parsed.slotId})` : 'this task';
   return `This dispatch issue for ${which} has stayed open past ~2 of its scheduling periods without being executed — `
-    + `no executor session ran it. Labeling \`${NEEDS_HUMAN_LABEL}\` for triage.`;
+    + `no executor session ran it. Labeling \`${NEEDS_HUMAN}\` for triage.`;
 }
 
 // --- re-arming a lost trigger ------------------------------------------------
@@ -330,7 +332,7 @@ export function staleClaimedDispatchIssues(openIssues = [], now, { idleMs = 3 * 
   return openIssues.filter((issue) => {
     if (!parseDispatchTitle(issue.title)) return false;
     const names = labelNames(issue);
-    if (!names.includes(AGENT_RUNNING_LABEL) || names.includes(NEEDS_HUMAN_LABEL)) return false;
+    if (!names.includes(AGENT_RUNNING_LABEL) || names.includes(NEEDS_HUMAN)) return false;
     const lastSign = issue.livenessAt ?? issue.updated_at ?? issue.created_at;
     return nowMs - new Date(lastSign).getTime() > idleMs;
   });
@@ -343,7 +345,7 @@ export function staleClaimedDispatchIssues(openIssues = [], now, { idleMs = 3 * 
 export const claimedDispatchIssues = (openIssues = []) => openIssues.filter((issue) => {
   if (!parseDispatchTitle(issue.title)) return false;
   const names = labelNames(issue);
-  return names.includes(AGENT_RUNNING_LABEL) && !names.includes(NEEDS_HUMAN_LABEL);
+  return names.includes(AGENT_RUNNING_LABEL) && !names.includes(NEEDS_HUMAN);
 });
 
 // The comment the shell posts when it reclaims a dead session's claim.
@@ -351,7 +353,7 @@ export function staleClaimComment(issue) {
   const parsed = parseDispatchTitle(issue.title);
   const which = parsed ? `${parsed.pack}/${parsed.task} (slot ${parsed.slotId})` : 'this task';
   return `This dispatch issue for ${which} has carried \`${AGENT_RUNNING_LABEL}\` for over 3h with no activity — `
-    + `the executor session that claimed it never converged it. Labeling \`${NEEDS_HUMAN_LABEL}\` for triage.`;
+    + `the executor session that claimed it never converged it. Labeling \`${NEEDS_HUMAN}\` for triage.`;
 }
 
 export function rearmDispatchIssues(openIssues = [], now, { graceMs = 20 * 60e3 } = {}) {
@@ -362,7 +364,7 @@ export function rearmDispatchIssues(openIssues = [], now, { graceMs = 20 * 60e3 
     if (stale.has(issue.number)) return false;
     if (!readyLabelOn(issue)) return false;
     const names = labelNames(issue);
-    if (names.includes(AGENT_RUNNING_LABEL) || names.includes(NEEDS_HUMAN_LABEL)) return false;
+    if (names.includes(AGENT_RUNNING_LABEL) || names.includes(NEEDS_HUMAN)) return false;
     if ((issue.comments ?? 0) > 0) return false;
     return nowMs - new Date(issue.created_at).getTime() > graceMs;
   });

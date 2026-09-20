@@ -76,11 +76,7 @@ export const APPROVAL_RE = /^\s*\/claude\s+go\b/im;
 // stops that half of the ad-hoc request lane on every single request.
 export const BUILT_IN_PATH_RE = /^(?:\.claudinite\/shared\/)?(?:engine\/scheduler|packs\/claudinite-tasks)\/queue\/tasks\/([^/]+)\/task\.md$/;
 
-// THE THIRD ROOT, and the one new items carry: the spec moved into `public/`, where a
-// path does not move. Its own pattern rather than a third alternative above, because a
-// caller reads the task name out of group 1 and two alternatives cannot both be it.
-//
-// Permanent for the same reason as the other two — an item's machine block is an issue
-// body this repository can never rewrite, so every shape any live item carries has to
-// stay valid however long that item sits open.
-export const BUILT_IN_PUBLIC_PATH_RE = /^(?:\.claudinite\/(?:shared|local)\/)?packs\/claudinite-tasks\/public\/(implement-request)\.md$/;
+// THE THIRD ROOT, and the one new items carry: the spec's `public/` home, where a path
+// does not move. One definition, the grammar's — `taskIdFromPath` decodes it there and
+// the dispatch validator reads the task name out of the same group 1 here.
+export { BUILT_IN_PUBLIC_TASK_PATH_RE as BUILT_IN_PUBLIC_PATH_RE } from '../../public/work-item-grammar.mjs';

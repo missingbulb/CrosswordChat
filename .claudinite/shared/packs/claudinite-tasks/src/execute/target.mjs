@@ -19,7 +19,7 @@
 // like an empty one, and "nothing to amend" on that evidence stacks a duplicate.
 
 import { pullDisposition } from '../deliver/land-pr.mjs';
-import { taskFromMessage, taskTrailer } from '../contract/task-trailer.mjs';
+import { taskFromMessage, taskTrailer } from '../../public/work-item-grammar.mjs';
 import { canonicalOutcome, opensPullRequest } from '../contract/task-contract.mjs';
 import { deleteBranchRef, listOpenPulls, readCommit, readPull, listRunsForSha, mergePull, closePull, comment as postComment } from '../world/github.mjs';
 

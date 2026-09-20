@@ -25,7 +25,7 @@
 
 import { pathToFileURL } from 'node:url';
 import { isSuspended, suspendedNotice } from '../world/hold.mjs';
-import { EXECUTING_LEASH_MS } from '../items/leases.mjs';
+import { EXECUTING_LEASH_MS } from '../../public/task-constants.mjs';
 import { swapStatus } from '../items/apply-status.mjs';
 import { isReleasable } from './readiness.mjs';
 import { isQueueItem } from '../items/read.mjs';
@@ -33,15 +33,14 @@ import { pickOrder } from '../items/pick-order.mjs';
 import { lastLivenessAt } from '../items/heartbeat.mjs';
 import { startRunCost } from '../items/run-record.mjs';
 import {
-  WORK_PREFIX, BLOCKED, READY, TASK_OBSOLETE,
-  NEEDS_HUMAN_DECISION, LIVE_STATUSES,
-  STATUS_BLOCKED, STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT,
-  isStatus, statusOf,
-  QUEUE_LABELS, EPISODE_MARKER, workItemTitle, parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
-  workItemBody, labelNames, hasLabel,
-  ORIGIN_AD_HOC, ORIGIN_PLANNED, ORIGIN_LABELS, REQUEST_LABEL, parseRequestFields,
-  parseBlockedBy, withMachineBlock,
-} from '../items/work-item.mjs';
+  WORK_PREFIX, STATUS_BLOCKED, STATUS_READY, STATUS_REJECTED, STATUS_NEEDS_HUMAN_DECISION, LIVE_STATUSES, 
+  STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT, QUEUE_LABELS, EPISODE_MARKER,
+  ORIGIN_AD_HOC, ORIGIN_PLANNED, ORIGIN_LABELS, REQUEST_LABEL,
+} from '../../public/task-constants.mjs';
+import {
+  isStatus, statusOf, workItemTitle, parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
+  workItemBody, labelNames, hasLabel, parseRequestFields, parseBlockedBy, withMachineBlock,
+} from '../../public/work-item-grammar.mjs';
 import { REQUEST_TASK_ID } from '../contract/built-in-tasks.mjs';
 import { taskSignalNames, isScheduledTask } from '../contract/task-contract.mjs';
 import { evaluatePreconditions } from '../contract/precondition-policy.mjs';
@@ -185,7 +184,7 @@ export async function planSchedulerRun({
       kind: 'create', pack: task.pack, task: task.id, title,
       // THE ORIGIN, worn for the item's whole life beside whatever status it holds
       // (PRINCIPLES.md): the schedule filed this one, so it is `planned`.
-      labels: [ORIGIN_PLANNED, READY],
+      labels: [ORIGIN_PLANNED, STATUS_READY],
       body: workItemBody({
         taskPath: task.taskPath,
         context: verdict.error ? [`The scheduler could not decide this occurrence (${verdict.error}); the executor decides at pick.`] : [],
@@ -246,7 +245,7 @@ export async function planSchedulerRun({
       kind: 'adopt',
       request: req.number,
       task: `${task.pack}/${task.id}`,
-      status: blockedBy.length || notBefore ? BLOCKED : READY,
+      status: blockedBy.length || notBefore ? STATUS_BLOCKED : STATUS_READY,
       // The block is the machine's half of a body the human owns and keeps editing,
       // so it is written whole here and rewritten in place after that.
       body: withMachineBlock(req.body, workItemBody({
@@ -297,7 +296,7 @@ export async function planSchedulerRun({
       // ONE label either way: back into the queue, or parked at the kind that says
       // what the human is being asked for — whether the interrupted run left
       // anything behind, and so whether this re-queues at all.
-      kind: 'reclaim', issue: item.number, to: oneShot ? NEEDS_HUMAN_DECISION : READY,
+      kind: 'reclaim', issue: item.number, to: oneShot ? STATUS_NEEDS_HUMAN_DECISION : STATUS_READY,
       reason: oneShot
         ? `The executor holding this item went silent for over ${minutes} minutes. This task declares \`on_interrupt: 'needs-human'\`, so nothing re-queues it automatically — check whether the interrupted run left anything behind, then re-queue it by hand.`
         : `Reclaimed: the executor holding this item went silent for over ${minutes} minutes. Returning it to the queue.`,
@@ -660,12 +659,12 @@ export async function schedulerRun({
     if (op.kind === 'create') {
       const res = await createIssue(gh, repo, { title: op.title, body: op.body, labels: op.labels });
       if (res.number) {
-        if (op.labels.includes(READY)) readied.add(res.number);
+        if (op.labels.includes(STATUS_READY)) readied.add(res.number);
         minted.push({ number: res.number, title: op.title, body: op.body, state: 'open', labels: op.labels });
         log(`- created #${res.number} ${op.pack}/${op.task} [${op.labels.join(' ')}]`);
       } else log(`! could not create the work item for ${op.pack}/${op.task}: ${res.status}`);
     } else if (op.kind === 'ready') {
-      await swapStatus({ addLabel, removeLabel }, gh, repo, { number: op.issue }, STATUS_BLOCKED, READY);
+      await swapStatus({ addLabel, removeLabel }, gh, repo, { number: op.issue }, STATUS_BLOCKED, STATUS_READY);
       readied.add(op.issue);
       log(`- readied #${op.issue}`);
     } else if (op.kind === 'reclaim') {
@@ -674,7 +673,7 @@ export async function schedulerRun({
       // claimant — the item then livelocks through reclaim cycles forever (F18).
       await comment(gh, repo, op.issue, `${EPISODE_MARKER}\n${op.reason}`);
       await swapStatus({ addLabel, removeLabel }, gh, repo, { number: op.issue }, STATUS_RUNNING_EXECUTOR, op.to);
-      if (op.to === READY) readied.add(op.issue);
+      if (op.to === STATUS_READY) readied.add(op.issue);
       log(`- reclaimed #${op.issue} -> ${op.to}`);
     } else if (op.kind === 'adopt') {
       // THE ISSUE IS THE ITEM, so adoption writes to it rather than filing anything:
@@ -705,17 +704,17 @@ export async function schedulerRun({
       log(`- adopted #${op.request} for ${op.task} (${op.model ?? 'default model'}${op.blockedBy.length ? `, blocked on ${op.blockedBy.map((n) => `#${n}`).join(' ')}` : ''}${op.merge ? `, may merge: ${op.merge}` : ''})`);
     } else if (op.kind === 'supersede') {
       await comment(gh, repo, op.issue, op.reason);
-      await addLabel(gh, repo, op.issue, TASK_OBSOLETE);
+      await addLabel(gh, repo, op.issue, STATUS_REJECTED);
       await closeIssue(gh, repo, op.issue, 'not_planned');
       log(`- superseded #${op.issue} — #${op.request} was re-marked`);
     } else if (op.kind === 'dedupe') {
       await comment(gh, repo, op.issue, op.reason);
-      await addLabel(gh, repo, op.issue, TASK_OBSOLETE);
+      await addLabel(gh, repo, op.issue, STATUS_REJECTED);
       await closeIssue(gh, repo, op.issue, 'not_planned');
       log(`- deduped #${op.issue}`);
     } else if (op.kind === 'retire-orphan') {
       await comment(gh, repo, op.issue, op.reason);
-      await addLabel(gh, repo, op.issue, TASK_OBSOLETE);
+      await addLabel(gh, repo, op.issue, STATUS_REJECTED);
       await closeIssue(gh, repo, op.issue, 'not_planned');
       log(`- reaped #${op.issue} — ${op.pack}/${op.task} is not declared at HEAD`);
     }
@@ -750,7 +749,7 @@ export async function schedulerRun({
         // A forced mint stands in for the occurrence the schedule would have filed,
         // so it wears the same origin: the task IS on the schedule, and this item is
         // its current occurrence (PRINCIPLES.md).
-        labels: [ORIGIN_PLANNED, READY],
+        labels: [ORIGIN_PLANNED, STATUS_READY],
       });
       if (res.number) {
         readied.add(res.number);

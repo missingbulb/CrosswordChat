@@ -3,7 +3,8 @@
 // consistent (S6/F11), and a family list that misses a just-created item is
 // exactly how a second standing item — a double execution — gets minted.
 
-import { STATUS_DONE, isQueueItem, labelNames, statusOf } from './work-item.mjs';
+import { STATUS_DONE } from '../../public/task-constants.mjs';
+import { isQueueItem, labelNames, statusOf } from '../../public/work-item-grammar.mjs';
 import { listOpenIssuesPage, listClosedIssuesPage } from '../world/github.mjs';
 
 // Republished beside the listings that apply it, which is where every reader of

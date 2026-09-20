@@ -6,7 +6,7 @@
 
 import { ACCEPTED_FREQUENCIES, cadenceTermFor, cadenceOf, statesConditions, DUE_TERM } from './calendar.mjs';
 import { MODEL_FAMILIES } from './model-map.mjs';
-import { EXECUTING_LEASH_MS } from '../items/leases.mjs';
+import { EXECUTING_LEASH_MS } from '../../public/task-constants.mjs';
 import { normalizePolicy } from './merge-policy.mjs';
 import { validatePreconditions, preconditionSignals, preconditionNeedsItem, NONE } from './precondition-policy.mjs';
 import { applyTaskDefaults } from './task-defaults.mjs';

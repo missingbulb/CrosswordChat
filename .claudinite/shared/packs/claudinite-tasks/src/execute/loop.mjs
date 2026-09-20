@@ -30,16 +30,16 @@ import { actionsEnv, repoRoot } from '../world/actions.mjs';
 import { now as clockNow } from '../world/clock.mjs';
 import { setIssueBody } from '../world/github.mjs';
 import {
-  BLOCKED, READY, URGENT, EXECUTING, AGENT, requeueHint,
-  STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT, isStatus,
-  TASK_DONE, TASK_OBSOLETE, QUEUE_LABELS, QUEUED_LABEL, isStandingItem,
-  NEEDS_HUMAN_ACTION, NEEDS_HUMAN_APPROVAL, NEEDS_HUMAN_FAILURE,
-  CLAIM_MARKER, HANDOFF_MARKER, EPISODE_MARKER,
-  parseWorkItemTitle, parseWorkItemBody, taskIdFromPath, parseContextLines, mergeContext, withNotBefore, withSection, editItemBody, hasLabel, DELIVERED_HEADING, LEGACY_DELIVERED_HEADINGS,
-  LAST_VERDICT_HEADING, lastVerdictLines,
-  withTarget,
-  itemFacts,
-} from '../items/work-item.mjs';
+  STATUS_BLOCKED, STATUS_READY, URGENT, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT, requeueHint, 
+  STATUS_DONE, STATUS_REJECTED, QUEUE_LABELS, QUEUED_LABEL, STATUS_NEEDS_HUMAN_ACTION,
+  STATUS_NEEDS_HUMAN_APPROVAL, STATUS_NEEDS_HUMAN_FAILURE, CLAIM_MARKER, HANDOFF_MARKER, EPISODE_MARKER,
+  DELIVERED_HEADING, LEGACY_DELIVERED_HEADINGS, LAST_VERDICT_HEADING,
+} from '../../public/task-constants.mjs';
+import {
+  isStatus, isStandingItem, parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
+  parseContextLines, mergeContext, withNotBefore, withSection, editItemBody, hasLabel,
+  lastVerdictLines, withTarget, itemFacts,
+} from '../../public/work-item-grammar.mjs';
 
 // The claim comment carries WHO and WHEN — the executor id and its run URL —
 // because executor identity is an unbounded set and must never become a label
@@ -103,7 +103,7 @@ export function conflictsWithEarlierClaim(item, myClaimId, others, { taskAfter =
 export function noGoPlan(item, task, schedule, now, reason) {
   return {
     kind: 'close',
-    outcome: TASK_OBSOLETE,
+    outcome: STATUS_REJECTED,
     stateReason: 'not_planned',
     reason,
     standing: isStandingItem(item, task?.decl ? isScheduledTask(task.decl) : null),
@@ -203,7 +203,7 @@ export async function runExecutor({
 
     // --- claim: the verified lease ------------------------------------------
     const endClaim = phase('claim');
-    await swapStatus(api, gh, repo, candidate, STATUS_READY, EXECUTING);
+    await swapStatus(api, gh, repo, candidate, STATUS_READY, STATUS_RUNNING_EXECUTOR);
     await api.comment(gh, repo, candidate.number, claimComment({
       executor: executorId, runUrl, at: nowIso(),
     }));
@@ -230,7 +230,7 @@ export async function runExecutor({
     if (conflictsWithEarlierClaim(candidate, winner.id, others, { taskAfter, scheduledOf, pathTo })) {
       await api.comment(gh, repo, candidate.number,
         `${EPISODE_MARKER}\nReverting this claim: a conflicting item holds an earlier claim this cycle. Returning the item to the queue.`);
-      await swapStatus(api, gh, repo, candidate, STATUS_RUNNING_EXECUTOR, READY);
+      await swapStatus(api, gh, repo, candidate, STATUS_RUNNING_EXECUTOR, STATUS_READY);
       standDown.add(candidate.number);
       endClaim();
       log(`- #${candidate.number}: reverted — a conflicting item claimed earlier`);
@@ -287,12 +287,12 @@ async function executeItem({
 
   // --- validate in code, before anything trusts the issue ------------------
   if (!taskPath || (!parsed && !id)) {
-    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_FAILURE, claim,
+    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
       'This work item is malformed — its title or first body line does not name a task. Possible forgery; a human should look at it.', 'invalid');
     return 'needs-human';
   }
   if (!task) {
-    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, TASK_OBSOLETE, 'not_planned',
+    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_REJECTED, 'not_planned',
       `\`${id}\` is not a task this repo carries at HEAD (the pack may be undeclared, or the task removed). Closing obsolete.`, 'task-gone');
     return 'obsolete';
   }
@@ -304,7 +304,7 @@ async function executeItem({
   // the same way. Without this the run reaches code-work and spawns with a cwd that is gone
   // (missingbulb/Shepherd#300).
   if (!existsSync(task.taskDir)) {
-    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, TASK_OBSOLETE, 'not_planned',
+    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_REJECTED, 'not_planned',
       `\`${id}\` no longer exists in this checkout (\`${task.taskPath}\`) — it was removed while this run was in flight. Nothing ran. Closing obsolete.`, 'task-gone');
     return 'obsolete';
   }
@@ -320,13 +320,13 @@ async function executeItem({
     // occurrence at today's path.
     const named = taskIdFromPath(taskPath);
     if (named && `${named.pack}/${named.task}` === id) {
-      await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, TASK_OBSOLETE, 'not_planned',
+      await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_REJECTED, 'not_planned',
         `This item names \`${id}\` at \`${taskPath}\`, where it no longer lives — the pack was renamed since the item `
         + `was filed, and the task is at \`${task.taskPath}\` now. An item's stored path is never rewritten, so this one `
         + 'can never run. Closing obsolete; the scheduler files a fresh occurrence at the current path.', 'task-gone');
       return 'obsolete';
     }
-    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_FAILURE, claim,
+    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
       `This item's task path (\`${taskPath}\`) is not where \`${id}\` lives at HEAD (\`${task.taskPath}\`). Not running it.`, 'invalid');
     return 'needs-human';
   }
@@ -349,7 +349,7 @@ async function executeItem({
   // parks open in the failure lane, where the ordinary re-queue lever retries it
   // once the API recovers, and nothing is written to whatever it could not read.
   if (verdict.error) {
-    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_FAILURE, claim,
+    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
       `This run could not be decided: ${verdict.error}\n\nNothing ran and nothing was written. Re-queue this item (${requeueHint}) once the cause has cleared.`);
     log(`! #${item.number} ${id}: the precondition could not answer — ${verdict.error}`);
     return 'needs-human';
@@ -370,7 +370,7 @@ async function executeItem({
     // A DECLINE IS A COMPLETED RUN, not a failure: the executor asked, got a
     // no, and closed the occurrence — so the record says `success` and the
     // reason sits beside it in the same comment.
-    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, TASK_OBSOLETE, 'not_planned',
+    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_REJECTED, 'not_planned',
       `The precondition declined: ${plan.reason}`
       + (plan.standing
         ? '\n\nThis task is asked again at the next scheduler run; a decline is recorded nowhere but here.'
@@ -395,7 +395,7 @@ async function executeItem({
   // "nothing to amend" on that evidence stacks a duplicate.
   const target = await resolveTargetOf(task, at);
   if (target.error) {
-    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_FAILURE, claim,
+    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
       `This run could not be given a target: ${target.error}\n\nNothing ran and nothing was written. Re-queue this item (${requeueHint}) once the cause has cleared.`);
     log(`! #${item.number} ${id}: the target could not be resolved — ${target.error}`);
     return 'needs-human';
@@ -407,10 +407,10 @@ async function executeItem({
     // work would re-deliver a diff already on the base. The next occurrence
     // converges from the moved base.
     await closeSuperseded({ gh, repo, numbers: target.supersedes, successor: target.landed, log });
-    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, TASK_DONE, 'completed',
+    await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_DONE, 'completed',
       `Landed #${target.landed}, this task's previous delivery, which had concluded green and was never merged. `
       + 'The checkout this run holds predates that merge, so nothing else ran; the next occurrence converges from the moved base.', 'success');
-    return TASK_DONE;
+    return STATUS_DONE;
   }
 
   if (task.decl.code_work) {
@@ -451,7 +451,7 @@ async function executeItem({
       // instruction, and that is where it now goes, kind and detail both. A run that
       // never STARTED is the other thing entirely and keeps its own lane: see the
       // `missingSecrets` branch below, where nothing failed because nothing ran.
-      await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_FAILURE, claim,
+      await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
         `Code-work failed: ${result.why}`
         + `${result.triage?.kind ? `\n\nThe worker asks for: **${result.triage.kind}**` : ''}`
         + `${result.triage?.detail ? `\n\nThe worker's own verdict: ${result.triage.detail}` : ''}`
@@ -459,7 +459,7 @@ async function executeItem({
       return 'needs-human';
     }
     if (result.missingSecrets?.length) {
-      await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_ACTION, claim,
+      await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_ACTION, claim,
         `This task declares repo Actions secrets that are not configured: ${result.missingSecrets.join(', ')}. Set them in repo settings and re-queue this item (${requeueHint}).`);
       return 'needs-human';
     }
@@ -485,14 +485,14 @@ async function executeItem({
       // it would record a pass nobody measured.
       if (result.requeue) {
         if (!result.requeue.until) {
-          await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_FAILURE, claim,
+          await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
             `Code-work asked to requeue this item but its \`claudinite-requeue:\` instant could not be read${result.requeue.reason ? ` (${result.requeue.reason})` : ''}. Fix the worker's marker, then re-queue this item (${requeueHint}).`);
           return 'needs-human';
         }
         const body = editItemBody(item.body, (machine) => withNotBefore(machine, result.requeue.until));
         await setIssueBody(gh, repo, item.number, body);
         await strikeClaim(api, gh, repo, claim);
-        await swapStatus(api, gh, repo, item, STATUS_RUNNING_EXECUTOR, BLOCKED);
+        await swapStatus(api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_BLOCKED);
         log(`- #${item.number} ${id}: requeued until ${result.requeue.until}${result.requeue.reason ? ` — ${result.requeue.reason}` : ''}`);
         return 'requeued';
       }
@@ -502,23 +502,23 @@ async function executeItem({
       // filed on schedule around it and an unreviewed PR delays nobody but its
       // reviewer.
       if (result.openPr) {
-        await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_APPROVAL, claim,
+        await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_APPROVAL, claim,
           `Code-work did this run's work and opened a PR for you to approve:\n${result.delivered.map((d) => `- ${d}`).join('\n')}`
           + `\n\nMerge or close #${result.openPr}, then close this item. This task keeps running on schedule meanwhile.`, null);
         return 'needs-human';
       }
-      await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, TASK_DONE, 'completed',
+      await close(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_DONE, 'completed',
         result.delivered?.length
           ? `Code-work did this run's work and left:\n${result.delivered.map((d) => `- ${d}`).join('\n')}`
           : 'Code-work did this run\'s work; no agent was needed.', 'success');
-      return TASK_DONE;
+      return STATUS_DONE;
     }
     return handOff({ api, gh, repo, item, task, id, context, result, target, executorId, claim, invokeAgent, config, log, cost });
   }
 
   // An agentless task with no code-work does nothing (the contract forbids it).
   if (task.decl.agent_model === 'none') {
-    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, NEEDS_HUMAN_FAILURE, claim,
+    await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
       'This task is agentless but declares no code_work, so there is nothing to run — a contract-forbidden shape that reached the queue.', 'invalid');
     return 'needs-human';
   }
@@ -567,7 +567,7 @@ async function handOff({ api, gh, repo, item, task, id, context, result, target 
   });
   await setIssueBody(gh, repo, item.number, body);
 
-  await swapStatus(api, gh, repo, item, STATUS_RUNNING_EXECUTOR, AGENT);
+  await swapStatus(api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT);
   // The hand-off is this run's LAST word on the item — the session converges it from
   // here — so the cost record rides this comment, where a terminal one would carry
   // it for an item the executor settled itself.
@@ -587,7 +587,7 @@ async function handOff({ api, gh, repo, item, task, id, context, result, target 
     // The endpoint refused, so no session exists and none will: a token, a URL or
     // a routine is wrong, and every future pick would be refused the same way.
     endHandOff();
-    await converge(cost, api, gh, repo, item, STATUS_RUNNING_AGENT, NEEDS_HUMAN_ACTION, claim,
+    await converge(cost, api, gh, repo, item, STATUS_RUNNING_AGENT, STATUS_NEEDS_HUMAN_ACTION, claim,
       `Could not start an agent session: ${invocation.error}\n\nNo session was started. Fix the invocation endpoint, then re-queue this item (${requeueHint}).`);
     return 'needs-human';
   }

@@ -1,6 +1,6 @@
-// Anchor math, published for other packs: how long a frequency's period is, and which
-// instant a task's window last opened at or opens next. A renderer of queue state needs
-// the same arithmetic the scheduler decides with.
+// RETIRED PATH, kept as a shim until #2115 for a member whose own workflow or local
+// pack still names it. The dashboard keeps its own copy of the anchor arithmetic; the queue's is `src/contract/calendar.mjs` and `src/items/anchors.mjs`.
+// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
 export {
   ACCEPTED_FREQUENCIES, DUE_TERM, ELAPSED_TERM, cadenceOf, cadenceTermFor, holdsOnFailure,
   holdsOnAnyPark, statesConditions,

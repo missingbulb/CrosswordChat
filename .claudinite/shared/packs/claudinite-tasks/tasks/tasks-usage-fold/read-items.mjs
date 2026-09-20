@@ -21,9 +21,8 @@
 
 import { isQueueItem } from '../../src/items/read.mjs';
 import { taskOf, parkKindOf } from '../usage-fold/read-queue.mjs';
-import {
-  outcomeOf, spellingsOf, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT,
-} from '../../src/items/work-item.mjs';
+import { STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT } from '../../public/task-constants.mjs';
+import { outcomeOf, spellingsOf } from '../../public/work-item-grammar.mjs';
 import { parseRunCosts } from '../../src/items/run-record.mjs';
 
 // How far back the FIRST read looks with no mark yet — the day tier's own width, as

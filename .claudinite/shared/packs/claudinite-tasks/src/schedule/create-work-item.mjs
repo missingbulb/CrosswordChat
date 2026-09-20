@@ -27,9 +27,11 @@
 
 import { pathToFileURL } from 'node:url';
 import {
-  READY, BLOCKED, URGENT, TASK_OBSOLETE, QUEUE_LABELS, ORIGIN_MANUAL,
-  EPISODE_MARKER, workItemTitle, workItemBody, withNotBefore, withWoken, statusesOn,
-} from '../items/work-item.mjs';
+  STATUS_READY, STATUS_BLOCKED, URGENT, STATUS_REJECTED, QUEUE_LABELS, ORIGIN_MANUAL, EPISODE_MARKER,
+} from '../../public/task-constants.mjs';
+import {
+  workItemTitle, workItemBody, withNotBefore, withWoken, statusesOn,
+} from '../../public/work-item-grammar.mjs';
 import { clearStatus } from '../items/apply-status.mjs';
 import { isScheduledTask } from '../contract/task-contract.mjs';
 import { repoRoot } from '../world/actions.mjs';
@@ -80,7 +82,7 @@ export async function wakeItem(gh, repo, number, { urgent = false } = {}) {
   // back from whatever held it, and a park half-cleared (the state gone, its kind
   // still standing) is the torn shape the janitor would have to repair.
   for (const status of statusesOn(issue)) await clearStatus(api, gh, repo, issue, status);
-  await api.addLabel(gh, repo, number, READY);
+  await api.addLabel(gh, repo, number, STATUS_READY);
   if (urgent) await api.addLabel(gh, repo, number, URGENT);
   return { ok: true, number };
 }
@@ -120,19 +122,19 @@ export async function createWorkItem(gh, repo, { pack, task, taskPath, scheduled
     // A hand-created item is `manual` by construction — a declared task, and
     // nobody's schedule asked for it — and the origin is worn for life beside
     // whatever status it holds (PRINCIPLES.md).
-    labels: [ORIGIN_MANUAL, blocked ? BLOCKED : READY, ...(opts.urgent ? [URGENT] : [])],
+    labels: [ORIGIN_MANUAL, blocked ? STATUS_BLOCKED : STATUS_READY, ...(opts.urgent ? [URGENT] : [])],
   });
   if (!res.number) return { ok: false, error: `could not create the item: ${res.status}` };
 
   if (opts.supersedes) {
     await api.comment(gh, repo, opts.supersedes, `Superseded by #${res.number}, a retry of this work created by hand.`);
-    await api.addLabel(gh, repo, opts.supersedes, TASK_OBSOLETE);
+    await api.addLabel(gh, repo, opts.supersedes, STATUS_REJECTED);
     await api.closeIssue(gh, repo, opts.supersedes, 'not_planned');
   }
   return { ok: true, number: res.number };
 }
 
-// Exported because `public/create-work-item.mjs` runs it: prose in a member's own local
+// Exported because this module is run directly as a command: prose in a member's own local
 // packs still addresses this command at that path, and nothing here can rewrite it.
 export async function runCreateWorkItem() {
   const { makeGh } = await import('../world/github.mjs');

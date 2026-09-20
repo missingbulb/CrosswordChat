@@ -10,6 +10,7 @@
 // lets every other module say what it needs instead of where it comes from.
 
 import { appendFileSync } from 'node:fs';
+import { SCHEDULER_WORKFLOW_FILE, EXECUTOR_WORKFLOW_FILE } from '../../public/task-constants.mjs';
 
 // The raw environment, for the modules that take an `env` object and read a name
 // the caller chose (a task's declared secrets, an endpoint's token). They ask for
@@ -22,16 +23,8 @@ export const actionsEnv = () => process.env;
 // the tree they read tasks and config from.
 export const repoRoot = () => process.cwd();
 
-// The scheduler workflow's file name — the vendored shim's, identical in every
-// member (the workflow is core, not pack content). Named here rather than
-// restated: the usage fold finds a repo's scheduler runs by it, to read their
-// logs for the task-invocation records.
-export const SCHEDULER_WORKFLOW_FILE = 'claudinite-scheduler.yml';
-
-// The executor workflow's file name, same contract: identical in every member,
-// and the target of every `workflow_dispatch` in the queue's chain (PRINCIPLES.md)
-// — the close-time drain, a run's own re-dispatch, and the failure continuation.
-export const EXECUTOR_WORKFLOW_FILE = 'claudinite-executor.yml';
+// The two workflow files, by name — vocabulary, so they are defined with the rest of it.
+export { SCHEDULER_WORKFLOW_FILE, EXECUTOR_WORKFLOW_FILE };
 
 // The repo slug (owner/name) and default branch the workflow runs against.
 // `GITHUB_REPOSITORY` is always set in a workflow; `GITHUB_REF_NAME` is the

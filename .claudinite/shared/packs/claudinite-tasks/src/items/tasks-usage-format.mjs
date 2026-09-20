@@ -27,7 +27,7 @@
 // later applies from the fix forward. The price is stated rather than hidden, as it
 // is for the session file's own appended rows.
 
-import { PARK_KINDS } from './work-item.mjs';
+import { PARK_KINDS } from '../../public/task-constants.mjs';
 import { ALL_RUN_PHASES } from './run-record.mjs';
 
 export const TASKS_USAGE_VERSION = 1;

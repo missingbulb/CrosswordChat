@@ -35,7 +35,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { deliverGenerated, baseTip, readAt, remoteUrl } from '../../src/deliver/deliver-generated.mjs';
+import { deliverGenerated, baseTip, readAt, remoteUrl } from '../../public/delivery.mjs';
 import { AUTOMERGE_TRAILER, policyExpression } from '../../src/contract/merge-policy.mjs';
 import taskJson from './task.json' with { type: 'json' };
 import { normalizeTaskDeclaration } from '../../src/contract/task-contract.mjs';

@@ -34,7 +34,7 @@
 // different questions on different clocks; see the task's README.
 
 import { TASK_RUN_OUTCOMES, TASK_EXEC_STATUSES, LEGACY_TASK_RUN_OUTCOMES } from './run-record.mjs';
-import { PARK_KINDS } from './work-item.mjs';
+import { PARK_KINDS } from '../../public/task-constants.mjs';
 
 export const USAGE_VERSION = 3;
 

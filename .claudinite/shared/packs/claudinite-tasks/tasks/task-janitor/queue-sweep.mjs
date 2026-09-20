@@ -23,12 +23,13 @@ import {
   abandonedParkItems, abandonedParkComment, scheduledForTasks,
 } from '../../src/recover/janitor-rules.mjs';
 import {
-  QUEUE_LABELS, HANDOFF_MARKER, TASK_OBSOLETE, TASK_DONE, IN_REVIEW_LABEL,
-  NEEDS_HUMAN_ACTION, NEEDS_HUMAN_FAILURE,
-  STATUS_BLOCKED, STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT,
-  isStatus, isParked, statusOf,
-  parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
-} from '../../src/items/work-item.mjs';
+  QUEUE_LABELS, HANDOFF_MARKER, STATUS_REJECTED, STATUS_DONE, IN_REVIEW_LABEL, STATUS_NEEDS_HUMAN_ACTION,
+  STATUS_NEEDS_HUMAN_FAILURE, STATUS_BLOCKED, STATUS_READY, STATUS_RUNNING_EXECUTOR,
+  STATUS_RUNNING_AGENT,
+} from '../../public/task-constants.mjs';
+import {
+  isStatus, isParked, statusOf, parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
+} from '../../public/work-item-grammar.mjs';
 import { listOpenWorkItems, listDoneWorkItems } from '../../src/items/read.mjs';
 import { lastProgressAt } from '../../src/items/heartbeat.mjs';
 import { ensureLabels, addLabel, removeLabel, comment, listComments, readIssue, closeIssue } from '../../src/world/github.mjs';
@@ -99,8 +100,8 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
   };
 
   for (const item of stale) {
-    await escalate(item, staleReadyComment(item), STATUS_READY, NEEDS_HUMAN_ACTION);
-    log(`escalated stale-ready #${item.number} → ${NEEDS_HUMAN_ACTION}`);
+    await escalate(item, staleReadyComment(item), STATUS_READY, STATUS_NEEDS_HUMAN_ACTION);
+    log(`escalated stale-ready #${item.number} → ${STATUS_NEEDS_HUMAN_ACTION}`);
     result.staleReady.push(item.number);
   }
   // FAILURE, not decision: a dead session is something the machine noticed, never a
@@ -113,8 +114,8 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
     // timeline — the comment says which, so the reader knows whether to look for a
     // dead session or a stuck one.
     await escalate(item, deadAgentComment(item, await sessionNote(gh, repo, item), { wedged: progress.get(item.number) != null }),
-      STATUS_RUNNING_AGENT, NEEDS_HUMAN_FAILURE);
-    log(`reclaimed a dead agent claim on #${item.number} → ${NEEDS_HUMAN_FAILURE}`);
+      STATUS_RUNNING_AGENT, STATUS_NEEDS_HUMAN_FAILURE);
+    log(`reclaimed a dead agent claim on #${item.number} → ${STATUS_NEEDS_HUMAN_FAILURE}`);
     result.deadAgents.push(item.number);
   }
   for (const item of stuck) {
@@ -141,8 +142,8 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
     }
     // FAILURE for rule B's reason: a swap that tore mid-flight is breakage the
     // machine noticed, so a later clean run of the task may clear it.
-    await escalate(item, statelessComment(), null, NEEDS_HUMAN_FAILURE);
-    log(`repaired stateless #${item.number} → ${NEEDS_HUMAN_FAILURE}`);
+    await escalate(item, statelessComment(), null, STATUS_NEEDS_HUMAN_FAILURE);
+    log(`repaired stateless #${item.number} → ${STATUS_NEEDS_HUMAN_FAILURE}`);
     result.stateless.push(item.number);
   }
 
@@ -152,7 +153,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
   const retire = async (item, body) => {
     await comment(gh, repo, item.number, body);
     await clearStatus({ removeLabel }, gh, repo, item, statusOf(item));
-    await addLabel(gh, repo, item.number, TASK_OBSOLETE);
+    await addLabel(gh, repo, item.number, STATUS_REJECTED);
     await closeIssue(gh, repo, item.number, 'not_planned');
   };
 
@@ -160,7 +161,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
     const p = parseWorkItemTitle(item.title) ?? taskIdFromPath(parseWorkItemBody(item.body).taskPath);
     const run = doneAfter(`${p.pack}/${p.task}`, item.updated_at ?? item.created_at);
     await retire(item, supersededComment(run));
-    log(`superseded #${item.number} by #${run.number} → ${TASK_OBSOLETE}`);
+    log(`superseded #${item.number} by #${run.number} → ${STATUS_REJECTED}`);
     result.superseded.push(item.number);
   }
   // Superseded wins where both apply: naming the run that answered it says more than
@@ -172,7 +173,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
     const id = `${p.pack}/${p.task}`;
     const at = headPath.get(id) ?? null;
     await retire(item, orphanedParkComment(id, at));
-    log(`orphaned park #${item.number} (${id} ${at ? `moved to ${at}` : 'is gone'}) → ${TASK_OBSOLETE}`);
+    log(`orphaned park #${item.number} (${id} ${at ? `moved to ${at}` : 'is gone'}) → ${STATUS_REJECTED}`);
     result.orphaned.push(item.number);
   }
 
@@ -185,7 +186,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
     const resolution = resolutionOf(endsWhen);
     await comment(gh, repo, item.number, endedParkComment(endsWhen, resolution));
     await clearStatus({ removeLabel }, gh, repo, item, statusOf(item));
-    await addLabel(gh, repo, item.number, resolution === 'merged' ? TASK_DONE : TASK_OBSOLETE);
+    await addLabel(gh, repo, item.number, resolution === 'merged' ? STATUS_DONE : STATUS_REJECTED);
     // THE RESOLUTION DECIDES THE OUTCOME; BOTH OUTCOMES CLOSE (#1489, widened by the
     // owner on 2026-09-06). A merged target means the work landed and an unmerged one
     // that it was rejected — and either way a terminal ends the item, marked or filed.
@@ -196,7 +197,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
     // would ever take that back, and the review is over.
     const { request } = parseWorkItemBody(item.body);
     if (request && request !== item.number) await removeLabel(gh, repo, request, IN_REVIEW_LABEL);
-    log(`ended park #${item.number} — #${endsWhen} ${resolution} → ${resolution === 'merged' ? TASK_DONE : TASK_OBSOLETE}`);
+    log(`ended park #${item.number} — #${endsWhen} ${resolution} → ${resolution === 'merged' ? STATUS_DONE : STATUS_REJECTED}`);
     result.ended.push(item.number);
   }
 
@@ -212,7 +213,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
       continue;
     }
     await retire(item, abandonedParkComment());
-    log(`abandoned park #${item.number} — untouched past the bound → ${TASK_OBSOLETE}`);
+    log(`abandoned park #${item.number} — untouched past the bound → ${STATUS_REJECTED}`);
     result.abandoned.push(item.number);
   }
 
@@ -230,7 +231,7 @@ export async function sweepQueue(gh, repo, now, { tasks = [], log = console.log 
     }
     const status = statusOf(item);
     await comment(gh, repo, item.number, unclosedTerminalComment(status));
-    await closeIssue(gh, repo, item.number, status === TASK_DONE ? 'completed' : 'not_planned');
+    await closeIssue(gh, repo, item.number, status === STATUS_DONE ? 'completed' : 'not_planned');
     log(`closed #${item.number} — it carried ${status} and was never closed`);
     result.unclosed.push(item.number);
   }

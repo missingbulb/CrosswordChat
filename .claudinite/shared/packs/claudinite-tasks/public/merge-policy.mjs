@@ -1,7 +1,6 @@
-// The auto-merge policy engine, published for other packs: the verdict an `automerge`
-// declaration compiles to, and the merge-rules.json compiler, so a pack's own tests can
-// assert its policies and declared rules against the same evaluator the landing lane and
-// the automerge-policy-scope gate apply.
+// RETIRED PATH, kept as a shim until #2115 for a member whose own workflow or local
+// pack still names it. The policy engine is published through `task-declaration.mjs`; `AUTOMERGE_TRAILER` is in `task-constants.mjs`.
+// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
 export {
   policyVerdict, policyExpression, declaredMergeRules, AUTOMERGE_TRAILER,
 } from '../src/contract/merge-policy.mjs';

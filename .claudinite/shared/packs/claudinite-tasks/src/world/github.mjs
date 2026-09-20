@@ -1,11 +1,12 @@
-// THE GITHUB PORT. Every REST path this pack calls is spelled in this module and
-// nowhere else: a caller names the OPERATION it wants — read this issue, swap this
-// label, merge this pull request — and never the URL that performs it. That is
-// what makes the outward edge countable and replaceable; a module that spelled its
-// own path would be a second GitHub client nothing knows about.
+// THE GITHUB PORT. Every REST path this pack calls is spelled in this module or in
+// the published client it builds on (`public/github.mjs`), and nowhere else: a
+// caller names the OPERATION it wants — read this issue, swap this label, merge this
+// pull request — and never the URL that performs it. That is what makes the outward
+// edge countable and replaceable; a module that spelled its own path would be a
+// second GitHub client nothing knows about.
 //
-// The transport is `gh(path) -> { status, json }`, made by `makeGh` and passed to
-// every operation as its first argument. It stays an injected function rather than
+// The transport is `gh(path) -> { status, json }`, made by the client's `makeGh` and
+// passed to every operation as its first argument. It stays an injected function rather than
 // a bound client because the whole pack tests against a fake `gh`, and because the
 // fleet planner supplies its own reader over a different token.
 //
@@ -22,85 +23,20 @@
 
 import { actionsEnv } from './actions.mjs';
 import { varsBag } from './vars-bag.mjs';
+// The transport, the call counter and the issue calls the tracker spells for itself
+// all live in the published client; this port is every OTHER path, over that
+// transport, and re-exports those so every caller in this pack still names one module.
+import {
+  makeGh, restCall, graphqlCall, apiCallCount, resetApiCallCount,
+  setIssueBody, patchIssue, postIssue, searchIssues, comment, dispatchWorkflow,
+  listWorkflowRuns, readWorkflowRun, readPagesSite,
+} from '../../public/github.mjs';
 
-const API = process.env.GITHUB_API_URL || 'https://api.github.com';
-
-// --- how many calls this process has made ---------------------------------------
-// Every REST and GraphQL request this pack makes passes through one of the three
-// functions below, which is what makes the outward edge countable at all: a run's
-// API spend is a property of the PORT, not of any caller, and asking each caller to
-// report its own would be a second count to drift.
-//
-// Process-wide because a run IS a process — the scheduler and the executor each get
-// a fresh one — and the cost record the run prints is about that process. A request
-// that failed still counts: it was made, it was billed against the rate limit, and
-// a run that spent its budget on refusals spent it.
-let apiCalls = 0;
-
-export const apiCallCount = () => apiCalls;
-
-// For a test driving several runs through one process. Nothing in a real run calls
-// it: a run that reset its own counter mid-flight would report the remainder.
-export const resetApiCallCount = () => { apiCalls = 0; };
-
-// The Action-side reader/writer. `packs/claudinite-tasks/` is the one place that
-// legitimately uses the Action's `GITHUB_TOKEN` — everything session-side stays
-// MCP-only (docs/PRINCIPLES.md).
-//
-// `path` is an API path beginning with `/` (e.g. `/repos/owner/name/commits`); the
-// base URL and auth are applied here.
-export function makeGh({ token = process.env.GITHUB_TOKEN, api = API, fetchImpl = fetch } = {}) {
-  // `gh(path)` reads; `gh(path, { method, body })` writes (body JSON-encoded).
-  return async function gh(path, { method = 'GET', body } = {}) {
-    apiCalls += 1;
-    const res = await fetchImpl(`${api}${path}`, {
-      method,
-      headers: {
-        accept: 'application/vnd.github+json',
-        'x-github-api-version': '2022-11-28',
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-        'user-agent': 'claudinite-scheduler',
-        ...(body ? { 'content-type': 'application/json' } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-    let json = null;
-    try { json = await res.json(); } catch { json = null; }
-    return { status: res.status, json };
-  };
-}
-
-// The same call for a caller that holds a token rather than a made client — the
-// delivery lane, which is handed one per run. One implementation of the headers,
-// so a client the landing lane uses cannot drift from the one the executor uses.
-export async function restCall(token, path, { method = 'GET', body, api = API, fetchImpl = fetch } = {}) {
-  apiCalls += 1;
-  const res = await fetchImpl(`${api}${path}`, {
-    method,
-    headers: {
-      authorization: `Bearer ${token}`,
-      accept: 'application/vnd.github+json',
-      'x-github-api-version': '2022-11-28',
-      ...(body ? { 'content-type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  let json = null;
-  try { json = await res.json(); } catch { /* empty body */ }
-  return { status: res.status, json };
-}
-
-// The GraphQL endpoint, for the two mutations REST does not offer. Returns the
-// parsed body; the caller decides what an `errors` array means.
-export async function graphqlCall(token, query, variables, { api = API, fetchImpl = fetch } = {}) {
-  apiCalls += 1;
-  const res = await fetchImpl(`${api}/graphql`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ query, variables }),
-  });
-  return res.json().catch(() => null);
-}
+export {
+  makeGh, restCall, graphqlCall, apiCallCount, resetApiCallCount,
+  setIssueBody, patchIssue, postIssue, searchIssues, comment, dispatchWorkflow,
+  listWorkflowRuns, readWorkflowRun, readPagesSite,
+};
 
 // --- issues -------------------------------------------------------------------
 
@@ -113,25 +49,11 @@ export const readIssue = async (gh, repo, number) => {
 // "could not be read".
 export const getIssue = (gh, repo, number) => gh(`/repos/${repo}/issues/${number}`);
 
-// Replace an issue's body. The whole body, because that is the only shape the API
-// offers — every caller reshapes the text it read rather than composing a new one.
-export const setIssueBody = (gh, repo, number, body) =>
-  gh(`/repos/${repo}/issues/${number}`, { method: 'PATCH', body: { body } });
-
 export const setIssueTitle = (gh, repo, number, title) =>
   gh(`/repos/${repo}/issues/${number}`, { method: 'PATCH', body: { title } });
 
-// The raw issue PATCH and POST, for a caller that reads the status itself rather
-// than taking one of the shaped writes above — the tracker, which fails soft on one
-// call and loud on the next and so must see both.
-export const patchIssue = (gh, repo, number, body) =>
-  gh(`/repos/${repo}/issues/${number}`, { method: 'PATCH', body });
-
 export const reopenIssue = (gh, repo, number) =>
   gh(`/repos/${repo}/issues/${number}`, { method: 'PATCH', body: { state: 'open' } });
-
-export const postIssue = (gh, repo, body) =>
-  gh(`/repos/${repo}/issues`, { method: 'POST', body });
 
 export const closeIssue = (gh, repo, number, stateReason = 'completed') =>
   gh(`/repos/${repo}/issues/${number}`, { method: 'PATCH', body: { state: 'closed', state_reason: stateReason } });
@@ -159,11 +81,6 @@ export const listClosedIssuesPage = (gh, repo, page) =>
 // label/state/since filters each reader needs, without this module having to know
 // every combination.
 export const listIssuesByQuery = (gh, repo, query) => gh(`/repos/${repo}/issues?${query}`);
-
-// Issue search across the repo. Search is eventually consistent and rate-limited
-// separately from the REST API, which is why the callers here treat an
-// unsuccessful search as "no answer" rather than "nothing found".
-export const searchIssues = (gh, query) => gh(`/search/issues?q=${query}&per_page=100`);
 
 // --- labels -------------------------------------------------------------------
 
@@ -212,9 +129,6 @@ export async function swapLabel(gh, repo, number, from, to) {
 }
 
 // --- comments -----------------------------------------------------------------
-
-export const comment = (gh, repo, number, body) =>
-  gh(`/repos/${repo}/issues/${number}/comments`, { method: 'POST', body: { body } });
 
 // The ONE sanctioned edit to a comment, and the reason the arbitration record is
 // no longer strictly append-only: an executor striking its OWN claim on the way
@@ -272,16 +186,6 @@ export const readCommit = (gh, repo, sha) => gh(`/repos/${repo}/commits/${sha}`)
 export const listRunsForSha = (gh, repo, sha) =>
   gh(`/repos/${repo}/actions/runs?head_sha=${sha}&per_page=100`);
 
-// One workflow file's runs, newest first — how a caller that dispatched a workflow
-// finds the run it started, since a dispatch answers 204 and names no run.
-export const listWorkflowRuns = (gh, repo, file, { event = 'workflow_dispatch', perPage = 10 } = {}) =>
-  gh(`/repos/${repo}/actions/workflows/${file}/runs?event=${event}&per_page=${perPage}`);
-
-export const readWorkflowRun = (gh, repo, runId) => gh(`/repos/${repo}/actions/runs/${runId}`);
-
-// The repo's GitHub Pages site — the URL a deploy answers on. 404 when Pages is off.
-export const readPagesSite = (gh, repo) => gh(`/repos/${repo}/pages`);
-
 export const latestRelease = (gh, repo) => gh(`/repos/${repo}/releases/latest`);
 
 // A repository Actions variable, answered from the executor's vars bag in the shape the
@@ -292,20 +196,3 @@ export const readRepoVariable = async (_gh, _repo, name, env = actionsEnv()) => 
   const bag = varsBag(env);
   return bag && name in bag ? { status: 200, json: { name, value: String(bag[name]) } } : { status: 404, json: null };
 };
-
-// --- workflows -----------------------------------------------------------------
-
-// Fire a `workflow_dispatch`. It is how the queue CHAINS (PRINCIPLES.md) — a run
-// that settled its item starts a fresh one rather than leaving the remainder for
-// the cron — and `workflow_dispatch` is one of the two events the default
-// `GITHUB_TOKEN` may fire, the explicit exemption in the same recursion guard that
-// suppresses its label events, so no wider credential is involved.
-//
-// Judged by STATUS, never by the body: a token without `actions: write` 403s this
-// POST with a plausible JSON body, and a body-only check would log it as sent.
-export async function dispatchWorkflow(gh, repo, file, ref, inputs = null) {
-  const { status } = await gh(`/repos/${repo}/actions/workflows/${file}/dispatches`, {
-    method: 'POST', body: { ref, ...(inputs ? { inputs } : {}) },
-  });
-  return { ok: status === 204, status };
-}

@@ -8,7 +8,7 @@
 // Import-light and free of `node:` on purpose, like dormancy.mjs: the dashboard reads
 // this in the browser through the pack's published public/.
 
-import { taskFromMessage } from '../contract/task-trailer.mjs';
+import { taskFromMessage } from '../../public/work-item-grammar.mjs';
 
 // Bot/CI housekeeping and Claudinite's own automated writes, by MESSAGE. The queue's
 // own vocabulary (`[claudinite-task]`, `[claudinite-work]`) is excluded here so

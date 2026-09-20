@@ -16,7 +16,7 @@
 // before its own earlier transitions, so filtering on that snapshot would skip
 // exactly the label this engine just wrote; removing a label an issue does not
 // carry 404s, which is the end state asked for and therefore success.
-import { spellingsOf } from './work-item.mjs';
+import { spellingsOf } from '../../public/work-item-grammar.mjs';
 
 // Move `item` out of `fromStatus` (canonical — every spelling of it goes) and into
 // the label `to`, which is whatever spelling this engine writes.

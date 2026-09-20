@@ -1,9 +1,4 @@
-// The production-verification spec as a FORMAT, published for the packs that write
-// one. A verification item's body is composed by one pack's skill and read by this
-// pack's probe worker, so the two could drift with nothing red: the writer's own
-// tests assert the body it tells an agent to write against the parser that will
-// actually read it, and that needs an address other packs may import.
-//
-// Three names, not the worker: what a spec looks like, and the re-arm cadence a
-// not-yet-live run reschedules itself on.
+// RETIRED PATH, kept as a shim until #2115 for a member whose own workflow or local
+// pack still names it. The spec format is the probe worker's own (`tasks/verify-production/probes.mjs`); nothing outside this pack takes it.
+// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
 export { parseVerificationSpec, parseRetryEvery, RETRY_FIELD } from '../tasks/verify-production/probes.mjs';

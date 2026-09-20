@@ -21,8 +21,9 @@ import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { removeTree } from '../../../../engine/remove-tree.mjs';
 import {
-  deliveryFor, pullCreateError, landDelivery, openDeliveredPull, disposeOpenPull, withTaskTrailer,
+  deliveryFor, pullCreateError, landDelivery, openDeliveredPull, disposeOpenPull,
 } from '../../../claudinite-tasks/public/delivery.mjs';
+import { withTaskTrailer } from '../../../claudinite-tasks/public/work-item-grammar.mjs';
 import { settingsPath, SETTINGS_FILE } from '../../../../engine/settings-file.mjs';
 
 const CANON_URL = 'https://github.com/missingbulb/Claudinite.git'; // public — no token
