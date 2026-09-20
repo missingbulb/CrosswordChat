@@ -12,8 +12,9 @@ Often there's nothing to prune, and that's fine. The run's
 
 - **Default branch.** `main` stands for **this repository's default branch** — substitute whatever the repo uses.
 - **GitHub access is MCP-native.** Updating the tracking issue and opening the PR go through the session's
-  **GitHub MCP tools** (`mcp__github__*`). The unattended run carries no `gh` CLI and an empty
-  `GITHUB_TOKEN`, so never reach for `gh`/`curl`; and never clone another repo, which the shell's git can
+  **GitHub MCP tools** (`mcp__github__*`). The unattended run carries no `gh` CLI, and its `GITHUB_TOKEN` holds
+  a proxy placeholder a presence test passes on and the API refuses — so never reach for `gh`/`curl`, and never
+  read that variable as evidence of one; and never clone another repo, which the shell's git can
   still reach — that boundary is the session's granted scope, not a missing capability.
 - **The mounted canon.** The exact canon revision this repo currently consumes — compare against *that*, not a
   live fetch. It is what `.claudinite/shared/` holds at the mount's stamp (a promotion is visible here only

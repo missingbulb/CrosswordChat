@@ -167,9 +167,9 @@ A workflow that regenerates and commits derived files and runs longer than a com
 
 Its `merged`/`merged_at` fields can read `false`/empty for a PR that has genuinely landed by squash-merge, even with `fields` narrowed. Confirm landed-ness by grepping the base branch's commit subjects for the squash's `(#N)`, or call `pull_request_read` `get` on the one PR you care about.
 
-## `issue_read`'s `get_*` methods reject a PR number
+## `issue_read`'s `get_*` methods are split on a PR number, so one that answers proves nothing about the next
 
-`issue_read` (`get`, `get_comments`, `get_labels`, …) resolves only true issues and errors "Could not resolve to an Issue" on a PR number, even though a PR is an issue at the API level. Read a PR's labels, comments or metadata through `pull_request_read` instead.
+`issue_read` `get` resolves a PR number and returns the pull request, while `get_labels` on that same number errors "Could not resolve to an Issue with the number of N" — the method set is not uniform, so a read that succeeded is no licence to reach for a sibling method. Read a PR's labels, comments or metadata through `pull_request_read`, which answers for all of them.
 
 ## Leaving several PRs open after one sweep, subscribe every one of them
 
@@ -179,8 +179,9 @@ An unsubscribed PR gets noticed only on a manual re-poll, while a subscribed one
 
 Removing a `.yml` from every branch does not remove its run history — the workflow stays listed in
 the Actions tab, a ghost registration attached only to runs that already happened. Clearing it
-needs `DELETE /repos/.../actions/runs/{run_id}`, an `actions: write` endpoint outside the read/
-list/get-logs/dispatch surface the GitHub MCP toolset exposes. Don't hunt for a session-side fix
+needs `DELETE /repos/.../actions/runs/{run_id}`, the one write the GitHub MCP toolset omits:
+`actions_run_trigger` dispatches, re-runs, cancels and deletes a run's *logs*, and a run stripped
+of its logs is still a listed run. Don't hunt for a session-side fix
 that doesn't exist — hand the cleanup to the owner (their own UI, or a one-time sanctioned
 workflow) instead.
 
@@ -220,7 +221,7 @@ A list or search API call that isn't bounded returns a full page of full-bodied 
 - **When you already know the exact title, don't search at all — list and match it yourself.** Field anchoring is a *GitHub search API* feature, and an MCP layer in front of it may match **semantically** instead, ranking by resemblance and honouring no qualifier: the title you named can then rank below unrelated issues or be absent from the page entirely, and `in:title` changes nothing. Enumerate with `list_issues` (a narrow field list, a large page size, no state filter — a log issue is often deliberately closed) and compare the string in-session. Reserve search for what it is good at: finding items you can only *describe*.
 - **Trim the fields, not just the page size.** The per-object field set is what governs the payload, so capping the page can leave the response byte-identical — measured, the same call at two page sizes returned output identical to the character. Ask for the fields you need (`["number","title","state"]` covers most lookups); dropping the body alone is usually the whole difference. Where a tool offers no field selection, narrow the query instead, or take the overflow as the answer and read the spilled result file directly rather than retrying it smaller.
 - **Pass a small explicit page size.** Default page sizes are tuned for a browser, not a tool result; when the answer wanted is one issue or one run, ask for 5–10, never a bare unpaged call.
-- **`actions_list`'s `list_workflow_runs` can ignore `per_page` entirely.** On a repo with enough run history, shrinking the page size — even to 1–3 — returned a byte-identical response, confirmed on two separate repos. Don't retry it smaller: scope the query to a specific run id or one head SHA instead, or read the spilled overflow file directly.
+- **`actions_list`'s `list_workflow_runs` does honour `perPage`.** On a repo holding 4,175 runs it returned exactly one and exactly two records at those page sizes, both unfiltered and scoped to one workflow file — so an overflow there means the records are fat, not that the bound was ignored, and the remedy is a smaller page plus a run-id or head-SHA scope rather than giving up on the page size.
 
 All of them, not one: a qualified query still returns a full page, a small page of unqualified matches is still the wrong records, and a small page of full-bodied records still overruns the cap.
 

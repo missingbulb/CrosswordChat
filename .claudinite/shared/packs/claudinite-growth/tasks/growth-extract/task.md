@@ -19,8 +19,9 @@ too. Do not widen past that window.
   **local git** in the checkout: the commits, the `conversation-logs` branch and its files
   (`git fetch`/`show` — read-only), and staging the lesson edits onto a branch. Reading issue/PR activity,
   opening the PR and delivering it, posting the exchange summaries and the tracking-issue log go
-  through the session's **GitHub MCP tools** (`mcp__github__*`). The unattended run carries no `gh` CLI
-  and an empty `GITHUB_TOKEN`, so never reach for `gh`/`curl`; and never clone another repo, which the
+  through the session's **GitHub MCP tools** (`mcp__github__*`). The unattended run carries no `gh` CLI, and its
+  `GITHUB_TOKEN` holds a proxy placeholder a presence test passes on and the API refuses — so never reach for
+  `gh`/`curl`, and never read that variable as evidence of one; and never clone another repo, which the
   shell's git can still reach — that boundary is the session's granted scope, not a missing capability.
 - **The repo's local packs.** The set identified in
   [this pack's README](../../README.md#identifying-a-projects-capture-surface-its-local-packs) — everything
