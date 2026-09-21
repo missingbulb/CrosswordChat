@@ -6,6 +6,7 @@ import { SETTINGS_FILE, SETTINGS_FILES, LEGACY_SETTINGS_FILE } from '../settings
 import { installedVersions, withInstalledVersions, LEGACY_STAMP_KEY } from '../installed-versions.mjs';
 import { ENDPOINTS_KEY, LEGACY_ENDPOINTS_KEY } from '../checks/helpers/repo-context.mjs';
 import { LOCAL_PACK_ROOT, taskDirsWithJson, updateTaskSchedulingFields } from './task-declarations-to-json.mjs';
+import { markPack, convertReferences } from '../checks/helpers/provenance.mjs';
 
 // <corpus>/engine/migrations/ — records are addressed corpus-relative, because they
 // no longer share one directory with this module: an engine record sits beside it,
@@ -495,6 +496,41 @@ export async function applyPackOwnedSettingMoves(migration, { read, write }) {
   return done;
 }
 
+// DROP a retired `taskScheduler` key from the member's own declaration. The keys are
+// the per-repo scheduling anchor (#1995): a cadence now measures whole UTC periods and
+// the scheduler workflow's cron hours were written into that file when it was
+// scaffolded, so nothing reads them and what is left is a value that looks live.
+//
+// A DELETE RATHER THAN A MOVE, because there is no new home: the setting is gone, not
+// relocated. It stays safe to run against a member whose vendored engine is a cycle
+// behind, because that engine's own reader already fills an absent key with the
+// documented default, which is what every repo that never moved its anchor was using.
+// `appliesTo` is what holds it back where that is not true.
+//
+// The block goes with its last key: a `taskScheduler` left holding nothing says less
+// than no block at all, and the reader treats the two identically.
+//
+// Idempotent by construction: every step is "if the retired key is there".
+export async function applyRetiredSchedulerSettings(migration, { read, write }) {
+  if (!migration.dropSchedulerSettings?.length) return [];
+  if (migration.appliesTo && !(await migration.appliesTo(read))) return [];
+  const file = await declarationFile(read);
+  if (file == null) return [];
+  let config;
+  try { config = JSON.parse(await read(file)); } catch { return []; }
+  if (config === null || typeof config !== 'object' || Array.isArray(config)) return [];
+  const block = config.taskScheduler;
+  if (block === null || typeof block !== 'object' || Array.isArray(block)) return [];
+
+  const dropped = migration.dropSchedulerSettings.filter((key) => block[key] !== undefined);
+  if (!dropped.length) return [];
+  const next = { ...config, taskScheduler: { ...block } };
+  for (const key of dropped) delete next.taskScheduler[key];
+  if (!Object.keys(next.taskScheduler).length) delete next.taskScheduler;
+  await write(file, `${JSON.stringify(next, null, 2)}\n`);
+  return [`${file}: dropped the retired taskScheduler ${dropped.map((k) => `"${k}"`).join(', ')}: nothing reads the per-repo scheduling anchor`];
+}
+
 // Write side — "this member's settings file moves to its new name and its new
 // shape" (#1252). The one op that RENAMES the declaration, which is why it is an op
 // rather than four `rewrite`s: a rewrite replaces literal text, and no two members
@@ -598,6 +634,33 @@ export async function applyTaskSchedulingFields(migration, io) {
   return updateTaskSchedulingFields(taskDirsWithJson([LOCAL_PACK_ROOT], io), io);
 }
 
+// Write side - "this repo's local packs carry their provenance" (docs/provenance/DESIGN.md
+// §6): every local pack's `references.md` converts into entries on the elements it keyed,
+// every rule and guideline ends with a marker, every skill declares its body, every
+// carrier has its file. A NAMED CODEMOD like the two above it - the record declares
+// `markProvenance: true`, and the code ships with the engine
+// (engine/checks/helpers/provenance.mjs, the grammar every reader of a provenance folder
+// composes) - because which rules are unmarked and which skills are workflows is the
+// repo's own disk. Idempotent: a pack already on the convention is left as it is.
+//
+// Dates an entry by the conversion, not by git: the registry's io reads files, not
+// history, and the entry's title says so. Needs `listDir` like the task-fields op; a
+// caller without it marks nothing rather than half-marking, and `remove` for the doc it
+// retires - an io without that leaves the doc and reports it.
+export async function applyProvenanceMarking(migration, io) {
+  if (!migration.markProvenance) return [];
+  if (typeof io.listDir !== 'function') return [];
+  if (migration.appliesTo && !(await migration.appliesTo(io.read))) return [];
+  const applied = [];
+  for (const pack of (io.listDir(LOCAL_PACK_ROOT) ?? []).sort()) {
+    const dir = `${LOCAL_PACK_ROOT}/${pack}`;
+    if (!io.exists(`${dir}/pack.mjs`)) continue;
+    applied.push(...convertReferences(dir, io));
+    applied.push(...markPack(dir, io));
+  }
+  return applied;
+}
+
 export async function applyMigration(migration, io) {
   const applied = [];
   applied.push(...(await applyFileAliases(migration, io)));
@@ -606,10 +669,12 @@ export async function applyMigration(migration, io) {
   applied.push(...(await applyPackDeclarations(migration, io)));
   applied.push(...(await applyLocalDeclarationNormalization(migration, io)));
   applied.push(...(await applyTaskSchedulingFields(migration, io)));
+  applied.push(...(await applyProvenanceMarking(migration, io)));
   applied.push(...(await applyPackRenames(migration, io)));
   // AFTER the renames: a setting moving onto a pack's entry has to find that entry
   // under the id the pack carries TODAY, which is what the rename above just settled.
   applied.push(...(await applyPackOwnedSettingMoves(migration, io)));
+  applied.push(...(await applyRetiredSchedulerSettings(migration, io)));
   // LAST: every op above writes to whichever name the member still carries, and this
   // is the one that changes which name that is.
   applied.push(...(await applySettingsReshape(migration, io)));

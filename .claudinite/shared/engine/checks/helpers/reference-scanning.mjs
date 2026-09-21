@@ -56,6 +56,12 @@ function normJoin(base, rel) {
 
 const isGlob = (t) => t.endsWith('/*') && !t.startsWith('*.');
 const globPrefix = (t) => t.slice(0, -2);
+// A carve-out one level below every child of a folder - `packs/*/provenance` - for a
+// region that every sibling carries under its own name. Expanded against the real
+// tree like a "<folder>/*" glob: each child directory of the prefix, then the rest.
+const CHILD_GLOB = /^(.+?)\/\*\/([^*]+)$/;
+const isChildGlob = (t) => CHILD_GLOB.test(t) && !t.startsWith('*.');
+const childGlobParts = (t) => { const m = CHILD_GLOB.exec(t); return { prefix: m[1], rest: m[2] }; };
 
 // A carve-out entry (folder/file, "<folder>/*" child-dir glob, or "*.suffix" name
 // pattern) matches a path when the path is the entry / under it, or its NAME ends
@@ -72,9 +78,10 @@ function carveMatch(path, carve) {
 }
 
 // Does one carve-out entry fully cover a barred target, so validation can prove
-// the target lies outside a root-guarded region? Name patterns never cover a folder.
+// the target lies outside a root-guarded region? Name patterns never cover a folder,
+// and neither does a child glob: it carves a folder out of every sibling, not a target.
 function carveCovers(e, t) {
-  if (e.startsWith('*.')) return false;
+  if (e.startsWith('*.') || isChildGlob(e)) return false;
   const tp = isGlob(t) ? globPrefix(t) : t;
   if (!isGlob(e)) return under(tp, e);
   return isGlob(t) ? under(tp, globPrefix(e)) : under(tp, globPrefix(e)) && tp !== globPrefix(e);
@@ -332,9 +339,20 @@ function parseExcept(raw, at, errors) {
         carve.push(s);
         continue;
       }
+      if (isChildGlob(s)) {
+        const { prefix, rest } = childGlobParts(s);
+        const p = normPrefix(prefix);
+        const r = normPrefix(rest);
+        if (p === '' || r === '' || p.includes('*') || r.includes('*')) {
+          errors.push({ what: `${at}: carve-out "${e}" must read "<folder>/*/<name>" - a folder, its child directories, then the name each carries`, fix: 'name the folder whose children each carry the region, and the region\'s own name, with no other wildcard' });
+          return null;
+        }
+        carve.push(`${p}/*/${r}`);
+        continue;
+      }
       const p = normPrefix(s.endsWith('/*') ? s.slice(0, -2) : s);
       if (p === '' || p.includes('*')) {
-        errors.push({ what: `${at}: carve-out "${e}" must name a folder/file, a "<folder>/*" glob, or a "*.suffix" pattern`, fix: 'remove the empty/malformed entry — an empty one would carve out everything' });
+        errors.push({ what: `${at}: carve-out "${e}" must name a folder/file, a "<folder>/*" glob, a "<folder>/*/<name>" child glob, or a "*.suffix" pattern`, fix: 'remove the empty/malformed entry - an empty one would carve out everything' });
         return null;
       }
       carve.push(s.endsWith('/*') ? `${p}/*` : p);
@@ -435,9 +453,11 @@ function edgeProblem(edge, at) {
 //       quote paths into) the barred folders; default is every resolvable
 //       reference. Incompatible with matchNames (a text layer).
 //   allow: a shared folder (or array) reachable despite the ban
-//   except: carve-out strings (folders/globs/patterns — the `from: "."` helper)
-//       and/or reviewed exceptions { path, to?, reason } (a file's deliberate
-//       crossing — to pinned folders, or the whole file when `to` is omitted)
+//   except: carve-out strings (folders, "<folder>/*" globs, "<folder>/*/<name>"
+//       child globs for a region every sibling carries under one name, "*.suffix"
+//       patterns - the `from: "."` helper) and/or reviewed exceptions
+//       { path, to?, reason } (a file's deliberate crossing - to pinned folders, or
+//       the whole file when `to` is omitted)
 //   matchNames: true opts into the bare-name layer; alsoMatchNames force-includes
 //       non-distinctive barred-folder names (see barrierFindings)
 export function normalizeEdges(specs) {
@@ -663,7 +683,11 @@ export function barrierFindings(ctx, edges, rule) {
   const childDirs = (p) => [...index.dirs].filter((d) => d.startsWith(`${p}/`) && !d.slice(p.length + 1).includes('/'));
 
   const scanEdge = (edge) => {
-    const carve = edge.carve.flatMap((e) => (isGlob(e) ? childDirs(globPrefix(e)) : [e]));
+    const carve = edge.carve.flatMap((e) => {
+      if (isGlob(e)) return childDirs(globPrefix(e));
+      if (isChildGlob(e)) { const { prefix, rest } = childGlobParts(e); return childDirs(prefix).map((kid) => `${kid}/${rest}`); }
+      return [e];
+    });
     const star = edge.targets.includes('*');
     const barred = [];
     let broken = false;

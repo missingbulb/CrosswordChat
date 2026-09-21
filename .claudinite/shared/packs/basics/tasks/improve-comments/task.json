@@ -4,7 +4,7 @@
   "description": "Reads a slice of the repository's code as comments, deletes the ones that restate the code, corrects the ones that drifted, and adds the why only a reader's guess carried.",
   "trigger": "schedule",
   "preconditions": [
-    "due:weekly",
+    "schedule:at-most-weekly",
     "substantive-change",
     "commits-outside:.claudinite/"
   ],

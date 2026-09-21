@@ -17,11 +17,11 @@
 // THE EXPRESSION IS WHAT MUST HOLD, NEVER WHO ASKS (docs/PRINCIPLES.md). The
 // engine keeps no calendar: every scheduler tick asks every task whose declaration
 // says `trigger: 'schedule'`, and the cadence such a task keeps is one of its own
-// conditions, read off its own run history — `due:<cadence>`,
-// `last-run-over:<duration>` — beside whatever else it requires. The same
-// conditions are judged, identically, at the pick of an item somebody created, so
-// this module never asks which of the two happened. `none` is retired: a task with
-// nothing to require states no condition, and the empty expression holds.
+// conditions, read off its own run history, `schedule:at-most-<cadence>`, beside
+// whatever else it requires. The same conditions are judged, identically, at the
+// pick of an item somebody created, so this module never asks which of the two
+// happened. `none` is retired: a task with nothing to require states no condition,
+// and the empty expression holds.
 //
 // THE VOCABULARY HAS TWO HOMES. The built-ins below are the run-history, movement
 // and pending-PR conditions every repo shares. A task whose gate is its own ships a
@@ -32,7 +32,10 @@
 // Import-light and pure over the signals: no I/O, so the same evaluation runs at
 // the scheduler's tick and at the executor's pick.
 
-import { anchorInstant, CADENCES, DUE_TERM, ELAPSED_TERM, NOT_FAILED_TERM, NOT_PARKED_TERM, parseDuration } from './calendar.mjs';
+import {
+  anchorInstant, cadenceOfScheduleArg, scheduleTermFor, AT_MOST_PREFIX, CADENCES,
+  DUE_TERM, SCHEDULE_TERM, NOT_FAILED_TERM, NOT_PARKED_TERM,
+} from './calendar.mjs';
 
 // The retired empty precondition. The contract's door still strips it from a
 // declaration that carries a `frequency` (the cadence term takes its place); on
@@ -76,7 +79,7 @@ export function parsePreconditions(preconditions) {
     return invalid(`an alternative around "${ALTERNATIVE}" is empty`);
   }
   if (conditions.flat().some((t) => t.name === NONE)) {
-    return invalid(`"${NONE}" is retired — a task with no condition states none: leave "preconditions" out, and the task runs only from an item somebody creates. Otherwise state when it runs: a cadence (\`${DUE_TERM}:daily\`, \`${ELAPSED_TERM}:7d\`) or the movement it waits for`);
+    return invalid(`"${NONE}" is retired. A task with no condition states none: leave "preconditions" out, and the task runs only from an item somebody creates. Otherwise state when it runs: a cadence (\`${scheduleTermFor('daily')}\`) or the movement it waits for`);
   }
   return { kind: 'conditions', conditions };
 }
@@ -135,7 +138,7 @@ export function validatePreconditions(preconditions, taskTerms = new Map()) {
   const parsed = parsePreconditions(preconditions);
   if (parsed.kind === 'invalid') {
     bad(`"preconditions" is not a legal expression: ${parsed.reason}`,
-      `write a list of conditions, all of which must hold — a cadence first where the task keeps one ("${DUE_TERM}:<daily|weekly|monthly>" or "${ELAPSED_TERM}:<12h|1d|7d>"), then what it waits for, e.g. ["${DUE_TERM}:weekly", "substantive-change", "no-open-pr-titled:My sweep"]; a task that runs only from an item somebody creates states no "preconditions" at all`);
+      `write a list of conditions, all of which must hold, a cadence first where the task keeps one ("${SCHEDULE_TERM}:${AT_MOST_PREFIX}<daily|weekly|monthly>"), then what it waits for, e.g. ["${scheduleTermFor('weekly')}", "substantive-change", "no-open-pr-titled:My sweep"]; a task that runs only from an item somebody creates states no "preconditions" at all`);
     return problems;
   }
   for (const ref of parsed.conditions.flat()) {
@@ -200,10 +203,6 @@ const touchedPaths = (s) => commitsOf(s).touchedPaths ?? [];
 const runsOf = (s) => s?.runs?.list ?? [];
 const newestRun = (s) => runsOf(s)[0] ?? null;
 const ms = (t) => (t == null ? null : new Date(t).getTime());
-const ago = (fromMs, nowMs) => {
-  const h = Math.round((nowMs - fromMs) / 3600e3);
-  return h < 48 ? `${h}h` : `${Math.round(h / 24)}d`;
-};
 
 // A person's wake stands in for the cadence: the cadence terms hold on a woken
 // item, and everything else the task requires still applies, so a force that
@@ -248,51 +247,45 @@ const BUILTIN_TERMS = new Map(Object.entries({
   // issue list the scheduler already holds — so a task whose cadence declines
   // costs no read at all on the ticks it does not run.
 
-  // No run since the cadence's most recent anchor on this repo's schedule. Both
-  // halves of the old occurrence guard: an item CREATED since the anchor is this
-  // period's, and so is one CLOSED since it — an item that started before the
-  // anchor and ran past it consumed this period, and a second one is a double run.
-  [DUE_TERM]: {
+  // No run since this UTC period opened. Both halves of the old occurrence guard: an
+  // item CREATED since it opened is this period's, and so is one CLOSED since then,
+  // because an item that started before the boundary and ran past it consumed this
+  // period too, and a second one beside it is a double run.
+  [SCHEDULE_TERM]: {
     signals: ['runs'],
     takesArg: true,
-    argName: 'daily|weekly|monthly',
-    argOk: (arg) => CADENCES.includes(arg),
-    argHint: `one of ${CADENCES.join(', ')}`,
-    holds(s, { arg, item, now, schedule }) {
-      const woken = wokenReason(item);
-      if (woken) return woken;
-      // The instant is the caller's to supply (a term never reads the clock); the
-      // schedule falls back to the documented defaults the way every anchor read does.
-      if (ms(now) === null || Number.isNaN(ms(now))) return { error: `${DUE_TERM}:${arg} has no instant to anchor on — the caller supplied no \`now\`` };
-      const anchor = anchorInstant(arg, schedule ?? {}, now);
-      const anchorMs = anchor.getTime();
-      const since = runsOf(s).find((r) => (ms(r.createdAt) ?? -Infinity) >= anchorMs || (ms(r.closedAt) ?? -Infinity) >= anchorMs);
-      return since
-        ? { holds: false, reason: `#${since.number} already ran since the ${arg} anchor at ${anchor.toISOString()}` }
-        : { holds: true, reason: `no run since the ${arg} anchor at ${anchor.toISOString()}` };
-    },
-  },
-
-  // The newest run STARTED more than the duration ago — an item's creation is when
-  // the task was last asked and said yes. No run in the horizon holds: the task
-  // has not run in longer than any duration this term can state.
-  [ELAPSED_TERM]: {
-    signals: ['runs'],
-    takesArg: true,
-    argName: '12h|1d|7d',
-    argOk: (arg) => parseDuration(arg) !== null,
-    argHint: 'a whole number of hours or days, e.g. 12h, 1d, 7d',
+    argName: CADENCES.map((c) => `${AT_MOST_PREFIX}${c}`).join('|'),
+    argOk: (arg) => cadenceOfScheduleArg(arg) !== null,
+    argHint: `one of ${CADENCES.map((c) => `${AT_MOST_PREFIX}${c}`).join(', ')}`,
     holds(s, { arg, item, now }) {
       const woken = wokenReason(item);
       if (woken) return woken;
-      const newest = newestRun(s);
-      if (!newest) return { holds: true, reason: `no run of this task in the last ${s?.runs?.horizonDays ?? '?'} days` };
-      const nowMs = ms(now);
-      const startedMs = ms(newest.createdAt);
-      if (nowMs === null || startedMs === null) return { error: `${ELAPSED_TERM}:${arg} cannot measure — the instant or #${newest.number}'s start is unknown` };
-      return nowMs - startedMs > parseDuration(arg)
-        ? { holds: true, reason: `the newest run, #${newest.number}, started ${ago(startedMs, nowMs)} ago — over ${arg}` }
-        : { holds: false, reason: `the newest run, #${newest.number}, started ${ago(startedMs, nowMs)} ago, inside ${arg}` };
+      const cadence = cadenceOfScheduleArg(arg);
+      // The instant is the caller's to supply, since a term never reads the clock.
+      if (ms(now) === null || Number.isNaN(ms(now))) return { error: `${SCHEDULE_TERM}:${arg} has no instant to place in a period: the caller supplied no \`now\`` };
+      const opened = anchorInstant(cadence, now);
+      const openedMs = opened.getTime();
+      const since = runsOf(s).find((r) => (ms(r.createdAt) ?? -Infinity) >= openedMs || (ms(r.closedAt) ?? -Infinity) >= openedMs);
+      return since
+        ? { holds: false, reason: `#${since.number} already ran in the ${cadence} period that opened ${opened.toISOString()}` }
+        : { holds: true, reason: `no run in the ${cadence} period that opened ${opened.toISOString()}` };
+    },
+  },
+
+  // The same term under the name it was introduced with, so a member's own task file
+  // carrying the old spelling keeps working forever (calendar.mjs, DUE_TERM). It is
+  // not a second behaviour: it translates its argument and delegates, so the two can
+  // never answer differently. `normalizeTaskDeclaration` rewrites a LOADED declaration
+  // to the current spelling, which is why this is reached only by a caller that did
+  // not come through that door.
+  [DUE_TERM]: {
+    signals: ['runs'],
+    takesArg: true,
+    argName: CADENCES.join('|'),
+    argOk: (arg) => CADENCES.includes(arg),
+    argHint: `one of ${CADENCES.join(', ')}`,
+    holds(s, ctx) {
+      return BUILTIN_TERMS.get(SCHEDULE_TERM).holds(s, { ...ctx, arg: `${AT_MOST_PREFIX}${ctx.arg}` });
     },
   },
 
@@ -483,8 +476,6 @@ export const BUILTIN_TERM_NAMES = [...BUILTIN_TERMS.keys()];
 // Evaluate a declaration over collected signals. Returns `{ run, reason, context }`
 // — or `{ error }`, which is a failed run rather than a decline.
 //
-// `schedule` is the repo's `taskScheduler` anchor settings, which `due:` reads.
-//
 // PARTIAL MODE (`partial: true`) judges what the bundle so far can decide: a term
 // whose signal has not been collected is UNKNOWN rather than false, a conjunct
 // with an unknown alternative and no held one stays open, and the verdict is `{
@@ -495,7 +486,7 @@ export const BUILTIN_TERM_NAMES = [...BUILTIN_TERMS.keys()];
 // missing signal is a term that does not hold, as it always was.
 export function evaluatePreconditions({
   preconditions, signals = {}, config = {}, item = null, terms = new Map(), windowDays = null, now = null,
-  schedule = null, partial = false,
+  partial = false,
 }) {
   const parsed = parsePreconditions(preconditions);
   if (parsed.kind === 'invalid') return { error: `the "preconditions" declaration is not legal: ${parsed.reason}` };
@@ -522,7 +513,7 @@ export function evaluatePreconditions({
         if (absent.length) { absent.forEach((n) => missing.add(n)); unknown = true; continue; }
       }
       let out;
-      try { out = term.holds(signals, { arg: ref.arg, config, item, windowDays, now, schedule }) ?? {}; }
+      try { out = term.holds(signals, { arg: ref.arg, config, item, windowDays, now }) ?? {}; }
       catch (e) { return { error: `the precondition "${ref.name}" threw: ${e.message}` }; }
       if (out.error) return { error: `${ref.name}: ${out.error}` };
       outcomes.push({ ref, out });

@@ -2,6 +2,7 @@
 name: fetching-from-the-web
 description: Reading a page or a file from the web in a session — exact bytes over a summarizing fetch, and what a 403 or an egress block means. Use before any WebFetch or curl, and when a fetch is denied.
 metadata:
+  body: guidelines
   force-load-on-tool-calls:
     - 'WebFetch'
     - 'Bash.command /(^|[;&|]\s*|\n\s*)(curl|wget)\b/'
@@ -13,14 +14,14 @@ metadata:
 # Fetching from the web
 
 - **Needing exact text** — a summarizing fetch tool is not a source; when the bytes matter, `curl`
-  into the scratchpad and read from disk.
+  into the scratchpad and read from disk. (needing-exact-text)
 - **A `403`** — don't retry and don't try a sibling URL; attribute the search snippet to the
-  publisher instead of asserting it, and mark it for re-verification.
+  publisher instead of asserting it, and mark it for re-verification. (a-rule)
 - **A sandbox or proxy denial is a policy boundary, not an obstacle to route around** — no
   open-network runner, no ad-hoc CI workflow, no push-triggered probe to make the request from
   somewhere the policy does not apply. Answer from committed reference material or ask the owner,
-  and say plainly that anything unverifiable is unverified.
+  and say plainly that anything unverifiable is unverified. (sandbox-proxy-denial)
 - **An explicit egress block** (`EGRESS_BLOCKED`) is domain-wide, unlike a publisher's `403`:
   working down alternate sources for the same fact spends the same denial on each. Never file the
   gap as "re-verify next pass" — no later agent pass can cross a policy block either; mark it as
-  needing a human or an unblocked environment.
+  needing a human or an unblocked environment. (explicit-egress-block)

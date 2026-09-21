@@ -1,125 +1,55 @@
-// This pack's session-start step: fetch the current user's personal interaction
-// preferences from the store this repo points at, and print them into the session
-// context. The engine runs it (engine/pack_loader/run-pack-session-start.mjs) because
-// this pack ships the file; it knows nothing about what the file does.
+// This pack's session-start step: say what the person's pack cost, or why they have none.
 //
-// WHY THIS IS A STEP AND NOT PROSE. `RULES.md` is fixed at vendor time and identical
-// for every repo and every person that mounts it. What this pack contributes is
-// neither: it belongs to the person in front of the session, and it lives in another
-// repository entirely. Only something that runs at session start can say it.
+// THE COPY ITSELF IS session-prepare.mjs, which runs in the phase before the skill mount and
+// the self-test, because what it writes is a pack those steps have to see. By the time this
+// step runs, the person's rules are already in the session on the memory channel (the rules
+// index imports the copied pack's prose) and their skills are already mounted. What is left
+// is the part only a reader needs.
 //
-// WHY THE CONTENT IS NOT HERE. Personal preferences belong to a group of people, not
-// to a project and not to the shared canon — which every fleet mounts, and which is
-// therefore both the wrong host for one group's preferences and the wrong authority
-// on where they live. So this pack carries the ADDRESS (its entry `config`, read via
-// store.mjs) and the group carries the content.
+// SO IT EMITS NO RULES. Prose on this channel is prose the harness may truncate on the way in,
+// with nothing on either side able to tell (#807), which is exactly why the pack rides the
+// memory channel instead. A step that also printed the rules would spend the session's context
+// twice for one set of them.
 //
-// LOCAL FIRST. When this tree IS the store, the working copy is what the owner is
-// reading and editing — a fetch would serve the default branch and quietly hide the
-// edit in progress.
-//
-// ATTENDED SESSIONS ONLY. A routine fired under a person's account carries their
-// identity but not their presence, and preferences written for a present person (a
-// popup for every decision, a callout closing every turn) misdirect a run nobody is
-// watching. The harness says which it is in CLAUDE_CODE_SESSION_ATTENDED; only an
-// explicit "not attended" declines, so an older harness that never sets it still loads.
-//
-// FAIL-SOFT ON EVERY MISS. No identity, no configured store, no file, a fetch that
-// fails: one plain-text note, and the session proceeds on default interaction
-// behavior. Nothing here is load-bearing — the packs, checks and skills a session
-// needs are already local — and a halt directive over a nice-to-have would be a
-// pack deciding the session cannot start.
+// AND IT READS NO STATUS FILE. The directory is the answer: the placeholder means nothing
+// landed, and why is a pure function of the config and the environment.
 
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { resolveStore, fileFor, isUsableIdentity } from './store.mjs';
+import { PLACEHOLDER, proseIn } from './copy_user_pack_to_repo.mjs';
+import { resolveStore, declineReason } from './user_pack_address.mjs';
 
-const FETCH_TIMEOUT_MS = 15_000;
-const FETCH_ATTEMPTS = 3;
-
-const note = (s) => process.stdout.write(`USER PREFERENCES: ${s}\n`);
-
-// What these preferences cost the session, stated on the engine's facet channel
-// (engine/pack_loader/run-pack-session-start.mjs) so the opening summary can say it
-// in the unit it states the rest of the load in. This step is the only thing in the
-// session that can weigh them: the file it read lives in another repository.
-//
-// Words at the standard English ratio, the same estimate the summary line makes of
-// the corpus prose — a character count is thrown off by exactly what these files are
-// full of, punctuation-dense Markdown. Rounded to 10 where the corpus rounds to 500,
-// because this is hundreds of tokens against its tens of thousands.
-const facet = (text) => {
-  const words = text.trim().split(/\s+/).filter(Boolean).length;
-  const tokens = Math.round(words / 0.75 / 10) * 10;
-  if (tokens) process.stdout.write(`CLAUDINITE-FACET: ${tokens.toLocaleString('en-US')} personal preference tokens\n`);
-};
-
-const emit = (s) => { facet(s); process.stdout.write(s.endsWith('\n') ? s : `${s}\n`); process.exit(0); };
-
-// Strip quotes/backslashes before embedding an identity in a message, so an unusual
-// one stays tidy in the injected text.
-const safe = (s) => String(s).replace(/["\\]/g, '');
+const note = (s) => { process.stdout.write(`PERSONAL PACK: ${s} - proceeding with default interaction behavior.\n`); process.exit(0); };
 
 const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const config = (() => {
+  try { return JSON.parse(process.env.CLAUDINITE_PACK_CONFIG || '{}'); } catch { return {}; }
+})();
 
-// The engine hands this pack its own entry `config`; nothing here re-reads settings.
-let config = {};
-try { config = JSON.parse(process.env.CLAUDINITE_PACK_CONFIG || '{}'); } catch { /* malformed — the rule reports it */ }
+const prose = existsSync(proseIn(root)) ? readFileSync(proseIn(root), 'utf8') : null;
 
-const store = resolveStore(config);
-if (!store) {
-  note('this project declares no preferences store (the pack entry\'s "config": { "repo": … }) — proceeding with default interaction behavior.');
-  process.exit(0);
+// No file at all means the prepare phase never ran: an engine older than the phase, which a
+// member holds until the engine lane catches up with the pack lane. Nothing to report about
+// this person, and nothing this step can do about it from here.
+if (prose === null) {
+  note('this repo\'s engine has no session-prepare phase, so no personal pack was copied in');
 }
 
-if (process.env.CLAUDE_CODE_SESSION_ATTENDED === '0') {
-  note('the session is unattended (CLAUDE_CODE_SESSION_ATTENDED=0) — personal preferences are for a present person; proceeding with default interaction behavior.');
-  process.exit(0);
+if (prose === PLACEHOLDER) {
+  const why = declineReason(config, process.env)
+    ?? `${resolveStore(config).repo} holds no pack for this person, or it could not be read`;
+  note(why);
 }
 
-const email = process.env.CLAUDE_CODE_USER_EMAIL || '';
-if (!email) {
-  note('CLAUDE_CODE_USER_EMAIL is not set — proceeding with default interaction behavior.');
-  process.exit(0);
-}
-if (!isUsableIdentity(email)) {
-  note(`CLAUDE_CODE_USER_EMAIL (${safe(email)}) is not a usable file name — proceeding with default interaction behavior.`);
-  process.exit(0);
-}
-
-const relative = fileFor(store, email);
-
-// Local first: this tree is the store itself.
-const local = join(root, relative);
-if (existsSync(local)) {
-  try {
-    emit(readFileSync(local, 'utf8'));
-  } catch (e) {
-    note(`${relative} is present but unreadable (${e.message}) — proceeding with default interaction behavior.`);
-    process.exit(0);
-  }
-}
-
-// Otherwise fetch the single file. CLAUDINITE_PREFS_URL overrides the derived base
-// for a fork or a test. `HEAD` is the store repo's default branch, whatever it is
-// called — the config names a repo, never a branch.
-const base = process.env.CLAUDINITE_PREFS_URL
-  || `https://raw.githubusercontent.com/${store.repo}/HEAD/${store.path}`;
-const url = `${base}/${encodeURIComponent(email)}.md`;
-
-let lastError = 'no response';
-for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (res.status === 404) { lastError = 'no preferences file for this user'; break; } // a definite answer — do not retry it
-    if (!res.ok) { lastError = `HTTP ${res.status}`; continue; }
-    const text = await res.text();
-    if (text.trim()) emit(text);
-    lastError = 'the file is empty';
-    break;
-  } catch (e) {
-    lastError = e.message || String(e);
-  }
-}
-note(`${safe(email)} at ${store.repo} could not be read (${lastError}) — proceeding with default interaction behavior.`);
+// What the pack costs the session, on the engine's facet channel
+// (engine/pack_loader/run-pack-session-start.mjs) so the opening summary can state it in the
+// unit it states the rest of the load in. This step is the only thing in the session that can
+// weigh it: what it weighs came from another repository.
+//
+// Words at the standard English ratio, the same estimate the summary line makes of the corpus
+// prose: a character count is thrown off by exactly what these files are full of,
+// punctuation-dense Markdown. Rounded to 10 where the corpus rounds to 500, because this is
+// hundreds of tokens against its tens of thousands.
+const words = prose.trim().split(/\s+/).filter(Boolean).length;
+const tokens = Math.round(words / 0.75 / 10) * 10;
+if (tokens) process.stdout.write(`CLAUDINITE-FACET: ${tokens.toLocaleString('en-US')} personal pack tokens\n`);
 process.exit(0);

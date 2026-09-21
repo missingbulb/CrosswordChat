@@ -170,7 +170,3 @@ export async function deliverGenerated({ root, repo, base, token, branchPrefix =
 export {
   deliveryFor, landDelivery, openDeliveredPull, disposeOpenPull, pullCreateError,
 } from '../src/deliver/land-pr.mjs';
-
-// `withTaskTrailer` was published here before it joined the grammar file beside it.
-// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
-export { withTaskTrailer } from './work-item-grammar.mjs';

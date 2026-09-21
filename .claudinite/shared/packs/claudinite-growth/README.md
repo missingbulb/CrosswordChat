@@ -156,9 +156,15 @@ rephrase, the keep-test, and the shrink-only discipline.
 counts as a claim whose truth lives outside the repo, the two probe rules, and the four verdicts a
 run reports.
 [**writing-pack-prose**](skills/writing-pack-prose/SKILL.md) owns how pack prose is *written* —
-the rule format, findability, and the per-pack `references.md` that carries each rule's
-reaffirmable rationale behind an end-of-line `(n)` marker (checks join via `check:<id>` entries);
-`references-integrity` below is its machine half, and `rule-revalidation` its consumer. The pack
+the rule format, findability, and the slug marker that ends every rule and names its provenance
+file; [**changing-pack-elements**](skills/changing-pack-elements/SKILL.md), forced on every pack
+file, says which entry an edit owes and how the pack's `README.md` stays about use;
+[**backfilling-provenance**](skills/backfilling-provenance/SKILL.md) is the method for filling a
+pack's empty files from its history, one pack per pull request. `provenance.mjs` beside this
+README is the one tool all three name - `mark`, `append`, `check`, `convert-references`,
+`reduce`, `history`, and the backfill's `brief` and `apply` - and `provenance-integrity` and
+`provenance-change-recorded` below are the
+convention's machine halves. The pack
 also bundles
 [unattended-agents](skills/unattended-agents/SKILL.md) and
 [**writing-tasks**](skills/writing-tasks/SKILL.md) — the contract a `tasks/<name>/task.json` and
@@ -171,6 +177,13 @@ arrives as one job but is two: teaching a repo a technology nobody there has use
 own. It keeps the portable half separable from the project's own parameters — the egress probe that
 settles whether the vendor was actually read, the split between the technology skill and the task
 beside it, and the three checks that keep such a skill liftable.
+[**extract-from-instructions**](skills/extract-from-instructions/SKILL.md) is the one extraction
+method with no window and no task behind it: the rules are already written, as a repo's
+`CLAUDE.md` or a person's machine-local one, and the work is routing each to its owner - the
+repo's local pack, that person's own pack, or neither - and onto a rung above prose. Reach for it
+when a repo adopting Claudinite already carries a `CLAUDE.md`, or when somebody wants their
+machine-local instructions carried properly; `adopt-claudinite` offers it during the adoption
+interview.
 Adoption itself — `adopt-claudinite`, `adopt-pack` and the `adopt-requested-packs` task — is not
 here: its subject is Claudinite's own surface, not lesson capture.
 
@@ -277,7 +290,8 @@ made the change, and is one sweep away from being closed as stale.
 | `technology-skill-cites-dated-sources` | high | correctness | check: blocking |
 | `technology-skill-links-inside-its-folder` | medium | complexity | check: blocking |
 | `technology-skill-code-imports-inside-its-folder` | medium | complexity | check: blocking |
-| `references-integrity` | high | correctness | check: blocking |
+| `provenance-integrity` | high | correctness | check: blocking |
+| `provenance-change-recorded` | high | correctness | check: blocking |
 | `routine-structure` | medium | complexity | check: blocking |
 | `task-declaration-matches-folder` | high | correctness | check: blocking |
 | `task-md-only-when-agentic` | high | correctness | check: blocking |

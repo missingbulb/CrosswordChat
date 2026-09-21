@@ -82,32 +82,7 @@ never a deeper import, which `tasks-pack-read-through-its-surface` refuses. Who 
 is derived on demand: `node packs/claudinite-canon-curation/pack-surface.mjs packs/claudinite-tasks`
 renders the surface and its consumers from the tree.
 
-### Retired paths, shimmed until #2115
-
-The surface above replaced a wider one. Every path it retired stays as a one-line shim for a
-member whose own workflow or local pack still names it, and `tasks-retired-public-paths` says so
-where that is the case; the shims go with #2115 once every member's workflow names the `src/`
-entry points.
-
-| Retired command | Runs |
-|---|---|
-| `scheduler-run.mjs` | `src/schedule/run.mjs` |
-| `drain-dispatch.mjs` | `src/schedule/drain-dispatch.mjs` |
-| `workflow-failure.mjs` | `src/recover/workflow-failure.mjs` |
-| `executor.mjs` | `src/execute/loop.mjs` |
-| `executor-continuation.mjs` | `src/recover/continuation.mjs` |
-| `create-work-item.mjs` | `src/schedule/create-work-item.mjs` |
-| `converge-workflows.mjs` | `src/adopt/converge-workflows.mjs` |
-| `tick.mjs` | `src/schedule/run.mjs`, the scheduler run's pre-#877 name |
-
-| Retired module | Where its names live now |
-|---|---|
-| `work-items.mjs` | `task-constants.mjs` and `work-item-grammar.mjs` |
-| `task-contract.mjs`, `preconditions.mjs`, `merge-policy.mjs` | `task-declaration.mjs` |
-| `anchors.mjs`, `dormancy.mjs`, `pull-requests.mjs`, `substantive-commit.mjs` | the dashboard's (and the sheepdog's) own copies, each with a drift guard |
-| `signals.mjs`, `wake.mjs`, `task-discovery.mjs`, `usage-format.mjs`, `verification.mjs` | this pack's own `src/` and `tasks/`; nothing outside the pack took them |
-
-A pack whose **non-task** code reads any of these declares `requires: ['claudinite-tasks']`. A
+A pack whose **non-task** code reads any of the modules above declares `requires: ['claudinite-tasks']`. A
 pack's `tasks/` folder needs no declaration: a mount without this pack carries no `tasks/` at all,
 since a task folder is inert without the queue that runs it.
 
@@ -130,7 +105,6 @@ pack paths behind which everything converges nightly.
 | `executor-workflow-secrets` | high | correctness | check: advisory |
 | `tasks-pack-read-through-its-surface` | high | correctness | declared check: blocking |
 | `repo-variables-through-the-bag` | high | correctness | declared check: blocking |
-| `tasks-retired-public-paths` | high | correctness | declared check: advisory |
 
 `tasks-pack-read-through-its-surface` is this pack's, not the canon's, because the consumers that
 can get it wrong are members: it scans a repo's own `packs/` **and** its `.claudinite/local/packs/`,

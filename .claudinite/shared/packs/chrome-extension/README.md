@@ -2,19 +2,15 @@
 
 Active when a `manifest.json` declares `manifest_version` — the MV3 build/runtime gotchas that apply while you're *coding* an extension. Mostly prose (`RULES.md`); the gotchas with a static signature in the source are checks.
 
-Releasing and Chrome-Web-Store publication live here too, in the [**chrome-store-releases**](skills/chrome-store-releases/SKILL.md) skill (the standard: the pipeline's contract, the setup steps, the manual store actions), the **vendored release set** ([`stubs/workflows/`](stubs/workflows/) + [`stubs/actions/`](stubs/actions/), materialized into each consumer's own `.github/` by the `chrome-release-vendoring` migration), the `cer/` conformance checks, and the `store-release` task that fires the daily release. GitHub only resolves a reusable workflow / composite action from a repo's own `.github/`, so the pack holds the templates and each consumer hosts a managed copy — no cross-repo `@main` dependency.
+Releasing and Chrome-Web-Store publication live here too, in the [**chrome-store-releases**](skills/chrome-store-releases/SKILL.md) skill (the standard: the pipeline's contract, the setup steps, the manual store actions), the **vendored release set** ([`stubs/workflows/`](stubs/workflows/) + [`stubs/actions/`](stubs/actions/), materialized into each consumer's own `.github/` by the `chrome-release-vendoring` migration), the `cer/` conformance checks, and the `store-release` task that fires the daily release.
 
-**The release half is gated on shipping, not on a second declaration.** It was its own opt-in pack, `chrome-extension-release`, until #1057; its `detect` was the orchestrator workflow's name, so the fact that decided whether the release rules applied was always structural and the declaration was a second copy of it. That fact is now read where it is used — `shipsReleasePipeline` in [`release-workflows.mjs`](worldRules/release-workflows.mjs) gates the coded rule, every `cer/` declared check carries the same test as its `relevantWhen`, and the `store-release` task's precondition asks the same question of the `release` signal. A repo that only codes an extension is asked for no release config, no privacy page and no README release section; a repo that publishes gets all of it without declaring anything.
-
-The `cer/` check ids are kept as they were: a member's `accept` entries name rules by id, and renaming one silently orphans an acceptance.
+**The release half applies once the repo ships the pipeline**, the orchestrator workflow or a `.github/release.config` being present, and nothing is declared for it. A repo that only codes an extension is asked for no release config, no privacy page and no README release section; a repo that publishes gets all of it.
 
 ## What the pack carries
 
 The gotchas themselves live in [`RULES.md`](RULES.md), grouped by the surface each concerns —
 service worker, content scripts, permissions and host access, sign-in and tokens, extension UI
-surfaces, and introspecting a service worker over CDP. The index below is held against that prose by
-the corpus-wide rule-index drift guard, which is what makes a second listing safe here: an earlier
-hand-kept one drifted into claiming a prose rule that never existed (#777).
+surfaces, and introspecting a service worker over CDP.
 
 ## Rules (`RULES.md`)
 
@@ -63,7 +59,7 @@ Runtime host access — the two rules that concern `host_permissions` — is the
 | `cer/privacy-permission-alignment` | critical | legal | check: blocking |
 | `cer/permission-added-store-issue` | high | legal | check: advisory |
 
-Every `cer/` rule is about a release that would otherwise fail — or publish the wrong thing — only once it reached the store, and every one of them is inert until this repo ships the pipeline. `cer/version-bumped` is the one work-scope rule among them: the tree always carries a version, and only the diff says whether it moved with the shipped files beside it.
+Every `cer/` rule is about a release that would otherwise fail — or publish the wrong thing — only once it reached the store, and every one of them is inert until this repo ships the pipeline. `cer/version-bumped` judges the diff, so it fires in a change that ships files without moving the version.
 
 ## Skills
 
@@ -71,4 +67,4 @@ Every `cer/` rule is about a release that would otherwise fail — or publish th
 
 ## Task
 
-`tasks/store-release/` fires the repo's daily release: agentless, `code_work` only, dispatching the vendored daily workflow. It absorbed that workflow's own 00:30 cron so the Claudinite scheduler stays the repo's only one, and its precondition declines on a repo that does not publish.
+`tasks/store-release/` fires the repo's daily release: agentless, `code_work` only, dispatching the vendored daily workflow. Its precondition declines on a repo that does not publish.

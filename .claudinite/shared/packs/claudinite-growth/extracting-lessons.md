@@ -100,7 +100,7 @@ derivable from the product's own requirements (that is a requirement — it belo
 Write **more checks and less prose**: a check relieves every session's context completely, where prose only
 relocates it. **Prose is rationed, and the ration is small** — a pass adds at most two rules, each one
 sentence. How a rule is phrased and sized, and where its rationale goes — the brief rule in `RULES.md`, the
-reaffirmable reason in the pack's `references.md` — is the
+reaffirmable reason on the rule's provenance file - is the
 [writing-pack-prose](skills/writing-pack-prose/SKILL.md) skill's; load it before writing any. The full
 evidence trail stays in the PR body and the issue.
 

@@ -1,6 +1,8 @@
 ---
 name: production-retrospective
 description: Design and file the review that comes back on its own once a larger element has lived in production long enough to judge — is it working, misused, overused, underused — read from its real production record against expectations written down when the element was designed. Use when designing a larger element (the brief is authored then), when filing a migration plan's chain (the retrospective is its last link), when a merge completes a design-doc'd element, or when defining a new retrospective class for a pack, a repo, or the fleet.
+metadata:
+  body: workflow
 ---
 
 # Production retrospective

@@ -15,10 +15,3 @@ export {
 export { evaluatePrecondition } from '../src/contract/precondition.mjs';
 export { loadTaskTerms } from '../src/contract/task-terms.mjs';
 export { declaredMergeRules, policyVerdict, policyExpression } from '../src/contract/merge-policy.mjs';
-
-// This path's earlier surface — the declaration as TEXT, which the dashboard now reads
-// with its own copy. Kept while a member's own pack may still import it here.
-// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
-export { parseTaskDeclaration } from '../src/contract/task-declaration-text.mjs';
-// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
-export { applyTaskDefaults } from '../src/contract/task-defaults.mjs';

@@ -10,3 +10,4 @@
 @shared/packs/spec-driven-product/RULES.md
 @shared/packs/web-speech/RULES.md
 @local/packs/crossword-chat/RULES.md
+@temp/packs/current_user/RULES.md

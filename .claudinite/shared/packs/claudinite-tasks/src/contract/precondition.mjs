@@ -15,9 +15,7 @@ export const SLACK_MS = 3600e3;
 // term's period, a day where it states none.
 export function defaultWindowMs(task) {
   const cadence = taskCadence(task?.decl);
-  if (cadence?.kind === 'due') return periodMs(cadence.cadence) + SLACK_MS;
-  if (cadence?.kind === 'elapsed') return cadence.ms + SLACK_MS;
-  return DAY_MS + SLACK_MS;
+  return (cadence === null ? DAY_MS : periodMs(cadence.cadence)) + SLACK_MS;
 }
 
 // The lookback in DAYS a verdict is judged over — what a term needs when its
@@ -35,7 +33,7 @@ export const windowDaysOf = (task, signals) => signals?.runs?.window?.days ?? de
 // is the only gate a task may declare (#1617). It fails LOUD by construction — a
 // term that throws, an unknown name, an unreadable signal all return `{ error }`,
 // a run failure the caller parks rather than a decline taken on a guess.
-export function evaluatePrecondition(task, signals, packConfig = {}, item = null, at = null, schedule = null) {
+export function evaluatePrecondition(task, signals, packConfig = {}, item = null, at = null) {
   return evaluatePreconditions({
     preconditions: task.decl.preconditions,
     signals,
@@ -45,8 +43,6 @@ export function evaluatePrecondition(task, signals, packConfig = {}, item = null
     // The window the signals were collected over, read off the bundle where it
     // was decided (src/signals/for-task.mjs).
     windowDays: windowDaysOf(task, signals),
-    // The repo's anchor settings, which a `due:` term resolves its cadence on.
-    schedule,
     // The instant this verdict is for — the same one the signals were collected
     // for, so a clock-reading term and a windowed one cannot disagree about when
     // "now" is.

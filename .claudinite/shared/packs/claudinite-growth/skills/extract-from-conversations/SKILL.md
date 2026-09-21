@@ -1,6 +1,8 @@
 ---
 name: extract-from-conversations
 description: Mine an agent-user conversation — a captured conversation log or the live session — for friction-driven lessons (misunderstandings, backtracks, measured wall-time waits) and land them in the repo's own local packs. Use when extracting lessons from a session transcript or the conversation-logs branch, or when an owner asks for a retrospective.
+metadata:
+  body: workflow
 ---
 
 # Extract lessons from a conversation
@@ -117,6 +119,11 @@ so there is nothing to post on and the rule simply lands without a comment):
 - one provenance line — the rule added, the capture date, the session id;
 - then a **200-word-max** description of just the slice of conversation that caused the rule: what was
   asked, what went wrong or got corrected, and why the rule follows from it.
+
+The rule's own file gets the same in the durable form: a `born` entry through `provenance.mjs
+append`, its `Source` the capture's date and session id, its `Reason` the paraphrase (a short
+quoted phrase at most), its `Mechanism` the carrier and why - the changing-pack-elements skill has
+the grammar. A candidate the run dropped for a reason worth remembering goes on `_declined.md`.
 
 **Summarize, never transcribe.** The dialogue itself is far too verbose for an issue — no pasted turns
 beyond a short quoted phrase, never raw JSONL, never a rendered transcript. A log that yields nothing gets

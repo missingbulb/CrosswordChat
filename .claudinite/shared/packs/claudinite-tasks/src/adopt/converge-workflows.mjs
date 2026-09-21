@@ -17,8 +17,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { hashedCron } from './hash-minute.mjs';
-import { DEFAULT_SCHEDULE } from '../contract/calendar.mjs';
+import { hashedCron, isSchedulerCron } from './hash-minute.mjs';
 import { loadConfig, ENDPOINTS_KEY, LEGACY_ENDPOINTS_KEY } from '../../../../engine/checks/helpers/repo-context.mjs';
 import { actionsEnv, repoRoot } from '../world/actions.mjs';
 
@@ -98,21 +97,27 @@ export function withDeclaredSecrets(stubText, names = []) {
     : stubText;
 }
 
-// `dailyHour` picks BOTH of the cron's hours (PRINCIPLES.md): the anchor tick and the drain tick
-// twelve hours after it. Optional, and absent means the documented default — an unset key is the
-// default, never a misconfiguration — so a caller that does not read the repo's schedule still
-// writes the right cron for every repo that has not moved its anchor.
-export function schedulerWorkflowTarget(fullName, stubText, secretNames = [], dailyHour = undefined) {
-  return withDeclaredSecrets(stubText, secretNames)
-    .replace(/cron:\s*'[^']*'/, `cron: '${hashedCron(fullName, dailyHour ?? DEFAULT_SCHEDULE.dailyHour)}'`);
+// THE CRON IS THE REPO'S, WRITTEN ONCE. `current` is the workflow file already on
+// disk, or null where this is the scaffold. A cron that repo already carries is kept
+// verbatim; only a repo that has none, or one whose line is not a scheduler cron at
+// all, gets the hashed default. Restamping it would be a change to
+// `.github/workflows/`, which lands only through a pull request a person merges, so a
+// converge that rewrote the line would put every member's scheduler behind a human
+// gate on every change to the derivation.
+export function schedulerWorkflowTarget(fullName, stubText, secretNames = [], current = null) {
+  const existing = /cron:\s*'([^']*)'/.exec(current ?? '')?.[1];
+  const cron = isSchedulerCron(existing) ? existing : hashedCron(fullName);
+  return withDeclaredSecrets(stubText, secretNames).replace(/cron:\s*'[^']*'/, `cron: '${cron}'`);
 }
 
-export function convergeSchedulerWorkflow(root, fullName, stubText, secretNames = [], dailyHour = undefined) {
+export function convergeSchedulerWorkflow(root, fullName, stubText, secretNames = []) {
+  const path = join(root, SCHEDULER_WORKFLOW);
+  const current = existsSync(path) ? readFileSync(path, 'utf8') : null;
   return writeWorkflow(root, SCHEDULER_WORKFLOW,
-    schedulerWorkflowTarget(fullName, stubText, secretNames, dailyHour));
+    schedulerWorkflowTarget(fullName, stubText, secretNames, current));
 }
 
-// The queue's second workflow — the label-event executor. No cron of its own (the
+// The queue's second workflow, the label-event executor. No cron of its own (the
 // scheduler run's drain is the poll), so nothing about it is hashed; it only needs its
 // secrets stamped.
 export function convergeExecutorWorkflow(root, stubText, secretNames = []) {
@@ -132,9 +137,9 @@ function writeWorkflow(root, relPath, target) {
 // scheduler run and the executor have to arrive together: the drain the first one
 // starts dispatches the second, so a repo holding one without the other has a queue
 // that fills and never empties.
-export function convergeWorkflows(root, fullName, { schedulerStub, executorStub = null, secretNames = [], dailyHour = undefined } = {}) {
+export function convergeWorkflows(root, fullName, { schedulerStub, executorStub = null, secretNames = [] } = {}) {
   const changed = [];
-  if (convergeSchedulerWorkflow(root, fullName, schedulerStub, secretNames, dailyHour)) changed.push(SCHEDULER_WORKFLOW);
+  if (convergeSchedulerWorkflow(root, fullName, schedulerStub, secretNames)) changed.push(SCHEDULER_WORKFLOW);
   if (executorStub && convergeExecutorWorkflow(root, executorStub, secretNames)) changed.push(EXECUTOR_WORKFLOW);
   return { changed };
 }
@@ -149,7 +154,7 @@ export function stubsDir(root) {
 
 // CLI: `node converge-workflows.mjs [owner/repo]` — scaffold THIS repo's two workflow
 // files. The full name comes from argv or GITHUB_REPOSITORY/CLAUDINITE_REPO, and the
-// cron it stamps from the repo's own `taskScheduler.dailyHour`.
+// cron is whatever the repo already carries, or one derived from that name at scaffold.
 // Exported because `converge-workflows.mjs` at the pack root runs it: `adopt-pack`'s own
 // prose, and the copies members took of it, still address this command at that path.
 export async function runConvergeWorkflows() {
@@ -166,7 +171,6 @@ export async function runConvergeWorkflows() {
     schedulerStub: readFileSync(stubPath, 'utf8'),
     executorStub: existsSync(executorPath) ? readFileSync(executorPath, 'utf8') : null,
     secretNames: await declaredSecrets(root, config),
-    dailyHour: config?.taskScheduler?.dailyHour,
   });
   console.log(changed.length ? `converge-workflows: ${changed.join(', ')}` : 'converge-workflows: already converged');
 }

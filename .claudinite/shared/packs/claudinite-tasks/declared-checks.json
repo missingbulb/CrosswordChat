@@ -16,25 +16,6 @@
     ]
   },
   {
-    "id": "tasks-retired-public-paths",
-    "severity": "advisory",
-    "since": "2026-09-18",
-    "failureMessage": "the claudinite-tasks public/ surface was re-laid, and the paths this repo still names are shims scheduled for deletion",
-    "fix": "repoint it: a run: line at the src/ entry the vendored stub names, an import at public/task-constants.mjs, work-item-grammar.mjs, github.mjs, delivery.mjs or task-declaration.mjs",
-    "scanFiles": "/^(\\.github\\/workflows\\/claudinite-(scheduler|executor)\\.yml|(\\.claudinite\\/local\\/)?packs\\/(?!claudinite-tasks\\/).*\\.(m?js|md))$/",
-    "excludeFileClasses": [
-      "testFiles"
-    ],
-    "scanIgnoringComments": true,
-    "matchLines": [
-      {
-        "match": "/claudinite-tasks\\/public\\/(anchors|converge-workflows|create-work-item|dormancy|drain-dispatch|executor-continuation|executor|merge-policy|preconditions|pull-requests|scheduler-run|signals|substantive-commit|task-contract|task-discovery|tick|usage-format|verification|wake|work-items|workflow-failure)\\.mjs/",
-        "what": "names a retired claudinite-tasks public/ path: \"{match}\"",
-        "fix": "repoint it at the path's new home before the shim is deleted (see the rule's fix)"
-      }
-    ]
-  },
-  {
     "id": "repo-variables-through-the-bag",
     "severity": "blocking",
     "since": "2026-09-16",

@@ -4,7 +4,7 @@
   "description": "Cleans up after the scheduler and the executor: re-queues items stuck past their period, repairs items a torn transition left without a state label, and reviews the health of the open set.",
   "trigger": "schedule",
   "preconditions": [
-    "due:daily"
+    "schedule:at-most-daily"
   ],
   "expected_outcome": "no_code_changes",
   "code_work": "node worker.mjs",

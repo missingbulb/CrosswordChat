@@ -65,6 +65,13 @@ const rule = {
         'move each pack\'s parameters onto that pack\'s own entry in `packs` as `config`, where a version cannot outlive the pack it prices, and delete the top-level map');
     }
 
+    for (const key of Array.isArray(repoContext.RETIRED_SCHEDULE_KEYS) ? repoContext.RETIRED_SCHEDULE_KEYS : []) {
+      if (raw.taskScheduler?.[key] !== undefined) {
+        flag(`taskScheduler.${key} is retired and nothing reads it`,
+          'delete it: a task cadence measures whole UTC periods, and the scheduler workflow\'s own cron hours were written into that file when it was scaffolded, so neither reads this. The nightly update deletes it for you');
+      }
+    }
+
     const endpointsKey = repoContext.LEGACY_ENDPOINTS_KEY;
     if (typeof endpointsKey === 'string' && raw.taskScheduler?.[endpointsKey] !== undefined) {
       flag(`taskScheduler.${endpointsKey} is the retired spelling`,

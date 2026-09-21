@@ -1,7 +1,19 @@
 import { posix } from 'node:path';
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
 import { packEntryId } from '../../../engine/pack_loader/pack-registry.mjs';
+// A namespace import for the session pack root, which this pack started reading before any
+// member's engine exported it: the two lanes deliver on separate cadences, and a named
+// import of an export the member's engine lacks is a link-time SyntaxError that faults the
+// whole pack rather than one rule.
+import * as registry from '../../../engine/pack_loader/pack-registry.mjs';
 import { RULES_INDEX_FILE, RULES_INDEX_IMPORT } from '../../../engine/pack_loader/generate-rules-index.mjs';
+
+// That root as this rule spells repo paths: POSIX, whatever host the constant was joined on.
+// An engine without it leaves a sentinel no path can start with, so the exemption below
+// matches nothing there, which is the right answer: such an engine writes no such import.
+const COPIED_ROOT = typeof registry.TEMP_PACKS_SUBDIR === 'string'
+  ? registry.TEMP_PACKS_SUBDIR.split(/[\\/]/).join('/')
+  : '\u0000';
 
 // The rules index is the ONLY channel a pack's prose reaches a session on (#807). The
 // SessionStart prose step that used to carry it is gone, deliberately — one channel, so
@@ -80,7 +92,13 @@ const rule = {
         // `..`, so this has to normalize rather than concatenate. A dangling import is
         // #807 in a new costume: the channel works, the rules still do not arrive, and
         // nothing says so.
-        if (!ctx.exists(posix.normalize(posix.join('.claudinite', rel)))) {
+        const path = posix.normalize(posix.join('.claudinite', rel));
+        // Except for the one import no checkout can satisfy: the pack copied for the
+        // person in front of the session, which the step runner writes every session and
+        // nobody tracks. Judged against the committed tree it would read as dangling in
+        // every repo that has the feature at all.
+        if (path.startsWith(`${COPIED_ROOT}/`)) continue;
+        if (!ctx.exists(path)) {
           findings.push(finding(rule, {
             file: RULES_INDEX_FILE,
             what: `the index imports \`${rel}\`, which does not exist — that pack's rules load as nothing`,

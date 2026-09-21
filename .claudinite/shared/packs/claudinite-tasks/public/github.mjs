@@ -278,7 +278,3 @@ export async function writeTracker(gh, repo, number, { body, comment: note = nul
   }
   return number;
 }
-
-// The two workflow file names were published here before they joined the constants file.
-// @legacy-tolerance advisory:tasks-retired-public-paths retire:#2115
-export { SCHEDULER_WORKFLOW_FILE, EXECUTOR_WORKFLOW_FILE } from './task-constants.mjs';

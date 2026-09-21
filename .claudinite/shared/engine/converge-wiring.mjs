@@ -54,6 +54,20 @@ export const REQUIRED_HOOKS = [
   { event: 'PostToolUse', matcher: '.*', command: 'node $CLAUDE_PROJECT_DIR/.claudinite/shared/engine/hooks/post-tool-use-command.mjs' },
 ];
 
+// The canon runs this same engine out of its own tree, where `.claudinite/shared/`
+// does not exist, so a mount-spelled command resolves to nothing there - and since
+// the command string is the registration's identity below, every run appended a
+// second, permanently broken group rather than recognising the one already wired.
+// Resolve the prefix against the root being converged: the mount wherever it is
+// present, the repo root only where the engine plainly sits there instead, and the
+// mount otherwise - a member whose vendoring has not run yet is still a member.
+const HOOK_MOUNT_PREFIX = `${MOUNT_ROOT}/${SHARED_NAME}/`;
+
+export function hooksFor(root) {
+  if (existsSync(join(root, MOUNT_ROOT, SHARED_NAME)) || !existsSync(join(root, 'engine', 'hooks'))) return REQUIRED_HOOKS;
+  return REQUIRED_HOOKS.map((h) => ({ ...h, command: h.command.replace(HOOK_MOUNT_PREFIX, '') }));
+}
+
 export const SETTINGS_PATH = '.claude/settings.json';
 export const CLAUDE_MD = 'CLAUDE.md';
 
@@ -78,7 +92,7 @@ export function ensureHooks(root) {
   }
   settings.hooks ??= {};
   const added = [];
-  for (const h of REQUIRED_HOOKS) {
+  for (const h of hooksFor(root)) {
     const list = (settings.hooks[h.event] ??= []);
     const ours = (group) => (group.hooks ?? []).some((entry) => entry?.command === h.command);
     const present = list.some((group) => (h.matcher == null || group.matcher === h.matcher) && ours(group));

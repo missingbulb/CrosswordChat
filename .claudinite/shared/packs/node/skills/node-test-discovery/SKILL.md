@@ -2,6 +2,7 @@
 name: node-test-discovery
 description: Wiring a `node --test` invocation so it finds the suite — dot-directories are skipped, a path that matches nothing runs zero tests and exits green. Loaded for any edit of a workflow or package.json test script.
 metadata:
+  body: guidelines
   force-load-on-file-edits-paths:
     - ".github/workflows/**"
     - "package.json"
@@ -19,4 +20,4 @@ metadata:
   Naming a path is not enough — the argument must **resolve to files that exist**: a typo'd
   glob, a moved fixture or a renamed directory produces the identical zero-test green, so the
   property to assert is that every path a `node --test` invocation names still matches something
-  in the tree.
+  in the tree. (node-test-skips)

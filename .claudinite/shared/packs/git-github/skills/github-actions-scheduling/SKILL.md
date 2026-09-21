@@ -1,6 +1,8 @@
 ---
 name: github-actions-scheduling
 description: What a GitHub Actions `schedule:` trigger actually guarantees — late fires, dropped fires, the 60-day disable — and how to build and describe scheduled work around it. Use when adding, changing, explaining, or debugging anything that runs on a cron in GitHub Actions.
+metadata:
+  body: guidelines
 ---
 
 # GitHub Actions cron is best-effort
@@ -20,34 +22,35 @@ after 60 days without repository activity.
 - **Never let correctness depend on a firing happening, or on when it happened.** Derive what is
   due from durable state the run can read — the Actions run ledger, a timestamp in the repo, the
   world the job inspects — never from "this fired, so it must be time". Wall-clock equality with
-  the cron minute is not a test any real run passes.
+  the cron minute is not a test any real run passes. (let-correctness-depend)
 - **Idempotent and self-catching.** A scheduled job does whatever is outstanding *now*, so a
   missed firing costs latency rather than data. Per-scheduler run bookkeeping — counters, "the last hour's
   changes", a queue advanced one step per run — loses information the first time a scheduler run vanishes.
   If a job cannot catch up, say so where it is declared and design the miss as an accepted loss.
+  (idempotent-self-catching)
 - **Catch up the most recent slot only.** A job that backfills every missed slot turns an outage
   into a storm on recovery; one catch-up evaluation per frequency is the shape that survives a
-  multi-day gap.
+  multi-day gap. (catch-up-recent)
 - **Spacing two jobs apart is not an ordering.** "B is an hour after A, so A has finished by
   then" holds only while the fires land on time — and when a poll is dropped, the catch-up run
   finds *both* due and does them together, which is precisely the run where B most needs A to
   have gone first. If the order actually matters, assert it in the run: have the run do A and
   defer B, or have B check for A's result and skip when it is missing. Spacing is a preference;
-  a check is a guarantee.
+  a check is a guarantee. (spacing-jobs-apart)
 - **Pick a minute off `:00`.** Anywhere in `:10–:50` dodges the stampede and stays clear of the
   hour boundary any slot math anchors on; across a fleet, hash the repo name into that band so
-  members spread rather than collide.
+  members spread rather than collide. (pick-minute-off)
 - **Deadline-bound work does not belong on a cron.** If something must happen *at* a time, drive
-  it from the event, not an hourly poll that may skip.
+  it from the event, not an hourly poll that may skip. (deadline-bound-work)
 
 ## Talking about it
 
 - **Say "about hourly, best-effort", never "hourly".** Stating an interval the platform does not
-  honour turns ordinary jitter into a bug report.
+  honour turns ordinary jitter into a bug report. (say-hourly-best)
 - **A late or missing run is not a defect until proven one.** First question: did GitHub fire at
   all — check the workflow's run list, not the job's logic. Then: has the repo been quiet for 60
   days? Only after both does the code become a suspect. A single missed slot is expected
-  behaviour.
+  behaviour. (late-missing-run)
 
 Claudinite's own scheduler is built to this: a repo-hashed `:10–:50` minute, and an hourly scheduler run
 that reconciles a queue of issues rather than replaying a ledger — a missed fire leaves the queue

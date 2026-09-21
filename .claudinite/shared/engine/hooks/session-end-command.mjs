@@ -65,7 +65,7 @@ async function main() {
   try { config = JSON.parse(readFileSync(configPath, 'utf8')); } catch { /* no declaration — no active packs */ }
 
   const { loadPacks, isActive } = await import(join(engineRoot, 'pack_loader', 'pack-registry.mjs'));
-  const steps = (await loadPacks({ localRoot: projectRoot }))
+  const steps = (await loadPacks({ localRoot: projectRoot, session: true }))
     .filter((p) => isActive(p, config))
     .map((p) => ({ pack: p.id, step: join(p.dir, STEP_FILE) }))
     .filter((s) => existsSync(s.step));

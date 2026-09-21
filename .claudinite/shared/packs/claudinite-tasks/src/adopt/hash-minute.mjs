@@ -24,40 +24,64 @@ const BAND = MINUTE_MAX - MINUTE_MIN + 1; // 41
 // well-spread, and Math.imul keeps the multiply in 32-bit range. Keyed on the repo
 // full name ("owner/repo") so the value is stable across re-vendors and re-derivable
 // anywhere the name is known.
-export function hashedMinute(fullName) {
+function hashOf(fullName) {
   let h = 0x811c9dc5;
   const s = String(fullName).toLowerCase();
   for (let i = 0; i < s.length; i += 1) {
     h ^= s.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
-  return MINUTE_MIN + ((h >>> 0) % BAND);
+  return h >>> 0;
 }
 
-// The anchor hour a repo that declares no `taskScheduler.dailyHour` runs on. DUPLICATED from
-// `calendar.mjs`'s DEFAULT_SCHEDULE because this module imports nothing by contract (bootstrap,
-// the update runner and a human all load it standalone); `hash-minute.test.mjs` guards the two
-// against drift.
-const DEFAULT_DAILY_HOUR = 4;
+export function hashedMinute(fullName) {
+  return MINUTE_MIN + (hashOf(fullName) % BAND);
+}
 
-// The full cron line for a repo — what the vendored workflow's `cron:` holds. TWO TICKS A DAY
-// (PRINCIPLES.md): the anchor tick at the repo's own `dailyHour`, which covers every occurrence the
-// calendar can produce, and the drain tick twelve hours later for the work that has no anchor —
-// adopting a marked issue, releasing a `Not-before`, reclaiming a dead claim.
+// THE CRON LINE a repo's scheduler workflow carries, minute and hours both derived
+// from the repo's own name. TWO TICKS A DAY (PRINCIPLES.md): the anchor tick, and the
+// drain tick twelve hours later for the work that has no period of its own, adopting a
+// marked issue, releasing a `Not-before:`, reclaiming a dead claim.
 //
-// `dailyHour` defaults rather than being required because a member's VENDORED worker is a cycle
-// stale and may still call this with one argument; that caller gets the default-schedule answer,
-// which is right for every repo that has not moved its anchor, and its own next converge passes
-// the real value.
-export const hashedCron = (fullName, dailyHour = DEFAULT_DAILY_HOUR) => {
-  const anchor = ((Math.trunc(dailyHour) % 24) + 24) % 24;
-  const drain = (anchor + 12) % 24;
+// THE HOUR IS HASHED, NOT CONFIGURED (#1995). It used to come from the repo's own
+// `taskScheduler.dailyHour`, which existed to order members ahead of the canon by an
+// hour; this repo's own record showed Actions firing up to 78 minutes off schedule
+// across one week, so the stagger never guaranteed the order it was there for. Hashing
+// it spreads the fleet across the clock, which is the only thing the knob reliably did.
+//
+// Hours 0 through 11 for the anchor, so the drain always lands on a different hour of
+// the same day. Shifted off the minute's own bits so two repos sharing a minute rarely
+// share an hour.
+const ANCHOR_HOURS = 12;
+export const hashedHours = (fullName) => {
+  const anchor = (hashOf(fullName) >>> 8) % ANCHOR_HOURS;
+  return { anchor, drain: anchor + ANCHOR_HOURS };
+};
+
+// WRITTEN ONCE, AT SCAFFOLD. The converge preserves whatever cron a repo's workflow
+// already carries (converge-workflows.mjs), because `.github/workflows/` lands only
+// through a pull request a person merges: restamping it would put every member's
+// scheduler behind a human gate every time this derivation changed.
+export const hashedCron = (fullName) => {
+  const { anchor, drain } = hashedHours(fullName);
   return `${hashedMinute(fullName)} ${anchor},${drain} * * *`;
 };
+
+// The shape a scheduler cron must have for the converge to keep it: a minute in the
+// band, and two hours twelve apart. Anything else is not a cron this repo wrote.
+const CRON_RE = /^(\d{1,2}) (\d{1,2}),(\d{1,2}) \* \* \*$/;
+export function isSchedulerCron(text) {
+  const m = CRON_RE.exec(String(text ?? '').trim());
+  if (!m) return false;
+  const [minute, anchor, drain] = m.slice(1).map(Number);
+  return minute >= MINUTE_MIN && minute <= MINUTE_MAX
+    && anchor >= 0 && anchor < ANCHOR_HOURS && drain === anchor + ANCHOR_HOURS;
+}
 
 // CLI: `node hash-minute.mjs <owner/repo>` prints the minute (bootstrap / update
 // use this to stamp or verify the workflow's cron without re-implementing the hash).
 if (import.meta.url === `file://${process.argv[1]}`) {
+
   const fullName = process.argv[2];
   if (!fullName) {
     process.stderr.write('usage: node hash-minute.mjs <owner/repo>\n');

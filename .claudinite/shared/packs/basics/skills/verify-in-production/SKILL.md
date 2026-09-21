@@ -1,6 +1,8 @@
 ---
 name: verify-in-production
 description: Decide whether a change that has merged can only be proven in production, and if so file the verification that comes back on its own once it is live. Use immediately after the merge, beside the conversation capture — never before, and not on request.
+metadata:
+  body: workflow
 ---
 
 # Verify in production
@@ -22,7 +24,7 @@ when the PR opens, not while review is in flight.
 The reason is that a PR can be **rejected**, and a branch that is still open can be rewritten
 under you. Both leave a verification whose premise never reached `main`:
 
-- A **rewritten branch** makes the brief describe a change that no longer exists. (1)
+- A **rewritten branch** makes the brief describe a change that no longer exists.
 - A **rejected PR** is worse, because the queue cannot tell it from a merge. A blocked item
   releases on its blocker being *closed*, and nothing reads `merged` — so the item goes ready,
   reads an `In-production-when:` that can never become true, pushes `Not-before:` forward by
@@ -66,7 +68,7 @@ gets — never preference:
   `/version.json` — files the **coded form**: declarative probes an agentless queue
   task (`claudinite-tasks/verify-production`) fetches and judges Action-side, where
   egress exists. No session ever runs, so there is no egress wall to hit — this is
-  the lane for exactly the class that used to park. (3)
+  the lane for exactly the class that used to park.
 - **A GitHub read** — an issue's state, a file at HEAD, a workflow run's conclusion —
   files the **agentic form**: an unattended session on this repository, whose reach
   is narrower than yours — **GitHub, through its own tools, in the repositories its
@@ -83,7 +85,7 @@ gets — never preference:
   is unverified and what would prove it. That is a filter, not a fork: an unreadable
   artifact is a reason not to file. Filing anyway spends a session rediscovering the
   wall and then parks `needs-human-action`, which is the human's-memory outcome this
-  skill exists to avoid. (3)
+  skill exists to avoid.
 
 Where the subject is the **fleet** rather than this repo — every member's stamp, every
 member's CI — this queue is the wrong runner for it whatever you file. It belongs to a

@@ -4,88 +4,94 @@
 
 - **One numbered requirements document states what the product must do**, leaf by leaf: what each
   surface must render, how it must behave, the exact copy and semantics it must carry. Not prose
-  aspirations — specific, testable statements.
+  aspirations — specific, testable statements. (numbered-requirements-document)
 
 - **Keep the spec's boundary crisp: a leaf is what the harness can assert.** The feature-level story
   — what the product does and why — lives in the product's prose docs; the spec holds the
   specific, testable statements (exact strings, placement, semantics). A statement no kind can prove
   isn't a leaf yet: it stays prose, or it's the trigger to add the kind that can prove it.
+  (keep-specs-boundary)
 
 - **Every leaf carries a stable id.** Add new requirements under new numbers; never renumber or
-  reuse a retired one — the ids are what cases, commits, and review discussion key on. (1)
+  reuse a retired one — the ids are what cases, commits, and review discussion key on.
+  (leaf-carries-stable)
 
 - **Doc-first, red by default.** Adding a leaf with no executable proof fails the build until a case
-  claims it. (2)
+  claims it. (doc-first-red)
 
 - **The spec drives the tests, never the other way around.** A behavior change starts by editing the
   leaf, watching the gate go red, then changing product and proof to match. A test changed without
   its leaf — or a leaf reworded to match what the code happens to do — inverts the authority.
+  (spec-drives-tests)
 
 ## 2. Every leaf ⇄ exactly one proof, of the right kind
 
 - **Enforce the bijection with a committed coverage gate**: each leaf claimed by exactly one case,
   each case claiming exactly one leaf, and every discovered kind of case actually executed by a
-  runner. The gate is part of the project's own suite.
+  runner. The gate is part of the project's own suite. (enforce-bijection-committed)
 
 - **A *kind* is one way a requirement can be asserted** — a rendered-state snapshot, a driven
   gesture, a pure rule, a boundary-enforced rule. Route each leaf to the kind that can actually
-  observe what it asserts. Keep kinds **extensible** — adding one is a self-contained drop. (3)
+  observe what it asserts. Keep kinds **extensible** — adding one is a self-contained drop.
+  (kind-way-requirement)
 
 - **A kind may be a singleton.** "The product loads in the real environment" is a perfectly good
   leaf whose mechanism is one end-to-end case; the kind names the *way of asserting*, not a
-  population of cases.
+  population of cases. (kind-may-be)
 
 - **Give each kind's runner a named lane, and keep the default lane fast and deterministic.** Heavy
   real-environment kinds gate the merge from CI without slowing the inner loop; their trust rules
   (twice-green before merging, self-diagnosing on failure) are canon in the writing-tests skill.
+  (give-each-kinds)
 
 - **Actuals come from the real code.** Whatever the kind, the proof drives the shipped entry points
   under a faithful harness — never a parallel re-implementation of what production "should" do
-  (the writing-tests skill owns the general rule).
+  (the writing-tests skill owns the general rule). (actuals-come-real)
 
 ## 3. Expected results are owner-owned
 
 - **The committed expecteds are the owner's approval record of the product.** A case's success
-  criterion encodes what the owner accepted. (4)
+  criterion encodes what the owner accepted. (committed-expecteds-owners)
 
 - **The contract takes two honest shapes.** *Artifact-expected* (a committed render, an exact-values
   file): the owner approves a committed file — an agent may **propose** the expected for a
   brand-new leaf, but never modifies a committed one to make a failing case pass. *Coded-expected*
   (an assertion, a `verify()`): the expected **is** the assertion — keep it outside the write
   surface of whatever writes the product code, so passing by weakening the check isn't even
-  expressible.
+  expressible. (contract-takes-honest)
 
 - **On a mismatch, surface actual vs. expected (and the diff) and ask.** The re-baselining procedure
   — diff shown, owner approves, only then re-baseline — is canon in the writing-tests skill, and
-  it applies uniformly: to a moved render, a changed values file, and a failing assertion alike. (5)
+  it applies uniformly: to a moved render, a changed values file, and a failing assertion alike.
+  (mismatch-surface-actual)
 
 - **Expected changes ride the normal review flow** — they land in the diff like code, so the owner
-  approves the product change and its new expected together, once.
+  approves the product change and its new expected together, once. (expected-changes-ride)
 
 ## 4. State a requirement once; prove it at every boundary that enforces it
 
 - **A product rule with more than one enforcing tier gets sibling leaves under one statement** —
   e.g. "only signed-in users can post": the surface's half (the client sends credentials) and the
   boundary's half (the server rejects an unauthenticated write) are separate proofs of one
-  requirement.
+  requirement. (product-rule-enforcing)
 
 - **The proof lives where the rule is actually enforced.** A surface-side test of a server-enforced
   rule proves only that the client cooperates, not that the boundary holds; if the real enforcement
-  is the backend, a leaf must exist there, exercised against the real handler.
+  is the backend, a leaf must exist there, exercised against the real handler. (proof-lives-rule)
 
 ## 5. A supported-targets matrix is spec, not folklore
 
 - **When part of the product's value is breadth over external targets** — supported sites, file
   formats, providers, locales — each supported target is its own leaf, so dropping a target is a
-  visible spec change, not a silent regression.
+  visible spec change, not a silent regression. (part-products-value)
 
 - **Prove each target against a committed, real sample of it** (a captured page, a genuine file),
   with the owner-reviewed exact-values expectation committed beside it — capture the sample first
   and read the expecteds off the committed bytes (canon in the writing-tests skill). A hand-invented
-  sample proves support for a target the world doesn't actually serve.
+  sample proves support for a target the world doesn't actually serve. (prove-each-target)
 
 - **Adding a target is a documented, repeatable flow** that lands the new leaf, its real sample, and
-  its reviewed expected together.
+  its reviewed expected together. (adding-target-documented)
 
 ## 6. Green means "claimed", not "fully verified" — track the gap honestly
 
@@ -93,32 +99,32 @@
   is still a model of the platform; the honest sentence pattern is "this proof confirms our code
   *asks* for the action, not that the platform *performs* it". Put that statement where readers of
   the spec will see it — a banner on the requirements doc, linking the issue that tracks closing
-  the gap — rather than in a test README footnote.
+  the gap — rather than in a test README footnote. (say-harness-cannot)
 
 - **Deliberate gaps are marked at the leaf and committed, never remembered.** A leaf that can't be
   faithfully verified yet stays in the spec, visibly provisional (a loud "to be decided" marker, and
   a pointer to whatever covers it meanwhile), and is listed in a committed allowlist the coverage
   gate checks — the allowlist is the burn-down list, shrunk deliberately. Prefer a real
   validation; reach for the marker only for a genuinely undecided edge case or a not-yet-wired
-  harness.
+  harness. (deliberate-gaps-marked)
 
 ## 7. The owner reviews the product surface, not the internals
 
 - **Embed regenerated renders of the real states in the spec itself** — the requirements document
   doubles as a gallery of what the product actually shows, generated from the shipped code, so
-  approving the spec *is* approving the product's appearance.
+  approving the spec *is* approving the product's appearance. (embed-regenerated-renders)
 
 - **Regenerate, never hand-edit.** The gallery is derived output of a committed generator; fixing it
-  means fixing the source (or the generator) and regenerating. (6)
+  means fixing the source (or the generator) and regenerating. (regenerate-hand-edit)
 
 ## 8. Ship automatically while `main` stays green
 
 - **`main` is releasable at all times, and automation does the releasing** — a release (and, where
   the platform has one, store publication) cuts from `main` on its own cadence without a human build
   step. Keeping `main` green *is* the release gate: a red `main` is a shipping outage, fixed before
-  new work.
+  new work. (main-releasable-all)
 
 - **The version users see moves deliberately.** Automation may patch-bump to ship, but a meaningful
   version change is a decision made on `main`, not a side effect. The concrete release contract —
   workflows, artifacts, store procedures — belongs to the project's release pack or release doc,
-  not here.
+  not here. (version-users-see)
