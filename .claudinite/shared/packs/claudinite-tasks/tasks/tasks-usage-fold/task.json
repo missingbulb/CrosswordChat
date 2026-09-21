@@ -4,7 +4,7 @@
   "description": "Folds what the repository's own scheduled machinery cost and how well it ran — runs, jobs, billed minutes and spend per workflow, API calls and wall time per run, and per task the outcomes, parks and latency samples its closed work items answer.",
   "trigger": "schedule",
   "preconditions": [
-    "due:daily",
+    "schedule:at-most-daily",
     "runs-since-fold"
   ],
   "expected_outcome": "amend_existing_or_create_new_pr",

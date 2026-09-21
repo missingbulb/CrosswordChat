@@ -495,7 +495,7 @@ const COLLECTORS = {
 // Every work item updated since `sinceIso`, off the issues list. A page that
 // could not be read THROWS — the collector then records `{ error }` and every
 // term over it fails loud — because a truncated history reads as a shorter one,
-// and "no run since the anchor" on that evidence is a double run.
+// and "no run in this period" on that evidence is a double run.
 async function readWorkItems(gh, repo, sinceIso) {
   const out = [];
   for (let page = 1; ; page += 1) {

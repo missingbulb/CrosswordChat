@@ -4,7 +4,7 @@
 // `validate-dispatch` validate against this one function, so the accepted shape
 // can never drift between the two surfaces.
 
-import { ACCEPTED_FREQUENCIES, cadenceTermFor, cadenceOf, statesConditions, DUE_TERM } from './calendar.mjs';
+import { ACCEPTED_FREQUENCIES, cadenceTermFor, cadenceOf, normalizeCadenceTerms, scheduleTermFor, statesConditions } from './calendar.mjs';
 import { MODEL_FAMILIES } from './model-map.mjs';
 import { EXECUTING_LEASH_MS } from '../../public/task-constants.mjs';
 import { normalizePolicy } from './merge-policy.mjs';
@@ -99,10 +99,16 @@ export function normalizeTaskDeclaration(decl, terms = new Map()) {
       out.preconditions = term === null || stated.some((e) => String(e).trim() === term) ? stated : [term, ...stated];
     } else {
       // An illegal frequency is still reported, as the illegal condition it becomes.
-      out.preconditions = [`${DUE_TERM}:${out.frequency}`, ...stated];
+      out.preconditions = [scheduleTermFor(out.frequency), ...stated];
     }
     delete out.frequency;
   }
+  // THE CADENCE-SPELLING DOOR (calendar.mjs, DUE_TERM). `due:<cadence>` is the same
+  // term under the name it was introduced with, permanently accepted because a task
+  // declaration is member-owned data no vendoring pass rewrites. Rewriting it here
+  // means every reader downstream of a loaded declaration sees one spelling, and the
+  // evaluator's own alias covers the callers that did not come through this door.
+  out.preconditions = normalizeCadenceTerms(out.preconditions);
   // A declaration stating no conditions carries the empty expression from here on,
   // so every reader judges one array: at a pick it holds, at a tick it is never asked.
   if (out.preconditions === undefined) out.preconditions = [];

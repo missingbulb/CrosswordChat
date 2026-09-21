@@ -22,7 +22,7 @@ reports it.
 | Answering "why did the mount not update" | medium | correctness | prose: <50 words |
 | A referenced file absent from the mount | medium | correctness | prose: <100 words |
 | An engine comment citing a design doc | low | complexity | prose: <100 words |
-| A silent check run is clean | low | complexity | prose: <100 words |
+| A silent check run is clean | low | complexity | prose: <50 words |
 | Pushing a change the world sweep scans | medium | complexity | prose: <50 words |
 
 ## Checks

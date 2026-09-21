@@ -174,11 +174,9 @@ function vendoredSet(root, files) {
 // lands on its own. It is an override rather than a materialized preference
 // because every member wants the same thing, and the one that doesn't should have
 // to say so (#1252).
-// `taskScheduler` is the per-repo maintenance anchor the vendored hourly scheduler
-// reads (docs/PRINCIPLES.md) — { dailyHour, weeklyDay, monthlyDay },
-// all UTC. Absence means the documented defaults, so an omitted key is not an
-// error; a present one is range-validated at load below. Its declaration is also
-// the per-repo cutover marker during the scheduling rollout (MIGRATION Phase 0.6).
+// `taskScheduler` is where the vendored scheduler's own parameters are declared
+// (docs/PRINCIPLES.md): which tasks this repo does not want instantiated, where its
+// agentic phases are dispatched. Absence is legal and means the documented defaults.
 // Nothing writes into a member's README any more, so there is no `badges` key here:
 // a member carrying the stale one gets the unknown-setting error below, and the
 // wiring converge clears it.
@@ -225,10 +223,18 @@ const KNOWN_CONFIG_KEYS = [...CONFIG_KEYS, ...LEGACY_CONFIG_KEYS];
 // @legacy-tolerance advisory:legacy-shape-in-use retire:#1846
 export const isDormant = (config) => config?.dormant === true;
 
-// The keys a `schedule` object may carry, and the canonical weekday vocabulary
-// (mirrored from the scheduler's own WEEKDAYS — kept as a literal here so the checks
-// layer does not import the scheduler).
+// The keys a `schedule` object may carry.
 const SCHEDULE_KEYS = ['dailyHour', 'weeklyDay', 'monthlyDay', 'dispatch', 'agenticTaskInvocationEndpoints', 'endpoints', 'disabledTasks'];
+
+// The per-repo scheduling anchor, retired (#1995). A cadence now measures whole UTC
+// periods, and the scheduler workflow's own cron hours are derived from the repo name
+// at scaffold, so nothing reads these three. They stay ACCEPTED rather than becoming
+// unknown keys, because an unknown key is a blocking settings error and every member
+// still carries them until its own converge runs the record that strips them out;
+// `legacy-shape-in-use` is the advisory that tells each holder, and #2181 takes them
+// off SCHEDULE_KEYS once the record has had its window.
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#2181
+export const RETIRED_SCHEDULE_KEYS = ['dailyHour', 'weeklyDay', 'monthlyDay'];
 
 // What the endpoint map is called. `endpoints` said nothing about WHICH endpoints —
 // a scheduler has several kinds it could mean — where these are exactly one thing:
@@ -248,7 +254,6 @@ export const LEGACY_ENDPOINTS_KEY = 'endpoints';
 // declaration that says otherwise. Declaring `"queue"` is still accepted — it says
 // what is true — and omitting it is the normal shape.
 export const DISPATCH_MODES = ['queue'];
-const SCHEDULE_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // The properties a `packs` entry object may carry: the pack's parameters
 // (`config`), its adoption-interview answers (`answers` — the owner's verbatim
@@ -399,29 +404,17 @@ export function loadConfig(root) {
     if (entry.config !== undefined) packConfig[entry.id] = entry.config;
   }
 
-  // --- taskScheduler: the per-repo maintenance anchor (UTC). Range-validated at
-  // load so a bad anchor is a settings error like any other; absence is legal
-  // (the scheduler fills the documented defaults). The value passes through
-  // unchanged for the scheduler to normalize.
+  // --- taskScheduler: the scheduler's own parameters. Absence is legal, and the
+  // value passes through unchanged for the scheduler to read.
   let taskScheduler = null;
   if (raw.taskScheduler !== undefined) {
     if (raw.taskScheduler === null || typeof raw.taskScheduler !== 'object' || Array.isArray(raw.taskScheduler)) {
-      errors.push({ what: '"taskScheduler" must be an object', fix: 'e.g. { "dailyHour": 4, "weeklyDay": "Sun", "monthlyDay": 1 }' });
+      errors.push({ what: '"taskScheduler" must be an object', fix: 'e.g. { "disabledTasks": [] }' });
     } else {
       for (const key of Object.keys(raw.taskScheduler)) {
         if (!SCHEDULE_KEYS.includes(key)) {
           errors.push({ what: `unknown "taskScheduler" setting "${key}"`, fix: `remove it or fix the name — valid taskScheduler settings: ${SCHEDULE_KEYS.join(', ')}` });
         }
-      }
-      const { dailyHour, weeklyDay, monthlyDay } = raw.taskScheduler;
-      if (dailyHour !== undefined && !(Number.isInteger(dailyHour) && dailyHour >= 0 && dailyHour <= 23)) {
-        errors.push({ what: `"taskScheduler.dailyHour" must be an integer 0–23 (UTC), got ${JSON.stringify(dailyHour)}`, fix: 'set an hour of the day, 0 through 23' });
-      }
-      if (weeklyDay !== undefined && !SCHEDULE_WEEKDAYS.includes(weeklyDay)) {
-        errors.push({ what: `"taskScheduler.weeklyDay" must be one of ${SCHEDULE_WEEKDAYS.join(', ')}, got ${JSON.stringify(weeklyDay)}`, fix: 'name a weekday, e.g. "Sun"' });
-      }
-      if (monthlyDay !== undefined && !(Number.isInteger(monthlyDay) && monthlyDay >= 1 && monthlyDay <= 31)) {
-        errors.push({ what: `"taskScheduler.monthlyDay" must be an integer 1–31, got ${JSON.stringify(monthlyDay)}`, fix: 'set a day of the month, 1 through 31 (clamped to the month length)' });
       }
       // The tasks this repo does not want instantiated (docs/PRINCIPLES.md,
       // "What is not a precondition"). Repo shape — "this repo ships the store

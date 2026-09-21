@@ -13,7 +13,7 @@ rules make that failure loud, local and cheap to fix.
   redesign then costs one directory, its blast radius is knowable before you start, and
   everything outside it becomes testable without a browser. Enforce the boundary by token —
   fail the build if the host's class prefix appears outside that module — since the discipline
-  is what makes the rest true. (1)
+  is what makes the rest true. (reaching-hosts-dom)
 
 - **Identifying an element on the host** — cast a net, don't bet on one class name: a family
   matcher (`[class*="toolbar"]`) over an exact one, attribute and role hooks the host churns
@@ -21,14 +21,14 @@ rules make that failure loud, local and cheap to fix.
   underneath ("a visible container whose text says X with a button in it, whatever its classes
   are called"). Make visibility part of identity — hosts keep dismissed modals in the DOM, so a
   match that ignores `display`/`visibility`/zero-size keeps reporting a splash you already
-  cleared.
+  cleared. (identifying-element-host)
 
 - **Editing the file that holds those selectors** — record what you verified them against and
   when: the date, the page, the captured markup you read them from, and above all the
   **negative** findings (this state class sits on the `<rect>` and not the `<g>`; that button
   exposes no `aria-pressed` and no class change; those text nodes carry no distinguishing
   class). It is the one file in your codebase whose truth lives on somebody else's server, and
-  each of those negatives is an hour nothing else in the repo can give back. (2)
+  each of those negatives is an hour nothing else in the repo can give back. (editing-file-holds)
 
 ## Proving it still works
 
@@ -38,12 +38,13 @@ rules make that failure loud, local and cheap to fix.
   throw** — a probe that dies on the first missing element reports one fault and hides the
   other nine — so collect a row per selector and return them all, and have it capture forensics
   for what you could *not* read, so the next report arrives with the evidence already in it.
+  (shipping-users)
 
 - **Testing the read/write/watch cycle** — mirror the host in a saved, simplified fixture that
   matches your selectors exactly, and drive that in CI. Its limit is the same as its virtue:
   **the fixture only ever shows you the markup you already knew about**, so a passing suite is
   never evidence about the live page. Keep a manual-test document for what only the real host
-  can answer, and treat every live finding as a fixture update.
+  can answer, and treat every live finding as a fixture update. (testing-read-write)
 
 ## Driving the host
 
@@ -53,7 +54,7 @@ rules make that failure loud, local and cheap to fix.
   input silently, and the re-read is the only thing that separates those from success. Poll the
   re-read rather than doing it synchronously after the last dispatch — the host renders
   asynchronously, so the DOM immediately after your event is the DOM *before* the app processed
-  it.
+  it. (writing-host)
 
 - **Dispatching a synthetic keystroke** — mirror what a real one carries, including the
   deprecated fields: the browser fills `keyCode`/`which`/`charCode` on every real keystroke,
@@ -61,13 +62,13 @@ rules make that failure loud, local and cheap to fix.
   long-lived key-handling layer still branches on them. A 0 matches nothing, so the handler
   runs and nothing happens — indistinguishable from "the app ignores untrusted events". Send
   the full keydown → keypress → keyup sequence, and build the init in **one helper** spread at
-  a single dispatch site, so fidelity is one function's job. (3)
+  a single dispatch site, so fidelity is one function's job. (dispatching-synthetic-keystroke)
 
 - **Toggling a host control to do your work** — put it back afterwards, and design for not
   being able to read it. You will often be unable to tell what state you are toggling (a button
   with no `aria-pressed` and no class change makes "on or off?" genuinely unanswerable), so
   treat the unreadable case as the **normal** one: fall back to click parity and let the
-  feature that depends on it degrade, rather than failing the operation.
+  feature that depends on it degrade, rather than failing the operation. (toggling-host-control)
 
 ## Sharing the page
 
@@ -75,13 +76,13 @@ rules make that failure loud, local and cheap to fix.
   Veils, pause screens and modals blank the content, and a watcher that diffs first reads that
   as the user having cleared everything; report the state once and return. Absence of the
   content is not absence of the app either — a pre-content splash can keep the real markup out
-  of the DOM for minutes.
+  of the DOM for minutes. (watching-host-changes)
 
 - **Building anything the user drives by voice, gesture or automation** — expect the host's own
   idle timers to fire, because your user is active and the host cannot tell. Nudge it with a
   real event that mutates nothing (a bare `Shift` keydown/keyup), and drive that nudge from
   real user activity, never from a timer of your own: when the user really has gone quiet, the
-  host *should* time out and your session should end with it.
+  host *should* time out and your session should end with it. (building-anything-user)
 
 - **Loading on the host's page at all** — doing nothing is the resting state, because your code
   loads whether or not the user is using you. Create watchers on demand and stop them with the
@@ -89,4 +90,4 @@ rules make that failure loud, local and cheap to fix.
   explicit, minimal carve-out, mount it with an observer that **disconnects the moment the
   element lands**, and give up only when the host shows no app markup at all — a slow render
   must not cost you the mount, and a page the app never loads on must not leave you waiting
-  forever.
+  forever. (loading-hosts-page)

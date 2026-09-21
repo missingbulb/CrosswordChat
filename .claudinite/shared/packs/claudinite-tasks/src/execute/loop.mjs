@@ -95,12 +95,9 @@ export function conflictsWithEarlierClaim(item, myClaimId, others, { taskAfter =
 // reason. The roll — `Not-before` stamped, open-blocked, waiting out the period —
 // is gone, and so is the schedule board: a scheduled task's next occurrence is
 // the scheduler run's ask at its next tick, and the closed item is itself the
-// history the task's cadence term reads (a `due:` period this item started in is
+// history the task's cadence term reads (the period this item started in is
 // consumed by it). `standing` marks whether the close should say so.
-// The `(item, task, schedule, now, reason)` signature is kept — callers and
-// fielded tests pass all five, and the standing/ad-hoc distinction still
-// shapes the close's wording.
-export function noGoPlan(item, task, schedule, now, reason) {
+export function noGoPlan(item, task, now, reason) {
   return {
     kind: 'close',
     outcome: STATUS_REJECTED,
@@ -340,7 +337,7 @@ async function executeItem({
   // THIS OCCURRENCE, its own run history excluding it.
   const fields = itemFacts(item);
   const signals = await collectSignalsFor(task, at, item);
-  const verdict = evaluatePrecondition(task, signals, config.packConfig?.[task.pack] ?? {}, fields, at, schedule);
+  const verdict = evaluatePrecondition(task, signals, config.packConfig?.[task.pack] ?? {}, fields, at);
 
   // A PRECONDITION THAT COULD NOT ANSWER IS A RUN FAILURE, NOT A VERDICT (F27). A
   // decline is a decision about the world; one taken on an API that would not answer
@@ -356,7 +353,7 @@ async function executeItem({
   }
 
   if (verdict.run !== true) {
-    const plan = noGoPlan(item, task, schedule, at, verdict.reason || 'no work');
+    const plan = noGoPlan(item, task, at, verdict.reason || 'no work');
     // A DECLINED REQUEST IS DISARMED IN THE SAME CONVERGENCE (PRINCIPLES.md).
     // Nothing else would: an issue left carrying `claude-queued` after its run was
     // refused is one no later scheduler run adopts and no person is told about, and one

@@ -34,7 +34,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadPacks, isActive, SHARED_SUBDIR } from './pack-registry.mjs';
+import { loadPacks, isActive, SHARED_SUBDIR, TEMP_PACKS_SUBDIR, SESSION_USER_PACK } from './pack-registry.mjs';
+import { shipsPrepareStep } from './pack-conventions.mjs';
 import { settingsPath } from '../settings-file.mjs';
 
 // The index, and the line a repo's CLAUDE.md carries to pull it in. One definition:
@@ -45,6 +46,21 @@ export const RULES_INDEX_IMPORT = '@.claudinite/claudinite-rules.GENERATED.md';
 
 // `@` paths are POSIX in a memory file whatever the host separator is.
 const posix = (p) => p.split(sep).join('/');
+
+// The prose of the pack copied for the person in front of the session, as the index
+// addresses it. A literal, because the index is written when a repo converges and the
+// directory is written when a session starts: the generator has never seen it and cannot
+// discover it.
+//
+// Spelled by hand rather than through `relative()`, which resolves a relative path against
+// `process.cwd()` and so reaches for a working directory at import time - in a process
+// whose cwd has been deleted that throws `uv_cwd` and faults the module. Both operands are
+// repo-relative constants under the index's own directory, so the arithmetic is a prefix.
+const SESSION_USER_PROSE = (() => {
+  const prefix = `${posix(dirname(RULES_INDEX_FILE))}/`;
+  const prose = posix(join(TEMP_PACKS_SUBDIR, SESSION_USER_PACK, 'RULES.md'));
+  return prose.startsWith(prefix) ? prose.slice(prefix.length) : prose;
+})();
 
 // The repo's declared pack list, read the way every other loader reads it. A missing
 // or malformed settings file means nothing is declared.
@@ -89,12 +105,18 @@ const prosePathIn = (pack, corpusRoot) => (
 export function ruleImports(active, { indexDir, corpusRoot }) {
   const imports = [];
   for (const pack of active) {
+    if (pack.temp) continue; // copied content rides the literal line below, never a discovered one
     if (!pack.prose) continue;
     const prosePath = prosePathIn(pack, corpusRoot);
     if (!existsSync(prosePath)) continue;
     // Relative to the INDEX, because that is what the harness resolves against.
     imports.push({ id: pack.id, path: posix(relative(indexDir, prosePath)) });
   }
+  // LAST, and unconditional on anything being there: a person's own rules are read
+  // against the project's, so they follow them. The import appears only where a pack
+  // that copies exists to fill it, and the step runner guarantees the file (even empty)
+  // in every session of such a repo.
+  if (active.some(shipsPrepareStep)) imports.push({ id: SESSION_USER_PACK, path: SESSION_USER_PROSE });
   return imports;
 }
 

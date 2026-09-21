@@ -86,6 +86,19 @@ git_config() {
 
 hooklog orchestrator "start"
 run_step git-config git_config
+# BEFORE EVERYTHING THAT READS THE SESSION'S PACK SET. A pack may COPY another pack into
+# the session - content belonging to the person in front of it rather than to the
+# repository, which no tracked tree can carry. The mount below, the self-test after it and
+# the rules index all read that set, so a copy arriving later is a copy nothing sees.
+#
+# NOTHING IT PRINTS IS SESSION CONTEXT, which is why this is the one step whose stdout is
+# redirected: a prepare step is doing something, not saying something, and what it has to
+# say reaches the session through the step that runs in the reporting phase. The redirect
+# is here rather than left to the runner because this is where the channel is decided, and
+# a step that wrote to the wrong one would spend the session's context without anyone
+# choosing to.
+pack_session_prepare() { node "$corpus/engine/pack_loader/run-pack-session-start.mjs" --prepare >&2; }
+run_step pack-session-prepare pack_session_prepare
 # CONVERGE BEFORE REPORTING. This step regenerates the .claude/skills mounts to match
 # the declared packs, and the self-test below judges those same links — so running it
 # first is what makes that judgment true of the session the person actually gets. The

@@ -4,7 +4,7 @@
   "description": "Reads where this repository's CI time goes from the Actions run history, keeps a standing record of each workflow's median, and hands an agent a real regression already localised to a workflow and a before-and-after delta.",
   "trigger": "schedule",
   "preconditions": [
-    "due:weekly",
+    "schedule:at-most-weekly",
     "substantive-change || prs-touched",
     "last-run-not-parked"
   ],

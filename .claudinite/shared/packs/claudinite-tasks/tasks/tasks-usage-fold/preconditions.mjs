@@ -35,18 +35,16 @@ export function foldedThroughAt(root) {
 export const terms = {
   'runs-since-fold': {
     signals: [],
-    holds(_signals, { now, schedule }) {
+    holds(_signals, { now }) {
       // The scheduler and the executor both run with the checkout as their working
       // directory, and the fold's own worker takes the same root the same way.
       const root = process.env.CLAUDINITE_REPO_ROOT || process.cwd();
       const mark = foldedThroughAt(root);
       if (!mark) return { holds: true, reason: 'nothing has been folded yet — every run this repo has made is uncounted' };
-      const anchor = mostRecentAnchor('daily', schedule, now);
-      if (!anchor) return { holds: true, reason: `runs are folded through ${mark}, and this repo states no daily anchor to measure it against` };
-      const at = anchor.toISOString();
+      const at = mostRecentAnchor('daily', now).toISOString();
       return mark < at
-        ? { holds: true, reason: `runs are folded through ${mark}, before the most recent anchor ${at} — the machinery has run since` }
-        : { holds: false, reason: `runs are folded through ${mark}, past the most recent anchor ${at} — nothing has run since the last fold` };
+        ? { holds: true, reason: `runs are folded through ${mark}, before this UTC day opened at ${at}: the machinery has run since` }
+        : { holds: false, reason: `runs are folded through ${mark}, inside the UTC day that opened at ${at}: nothing has run since the last fold` };
     },
   },
 };

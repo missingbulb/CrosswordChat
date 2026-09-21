@@ -8,44 +8,44 @@ measured doing, and which files carry the evidence.
   `Snapshot` in and `enterAnswer` out (REQ-PAGE-011); `extension-test/unit/arch.test.js` fails if
   the `xwd__` prefix appears outside it, and that wall is why `puzzle-model/`, `matching/` and
   `conversation/` are testable with no browser. Inside it, selectors change in `selectors.js`
-  and nowhere else.
+  and nowhere else. (reaching-hosts-dom)
 
 - **Editing `page-adapter/selectors.js`** — keep recording the dated **negative** findings that
   make up most of its value: the state classes sit on the `<rect>` and not the `<g>`, the pencil
   button exposes no `aria-pressed` and no class change, and the letter/number `<text>` nodes
-  carry no distinguishing class.
+  carry no distinguishing class. (editing-page-adapter)
 
 - **Hearing that the extension stopped working** — run `page-adapter/probe.js` (REQ-PAGE-009)
   from the in-page menu (MT-01) first; it turns the report into "the clue-list wrapper selector
-  matches 0, want 2".
+  matches 0, want 2". (hearing-extension-stopped)
 
 - **Writing into the grid** — click each cell and type one letter, which is immune to the host's
   advance-on-type and skip-filled settings, then poll the DOM back to confirm (REQ-PAGE-007).
   The keystroke fidelity that makes those events land is `page-adapter/writer.js`'s
-  `keyEventInit`/`typeKey`, verified live in MT-02.
+  `keyEventInit`/`typeKey`, verified live in MT-02. (writing-grid)
 
 - **Borrowing pencil mode for a write** — restore it afterwards (REQ-PAGE-012); the write's
-  pencil-mode fallback is REQ-ANS-019.
+  pencil-mode fallback is REQ-ANS-019. (borrowing-pencil-mode)
 
 - **Keeping a voice session alive on nytimes.com** — the host auto-pauses a quiet puzzle after
   ~30 s of no keyboard input and a voice solver touches no keyboard, so the adapter sends a bare
   `Shift` keydown/keyup on every heard command (REQ-LIFE-017), driven by real user activity and
-  never by a timer of ours.
+  never by a timer of ours. (keeping-voice-session)
 
 - **Diffing the grid for changes** — check for the pause veil before diffing
   (`page-adapter/watcher.js`): it empties the visible entries, which reads as the user having
-  cleared everything.
+  cleared everything. (diffing-grid-changes)
 
 - **Speaking from the content script** — `chrome.tts` is not exposed there, so relay it over the
   `cc-session` port: `speech/remote-tts-port.js` presents the same contract as
-  `speech/tts-port.js`, so the orchestrator cannot tell the difference.
+  `speech/tts-port.js`, so the orchestrator cannot tell the difference. (speaking-content-script)
 
 - **Guarding against hearing our own TTS as a transcript** — the echo the relay's OS-rendered
-  audio leaves behind is the string-match guard's, REQ-SPCH-005.
+  audio leaves behind is the string-match guard's, REQ-SPCH-005. (guarding-against-hearing)
 
 - **Rehearsing the read/write/watch cycle** — drive `extension-test/fixtures/fake-nyt/`
   (`npm run fixture`), and `npm run build:dev` to widen the matches to `localhost:8787` (MT-23);
-  `dev/docs/MANUAL-TESTS.md` is the manual-test document.
+  `dev/docs/MANUAL-TESTS.md` is the manual-test document. (rehearsing-read-write)
 
 - **Adding anything at load time** — there is exactly one carve-out, mounting the toolbar button
-  (REQ-LIFE-012); nothing else runs between sessions (REQ-NFR-004).
+  (REQ-LIFE-012); nothing else runs between sessions (REQ-NFR-004). (adding-anything-load)

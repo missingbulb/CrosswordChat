@@ -1,6 +1,8 @@
 ---
 name: adopt-claudinite
 description: Bootstrap Claudinite into a consuming repo — mount, hooks, checks, skills. Use when asked to bootstrap, adopt, or set up Claudinite, or to baseline a repo to pick up updates.
+metadata:
+  body: workflow
 ---
 
 Follow [bootstrap.md](../../../../bootstrap.md)'s **fast path** — canonical there, and idempotent
@@ -8,13 +10,22 @@ by design. Everything mechanical is one `bootstrap.mjs` invocation from the fetc
 adoption is seven steps: open the adoption issue **first** (the work-scope sweep blocks a commit
 that references no issue), fetch the canon and run the script, ask **every** pending interview
 question it reports in one batched `AskUserQuestion` pass (up to 4 per call, the project-class
-question folded in) and record the answers via `--answer` re-runs, **create the executor routine
+question folded in, and the instruction-conversion offers below) and record the answers via
+`--answer` re-runs, **create the executor routine
 and write its endpoint into the declaration** (Part 6 — this session's work, and before the
 commit so it lands in the same PR), land the adoption as one commit referencing the issue,
 capture the adoption session itself once the PR lands (the fast path's capture step — no
 SessionEnd hook was loaded when this session started, so nothing else will), then file **one
 issue** carrying the script's HANDOVER block, a checkbox per step. Never re-enact the doc's parts
 step by step — they document what the script converges.
+
+**The instructions the repo already has.** A repo adopting usually carries a `CLAUDE.md`, and this
+is the moment its rules become carriers instead of being copied into a pack by hand later. In the
+same batched pass, ask whether to convert it and whether to trim it afterwards, and - only where
+the session can read that the file exists - whether to convert the person's machine-local
+`~/.claude/CLAUDE.md` as well. Every yes is the growth pack's `extract-from-instructions`, landing
+in this same PR; that skill's routing is what decides which rule is the repo's and which is the
+person's, and it never writes the machine-local file.
 
 Two things the fast path spells out and a session keeps getting wrong. A fresh project's
 interview takes **two** passes, because declaring the project-class pack pulls in a `requires`

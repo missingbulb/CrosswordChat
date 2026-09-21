@@ -1,6 +1,8 @@
 ---
 name: revalidating-rules
 description: Re-probe the pack rules whose truth lives outside the repository — harness tool contracts, token reach, whether an MCP tool exists, a platform's behaviour — and correct the ones that have gone stale. Use when a revalidation sweep runs over a corpus of packs, or when asked whether a rule's environmental claim still holds.
+metadata:
+  body: workflow
 ---
 
 # Revalidating a rule against the world
@@ -53,12 +55,13 @@ Two rules bound it, and they bind every run whatever corpus it is working:
    outcome available: it is unfalsifiable afterwards, and it removes a capability from every future
    session.
 
-## The referenced rules — reaffirm against the recorded reason
+## The recorded reasons - reaffirm against the element's file
 
-A pack's `references.md` (the [writing-pack-prose](../writing-pack-prose/SKILL.md) convention: a rule
-ending `(n)` cites entry *n*; a `- **(check:<id>)**` entry covers a check) widens what a revalidation
-can judge, because the entry records **what would retire the rule** — the one thing a probe of the
-environment alone cannot know. For each marked rule and each covered check in the corpus:
+A pack's `provenance/` (the [writing-pack-prose](../writing-pack-prose/SKILL.md) convention: a rule
+ending `(slug)` names its file; a check's file is named by its id) widens what a revalidation can
+judge, because the file's entries record **what would retire the rule** - the one thing a probe
+of the environment alone cannot know. For each element in the corpus, read its file's `Source`,
+`Reason` and `Retire when` before probing:
 
 - A **workaround** entry re-probes the recorded issue where the probe rules allow: if the problem it
   routed around no longer reproduces, the rule (or check) is a retirement candidate — proposed for
@@ -69,9 +72,14 @@ environment alone cannot know. For each marked rule and each covered check in th
 - An **owner decision** entry is not probeable — verify only that the decision hasn't been superseded
   in the repo's own record, and otherwise report it `doc-verified`.
 
-A rule with no marker is judged exactly as before — the mechanism is opt-in per rule, and an unmarked
-rule is never flagged for lacking one. Correct a stale *entry* in the same change as its rule, and
-keep the entry's number: numbers are stable identifiers.
+What the run writes back, through `provenance.mjs append` in the same change: `reaffirmed` only
+where the probe produced **new** evidence or changed `Retire when` - a rule found still true on the
+old evidence gets no entry, and the run's pull request body is its record; `reworded` or `retired`
+where the probe corrected the rule. An entry is never edited: a stale reason is answered by a new
+entry. An **empty** file met on the way - an element whose history is not yet written - is filled
+first, from `provenance.mjs history <pack> <element>`, source-first, as the
+[backfilling-provenance](../backfilling-provenance/SKILL.md) skill describes; that is how a
+member's local pack backfills on this cadence with no pass of its own.
 
 ## Correcting what is stale
 

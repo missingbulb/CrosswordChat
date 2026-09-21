@@ -34,7 +34,7 @@ export function readSettings(projectRoot) {
 
 export async function activePacks(projectRoot, declared) {
   const { loadPacks, isActive } = await import(join(corpusRoot, 'engine', 'pack_loader', 'pack-registry.mjs'));
-  const packs = await loadPacks({ localRoot: projectRoot });
+  const packs = await loadPacks({ localRoot: projectRoot, session: true });
   return packs.filter((p) => isActive(p, { packs: declared }));
 }
 
@@ -143,7 +143,7 @@ async function derive(projectRoot, declared) {
     engine('engine/pack_loader/pack-registry.mjs'), engine('engine/pack_loader/path-scoped-skills.mjs'),
     engine('engine/checks/run-active-pack-rules.mjs'),
   ]);
-  const packs = (await loadPacks({ localRoot: projectRoot })).filter((p) => isActive(p, { packs: declared }));
+  const packs = (await loadPacks({ localRoot: projectRoot, session: true })).filter((p) => isActive(p, { packs: declared }));
   const derived = {
     scoped: pathScopedSkills(packs),
     triggered: triggeredSkills(packs),

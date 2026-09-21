@@ -41,15 +41,50 @@
 // COMPUTE at session time — a static count is already in the prose the reader has.
 // No channel configured, or a file that cannot be written: the facet is dropped and
 // the step's own contribution is unaffected.
-import { existsSync, readFileSync, appendFileSync } from 'node:fs';
+import { existsSync, readFileSync, appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { settingsPath } from '../settings-file.mjs';
+import { TEMP_PACKS_SUBDIR, SESSION_USER_PACK } from './pack-registry.mjs';
+import { PREPARE_FILE, shipsPrepareStep } from './pack-conventions.mjs';
+
+// The rules index imports the copied user pack's prose by a literal path, so that path
+// must resolve in every session - including the ones where nothing was copied, which is
+// every session in a repo whose packs copy nothing for this person. An import with no
+// file behind it has no defined behavior on the memory channel and no way to report one,
+// so the runner writes the empty answer rather than leave the question open.
+//
+// Written ONLY where a step exists that could copy: the index only carries the import
+// there, and a repo with no such pack should end the session with no such directory.
+// Never over content - a step that has already copied this session owns the file.
+function ensureSessionUserProse(projectRoot, packs) {
+  if (!packs.some(shipsPrepareStep)) return;
+  const dir = join(projectRoot, TEMP_PACKS_SUBDIR, SESSION_USER_PACK);
+  const file = join(dir, 'RULES.md');
+  if (existsSync(file)) return;
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(file, '<!-- No personal pack was copied into this session. -->\n');
+  } catch { /* an unwritable temp root is the step's problem to report, not the runner's */ }
+}
 
 // The file an active pack contributes, if it ships one. Named for when it runs, and
 // deliberately the mirror of the session-end runner's STEP_FILE.
 export const STEP_FILE = 'session-start.mjs';
+
+// THE EARLIER PHASE this runner also serves, under `--prepare`: the steps that run before
+// anything reads the session's pack set - the skill mount, the self-test, the rules index.
+// A pack that must PUT SOMETHING THERE for those to find (a pack copied into the session's
+// temp root, a file the mount will link) cannot do it from session-start.mjs, which runs
+// after all of them have already looked. The file name and the "does this pack copy?"
+// predicate are pack-conventions.mjs's, with every other structural answer about a pack
+// directory.
+//
+// A prepare step's stdout is NOT session context - that is the whole difference. It is
+// doing something, not saying something, and its output is diagnostics: the orchestrator
+// logs it and moves on. A pack with something to SAY still says it from session-start.mjs,
+// where the cap and the truncation notice apply.
 
 // Bounds, overridable only for tests (the env names are the engine's, not a pack's).
 const TIMEOUT_MS = Number(process.env.CLAUDINITE_PACK_STEP_TIMEOUT_MS) || 20_000;
@@ -57,7 +92,7 @@ const MAX_BYTES = Number(process.env.CLAUDINITE_PACK_STEP_MAX_BYTES) || 32_768;
 
 const note = (s) => process.stdout.write(`PACK STEP: ${s}\n`);
 
-async function main() {
+async function main({ stepFile, forward }) {
   const loaderDir = dirname(fileURLToPath(import.meta.url)); // <corpus>/engine/pack_loader
   const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -68,7 +103,7 @@ async function main() {
   }
 
   const { loadPacks, isActive, packEntryId } = await import(join(loaderDir, 'pack-registry.mjs'));
-  const packs = (await loadPacks({ localRoot: projectRoot })).filter((p) => isActive(p, config));
+  const packs = (await loadPacks({ localRoot: projectRoot, session: true })).filter((p) => isActive(p, config));
   if (!packs.length) return; // this repo runs no Claudinite, or declares nothing — say nothing
 
   // Each entry's own `config`, keyed by bare pack id: a step is handed its pack's
@@ -80,8 +115,10 @@ async function main() {
     if (entry && typeof entry === 'object' && entry.config) entryConfig.set(packEntryId(entry), entry.config);
   }
 
+  if (!forward) ensureSessionUserProse(projectRoot, packs);
+
   for (const pack of packs) {
-    const step = join(pack.dir, STEP_FILE);
+    const step = join(pack.dir, stepFile);
     if (!existsSync(step)) continue;
 
     const run = spawnSync(process.execPath, [step], {
@@ -106,14 +143,14 @@ async function main() {
     // buffer also kills the child, which would otherwise read as a timeout.
     const overflowed = run.error?.code === 'ENOBUFS';
     if (!overflowed && (run.error?.code === 'ETIMEDOUT' || run.signal)) {
-      note(`the "${pack.id}" pack's ${STEP_FILE} did not finish in ${Math.round(TIMEOUT_MS / 1000)}s and was stopped — continuing without what it would have said.`);
+      note(`the "${pack.id}" pack's ${stepFile} did not finish in ${Math.round(TIMEOUT_MS / 1000)}s and was stopped - continuing without what it would have said.`);
       continue;
     }
     if (!overflowed && run.status !== 0) {
       // Its output is not injected: a step that exited non-zero has said something
       // unfinished, and half a contribution read as a whole one is worse than none.
       const why = (run.stderr || '').trim().split('\n').pop() || `exit ${run.status}`;
-      note(`the "${pack.id}" pack's ${STEP_FILE} failed (${why}) — continuing without what it would have said.`);
+      note(`the "${pack.id}" pack's ${stepFile} failed (${why}) - continuing without what it would have said.`);
       continue;
     }
 
@@ -133,8 +170,11 @@ async function main() {
 
     let text = text0.trim();
     if (!text) continue; // nothing to say is a legitimate answer, and gets no marker
+    // A prepare step's output is a diagnostic, not a contribution: it goes to stderr,
+    // which the orchestrator logs, and never into the session's context.
+    if (!forward) { process.stderr.write(`${pack.id}/${stepFile}: ${text}\n`); continue; }
     if (overflowed || Buffer.byteLength(text, 'utf8') > MAX_BYTES) {
-      text = `${Buffer.from(text, 'utf8').subarray(0, MAX_BYTES).toString('utf8')}\n\n[truncated at ${MAX_BYTES} bytes — the "${pack.id}" pack's ${STEP_FILE} produced more session context than a step may contribute]`;
+      text = `${Buffer.from(text, 'utf8').subarray(0, MAX_BYTES).toString('utf8')}\n\n[truncated at ${MAX_BYTES} bytes - the "${pack.id}" pack's ${stepFile} produced more session context than a step may contribute]`;
     }
     // The same marker the prose injector uses, so a reader can tell which pack is
     // talking whether the text came from a file or from a step.
@@ -144,6 +184,12 @@ async function main() {
 
 // Fail-soft to the end: a broken registry, an unreadable pack tree, anything —
 // one note, exit 0.
-main()
-  .catch((e) => note(`the pack session-start runner could not complete (${e.message}) — continuing.`))
-  .finally(() => process.exit(0));
+// A CLI, and only when it is the one being run: this module is imported for its exports
+// too, and a module that runs its own program on import takes the importing process down
+// with it when it exits.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const prepare = process.argv.includes('--prepare');
+  main(prepare ? { stepFile: PREPARE_FILE, forward: false } : { stepFile: STEP_FILE, forward: true })
+    .catch((e) => note(`the pack session-${prepare ? 'prepare' : 'start'} runner could not complete (${e.message}) - continuing.`))
+    .finally(() => process.exit(0));
+}

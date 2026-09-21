@@ -23,7 +23,12 @@
 //   EVENT — a merge landing — and that is the one place two branches that each
 //   moved a shared number are visible at once, so it is the only place a rule
 //   about the change can see them collide (#1482). Judged against what the
-//   branch held BEFORE the push, it is an ordinary work scope.
+//   branch held BEFORE the push, it is an ordinary work scope. "On the base
+//   branch" is CONTAINMENT, not equality: by the time this step fetches the base,
+//   a busy trunk has often taken two more merges and a version bump, so HEAD is
+//   an ancestor of the base, and a three-dot diff from a base that already holds
+//   HEAD is empty, which read as a refused empty scope and failed every overtaken
+//   push.
 //
 //   THE EMPTY SCOPE. The runner prints nothing on a clean sweep and nothing on a
 //   sweep that judged nothing. This prints the scope either way, so a green step
@@ -103,12 +108,11 @@ export function decide(root, { branch, fetch = true, eventPath = process.env.GIT
   if (!base) {
     return { run: false, code: 1, say: `work scope: no base branch resolved (tried ${BASE_REF_CANDIDATES.join(', ')}) — the sweep would judge an empty diff and pass` };
   }
-  const head = git(root, 'rev-parse', 'HEAD');
-  const baseSha = git(root, 'rev-parse', `${base}^{commit}`);
-  if (head && head === baseSha) {
+  const onBase = git(root, 'merge-base', '--is-ancestor', 'HEAD', base) !== null;
+  if (onBase) {
     const pushed = pushedFrom(root, { eventPath });
     if (!pushed) {
-      return { run: false, code: 0, say: `work scope: skipped — HEAD is ${base}, so there is no change to judge` };
+      return { run: false, code: 0, say: `work scope: skipped, HEAD is on ${base} so there is no change to judge` };
     }
     base = pushed;
   }

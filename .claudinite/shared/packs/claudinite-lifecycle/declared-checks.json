@@ -18,7 +18,7 @@
   {
     "id": "scheduler-workflow-shape",
     "severity": "blocking",
-    "failureMessage": "the scheduler is the repo's only cron and its anchor arithmetic runs on the hour — a drifted cron or a missing guard silently breaks staggering, double-run safety, or manual runs",
+    "failureMessage": "the scheduler is the repo's only cron, so a drifted cron or a missing guard silently breaks staggering, double-run safety, or manual runs",
     "scanFiles": ".github/workflows/claudinite-scheduler.yml",
     "countMatchingLines": [
       {
@@ -34,7 +34,7 @@
         "match": "/\\bcron:.*/",
         "unlessLineMatches": "/\\bcron:\\s*['\"]?(1[0-9]|[2-4][0-9]|50) (([0-9]|1[0-9]|2[0-3]),([0-9]|1[0-9]|2[0-3])) \\* \\* \\*['\"]?\\s*$/",
         "what": "{match} is not two daily ticks on a fixed minute in :10\u2013:50",
-        "fix": "use \"<minute> <dailyHour>,<dailyHour+12> * * *\", minute 10 to 50, all written by the converge"
+        "fix": "use \"<minute> <hour>,<hour+12> * * *\", minute 10 to 50 and hour 0 to 11, all derived from the repo name and written once when the file was scaffolded"
       }
     ],
     "checkEachFile": [
@@ -49,9 +49,9 @@
         "fix": "add a concurrency: group so overlapping runs serialize (double-run safety)"
       },
       {
-        "require": "/packs\\/claudinite-tasks\\/(src\\/schedule\\/run|(public|queue)\\/(scheduler-run|tick))\\.mjs/",
+        "require": "/packs\\/claudinite-tasks\\/src\\/schedule\\/run\\.mjs/",
         "what": "does not run the vendored scheduler entry",
-        "fix": "run the vendored scheduler entry — node .claudinite/shared/packs/claudinite-tasks/src/schedule/run.mjs; the retired `public/` and `queue/` spellings still pass while a member's own workflow pull request is in flight"
+        "fix": "run the vendored scheduler entry: node .claudinite/shared/packs/claudinite-tasks/src/schedule/run.mjs"
       },
       {
         "require": "/^\\s*contents:\\s*write\\b/m",

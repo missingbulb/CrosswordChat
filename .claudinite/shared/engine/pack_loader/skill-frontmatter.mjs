@@ -1,6 +1,7 @@
 // A skill's own declaration: the YAML frontmatter at the top of its SKILL.md, read
 // for the fields the corpus acts on — `name`, `description` (what the harness
 // matches a session's activity against) and, under `metadata`, the corpus's own
+// keys: `body`, what kind of body follows (below), and
 // `force-load-on-file-edits-paths`: the files a file tool may touch only with this
 // skill loaded (the PreToolUse guard holds the edit until it is). `metadata` is the
 // map the harness reserves for a reader's own keys and never acts on, which is why
@@ -22,7 +23,7 @@ export const FORCE_LOAD_KEY = 'force-load-on-file-edits-paths';
 // quote it in the frontmatter, since a regex carries backslashes:
 //   force-load-on-tool-calls:          - 'mcp__github__create_pull_request'
 //                                      - 'Bash.command /(^|[;&|]\\s*)git\\s+commit\\b/'
-//   force-load-on-prompts-matching:    - '/\\bLGTM\\b/'
+//   force-load-on-prompts-matching:    - '/\\/do-later\\b/'
 //   force-load-on-tool-results-matching: - 'WebFetch /EGRESS_BLOCKED|\\b403\\b/'
 // A tool entry is the tool's exact name — optionally `.field`, the input field
 // the regex reads (`Bash.command`) — or a /regex/ over names, then optionally a
@@ -31,6 +32,15 @@ export const FORCE_LOAD_KEY = 'force-load-on-file-edits-paths';
 export const TOOL_CALL_KEY = 'force-load-on-tool-calls';
 export const PROMPT_KEY = 'force-load-on-prompts-matching';
 export const TOOL_RESULT_KEY = 'force-load-on-tool-results-matching';
+// What kind of body follows the frontmatter, declared under `metadata` too:
+//   body: workflow     a procedure — steps and their gotchas change as one
+//   body: guidelines   rules behind a trigger, each as independent as a RULES.md bullet
+// Declared rather than inferred: the two shapes look alike from outside, and a
+// skill that mixes steps and gotchas is classified by its author, not by a count.
+// The corpus's maintenance tooling reads it; the harness never does. Absent, or a
+// value outside the vocabulary, is undeclared (null) — never a default.
+export const BODY_KEY = 'body';
+export const BODIES = Object.freeze(['workflow', 'guidelines']);
 
 const RE_FORM = /^\/(.*)\/([a-z]*)$/s;
 const toRegExp = (s) => { const m = RE_FORM.exec(String(s).trim()); try { return m ? new RegExp(m[1], m[2]) : null; } catch { return null; } };
@@ -114,7 +124,13 @@ export function forceLoadPathsOf(fm) {
   return typeof v === 'string' ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
 }
 
-// The metadata of the skill at `dir`: { name, description, forceLoadPaths,
+// The declared body: 'workflow', 'guidelines', or null when undeclared.
+export function bodyOf(fm) {
+  const v = fm?.metadata && typeof fm.metadata === 'object' && !Array.isArray(fm.metadata) ? fm.metadata[BODY_KEY] : undefined;
+  return typeof v === 'string' && BODIES.includes(v.trim()) ? v.trim() : null;
+}
+
+// The metadata of the skill at `dir`: { name, description, body, forceLoadPaths,
 // toolCallTriggers, promptTriggers, toolResultTriggers }.
 // Unreadable is empty metadata, on the harness's own terms.
 export function skillMetadata(dir) {
@@ -123,6 +139,7 @@ export function skillMetadata(dir) {
   return {
     name: typeof fm.name === 'string' ? fm.name : '',
     description: typeof fm.description === 'string' ? fm.description : '',
+    body: bodyOf(fm),
     forceLoadPaths: forceLoadPathsOf(fm),
     toolCallTriggers: toolCallTriggersOf(fm),
     promptTriggers: promptTriggersOf(fm),

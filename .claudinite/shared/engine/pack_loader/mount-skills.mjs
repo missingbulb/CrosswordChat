@@ -37,7 +37,7 @@ try {
   // Include the project's own local packs — a local pack can require a canon
   // skill AND bundle its own under <pack>/skills/, mounted from the tracked pack
   // dir rather than the corpus mount.
-  const packs = await loadPacks({ localRoot: projectRoot });
+  const packs = await loadPacks({ localRoot: projectRoot, session: true });
   // The repo's own pack root, so a mount from it is recognized as ours (skills
   // themselves resolve off each pack's own dir).
   const localPacksRoot = join(projectRoot, '.claudinite', 'local', 'packs');

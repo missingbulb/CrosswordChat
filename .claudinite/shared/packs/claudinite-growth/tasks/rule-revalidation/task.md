@@ -10,8 +10,9 @@ tree whole, so an edit there is lost either way.
 
 ## The method lives in the skill
 
-How a claim is judged revalidatable, how it is probed, what the four verdicts mean, and how a
-`references.md` entry is reaffirmed are owned by the [**revalidating-rules**
+How a claim is judged revalidatable, how it is probed, what the four verdicts mean, how an
+element's provenance file is reaffirmed and what the run appends to it - and how an empty file met
+on the way is filled first - are owned by the [**revalidating-rules**
 skill](../../skills/revalidating-rules/SKILL.md). Follow it; don't re-derive it here. This worker
 frames the unattended run around it.
 

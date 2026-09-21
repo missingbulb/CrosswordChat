@@ -21,7 +21,7 @@
 // runs this applier from the fresh canon clone it fetched, so even a dormant
 // project catches up on every record ever landed — there is no fleet-wide
 // apply pass and no retirement; the records simply accumulate.
-import { existsSync, renameSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { existsSync, renameSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { loadMigrations, applyMigration } from './registry.mjs';
@@ -46,9 +46,12 @@ export async function main() {
   // carry a declaration is the repo's own disk (the registry says why it is inert
   // without it).
   const listDir = (p) => { try { return readdirSync(join(repoRoot, p)); } catch { return null; } };
+  // And for the provenance codemod: the references doc it retires is deleted, not
+  // emptied (an io without this leaves the doc and says so).
+  const remove = (p) => rmSync(join(repoRoot, p), { force: true });
 
   const applied = [];
-  for (const m of migrations) applied.push(...(await applyMigration(m, { exists, move, read, write, readTemplate, listDir })));
+  for (const m of migrations) applied.push(...(await applyMigration(m, { exists, move, read, write, readTemplate, listDir, remove })));
   if (applied.length) console.log(`Applied migrations:\n${applied.map((x) => `  ${x}`).join('\n')}`);
 }
 

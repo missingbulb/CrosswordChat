@@ -4,7 +4,7 @@
   "description": "Maintains this repository's Claudinite mount: converges the vendored engine and packs to the canon's versions, runs the version-ranged migrations, gates on the self-test and delivers the update pull request. An agent runs where the new rules meet member-authored content, and where the converge wrote what this repo's tests can see.",
   "trigger": "schedule",
   "preconditions": [
-    "due:daily"
+    "schedule:at-most-daily"
   ],
   "expected_outcome": "supersede_existing_pr",
   "automerge": [

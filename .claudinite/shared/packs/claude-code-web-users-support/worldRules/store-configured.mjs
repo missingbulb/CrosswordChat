@@ -1,5 +1,5 @@
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
-import { resolveStore } from '../store.mjs';
+import { resolveStore } from '../user_pack_address.mjs';
 
 // Declaring this pack is a statement that this project's users HAVE a preferences
 // store. If its entry names none — or names one that does not resolve — the pack is

@@ -49,7 +49,7 @@
         "type": "string",
         "minLength": 1
       },
-      "description": "When the task runs — every listed condition must hold, `||` between alternatives. A cadence first where the task keeps one (`due:daily|weekly|monthly` on the repo's schedule, or `last-run-over:<12h|1d|7d>`), `last-run-not-failed` to stop past the task's own failure park, then the built-in movement terms (e.g. \"substantive-change\", \"commits-under:<dir>\") or terms the task's own preconditions.mjs exports. The same conditions are judged whether the run was asked for by the scheduler or by a person, so this field never says WHETHER the task is on the schedule — `trigger` does. A scheduled task with no cadence term is asked at every tick and runs whenever its other conditions hold; a task with no conditions at all runs whenever an occurrence exists."
+      "description": "When the task runs: every listed condition must hold, `||` between alternatives. A cadence first where the task keeps one (`schedule:at-most-daily|at-most-weekly|at-most-monthly`, measured over whole UTC periods), `last-run-not-failed` to stop past the task's own failure park, then the built-in movement terms (e.g. \"substantive-change\", \"commits-under:<dir>\") or terms the task's own preconditions.mjs exports. The same conditions are judged whether the run was asked for by the scheduler or by a person, so this field never says WHETHER the task is on the schedule; `trigger` does. A scheduled task with no cadence term is asked at every tick and runs whenever its other conditions hold; a task with no conditions at all runs whenever an occurrence exists."
     },
     "expected_outcome": {
       "type": "string",

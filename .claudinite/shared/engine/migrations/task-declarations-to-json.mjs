@@ -44,7 +44,26 @@ export function checkoutIo(root) {
 // contract's door reads (`cadenceTermFor` in packs/claudinite-tasks/calendar.mjs),
 // spelled again here because the engine imports no pack; the engine test pins the
 // two to each other over every accepted value.
-const cadenceTermFor = (frequency) => (frequency === 'manual' ? null : `due:${frequency}`);
+const cadenceTermFor = (frequency) => (frequency === 'manual' ? null : `schedule:at-most-${frequency}`);
+
+// The cadence term's retired spelling, and the current one. The engine keeps
+// reading the old one forever (packs/claudinite-tasks/calendar.mjs, DUE_TERM), so this
+// rewrite is cosmetic convergence rather than a repair: it is what stops the fleet
+// carrying two spellings of one term indefinitely.
+// Anchored on what can precede a term inside the array, a quote or a separator, so a
+// cadence stated as one alternative of an entry is rewritten too and a colon-carrying
+// argument that happens to end in the same text is not.
+const DUE_CADENCE = /(^|["\s|])due:(daily|weekly|monthly)\b/g;
+export function restateCadenceTerms(source) {
+  const array = PRECONDITIONS_ARRAY.exec(source);
+  if (!array) return null;
+  const restated = array[1].replace(DUE_CADENCE, (_m, before, cadence) => `${before}schedule:at-most-${cadence}`);
+  if (restated === array[1]) return null;
+  return {
+    text: source.slice(0, array.index) + array[0].replace(array[1], restated) + source.slice(array.index + array[0].length),
+    terms: [...array[1].matchAll(DUE_CADENCE)].map((m) => `due:${m[2]}`),
+  };
+}
 
 // The field wherever it sits: on a line of its own (nearly every declaration's
 // layout) or inline in a one-line object. The commas
@@ -216,6 +235,12 @@ export async function updateTaskSchedulingFields(taskDirs, io) {
       applied.push(patched.term === null
         ? `${json}: frequency "${patched.frequency}" dropped — no schedule, so no preconditions`
         : `${json}: frequency "${patched.frequency}" → "${patched.term}", first in preconditions`);
+    }
+    const restated = restateCadenceTerms(source);
+    if (restated) {
+      source = restated.text;
+      io.write(json, source);
+      applied.push(`${json}: ${restated.terms.join(', ')} restated as the current spelling`);
     }
     const stated = stateTriggerText(source);
     if (stated) {

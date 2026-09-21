@@ -879,9 +879,7 @@ async function main() {
   if (problems.length) process.exitCode = 1;
 }
 
-// Run only when invoked directly (the workflow's `node scheduler-run.mjs`), never on
-// import. Exported as well, because `tick.mjs` beside this file is a fielded entry
-// point that must be able to start the same run without being this module.
+// Run only when invoked directly (the workflow's `node run.mjs`), never on import.
 export { main as runSchedulerRun };
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => { console.error(e); process.exit(1); });

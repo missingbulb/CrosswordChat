@@ -9,10 +9,11 @@
 - **The folder is the kind.** A case's kind is the directory it lives in; the case declares no
   kind field. Cases are
   `<kind>/cases/<slug>.<leaf-id>.case.<ext>`: a stable feature slug (so retitling a spec section
-  never forces renames), then the dotted leaf id.
+  never forces renames), then the dotted leaf id. (folder-kind)
 
 - **Artifact expecteds live beside their case** (`<slug>.<id>.png`, `expected/<name>.json`);
   failure artifacts (actual/diff renders) go to a gitignored dir, never beside the goldens.
+  (artifact-expecteds-live)
 
 ## 2. The gallery is derived output
 

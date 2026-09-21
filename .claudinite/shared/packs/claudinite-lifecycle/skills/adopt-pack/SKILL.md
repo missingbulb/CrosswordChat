@@ -1,6 +1,8 @@
 ---
 name: adopt-pack
 description: Add one or more packs to an already-adopted Claudinite member — declare, run each pack's adoption interview, re-vendor, scaffold, land. Use when asked to adopt, add, enable, or declare a pack (e.g. product-wiki, executable-requirements) on a repo that already runs Claudinite.
+metadata:
+  body: workflow
 ---
 
 Turn one or more packs on: declare, answer what the pack asks, materialize its content, satisfy what
@@ -94,8 +96,8 @@ node .claudinite/shared/packs/claudinite-tasks/src/adopt/converge-workflows.mjs 
 ```
 
 `.github/workflows/` is the one directory a member's nightly may never push to, so these arrive
-here or not at all. They are static from this moment: the cron minute is hashed from the repo's
-full name, both anchor hours come from its `taskScheduler.dailyHour`, and every `run:` names a
+here or not at all. They are static from this moment: the cron minute and both hours are hashed
+from the repo's full name and never restamped afterwards, and every `run:` names a
 mount path behind which the code converges nightly. The command is a no-op when both files are
 already right. A repo adopting this pack also needs its CCR routine endpoints — the executor's and
 the work-item session's — pointed at `public/instructions.md` in its own mount; that is a console

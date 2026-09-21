@@ -4,7 +4,7 @@
   "description": "Re-probes the pack rules whose truth lives outside this repository, such as what the harness rejects or which tools exist, and corrects the ones the platform has moved under.",
   "trigger": "schedule",
   "preconditions": [
-    "due:weekly",
+    "schedule:at-most-weekly",
     "repo-active"
   ],
   "expected_outcome": "supersede_existing_pr",
