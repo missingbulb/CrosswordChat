@@ -3,6 +3,8 @@ name: writing-tasks
 description: The contract a Claudinite task is written to — the declaration's fields, the code-work and agentic phases, the precondition as the only decision point, ordering, and how a work item converges. Use when writing or changing a tasks/<name>/task.json or its worker, or when a task-declaration check fires.
 metadata:
   body: workflow
+  usage:
+    expect: triggered
   force-load-on-file-edits-paths:
     - "**/tasks/**"
 ---
@@ -325,11 +327,11 @@ built-in request implementer's `request-eligible` declares) has nothing to be ju
 against at a tick, so it would fail every hour rather than decline — such a task is
 `trigger: 'request'`.
 
-A declaration still carrying `frequency` is rewritten at the door into its cadence
-term plus `trigger: 'schedule'` (`manual` into `trigger: 'request'` and no
-expression), and one stating no `trigger` has it derived from the shape of its
-conditions; both are reported by `legacy-task-fields`, and the nightly update writes
-them into a member's own task files. Write both fields.
+`trigger` is required and stated: nothing reads it off the shape of the conditions,
+so a declaration naming none does not load. A declaration still carrying `frequency`
+is rewritten at the door into its cadence term (`manual` into no expression at all),
+which `legacy-task-fields` reports and the nightly update writes into a member's own
+task files. The `trigger` beside it is the author's.
 
 **`preconditions` is the only gate there is.** The `precondition` function and its
 `precondition_signals` companion are retired: both are rejected by name, and the
@@ -462,6 +464,25 @@ Declare it only for a real read-what-it-produces dependency, never as a general
 priority hint, and never describe it as a `Blocked-by` edge — that is a different
 field with different semantics. A yielded item is not spent: it waits, and runs in
 the same cycle once the upstream is out of the way.
+
+## A worker that commits or pushes restores `main` first
+
+One executor run drains several due items through **one** checkout, in whatever
+order the scheduler picked them. A worker that delivers by switching branches (a
+`git checkout -B` for its own maintenance commit, say) and never switches back
+hands the *next* item in that run a tree it never asked for — a task ordered
+after it inherits the departed worker's branch, not `main`. From there a plain
+`git commit`/`git push` either lands on the wrong branch silently, or aborts with
+exit 128 for want of an upstream, and either failure can go unnoticed for days:
+nothing about the *next* task's own logic is wrong, so its own tests and checks
+stay green while it quietly does nothing (or the wrong thing) run after run.
+
+So any worker script that ends in a commit or a push starts by restoring `main`
+— `git fetch origin main && git checkout main` (or `git switch main`), *before*
+the write, not after. Never repair this by pushing straight to `main`
+(`git push origin HEAD:main`) as a workaround for a stray branch: that can push
+an unreviewed commit past its own review surface. Restoring first is what keeps
+one task's delivery from becoming the next task's silent starting state.
 
 ## The queue labels are the item's state, and only the queue writes them
 

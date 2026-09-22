@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "usage-rules.schema.json",
+  "title": "Usage review rules",
+  "description": "Declarations the usage review evaluates against the record. Each rule is a sentence a person can read in a sitting: over these subjects, in this window, above this floor, when this holds, the cause is this well known, and this is what it usually means. A gate the vocabulary cannot express is not a rule - there are no coded rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rules"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "over",
+          "window",
+          "floor",
+          "when",
+          "cause",
+          "causes",
+          "open",
+          "finding",
+          "recommendation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "The rule's name, and the name of its provenance file. Cited by a triage PR's provenance entry, so it is an identifier rather than a description."
+          },
+          "over": {
+            "enum": [
+              "skill",
+              "check",
+              "guard",
+              "checks"
+            ],
+            "description": "What the rule judges one at a time. `checks` is the scope totals rather than a rule, so such a rule yields at most one finding."
+          },
+          "expect": {
+            "enum": [
+              "adoption",
+              "routine",
+              "triggered",
+              "rare"
+            ],
+            "description": "Narrows a skill rule to skills declaring that expectation of themselves. Absent, the rule judges every skill - including the ones that declare nothing."
+          },
+          "window": {
+            "enum": [
+              "28 days",
+              "adoption",
+              "now"
+            ],
+            "description": "`28 days` is the trailing window, with `previous.` naming the 28 before it; `adoption` is the subject pack's own adoption window; `now` is a live read of the tree, which no window applies to."
+          },
+          "floor": {
+            "type": "object",
+            "description": "Counts that must hold before the rule is evaluated at all. Under the floor the review records *not evaluated* with the figure, which is what keeps a young window from reading as a clean one.",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "when": {
+            "type": "string",
+            "description": "One comparison, in four shapes: `a / b >= n`, `a / b <= n`, `a = 0`, `a >= n`. `median(a)` takes the median across the window's days and `previous.` reads the window before. Nothing else - a rule needing more is not a rule.",
+            "pattern": "^(previous\\.)?(median\\()?[A-Za-z][A-Za-z0-9]*\\)?( / (previous\\.)?(median\\()?[A-Za-z][A-Za-z0-9]*\\)?)? (>=|<=|=) [A-Za-z0-9./ ]+$"
+          },
+          "and": {
+            "type": "string",
+            "description": "A live predicate the record cannot answer - a name (`proseTwin`) or one more comparison against a live figure (`tokens <= 300`). Both sides must hold."
+          },
+          "cause": {
+            "enum": [
+              "known",
+              "probable",
+              "unknown"
+            ],
+            "description": "How well the record alone settles the cause: `known` where the arithmetic or the mechanism leaves one, `probable` where one is likeliest, `unknown` where the finding is evidence only. It tells a reader what the recommendation is worth, and nothing follows from it automatically except which findings the triage may act on."
+          },
+          "causes": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The possible causes in likelihood order, each with the discriminator that tells it apart. For a `known` rule this is what the arithmetic already settled; otherwise it is the search order a reader works through.",
+            "items": {
+              "type": "string",
+              "minLength": 10
+            }
+          },
+          "open": {
+            "type": "boolean",
+            "description": "True where the list is only what its authors thought of, so a reader may find a cause not on it; false where the mechanism closes it."
+          },
+          "finding": {
+            "type": "string",
+            "minLength": 10,
+            "description": "The sentence a person reads as the finding."
+          },
+          "recommendation": {
+            "type": "string",
+            "minLength": 10,
+            "description": "The sentence a person reads as what it usually means. `none` where the finding is evidence carried forward and nothing is proposed."
+          }
+        }
+      }
+    }
+  }
+}

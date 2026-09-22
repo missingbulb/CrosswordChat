@@ -2,43 +2,43 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60920.3"
+      "version": "60922.3"
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60921.2"
+      "version": "60922.5"
     },
     {
       "id": "git-github",
-      "version": "60921.1"
+      "version": "60922.5"
     },
     {
       "id": "chrome-extension",
-      "version": "60920.3"
+      "version": "60922.2"
     },
     {
       "id": "node",
-      "version": "60920.1"
+      "version": "60922.1"
     },
     {
       "id": "spec-driven-product",
-      "version": "60920.1"
+      "version": "60922.2"
     },
     {
       "id": "executable-requirements",
-      "version": "60920.1",
+      "version": "60922.1",
       "via": [
         "spec-driven-product"
       ]
     },
     {
       "id": "claudinite-growth",
-      "version": "60921.3"
+      "version": "60922.4"
     },
     "local/crossword-chat",
     {
       "id": "claude-code-web-users-support",
-      "version": "60921.1",
+      "version": "60921.2",
       "config": {
         "repo": "missingbulb/Shepherd"
       },
@@ -48,15 +48,15 @@
     },
     {
       "id": "claudinite-tasks",
-      "version": "60920.4"
+      "version": "60922.4"
     },
     {
       "id": "web-speech",
-      "version": "60920.1"
+      "version": "60922.2"
     },
     {
       "id": "host-page",
-      "version": "60920.1"
+      "version": "60921.1"
     }
   ],
   "taskScheduler": {

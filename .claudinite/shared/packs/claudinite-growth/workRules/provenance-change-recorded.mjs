@@ -185,11 +185,20 @@ function sansBullets(text, shape) {
   return normalize(String(text).split('\n').filter((_, i) => !drop.has(i)).join('\n'));
 }
 
-// The marking pass's own edits to a skill: a `body:` line and markers on guideline
-// bullets. Neither is a decision, so a skill that changed only so owes nothing.
+// The marking pass's own edits to a skill: a `body:` line, a `usage:` block and
+// markers on guideline bullets. None of the three is a decision about what the
+// skill says or when it loads: each declares something only the corpus's own
+// maintenance reads, and the harness ignores all of them, so a skill that changed
+// only so owes nothing.
 function skillOnlyMarkedOrBodied(before, after) {
   const strip = (t) => normalize(String(t)
     .replace(/^\s*body:\s*(workflow|guidelines)\s*$/gm, '')
+    .replace(/^\s*usage:\s*$/gm, '')
+    .replace(/^\s*expect:\s*[a-z]+\s*$/gm, '')
+    // A retired key of that block, stripped on both sides so its REMOVAL is as
+    // exempt as its writing was - a sweep that drops a key nothing reads decides
+    // nothing about the skill.
+    .replace(/^\s*loads-per-sessions:\s*.*$/gm, '')
     .replace(/^metadata:\s*$/gm, '') // the block `mark` opens to hold the body
     .replace(/\s*\([a-z][a-z0-9]*(?:-[a-z0-9]+)+\)\s*$/gm, '')
     .replace(/\s*\(\d+(?:\s*,\s*\d+)*\)\s*$/gm, ''));

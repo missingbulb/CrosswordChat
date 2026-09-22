@@ -4,25 +4,62 @@
 // `fetch(` is describing the code, not doing it, and matching it is a false
 // positive that fails the build over an English sentence. Strip comments first.
 
+// A `/` opens a regex literal only where a value may begin. After a value - 
+// an identifier, a number, a closing `)` or `]` - it is division. The keywords
+// are the identifiers that are not values, so the `/` after them opens a regex.
+const VALUE_END = /[\w$)\]]$/;
+const NOT_A_VALUE = /\b(return|typeof|instanceof|in|of|new|delete|void|case|do|else|yield|await)$/;
+function opensRegex(code) {
+  const before = code.replace(/\s+$/, '');
+  if (before === '') return true;
+  if (!VALUE_END.test(before)) return true;
+  return NOT_A_VALUE.test(before);
+}
+
 // Return `source` with its JS/TS comments removed, leaving everything else —
-// including string and template literals — byte-for-byte intact. String-aware
-// on purpose: a `//` inside "https://…" is not a comment, and dropping the rest
-// of that line would corrupt real code (and could hide a genuine violation that
-// follows on the same line). Regex literals are treated as code and preserved.
+// including string, template and regex literals - byte-for-byte intact.
+// Literal-aware on purpose: a `//` inside "https://…" is not a comment, and
+// dropping the rest of that line would corrupt real code (and could hide a
+// genuine violation that follows on the same line). The same holds inside a
+// regex, whose `"`, `'` and `` ` `` are pattern characters - reading one as a
+// string's opening quote puts the scanner in string state for the rest of the
+// file, where every later comment survives and every later string reads as code.
 // Newlines inside block comments are kept so line numbers don't shift.
 export function stripComments(source) {
   let out = '';
-  let state = 'code'; // code | line | block | sq | dq | tpl
+  let state = 'code'; // code | line | block | sq | dq | tpl | re | reClass
+  // One frame per `${}` hole still open, innermost last, each holding the brace
+  // depth reached inside it. A hole holds code, and that code may open a template
+  // of its own, so the enclosing template is a place to return to rather than a
+  // flag: without the stack the inner literal's backtick closed the outer one and
+  // every character after it read inside-out.
+  const holes = [];
   for (let i = 0; i < source.length; i++) {
     const c = source[i];
     const c2 = source[i + 1];
     if (state === 'code') {
       if (c === '/' && c2 === '/') { state = 'line'; i++; continue; }
       if (c === '/' && c2 === '*') { state = 'block'; i++; continue; }
-      if (c === "'") state = 'sq';
+      if (c === '/' && opensRegex(out)) state = 're';
+      else if (c === "'") state = 'sq';
       else if (c === '"') state = 'dq';
       else if (c === '`') state = 'tpl';
+      else if (holes.length && c === '{') holes[holes.length - 1].depth++;
+      else if (holes.length && c === '}') {
+        if (holes[holes.length - 1].depth === 0) { holes.pop(); state = 'tpl'; }
+        else holes[holes.length - 1].depth--;
+      }
       out += c;
+    } else if (state === 're' || state === 'reClass') {
+      // Inside a regex literal. A `/` inside a character class is a literal
+      // slash, not the closing delimiter, so the class is tracked as its own
+      // state rather than guessed at.
+      out += c;
+      if (c === '\\') { out += c2 ?? ''; i++; }
+      else if (c === '\n') state = 'code'; // an unterminated regex was a division after all
+      else if (state === 're' && c === '[') state = 'reClass';
+      else if (state === 'reClass' && c === ']') state = 're';
+      else if (state === 're' && c === '/') state = 'code';
     } else if (state === 'line') {
       if (c === '\n') { state = 'code'; out += c; }
     } else if (state === 'block') {
@@ -33,7 +70,11 @@ export function stripComments(source) {
       // honoring backslash escapes so an escaped quote doesn't end it early.
       out += c;
       if (c === '\\') { out += c2 ?? ''; i++; }
-      else if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) {
+      else if (state === 'tpl' && c === '$' && c2 === '{') {
+        out += c2; i++;
+        holes.push({ depth: 0 });
+        state = 'code';
+      } else if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) {
         state = 'code';
       }
     }

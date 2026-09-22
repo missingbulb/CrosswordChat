@@ -3,6 +3,8 @@ name: writing-repo-scanning-checks
 description: How a check that scans the repo picks its file set, strips comments before matching a forbidden token, and proves itself silent against real sources. Loaded for any edit of a coded or declared check.
 metadata:
   body: guidelines
+  usage:
+    expect: triggered
   force-load-on-file-edits-paths:
     - "**/engine/checks/**"
     - "**/packs/*/worldRules/**"

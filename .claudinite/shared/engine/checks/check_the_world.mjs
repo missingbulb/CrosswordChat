@@ -132,6 +132,9 @@ async function sweep() {
     onContributeError: (pack, e) => findings.push(configError(
       `the "${pack.id}" pack's contributedRules failed: ${e.message}`, 'fix the pack manifest, or the contribution it interprets')),
   }));
+  // No timing record here: a clean world run prints nothing and exits 0, which is
+  // the contract its callers read silence against. The Stop hook's own sweep
+  // (check_the_work.mjs) is the one the usage review reads a timing record from.
 
   const blocking = reportFindings(findings, ctx.config, { scopeLabel: 'world', mode: ctx.mode, baseRef: ctx.baseRef });
   process.exitCode = blocking ? 1 : 0;

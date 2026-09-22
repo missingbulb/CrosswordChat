@@ -19,6 +19,12 @@
 - **Doc-first, red by default.** Adding a leaf with no executable proof fails the build until a case
   claims it. (doc-first-red)
 
+- **A repo-tooling or process change is never `feature`.** It has no product requirement leaf to
+  record, so classifying it `feature` arms doc-first against a target that cannot exist; classify
+  it `process-change` or `correction` instead, and if it already armed the gate, don't launder the
+  mislabeling with a backdated token spec commit or a coverage-allowlist workaround - name the
+  mistake and accept the resulting red. (repo-tooling-never-feature)
+
 - **The spec drives the tests, never the other way around.** A behavior change starts by editing the
   leaf, watching the gate go red, then changing product and proof to match. A test changed without
   its leaf — or a leaf reworded to match what the code happens to do — inverts the authority.

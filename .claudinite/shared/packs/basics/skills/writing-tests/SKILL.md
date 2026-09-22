@@ -3,6 +3,8 @@ name: writing-tests
 description: Practices for writing tests you can trust. Use before writing or changing any test — see-it-fail discipline, snapshot/golden rules, CI-only and heavy-browser tests, fuzzy-metric gating.
 metadata:
   body: guidelines
+  usage:
+    expect: triggered
   force-load-on-file-edits-paths:
     - "**/*.test.*"
     - "**/*.spec.*"
@@ -32,6 +34,11 @@ A consuming repo's own test *mechanics* — runner, layout, which suites exist �
   (test-dereferences-path)
 - **Never test that a value is set.** A test that reads a value someone declared — a config or manifest field (`assert.equal(task.expected_outcome, 'fresh_pr')`), an exported constant or default object (`assert.deepEqual(DEFAULTS, {…})`), a settings file naming a pack, a workflow's `run:` line, a frontmatter key — and asserts it is the literal it was set to restates the file under test in a second file. It can only fail when someone changes the value **on purpose**, so it catches no defect and instead taxes every deliberate change with a mirrored edit — and teaches that the value is load-bearing prose to be restated, which is how one setting ends up copied into a comment, a worker doc, a README table and a test, so flipping it becomes a five-file diff. The see-it-fail test exposes it: to make the assertion go red you must break the thing it asserts, which is not a bug. "It exists", "it has the right shape" and "it is one of these" are the same test in a looser coat. Test the **behaviour the value drives** instead: feed the real code the declared value and assert what the code does with it — a task declared `weekly` is planned once across a fourteen-day clock, a check declared over `**/*.mjs` fires on a fixture `.mjs` and stays silent on a `.md`, a default object yields the documented output when nothing overrides it. Where no code reads the value there is nothing to test; if a declaration genuinely must not change without deliberation, that is a review concern, not a test. What *does* earn an assertion on declared data is a claim spanning two artifacts that could drift independently: the doc a field *names* exists; every signal the code reads is declared; two implementations of the same list agree; a value the runtime constrains is inside its legal set — proven by running the constraint, not by re-listing the set.
   (test-value-set)
+- **Naming the thing a fixture stands for** - invent the name (`acme-pack`, `acme-user`,
+  `acme.example`) wherever the case holds for any name at all, and keep a real one only where that
+  entity is what the case asserts about: a borrowed name reads as meaningful, collides with the
+  real thing's own cases, and makes every later rename an edit of tests that were never about it.
+  (fixture-names-invented)
 - **Testing a task's precondition or declaration** — assert only the pack's own code: a
   task-local term's decisions, a worker's behaviour, or a composition it designed; a plain
   built-in term or a validated declaration is the scheduler's own mechanism, proved once by its

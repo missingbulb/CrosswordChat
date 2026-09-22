@@ -1,5 +1,4 @@
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
-import { migrationActive } from '../../../engine/checks/helpers/active-migrations.mjs';
 
 // The Chrome-Web-Store release pipeline is VENDORED into each consumer's own
 // .github/: the orchestrator (this STUB_FILE, named "Release to Chrome Store")
@@ -19,24 +18,12 @@ import { migrationActive } from '../../../engine/checks/helpers/active-migration
 // nightly release to the same anchor. The privacy page has no orchestrator entry of
 // its own: it redeploys as part of every publish (the publish reusable's
 // deploy-privacy-page leg).
-//
-// Migration tolerance: while `chrome-release-vendoring` is recent, a repo still
-// on the pre-vendoring shape (the orchestrator calling Claudinite's core
-// workflows @main) is TOLERATED — baselining vendors it, no red window. Once the
-// record ages out of the recency window, migrationActive() flips false and the
-// tolerance is gone: every up-to-date repo has vendored by then, and a repo
-// still on @main is flagged.
 export const STUB_FILE = 'chrome-extension-release.yml';
 export const STUB_NAME = 'Release to Chrome Store';
-// @legacy-tolerance advisory:cer/release-workflows retire:#1643
-export const LEGACY_STUB_NAMES = ['Release'];
 export const STUB_CRON = '30 0 * * *';
 
-// The create-package reusable's canon filename (pre-vendoring), still the name a
-// legacy orchestrator calls @main — kept for the fingerprint + tolerance.
-// @legacy-tolerance advisory:cer/release-workflows retire:#1643
-export const LEGACY_CREATE_PACKAGE = 'chrome-extension-release.yml';
-// Its vendored filename (renamed to avoid colliding with the orchestrator).
+// The create-package reusable's vendored filename, renamed to avoid colliding
+// with the orchestrator's own.
 export const VENDORED_CREATE_PACKAGE = 'chrome-extension-create-package.yml';
 
 // The reusable workflows the orchestrator calls locally.
@@ -53,8 +40,6 @@ export const ORCHESTRATOR_CALLS = [
 export const VENDORED_WORKFLOWS = [...ORCHESTRATOR_CALLS, 'deploy-privacy-page.yml'];
 // Every composite action that must be vendored under .github/actions/<name>/.
 export const VENDORED_ACTIONS = ['read-release-config', 'bump-extension-patch', 'report-failure'];
-
-export const VENDORING_MIGRATION = 'chrome-release-vendoring';
 
 // DOES THIS REPO SHIP TO THE STORE? The whole release half of this pack is gated on
 // it, coded rule and declared checks alike — coding an extension pulls the pack in
@@ -86,11 +71,6 @@ export function shipsReleasePipeline(ctx) {
   return ctx.tracked.some((f) => SHIPS_PIPELINE_PATH_RE.test(f) && SHIPS_PIPELINE_TEXT_RE.test(ctx.read(f) ?? ''));
 }
 
-// A repo is on the pre-vendoring shape when its orchestrator still calls one of
-// Claudinite's core release workflows @main.
-// @legacy-tolerance advisory:cer/release-workflows retire:#1643
-const LEGACY_CANON_REF = /missingbulb\/Claudinite\/\.github\/workflows\/chrome-extension-[a-z-]+\.yml@/;
-
 const rule = {
   id: 'cer/release-workflows',
   severity: 'blocking',
@@ -98,9 +78,7 @@ const rule = {
   doc: 'packs/chrome-extension/skills/chrome-store-releases/SKILL.md',
   why: 'every extension repo ships the same pipeline entirely from its own .github/ — vendored from the pack, kept in sync by baselining, with no cross-repo @main dependency',
 
-  // opts.tolerateLegacy defaults to whether the vendoring migration is still live;
-  // tests pass it explicitly to exercise the in-flight and retired states.
-  run(ctx, { tolerateLegacy = migrationActive(VENDORING_MIGRATION) } = {}) {
+  run(ctx) {
     // RELEVANCE FIRST: a repo that codes an extension but does not publish one
     // ships no pipeline and is asked for nothing here.
     if (!shipsReleasePipeline(ctx)) return [];
@@ -152,29 +130,10 @@ const rule = {
       }));
     }
 
-    // Pre-vendoring shape: the orchestrator still calls Claudinite core @main.
-    if (LEGACY_CANON_REF.test(text)) {
-      // Rollout in flight: baselining vendors the set, so this is not the repo's
-      // fault and must not block it — but a tolerance that says nothing leaves the
-      // repo holding the shape its removal is gated on, so it says something.
-      if (tolerateLegacy) {
-        out.push(finding(rule, {
-          file: path,
-          severity: 'advisory',
-          what: 'still calls Claudinite\'s core release workflows @main, which the vendoring is retiring',
-          fix: 'let baselining vendor the pack\'s stubs/workflows/ + stubs/actions/ into this repo\'s .github/, or copy them by hand — the tolerance for the @main calls ends one convergence window after this advisory ships (#1643)',
-        }));
-        return out;
-      }
-      out.push(finding(rule, {
-        file: path,
-        what: 'still calls Claudinite\'s core release workflows @main, which the vendoring has retired',
-        fix: 'vendor the pack\'s stubs/workflows/ + stubs/actions/ into this repo\'s .github/ and repoint the three uses: to ./.github/workflows/… (baselining does this via the chrome-release-vendoring migration)',
-      }));
-      return out;
-    }
-
-    // Vendored shape: the orchestrator must call the three local reusables.
+    // The orchestrator must call the three local reusables. A repo still on the
+    // pre-vendoring shape — calling Claudinite's core workflows @main — names none
+    // of them, and lands here with one finding per missing call and per missing
+    // vendored file, which together say "vendor the set".
     for (const call of ORCHESTRATOR_CALLS) {
       if (!text.includes(`./.github/workflows/${call}`)) {
         out.push(finding(rule, {

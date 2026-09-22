@@ -3,6 +3,8 @@ name: merge-to-main
 description: Merge the change in front of the owner into main. Use when the owner approves the current branch or PR, or asks to merge or land it into main.
 metadata:
   body: workflow
+  usage:
+    expect: triggered
   force-load-on-tool-calls:
     - 'mcp__github__merge_pull_request'
 ---

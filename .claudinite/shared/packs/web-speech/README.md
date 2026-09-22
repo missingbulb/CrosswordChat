@@ -2,7 +2,7 @@
 
 Active when a browser speech API — `webkitSpeechRecognition` / `SpeechRecognition`, `speechSynthesis` / `SpeechSynthesisUtterance`, or `chrome.tts` — is referenced in JS/TS source. Portable runtime gotchas for browser voice I/O (speech-to-text and text-to-speech).
 
-Most gotchas are runtime browser behaviours with no repo-state signature a static check could read, so they live as prose (`RULES.md`). The call-site contracts that **do** have a file-scoped signature — some in the [`web-speech-io`](skills/web-speech-io/SKILL.md) skill's bundle, the rest pack-level — run as checks at every Stop and in CI; each failure message is the rule.
+Most of the pack is prose (`RULES.md`). The call-site contracts with a file-scoped signature, some in the [`web-speech-io`](skills/web-speech-io/SKILL.md) skill's bundle and the rest pack-level, run as checks at every Stop and in CI; each failure message is the rule.
 
 Some of these APIs are extension-only, and where a rule touches MV3 service-worker or content-script mechanics this pack owns the speech-API facet of it specifically — never the general extension gotcha underneath.
 
@@ -26,10 +26,6 @@ Some of these APIs are extension-only, and where a rule touches MV3 service-work
 | Don't trust the default voice | low | correctness | prose: <100 words |
 | Never reject a speak() promise | high | correctness | prose: <50 words + check (`tts-speak-settles`) |
 | Neither engine reliably supports SSML | low | correctness | prose: <50 words |
-
-## Provenance
-
-Distilled from `missingbulb/CrosswordChat` — a Chrome extension that solves the NYT crossword conversationally (voice in, voice out). Grounded in its `extension/src/speech/` ports (`stt-port.js`, `tts-port.js`, `remote-tts-port.js`, `biasing.js`), the service-worker TTS relay (`extension/src/background/service-worker.js`), and its `dev/docs/FEASIBILITY.md` speech-API analysis.
 
 ## Checks
 
@@ -56,4 +52,4 @@ keeps current.
 
 What unites the pack-level ones is that their breach is **silent**: nothing throws, nothing logs,
 and the app keeps showing a live session while the user is heard by nobody, hears nothing, or
-hears every line in a voice nobody chose. That is what earns them a scan rather than prose.
+hears every line in a voice nobody chose.

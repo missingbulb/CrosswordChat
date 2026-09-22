@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hooklog } from '../checks/helpers/hook-log.mjs';
+import { TIMING_PREFIX } from '../checks/check-timing.mjs';
 
 const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const workRunner = join(dirname(fileURLToPath(import.meta.url)), '..', 'checks', 'check_the_work.mjs');
@@ -48,7 +49,15 @@ hooklog('Stop', 'start checks');
 const run = spawnSync(process.execPath, [workRunner, ...(transcriptPath ? ['--transcript', transcriptPath] : [])], {
   cwd: projectRoot, encoding: 'utf8',
 });
-const output = (run.stdout ?? '').trim();
+// The runner's timing record is a measurement, not a finding. Lift it off stdout
+// before anything reads the report: it goes to the hook log, where the usage
+// review's fold reads it from the transcript, and the loop guard below hashes
+// findings alone - a millisecond that moves every run would make every stop look
+// like a new one, so the guard would never relent.
+const reported = (run.stdout ?? '').trim().split('\n');
+const timing = reported.find((line) => line.includes(TIMING_PREFIX)) ?? null;
+if (timing) hooklog('Stop', timing.trim());
+const output = reported.filter((line) => line !== timing).join('\n').trim();
 if (run.status === 0) {
   if (output) console.log(output); // advisory findings, for the transcript
   hooklog('Stop', 'done exit=0 checks-passed');

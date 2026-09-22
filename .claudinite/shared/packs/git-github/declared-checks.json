@@ -221,5 +221,21 @@
         "fix": "treat the result as a lower bound: where the candidate set can be walked directly (each candidate's own file, a known roster), cross-check against that before scoping work off the count"
       }
     ]
+  },
+  {
+    "id": "branch-from-bare-main",
+    "severity": "blocking",
+    "since": "2026-09-16",
+    "scope": "action",
+    "failureMessage": "a sandboxed checkout's local `main` can sit pinned stale, so branching from it by bare name rather than `origin/main` can silently start from frozen history",
+    "guardToolCalls": [
+      {
+        "tool": "Bash",
+        "inputField": "command",
+        "match": "/git\\s+(?:checkout\\s+-b\\s+\\S+|branch\\s+(?!-)\\S+)\\s+main\\b/",
+        "what": "a branch created from bare \"main\" (\"{match}\")",
+        "fix": "git fetch origin main, then branch from origin/main explicitly"
+      }
+    ]
   }
 ]

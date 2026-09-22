@@ -3,6 +3,8 @@ name: adopt-pack
 description: Add one or more packs to an already-adopted Claudinite member — declare, run each pack's adoption interview, re-vendor, scaffold, land. Use when asked to adopt, add, enable, or declare a pack (e.g. product-wiki, executable-requirements) on a repo that already runs Claudinite.
 metadata:
   body: workflow
+  usage:
+    expect: adoption
 ---
 
 Turn one or more packs on: declare, answer what the pack asks, materialize its content, satisfy what

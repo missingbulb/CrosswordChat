@@ -4,15 +4,9 @@
 // Actions-runner rules — the `gha/` declared checks and the
 // skills/github-actions-scheduling skill. Universal reach comes from basics
 // naming it in `requires`, so the closure materializes it into every
-// declaration — never seeded directly (#385).
-//
-// THE ACTIONS HALF CARRIES NO FINGERPRINT, and does not need one: every `gha/`
-// check selects its inputs with `scanFiles` over `.github/workflows/`, so a repo
-// with no workflows hears from none of them. The fingerprint the separate pack
-// carried was a second copy of that same fact, kept in a place a repo had to
-// re-declare (#1079).
+// declaration - never seeded directly, and the pack carries no fingerprint.
 export default {
-  version: '60921.1',
+  version: '60922.5',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'git and GitHub procedure and platform: commit layering, branch and merge mechanics, workflow YAML, triggers, secrets, scheduling',

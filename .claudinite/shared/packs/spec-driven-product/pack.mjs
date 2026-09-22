@@ -1,10 +1,8 @@
-// A project-CLASS pack (prose-only, no fingerprint): a product project of this
-// class declares it. No detect — declaration is authoritative. The general
-// test-trust rules the playbook leans on (see-it-fail, snapshot hygiene,
-// re-baselining approval) stay in the writing-tests skill; release mechanics
-// stay in the platform's release surface (e.g. the chrome-extension pack's).
+// A project-CLASS pack: the playbook for building and shipping a small end-user
+// product against an executable spec. Prose only, and declared rather than
+// detected.
 export default {
-  version: '60920.1',
+  version: '60922.2',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'playbook for shipping a small end-user product from an executable spec — leaf claims, owner-owned expecteds, green-main releases',

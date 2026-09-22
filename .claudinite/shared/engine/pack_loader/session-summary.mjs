@@ -34,15 +34,12 @@ import { fileURLToPath } from 'node:url';
 import { settingsPath } from '../settings-file.mjs';
 
 import { spawnSync } from 'node:child_process';
+import { countWords, estimateTokens } from './token-estimate.mjs';
 
 // The prose is reported in TOKENS because that is the unit of the cost it
 // imposes — a context window, not a disk. The estimate goes through WORDS at the
-// standard English ratio of roughly 0.75 words per token: prose is words, and a
-// character count is thrown off by exactly what this corpus is full of — code
-// fences, paths, punctuation-dense Markdown. Rounded to the hundred and shown in
-// thousands (`14.3k`), because a session summary is a sense of scale, not an
-// accounting.
-const WORDS_PER_TOKEN = 0.75;
+// ratio token-estimate.mjs states. Rounded to the hundred and shown in thousands
+// (`14.3k`), because a session summary is a sense of scale, not an accounting.
 const TOKEN_ROUNDING = 100;
 const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
 const thousands = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
@@ -90,13 +87,12 @@ try {
     const prosePath = join(pack.dir, pack.prose);
     if (!existsSync(prosePath)) continue;
     try {
-      const words = readFileSync(prosePath, 'utf8').trim().split(/\s+/).filter(Boolean).length;
+      const words = countWords(readFileSync(prosePath, 'utf8'));
       wordsByPack.set(pack.id, (wordsByPack.get(pack.id) ?? 0) + words);
     } catch { /* an unreadable file counts as none */ }
   }
   const proseWords = [...wordsByPack.values()].reduce((n, w) => n + w, 0);
-  const estimate = (words, rounding) => Math.round(words / WORDS_PER_TOKEN / rounding) * rounding;
-  const tokens = estimate(proseWords, TOKEN_ROUNDING);
+  const tokens = estimateTokens(proseWords, TOKEN_ROUNDING);
 
   // What the active packs arm, split by WHEN it judges: a GUARD is a `scope: "action"`
   // declaration (`guardToolCalls`), judged per tool call by the PreToolUse hook; every

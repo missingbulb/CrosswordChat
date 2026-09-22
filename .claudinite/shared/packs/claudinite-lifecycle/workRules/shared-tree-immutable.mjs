@@ -7,6 +7,15 @@ import { finding } from '../../../engine/checks/helpers/findings.mjs';
 // running with no hook lands the edit unseen. This rule reads what the branch
 // actually committed.
 //
+// It is advisory, not blocking: rewriting this tree wholesale is exactly what the
+// pack's own update task does, by design, on every member every night, and the
+// title exemption below is the only thing separating that legitimate rewrite from
+// a hand-edit. A branch carrying converged content under any other title (a
+// re-converge run by hand, a rehearsal's residue, a member's baselining) is doing
+// the update task's operation without the update task's title, and blocking it
+// stops work that is usually right. The finding says what to check; the session
+// decides.
+//
 // It cannot be a declaration. `.claudinite/shared/` is structurally filtered out
 // of the scanned file set (repo-context.mjs — the vendored corpus is canon-owned
 // and out of scope for every ordinary check), so `ctx.changedFiles` never carries
@@ -14,20 +23,21 @@ import { finding } from '../../../engine/checks/helpers/findings.mjs';
 // here by construction. Reading the branch's own commits is the only surface that
 // still sees the tree.
 //
-// The update flow is the one legitimate writer: its worker commits under the PR
-// title it composes (tasks/update/worker.mjs), so a converge PR — every member's,
-// every night — is exempt by that title rather than by a branch-name convention.
+// The update flow is the one writer that owns this operation outright: its worker
+// commits under the PR title it composes (tasks/update/worker.mjs), so a converge
+// PR, every member's, every night, is exempt by that title rather than by a
+// branch-name convention.
 const SHARED_ROOT = '.claudinite/shared/';
 const UPDATE_RUN = /^Claudinite update\b/;
 
 const rule = {
   id: 'shared-tree-immutable',
-  severity: 'blocking',
+  severity: 'advisory',
   since: '2026-09-06',
   scope: 'work',
   doc: 'packs/claudinite-lifecycle/RULES.md',
-  description: 'A branch never commits an edit under .claudinite/shared/ — the update flow replaces that tree whole',
-  why: 'the update flow overwrites .claudinite/shared/ on its next converge, so a hand-edit there is either silently lost or briefly masks a mount gone stale — the fix belongs in the canon, or as a local override under .claudinite/local/packs/',
+  description: 'A branch commits under .claudinite/shared/ without being the update flow, whose task rewrites that tree whole by design',
+  why: "the update flow overwrites .claudinite/shared/ on its next converge, so a hand-edit there is either silently lost or briefly masks a mount gone stale — the fix belongs in the canon, or as a local override under .claudinite/local/packs/; rewriting that tree is the update task's own operation, which is why this advises rather than blocks",
 
   run(work) {
     if (work.onDefaultBranch()) return [];
@@ -38,8 +48,8 @@ const rule = {
       .sort()
       .map((p) => finding(rule, {
         file: p,
-        what: `this branch commits ${p}, inside the vendored ${SHARED_ROOT} tree`,
-        fix: `revert that file and make the change in the canon instead, or — for a difference this repo alone needs — carry it under .claudinite/local/packs/, which sits beside the mount and survives every converge`,
+        what: `this branch commits ${p}, inside the vendored ${SHARED_ROOT} tree, under a title the update task does not compose`,
+        fix: `if this branch is converging the mount, the update task's own operation, which legitimately rewrites this tree whole, leave it; otherwise revert that file and make the change in the canon instead, or — for a difference this repo alone needs — carry it under .claudinite/local/packs/, which sits beside the mount and survives every converge`,
       }));
   },
 };

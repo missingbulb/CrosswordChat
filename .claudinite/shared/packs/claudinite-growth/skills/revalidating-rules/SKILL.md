@@ -3,6 +3,8 @@ name: revalidating-rules
 description: Re-probe the pack rules whose truth lives outside the repository — harness tool contracts, token reach, whether an MCP tool exists, a platform's behaviour — and correct the ones that have gone stale. Use when a revalidation sweep runs over a corpus of packs, or when asked whether a rule's environmental claim still holds.
 metadata:
   body: workflow
+  usage:
+    expect: judgment
 ---
 
 # Revalidating a rule against the world

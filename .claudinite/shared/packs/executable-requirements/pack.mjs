@@ -1,12 +1,9 @@
 
 // The executable-requirements framework standard: the concrete, portable
-// conventions — layout, naming, gates, kinds, gallery, determinism — shared by
-// every project that runs its spec as tests. The judgment layer (owner-owned
-// expecteds, doc-first discipline) is the spec-driven-product pack; this pack
-// is the mechanics that implement it. Fingerprinted by the framework's one
-// structural constant: the spec file itself.
+// conventions - layout, naming, gates, kinds, gallery, determinism - shared by
+// every project that runs its spec as tests.
 export default {
-  version: '60920.1',
+  version: '60922.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'running a numbered spec as tests: dev/requirements layout, requirement ids, kinds, coverage and gallery gates, determinism rules',
@@ -14,11 +11,6 @@ export default {
   },
   marker: 'dev/requirements/requirements.md',
   detect: (ctx) => ctx.tracked.includes('dev/requirements/requirements.md'),
-  // Adoption interview: the spec runs AS tests, so two decisions must be made
-  // before the first requirement is authored — how a UI requirement becomes an
-  // assertion (the harness), and where the requirements come from (a new file,
-  // or extracted from an existing doc / the issue tracker). `config.spec` fixes
-  // the executable spec's home; the rest records as intent on the entry.
   questions: [
     {
       id: 'ui_testing',

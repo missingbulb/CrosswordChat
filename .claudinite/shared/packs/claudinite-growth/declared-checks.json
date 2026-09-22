@@ -26,13 +26,23 @@
     "id": "legacy-check-spellings",
     "severity": "advisory",
     "since": "2026-09-03",
-    "failureMessage": "the merged assertion families accept their pre-merge spelling only until no declaration still uses it, and a spelling the engine stops placing asserts nothing at all",
+    "failureMessage": "the merged assertion families no longer accept their pre-merge spelling, and a spelling the engine cannot place is dropped at load — the assertion is simply not there",
     "scanFiles": "/declared-checks\\.json$/",
     "matchLines": [
       {
         "match": "/\"eachValueInParsedArray\"/",
-        "what": "{match} is the pre-merge spelling of an index-coverage assertion",
-        "fix": "restate it as a named `extractValueSets` entry quantified over by `requireIndexCoverage`'s `eachValueOfSet` — the normalizer that rewrites it today is scheduled for removal (#1643)"
+        "what": "{match} is the pre-merge spelling of an index-coverage assertion, which the engine no longer places",
+        "fix": "restate it as a named `extractValueSets` entry quantified over by `requireIndexCoverage`'s `eachValueOfSet` — the normalizer that rewrote it retired in #1643"
+      },
+      {
+        "match": "/\"(listedInFile|coveredByGlobLine)\"/",
+        "what": "{match} is the pre-merge spelling of an index-coverage assertion, which the engine no longer places",
+        "fix": "restate it as a `requireIndexCoverage` entry — `listFile`/`globFile` become `indexFile`, `asText` becomes `coveredByText`, `globLineMatching` becomes `coveredByGlobLinesMatching`, and the defaults the old keys implied (`whenIndexFileAbsent`, `anchorFindingsAt`) are now declared"
+      },
+      {
+        "match": "/\"(checkParsedFile|forEachParsedEntry|equalParsedValues)\"/",
+        "what": "{match} is the pre-merge spelling of a parsed-document assertion, which the engine no longer places",
+        "fix": "restate it as a `checkParsedFiles` entry — one selector (`file`, or `filesMatching` + `whereFileContains`) carrying `forEachEntryAtField`/`whereEntryFieldEquals` or `requireEqualFields`"
       }
     ]
   },
