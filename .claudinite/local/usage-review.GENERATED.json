@@ -1,0 +1,5848 @@
+{
+  "generated": "2026-09-22T00:00:00Z",
+  "window": {
+    "from": "2026-08-25",
+    "to": "2026-09-21",
+    "daysCovered": 28,
+    "previous": {
+      "from": "2026-07-28",
+      "to": "2026-08-24",
+      "daysCovered": 1
+    },
+    "foldedThrough": "2026-09-21",
+    "subjects": {
+      "skills": 42,
+      "checks": 96,
+      "guards": 16
+    },
+    "twinless": 96
+  },
+  "findings": [],
+  "notEvaluated": [
+    {
+      "rule": "advisory-ignored",
+      "subject": "adoption-answers-pending",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "automerge-policy-scope",
+      "pack": "claudinite-tasks",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "barrier",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "catalog-completeness",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/permission-added-store-issue",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/privacy-permission-alignment",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/readme-sections",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/release-config",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/release-layout",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/release-workflows",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/template-tokens",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/version-bumped",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "cer/version-sync",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "check-ships-with-test",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "claude-md-length",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "claudinite-isolation",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": 0
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "claudinite-lifecycle-declared",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "comment-classification-form",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "conformance-work-scope",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "conformance-workflow",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "content-script-module-syntax",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "declarative-content-set-icon",
+      "pack": "chrome-extension",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "declared-check-messages",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": 0
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "declared-check-since",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "declared-check-spec-keys",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "dedup-prune-integrity",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "doc-pointers-resolve",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "executor-workflow-secrets",
+      "pack": "claudinite-tasks",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "feature-requirements-first",
+      "pack": "executable-requirements",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "generated-merge-driver",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": 1
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/checkout-submodules",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/cron-minute-off-the-hour",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/label-create-before-add",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/no-scheduled-fleet-executor",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/pages-artifact-symlinks",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/run-pipefail",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/scheduled-failure-escalation",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/secrets-in-job-if",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "gha/unique-automation-branch",
+      "pack": "git-github",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "growth-write-scope",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "improve-comments-scope",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "in-session-github-access",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "interview-answer-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "legacy-check-spellings",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "legacy-shape-in-use",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "legacy-task-fields",
+      "pack": "claudinite-tasks",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "markdown-link-labels",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "mic-capture-released",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "mic-constraints-not-screen-capture",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "no-conflict-markers",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "node/btoa-atob-on-text",
+      "pack": "node",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "node/earn-each-dependency",
+      "pack": "node",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "node/test-discovery-resolves",
+      "pack": "node",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "page-observers-disconnected",
+      "pack": "host-page",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "preferences-provenance",
+      "pack": "claude-code-web-users-support",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "preferences-store-configured",
+      "pack": "claude-code-web-users-support",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "preferences-store-file-names",
+      "pack": "claude-code-web-users-support",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "provenance-change-recorded",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "provenance-integrity",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": 1
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "reference-integrity",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": 0
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "repo-variables-through-the-bag",
+      "pack": "claudinite-tasks",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "routine-structure",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "rules-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "rules-line-length",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": 1
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "runnable-doc-commands",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "scheduler-workflow-shape",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "schema-conformance",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": 0
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "seeded-file-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "shared-constants",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "shared-tree-immutable",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "skill-loaded-before-editing",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": 0
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "skills-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "advisory",
+      "need": 10,
+      "have": 0
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "squash-merge-history",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "stt-error-map-has-default",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "stt-interim-results-gated",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "stt-terminal-handlers",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "synthetic-input-events-bubble",
+      "pack": "host-page",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "synthetic-input-events-target-app-node",
+      "pack": "host-page",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "task-code-work-env",
+      "pack": "claudinite-tasks",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "task-declaration-matches-folder",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "task-declaration-shape",
+      "pack": "claudinite-tasks",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "task-md-only-when-agentic",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "task-phase-discipline",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "task-worker-restores-main",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "tasks-pack-read-through-its-surface",
+      "pack": "claudinite-tasks",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "technology-skill-cites-dated-sources",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "technology-skill-code-imports-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "technology-skill-links-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "tts-speak-settles",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "tts-voices-cached-empty",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "untracked-test-file",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "warning-suppression",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "web-speech-capture-released-on-pagehide",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "web-speech-no-window-api-in-service-worker",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "web-speech-recognition-feature-detected",
+      "pack": "web-speech",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "advisory-ignored",
+      "subject": "work-request-not-started",
+      "pack": "basics",
+      "name": "advisory",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "adoption-answers-pending",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "automerge-policy-scope",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "barrier",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "catalog-completeness",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/permission-added-store-issue",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/privacy-permission-alignment",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/readme-sections",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/release-config",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/release-layout",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/release-workflows",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/template-tokens",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/version-bumped",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "cer/version-sync",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "check-ships-with-test",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "claude-md-length",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "claudinite-isolation",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "claudinite-lifecycle-declared",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "comment-classification-form",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "conformance-work-scope",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "conformance-workflow",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "content-script-module-syntax",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "declarative-content-set-icon",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "declared-check-messages",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "declared-check-since",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "declared-check-spec-keys",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "dedup-prune-integrity",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "doc-pointers-resolve",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "executor-workflow-secrets",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "feature-requirements-first",
+      "pack": "executable-requirements",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "generated-merge-driver",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/checkout-submodules",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/cron-minute-off-the-hour",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/label-create-before-add",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/no-scheduled-fleet-executor",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/pages-artifact-symlinks",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/run-pipefail",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/scheduled-failure-escalation",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/secrets-in-job-if",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "gha/unique-automation-branch",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "growth-write-scope",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "improve-comments-scope",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "in-session-github-access",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "interview-answer-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "legacy-check-spellings",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "legacy-shape-in-use",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "legacy-task-fields",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "markdown-link-labels",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "mic-capture-released",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "mic-constraints-not-screen-capture",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "no-conflict-markers",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "node/btoa-atob-on-text",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "node/earn-each-dependency",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "node/test-discovery-resolves",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "page-observers-disconnected",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "preferences-provenance",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "preferences-store-configured",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "preferences-store-file-names",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "provenance-change-recorded",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "provenance-integrity",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "reference-integrity",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "repo-variables-through-the-bag",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "routine-structure",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "rules-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "rules-line-length",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "runnable-doc-commands",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "scheduler-workflow-shape",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "schema-conformance",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "seeded-file-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "shared-constants",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "shared-tree-immutable",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "skill-loaded-before-editing",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "skills-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "squash-merge-history",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "stt-error-map-has-default",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "stt-interim-results-gated",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "stt-terminal-handlers",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "synthetic-input-events-bubble",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "synthetic-input-events-target-app-node",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "task-code-work-env",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "task-declaration-matches-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "task-declaration-shape",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "task-md-only-when-agentic",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "task-phase-discipline",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "task-worker-restores-main",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "tasks-pack-read-through-its-surface",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "technology-skill-cites-dated-sources",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "technology-skill-code-imports-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "technology-skill-links-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "tts-speak-settles",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "tts-voices-cached-empty",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "untracked-test-file",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "warning-suppression",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "web-speech-capture-released-on-pagehide",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "web-speech-no-window-api-in-service-worker",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "web-speech-recognition-feature-detected",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-fires-most-sessions",
+      "subject": "work-request-not-started",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "adoption-answers-pending",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "automerge-policy-scope",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "barrier",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "catalog-completeness",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/permission-added-store-issue",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/privacy-permission-alignment",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/readme-sections",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/release-config",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/release-layout",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/release-workflows",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/template-tokens",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/version-bumped",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "cer/version-sync",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "check-ships-with-test",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "claude-md-length",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "claudinite-isolation",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "claudinite-lifecycle-declared",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "comment-classification-form",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "conformance-work-scope",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "conformance-workflow",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "content-script-module-syntax",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "declarative-content-set-icon",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "declared-check-messages",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "declared-check-since",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "declared-check-spec-keys",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "dedup-prune-integrity",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "doc-pointers-resolve",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "executor-workflow-secrets",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "feature-requirements-first",
+      "pack": "executable-requirements",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "generated-merge-driver",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/checkout-submodules",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/cron-minute-off-the-hour",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/label-create-before-add",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/no-scheduled-fleet-executor",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/pages-artifact-symlinks",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/run-pipefail",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/scheduled-failure-escalation",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/secrets-in-job-if",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "gha/unique-automation-branch",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "growth-write-scope",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "improve-comments-scope",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "in-session-github-access",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "interview-answer-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "legacy-check-spellings",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "legacy-shape-in-use",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "legacy-task-fields",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "markdown-link-labels",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "mic-capture-released",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "mic-constraints-not-screen-capture",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "no-conflict-markers",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "node/btoa-atob-on-text",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "node/earn-each-dependency",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "node/test-discovery-resolves",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "page-observers-disconnected",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "preferences-provenance",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "preferences-store-configured",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "preferences-store-file-names",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "provenance-change-recorded",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "provenance-integrity",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "reference-integrity",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "repo-variables-through-the-bag",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "routine-structure",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "rules-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "rules-line-length",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "runnable-doc-commands",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "scheduler-workflow-shape",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "schema-conformance",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "seeded-file-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "shared-constants",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "shared-tree-immutable",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "skill-loaded-before-editing",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "skills-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "squash-merge-history",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "stt-error-map-has-default",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "stt-interim-results-gated",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "stt-terminal-handlers",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "synthetic-input-events-bubble",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "synthetic-input-events-target-app-node",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "task-code-work-env",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "task-declaration-matches-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "task-declaration-shape",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "task-md-only-when-agentic",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "task-phase-discipline",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "task-worker-restores-main",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "tasks-pack-read-through-its-surface",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "technology-skill-cites-dated-sources",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "technology-skill-code-imports-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "technology-skill-links-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "tts-speak-settles",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "tts-voices-cached-empty",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "untracked-test-file",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "warning-suppression",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "web-speech-capture-released-on-pagehide",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "web-speech-no-window-api-in-service-worker",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "web-speech-recognition-feature-detected",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires",
+      "subject": "work-request-not-started",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "adoption-answers-pending",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "automerge-policy-scope",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "barrier",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "catalog-completeness",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/permission-added-store-issue",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/privacy-permission-alignment",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/readme-sections",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/release-config",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/release-layout",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/release-workflows",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/template-tokens",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/version-bumped",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "cer/version-sync",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "check-ships-with-test",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "claude-md-length",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "claudinite-isolation",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "claudinite-lifecycle-declared",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "comment-classification-form",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "conformance-work-scope",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "conformance-workflow",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "content-script-module-syntax",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "declarative-content-set-icon",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "declared-check-messages",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "declared-check-since",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "declared-check-spec-keys",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "dedup-prune-integrity",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "doc-pointers-resolve",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "executor-workflow-secrets",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "feature-requirements-first",
+      "pack": "executable-requirements",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "generated-merge-driver",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/checkout-submodules",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/cron-minute-off-the-hour",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/label-create-before-add",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/no-scheduled-fleet-executor",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/pages-artifact-symlinks",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/run-pipefail",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/scheduled-failure-escalation",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/secrets-in-job-if",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "gha/unique-automation-branch",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "growth-write-scope",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "improve-comments-scope",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "in-session-github-access",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "interview-answer-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "legacy-check-spellings",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "legacy-shape-in-use",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "legacy-task-fields",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "markdown-link-labels",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "mic-capture-released",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "mic-constraints-not-screen-capture",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "no-conflict-markers",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "node/btoa-atob-on-text",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "node/earn-each-dependency",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "node/test-discovery-resolves",
+      "pack": "node",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "page-observers-disconnected",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "preferences-provenance",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "preferences-store-configured",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "preferences-store-file-names",
+      "pack": "claude-code-web-users-support",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "provenance-change-recorded",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "provenance-integrity",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "reference-integrity",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "repo-variables-through-the-bag",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "routine-structure",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "rules-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "rules-line-length",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "runnable-doc-commands",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "scheduler-workflow-shape",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "schema-conformance",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "seeded-file-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "shared-constants",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "shared-tree-immutable",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "skill-loaded-before-editing",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "skills-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "squash-merge-history",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "stt-error-map-has-default",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "stt-interim-results-gated",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "stt-terminal-handlers",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "synthetic-input-events-bubble",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "synthetic-input-events-target-app-node",
+      "pack": "host-page",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "task-code-work-env",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "task-declaration-matches-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "task-declaration-shape",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "task-md-only-when-agentic",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "task-phase-discipline",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "task-worker-restores-main",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "tasks-pack-read-through-its-surface",
+      "pack": "claudinite-tasks",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "technology-skill-cites-dated-sources",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "technology-skill-code-imports-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "technology-skill-links-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "tts-speak-settles",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "tts-voices-cached-empty",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "untracked-test-file",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "warning-suppression",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "web-speech-capture-released-on-pagehide",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "web-speech-no-window-api-in-service-worker",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "web-speech-recognition-feature-detected",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-never-fires-with-prose-twin",
+      "subject": "work-request-not-started",
+      "pack": "basics",
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "adoption-answers-pending",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "automerge-policy-scope",
+      "pack": "claudinite-tasks",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "barrier",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "catalog-completeness",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/permission-added-store-issue",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/privacy-permission-alignment",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/readme-sections",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/release-config",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/release-layout",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/release-workflows",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/template-tokens",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/version-bumped",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "cer/version-sync",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "check-ships-with-test",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "claude-md-length",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "claudinite-isolation",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "claudinite-lifecycle-declared",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "comment-classification-form",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "conformance-work-scope",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "conformance-workflow",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "content-script-module-syntax",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "declarative-content-set-icon",
+      "pack": "chrome-extension",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "declared-check-messages",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "declared-check-since",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "declared-check-spec-keys",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "dedup-prune-integrity",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "doc-pointers-resolve",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "executor-workflow-secrets",
+      "pack": "claudinite-tasks",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "feature-requirements-first",
+      "pack": "executable-requirements",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "generated-merge-driver",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/checkout-submodules",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/cron-minute-off-the-hour",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/label-create-before-add",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/no-scheduled-fleet-executor",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/pages-artifact-symlinks",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/run-pipefail",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/scheduled-failure-escalation",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/secrets-in-job-if",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "gha/unique-automation-branch",
+      "pack": "git-github",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "growth-write-scope",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "improve-comments-scope",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "in-session-github-access",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "interview-answer-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "legacy-check-spellings",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "legacy-shape-in-use",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "legacy-task-fields",
+      "pack": "claudinite-tasks",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "markdown-link-labels",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "mic-capture-released",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "mic-constraints-not-screen-capture",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "no-conflict-markers",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "node/btoa-atob-on-text",
+      "pack": "node",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "node/earn-each-dependency",
+      "pack": "node",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "node/test-discovery-resolves",
+      "pack": "node",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "page-observers-disconnected",
+      "pack": "host-page",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "preferences-provenance",
+      "pack": "claude-code-web-users-support",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "preferences-store-configured",
+      "pack": "claude-code-web-users-support",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "preferences-store-file-names",
+      "pack": "claude-code-web-users-support",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "provenance-change-recorded",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "provenance-integrity",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "reference-integrity",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "repo-variables-through-the-bag",
+      "pack": "claudinite-tasks",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "routine-structure",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "rules-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "rules-line-length",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "runnable-doc-commands",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "scheduler-workflow-shape",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "schema-conformance",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "seeded-file-stale",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "shared-constants",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "shared-tree-immutable",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "skill-loaded-before-editing",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "skills-index-current",
+      "pack": "claudinite-lifecycle",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "squash-merge-history",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "stt-error-map-has-default",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "stt-interim-results-gated",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "stt-terminal-handlers",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "synthetic-input-events-bubble",
+      "pack": "host-page",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "synthetic-input-events-target-app-node",
+      "pack": "host-page",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "task-code-work-env",
+      "pack": "claudinite-tasks",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "task-declaration-matches-folder",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "task-declaration-shape",
+      "pack": "claudinite-tasks",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "task-md-only-when-agentic",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "task-phase-discipline",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "task-worker-restores-main",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "tasks-pack-read-through-its-surface",
+      "pack": "claudinite-tasks",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "technology-skill-cites-dated-sources",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "technology-skill-code-imports-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "technology-skill-links-inside-its-folder",
+      "pack": "claudinite-growth",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "tts-speak-settles",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "tts-voices-cached-empty",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "untracked-test-file",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "warning-suppression",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "web-speech-capture-released-on-pagehide",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "web-speech-no-window-api-in-service-worker",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "web-speech-recognition-feature-detected",
+      "pack": "web-speech",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "check-unsatisfiable",
+      "subject": "work-request-not-started",
+      "pack": "basics",
+      "name": "relent >= 1",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "checks-slower",
+      "subject": "checks",
+      "pack": null,
+      "name": "activity",
+      "need": 120,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "ask-user-question-already-decided",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "bare-wait-in-fresh-shell",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "branch-from-bare-main",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "codeload-tarball-fetch",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "generated-file-hand-edit",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "github-list-without-fields",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "grep-context-without-content",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "issue-labels-overwrite",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "manufactured-no-op-call",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "pipe-tail-hides-exit",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "pkill-pattern-self-match",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "pull-request-head-unqualified",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "search-code-lower-bound",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "shared-tree-edit-guard",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "sub-issue-without-parent",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "guard-overruled",
+      "subject": "wakeup-without-prompt",
+      "pack": "basics",
+      "name": "activity",
+      "need": 90,
+      "have": 41.46558
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "adopt-claudinite",
+      "pack": "claudinite-lifecycle",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "adopt-pack",
+      "pack": "claudinite-lifecycle",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "authoring-agent-docs",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "backfilling-provenance",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "bug-investigation",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "changing-pack-elements",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "chrome-store-releases",
+      "pack": "chrome-extension",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "ci-performance-evaluation",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "committing",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "deterministic-expecteds",
+      "pack": "executable-requirements",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "do-later",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "extension-host-permissions",
+      "pack": "chrome-extension",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "extract-from-activity",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "extract-from-conversations",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "extract-from-instructions",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "fetching-from-the-web",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "file-placement",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "git-github-advanced",
+      "pack": "git-github",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "github-actions-scheduling",
+      "pack": "git-github",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "growth-dedup",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "improve-comments",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "learning-a-technology",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "merge-to-main",
+      "pack": "git-github",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "node-test-discovery",
+      "pack": "node",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "production-retrospective",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "prose-to-checks",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "repo-text-sweeps",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "revalidating-rules",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "searching-for-a-tool",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "triaging-usage-findings",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "unattended-agents",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "verify-in-production",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "web-speech-io",
+      "pack": "web-speech",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "working-with-generated-files",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "write-a-requirement-leaf",
+      "pack": "executable-requirements",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "write-a-saga",
+      "pack": "executable-requirements",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "writing-handover-issues",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "writing-migration-plans",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "writing-pack-prose",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "writing-repo-scanning-checks",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "writing-tasks",
+      "pack": "claudinite-growth",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "result-trigger-follows-every-call",
+      "subject": "writing-tests",
+      "pack": "basics",
+      "name": "toolCalls",
+      "need": 10,
+      "have": null
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "adopt-claudinite",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "adopt-pack",
+      "pack": "claudinite-lifecycle",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "authoring-agent-docs",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "backfilling-provenance",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "bug-investigation",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "changing-pack-elements",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "chrome-store-releases",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "ci-performance-evaluation",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "committing",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "deterministic-expecteds",
+      "pack": "executable-requirements",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "do-later",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "extension-host-permissions",
+      "pack": "chrome-extension",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "extract-from-activity",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "extract-from-conversations",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "extract-from-instructions",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "fetching-from-the-web",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "file-placement",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "git-github-advanced",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "github-actions-scheduling",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "growth-dedup",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "improve-comments",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "learning-a-technology",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "merge-to-main",
+      "pack": "git-github",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "node-test-discovery",
+      "pack": "node",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "production-retrospective",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "prose-to-checks",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "repo-text-sweeps",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "revalidating-rules",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "searching-for-a-tool",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "triaging-usage-findings",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "unattended-agents",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "verify-in-production",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "web-speech-io",
+      "pack": "web-speech",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "working-with-generated-files",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "write-a-requirement-leaf",
+      "pack": "executable-requirements",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "write-a-saga",
+      "pack": "executable-requirements",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "writing-handover-issues",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "writing-migration-plans",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "writing-pack-prose",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "writing-repo-scanning-checks",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "writing-tasks",
+      "pack": "claudinite-growth",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-always-loaded",
+      "subject": "writing-tests",
+      "pack": "basics",
+      "name": "activity",
+      "need": 60,
+      "have": 41.46558
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "adopt-claudinite",
+      "pack": "claudinite-lifecycle",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "adopt-pack",
+      "pack": "claudinite-lifecycle",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "authoring-agent-docs",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "backfilling-provenance",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "bug-investigation",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "changing-pack-elements",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "chrome-store-releases",
+      "pack": "chrome-extension",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "ci-performance-evaluation",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "committing",
+      "pack": "basics",
+      "name": "skillBlocks / skillLoads >= 0.9",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "deterministic-expecteds",
+      "pack": "executable-requirements",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "do-later",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "extension-host-permissions",
+      "pack": "chrome-extension",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "extract-from-activity",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 1
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "extract-from-conversations",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 1
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "extract-from-instructions",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "fetching-from-the-web",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 2
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "file-placement",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "git-github-advanced",
+      "pack": "git-github",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "github-actions-scheduling",
+      "pack": "git-github",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "growth-dedup",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "improve-comments",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "learning-a-technology",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "merge-to-main",
+      "pack": "git-github",
+      "name": "skillBlocks / skillLoads >= 0.9",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "node-test-discovery",
+      "pack": "node",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "production-retrospective",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "prose-to-checks",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 2
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "repo-text-sweeps",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "revalidating-rules",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 1
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "searching-for-a-tool",
+      "pack": "basics",
+      "name": "skillBlocks / skillLoads >= 0.9",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "triaging-usage-findings",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "unattended-agents",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "verify-in-production",
+      "pack": "basics",
+      "name": "skillBlocks / skillLoads >= 0.9",
+      "need": null,
+      "have": null
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "web-speech-io",
+      "pack": "web-speech",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "working-with-generated-files",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 1
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "write-a-requirement-leaf",
+      "pack": "executable-requirements",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "write-a-saga",
+      "pack": "executable-requirements",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "writing-handover-issues",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 0
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "writing-migration-plans",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 1
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "writing-pack-prose",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 1
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "writing-repo-scanning-checks",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 2
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "writing-tasks",
+      "pack": "claudinite-growth",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 1
+    },
+    {
+      "rule": "skill-forced-only-small",
+      "subject": "writing-tests",
+      "pack": "basics",
+      "name": "skillLoads",
+      "need": 5,
+      "have": 2
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "adopt-claudinite",
+      "pack": "claudinite-lifecycle",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "adopt-pack",
+      "pack": "claudinite-lifecycle",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "authoring-agent-docs",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "backfilling-provenance",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "bug-investigation",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "changing-pack-elements",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "chrome-store-releases",
+      "pack": "chrome-extension",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "ci-performance-evaluation",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "committing",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "deterministic-expecteds",
+      "pack": "executable-requirements",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "do-later",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "extension-host-permissions",
+      "pack": "chrome-extension",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "extract-from-activity",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "extract-from-conversations",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "extract-from-instructions",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "fetching-from-the-web",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "file-placement",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "git-github-advanced",
+      "pack": "git-github",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "github-actions-scheduling",
+      "pack": "git-github",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "growth-dedup",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "improve-comments",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "learning-a-technology",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "merge-to-main",
+      "pack": "git-github",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "node-test-discovery",
+      "pack": "node",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "production-retrospective",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "prose-to-checks",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "repo-text-sweeps",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "revalidating-rules",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "searching-for-a-tool",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "triaging-usage-findings",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "unattended-agents",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "verify-in-production",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "web-speech-io",
+      "pack": "web-speech",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "working-with-generated-files",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "write-a-requirement-leaf",
+      "pack": "executable-requirements",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "write-a-saga",
+      "pack": "executable-requirements",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "writing-handover-issues",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "writing-migration-plans",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "writing-pack-prose",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "writing-repo-scanning-checks",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "writing-tasks",
+      "pack": "claudinite-growth",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-loaded-still-caught",
+      "subject": "writing-tests",
+      "pack": "basics",
+      "name": "skillSessions",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "authoring-agent-docs",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "changing-pack-elements",
+      "pack": "claudinite-growth",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "chrome-store-releases",
+      "pack": "chrome-extension",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "committing",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "deterministic-expecteds",
+      "pack": "executable-requirements",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "do-later",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "extension-host-permissions",
+      "pack": "chrome-extension",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "fetching-from-the-web",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "learning-a-technology",
+      "pack": "claudinite-growth",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "merge-to-main",
+      "pack": "git-github",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "node-test-discovery",
+      "pack": "node",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "searching-for-a-tool",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "working-with-generated-files",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "write-a-requirement-leaf",
+      "pack": "executable-requirements",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "write-a-saga",
+      "pack": "executable-requirements",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "writing-handover-issues",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "writing-migration-plans",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "writing-pack-prose",
+      "pack": "claudinite-growth",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "writing-repo-scanning-checks",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "writing-tasks",
+      "pack": "claudinite-growth",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "skill-triggered-missing-moments",
+      "subject": "writing-tests",
+      "pack": "basics",
+      "name": "moments",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "adopt-claudinite",
+      "pack": "claudinite-lifecycle",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "adopt-pack",
+      "pack": "claudinite-lifecycle",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "authoring-agent-docs",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "backfilling-provenance",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "bug-investigation",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "changing-pack-elements",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "chrome-store-releases",
+      "pack": "chrome-extension",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "ci-performance-evaluation",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "committing",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "deterministic-expecteds",
+      "pack": "executable-requirements",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "do-later",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "extension-host-permissions",
+      "pack": "chrome-extension",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "extract-from-activity",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "extract-from-conversations",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "extract-from-instructions",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "fetching-from-the-web",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "file-placement",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "git-github-advanced",
+      "pack": "git-github",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "github-actions-scheduling",
+      "pack": "git-github",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "growth-dedup",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "improve-comments",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "learning-a-technology",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "merge-to-main",
+      "pack": "git-github",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "node-test-discovery",
+      "pack": "node",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "production-retrospective",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "prose-to-checks",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "repo-text-sweeps",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "revalidating-rules",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "searching-for-a-tool",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "triaging-usage-findings",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "unattended-agents",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "verify-in-production",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "web-speech-io",
+      "pack": "web-speech",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "working-with-generated-files",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "write-a-requirement-leaf",
+      "pack": "executable-requirements",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "write-a-saga",
+      "pack": "executable-requirements",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "writing-handover-issues",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "writing-migration-plans",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "writing-pack-prose",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "writing-repo-scanning-checks",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "writing-tasks",
+      "pack": "claudinite-growth",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    },
+    {
+      "rule": "trigger-fires-unfollowed",
+      "subject": "writing-tests",
+      "pack": "basics",
+      "name": "triggerFired",
+      "need": 5,
+      "have": null
+    }
+  ],
+  "unstated": []
+}
