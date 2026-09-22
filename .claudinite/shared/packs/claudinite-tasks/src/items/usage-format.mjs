@@ -36,7 +36,7 @@
 import { TASK_RUN_OUTCOMES, TASK_EXEC_STATUSES, LEGACY_TASK_RUN_OUTCOMES } from './run-record.mjs';
 import { PARK_KINDS } from '../../public/task-constants.mjs';
 
-export const USAGE_VERSION = 3;
+export const USAGE_VERSION = 4;
 
 // The queue's own outcome words — what `outcomeOf`
 // (packs/claudinite-tasks/queue/work-item.mjs) decodes a closed work item to, plus `none`
@@ -78,7 +78,28 @@ export const USAGE_FIELDS = Object.freeze({
   // run counts that concluded in failure.
   hour: Object.freeze(['scheduler', 'executor', 'agentic', 'failed']),
   checks: Object.freeze(['runs', 'failures', 'errors', 'blocking', 'advisory', 'ciRuns', 'ciFailures']),
-  checkFindings: Object.freeze(['blocking', 'advisory']),
+  // Keyed by RULE. `sessions` is how many sessions the rule was seen in at all,
+  // `persisted` how many left it still standing at their last Stop (an advisory
+  // nobody acted on), `relent` how many gave up on it after two fix attempts.
+  // The last two are what separate a check that corrects work from one that is
+  // merely printed at it.
+  checkFindings: Object.freeze(['blocking', 'advisory', 'sessions', 'persisted', 'relent']),
+  // Keyed by SKILL. Why the skill's body entered the session, in the order
+  // corpus-use.mjs's LOAD_CAUSES spells them - `voluntary` is the session
+  // reaching for it, every other slot names the thing that made it load.
+  skillLoadsBy: Object.freeze([
+    'voluntary', 'blockedEdit', 'blockedCall', 'resultTrigger', 'promptTrigger', 'command', 'read',
+  ]),
+  // Keyed by SKILL. A declared trigger that fired, and whether a load followed it
+  // in the same session - a fire nobody followed is a pattern matching the wrong
+  // thing, or advice wanted before the call rather than after it.
+  triggerFires: Object.freeze(['fired', 'followed']),
+  // Keyed by RULE - an action guard's firings, by what the call was told.
+  guardFires: Object.freeze(['blocking', 'advisory']),
+  // Keyed by `<scope>` for a whole sweep and `<scope>/<rule>` for one rule in it.
+  // `maxMs` beside the total because a median over days answers "is the sweep
+  // slower" and the max answers "is one rule to blame".
+  checkTiming: Object.freeze(['runs', 'totalMs', 'maxMs']),
   // Keyed by MODEL ID. The four usage counters are kept apart here where `tokensIn`
   // is their first three summed, so a reader can price a day per model without
   // anything else in the file changing meaning.
@@ -123,12 +144,26 @@ export const WEEK_FROM_DAY = Object.freeze({ sessionDays: 'sessions' });
 // declared for. The sub-maps whose values are bare numbers are BARE_MAPS below.
 export const COUNTER_GROUPS = Object.freeze([
   'checks', 'checkFindings', 'tasks', 'taskExec', 'queue', 'tokensByModel', 'prs', 'taskCost', 'parks',
+  'skillLoadsBy', 'triggerFires', 'guardFires', 'checkTiming',
 ]);
 
 // The row's sub-maps whose values are BARE NUMBERS — no vocabulary, nothing to expand,
 // written and read as they stand. Keyed by a name that varies (a skill, a pack), like
 // the counter groups beside them.
-export const BARE_MAPS = Object.freeze(['skillLoads']);
+// `skillSessions` counts distinct sessions per DAY, so a window figure summed
+// from them is a ceiling on distinct sessions rather than a count - a session
+// spanning midnight is two. `moments` carries no key at all where the engine
+// running the fold could not resolve the declarations, which reads as *not
+// recorded* rather than as none. `skillCaught` is sessions that loaded the skill
+// and were caught anyway by a check it owns.
+export const BARE_MAPS = Object.freeze([
+  'skillLoads', 'skillSessions', 'skillBlocks', 'moments', 'toolCalls', 'skillCaught',
+]);
+
+// The counter fields folded by MAX rather than by sum, per group. A peak is not
+// additive: a week's slowest check run is the slowest of its days', never their
+// total, and summing it would report a steady sweep as an ever-worsening one.
+export const MAX_FIELDS = Object.freeze({ checkTiming: Object.freeze(['maxMs']) });
 
 // The bounds a reader would otherwise have to guess, declared in the file beside
 // `fields` for the same reason: a figure computed under a cap means nothing without

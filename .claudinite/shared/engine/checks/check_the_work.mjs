@@ -12,6 +12,7 @@ import { discoverPacks } from '../pack_loader/pack-registry.mjs';
 import { runActivePackRules } from './run-active-pack-rules.mjs';
 import { READS_THE_SESSION } from './helpers/work.mjs';
 import { reportFindings } from './report-findings.mjs';
+import { renderTiming } from './check-timing.mjs';
 
 const args = process.argv.slice(2);
 const has = (flag) => args.includes(flag);
@@ -26,8 +27,15 @@ const ctx = buildContext({
   transcriptPath: value('--transcript'),
 });
 
-const findings = runActivePackRules(ctx, packs, { includeRule: (rule) => READS_THE_SESSION.has(rule.scope) });
+const timings = [];
+const started = performance.now();
+const findings = runActivePackRules(ctx, packs, { includeRule: (rule) => READS_THE_SESSION.has(rule.scope), timings });
+const sweepMs = performance.now() - started;
 const blocking = reportFindings(findings, ctx.config, { scopeLabel: 'work', mode: ctx.mode, baseRef: ctx.baseRef });
+// The timing record last, on its own line: the Stop hook lifts it off stdout and
+// relays it through the hook log, so it must not be inside the findings block it
+// hashes to decide whether a session is converging.
+console.log(renderTiming('work', sweepMs, timings));
 // An exit CODE, never process.exit(): a findings report can run to hundreds of
 // lines, stdout is a pipe whenever a caller captures it, and a pipe write is
 // asynchronous — process.exit() drops whatever is still queued, which loses the

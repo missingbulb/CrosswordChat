@@ -36,7 +36,7 @@
 // in the exact file anyone would go to change it, and a missing key becomes drift the
 // automation repairs rather than a case code must interpret forever. `servedBy`
 // therefore reports whether the value was DECLARED or inferred.
-// THE NAME IS `versioned`, and `updates` is its own legacy alias.
+// THE NAME IS `versioned`.
 //
 // The mechanism and the TASK that runs it had names one letter apart — mechanism
 // `updates`, task `update` — which is not a style complaint: the two appear together
@@ -47,26 +47,17 @@
 // (docs/versioned-updates/DESIGN.md) — while `update` is the right name for a task,
 // which is an action a repo performs.
 //
-// `updates` STAYS RECOGNISED for the same reason `baselining` does, and for a
-// narrower window: it is stamped in every member's declaration right now, and a
-// member reads its own declaration with the engine it currently has, which is one
-// cycle behind the record that renames it. A member converging mid-rename must not
-// find its own mechanism unrecognised — that reads as `invalid`, which resolves to
-// the default with the offending value attached, and would make a correctly-declared
-// repo look misdeclared for exactly one cycle. The `basics` record retires it from
-// declarations; this list retires it from the vocabulary a release later.
-export const MECHANISMS = ['baselining', 'updates', 'versioned'];
+// `updates` IS GONE FROM THE VOCABULARY (#1643), one convergence window after the
+// `basics` record retired it from declarations. A declaration still carrying it
+// reads as `invalid` — undeclared, with the offending value attached — which
+// resolves to the default, which is `versioned`, which is what that repo meant.
+export const MECHANISMS = ['baselining', 'versioned'];
 export const DEFAULT_MECHANISM = 'versioned';
 
 // The mechanism that no longer exists — kept nameable so the one caller that must
 // explain the dead end can name it without hard-coding the string.
 export const RETIRED_MECHANISM = 'baselining';
 
-// …and the one being renamed out of declarations, still fully served while members
-// carry it. Distinct from RETIRED: a repo declaring this gets maintained normally,
-// it is simply spelled the old way.
-// @legacy-tolerance advisory:legacy-shape-in-use retire:#1643
-export const LEGACY_MECHANISM = 'updates';
 export const VERSIONED_MECHANISM = 'versioned';
 
 // The declaration key. Beside `delivery`, because both answer "how is this repo
@@ -92,11 +83,7 @@ export function servedBy(declaration) {
 // The two questions the mechanisms ask about themselves, so neither has to know the
 // other's name at its call site — and so the "exactly one" property is one
 // expression rather than two that can disagree.
-// Both spellings answer yes: a member on the old name is served by the same flows,
-// so every caller asking "are the update flows mine to run" gets one answer whichever
-// word the repo happens to carry this cycle.
-export const servedByUpdates = (declaration) =>
-  [LEGACY_MECHANISM, VERSIONED_MECHANISM].includes(servedBy(declaration).mechanism);
+export const servedByUpdates = (declaration) => servedBy(declaration).mechanism === VERSIONED_MECHANISM;
 export const servedByBaselining = (declaration) => servedBy(declaration).mechanism === RETIRED_MECHANISM;
 
 // The declaration a flip writes: the mechanism made explicit, everything else

@@ -28,8 +28,8 @@ export const DECLINED_FILE = '_declined.md';
 
 // The closed kind vocabulary, and the kinds whose entry always carries Mechanism.
 export const KINDS = Object.freeze(['born', 'reworded', 'strengthened', 'weakened', 'split', 'merged', 'moved',
-  'converted', 'trigger-changed', 'policy-changed', 'severity-changed', 'reaffirmed', 'promoted', 'retired']);
-export const MECHANISM_KINDS = Object.freeze(['born', 'converted', 'moved', 'trigger-changed', 'policy-changed', 'severity-changed']);
+  'converted', 'trigger-changed', 'policy-changed', 'severity-changed', 'scope-changed', 'reaffirmed', 'promoted', 'retired']);
+export const MECHANISM_KINDS = Object.freeze(['born', 'converted', 'moved', 'trigger-changed', 'policy-changed', 'severity-changed', 'scope-changed']);
 export const FIELDS = Object.freeze(['Source', 'Reason', 'Actor', 'Model', 'Mechanism', 'Rejected', 'Retire when', 'Landed']);
 export const DECLINED_KIND = 'declined';
 
@@ -54,6 +54,9 @@ const FIELD_LINE = /^- \*\*([A-Z][A-Za-z ]*?):\*\*\s*(.*)$/;
 // every element file is its id and `.md`, the pack's own and the declined log leading
 // with an underscore.
 const ELEMENT_FILE = /^_?[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
+// The title `convertReferences` writes, which is how a conversion-filled file is known
+// again afterwards.
+const CONVERTED_TITLE = /^converted from references\.md \(/;
 export const elementIdOf = (id) => String(id).replace(/\//g, '-');
 export const fileOfId = (id) => `${elementIdOf(id)}.md`;
 export const idOfFile = (name) => name.replace(/\.md$/, '');
@@ -156,16 +159,26 @@ function wrapField(text, width) {
   return out;
 }
 
-// Validate an entry against the grammar and the file it would join, then return the
-// text to write back. Refuses rather than writes: the caller decides what a refusal
-// costs. `firstKind` is what an empty file's first entry must be (null: anything).
-export function appendedText(existing, entry, { kinds = KINDS, firstKind = 'born' } = {}) {
+// The grammar faults of one entry on its own, before the file it would join is read.
+export function entryProblems(entry, { kinds = KINDS } = {}) {
   const problems = [];
   if (!kinds.includes(entry.kind)) problems.push(`kind "${entry.kind}" is not in the vocabulary (${kinds.join(', ')})`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.date ?? '') || Number.isNaN(Date.parse(`${entry.date}T00:00:00Z`))) problems.push(`date "${entry.date}" is not a YYYY-MM-DD date`);
   if (!entry.title || !String(entry.title).trim()) problems.push('an entry needs its one-line title');
   for (const name of Object.keys(entry.fields ?? {})) if (!FIELDS.includes(name)) problems.push(`field "${name}" is not in the vocabulary`);
   if (MECHANISM_KINDS.includes(entry.kind) && !String(entry.fields?.Mechanism ?? '').trim()) problems.push(`a ${entry.kind} entry carries Mechanism: the carrier and its trigger, and why`);
+  return problems;
+}
+
+// Validate an entry against the grammar and the file it would join, then return the
+// text to write back. Refuses rather than writes: the caller decides what a refusal
+// costs. `firstKind` is what an empty file's first entry must be (null: anything).
+// This is the ordinary lane, and it is append-only: an entry dated before the file's
+// last one is refused, because a change being recorded now cannot have happened before
+// the change recorded last. The backfill is the one lane that writes the past, and it
+// goes through `backfilledText` instead.
+export function appendedText(existing, entry, { kinds = KINDS, firstKind = 'born' } = {}) {
+  const problems = entryProblems(entry, { kinds });
   const { entries, errors } = parseEntries(existing, { kinds });
   if (errors.length) problems.push(`the file does not parse (line ${errors[0].line}: ${errors[0].what})`);
   const last = entries[entries.length - 1];
@@ -178,6 +191,50 @@ export function appendedText(existing, entry, { kinds = KINDS, firstKind = 'born
   if (text.trim() === '') return { problems: [], text: body };
   const glue = text.endsWith('\n\n') ? '' : text.endsWith('\n') ? '\n' : '\n\n';
   return { problems: [], text: `${text}${glue}${body}` };
+}
+
+// One parsed entry as `renderEntry` takes it, its fields in the file's own order.
+const asEntry = (e) => ({ date: e.date, kind: e.kind, title: e.title, fields: Object.fromEntries(e.order.map((n) => [n, e.fields[n]])) });
+const headingOf = (e) => `${e.date} · ${e.kind} · ${e.title}`;
+
+// The backfill's write, and the ONE place a provenance file is rewritten rather than
+// appended to. A backfill derives an element's whole history at once from commits that
+// are already in the past, so its entries are dated before whatever the file holds -
+// which the append lane refuses, correctly, for every other caller. Here the file is
+// re-rendered from its existing entries and the batch merged in date order.
+//
+// A file the references conversion filled carries a placeholder `born` dated by the
+// conversion write rather than by the element's birth. Where the batch supplies a born
+// dated EARLIER, that placeholder is the thing being corrected, so it is dropped and
+// named in `superseded`; where the placeholder's date is the real birth, no earlier
+// born arrives and it stands. That distinction is read off the dates rather than left
+// to the run, which is why this is the tool's job and not a prompt's (#2223).
+export function backfilledText(existing, entries, { kinds = KINDS, firstKind = 'born' } = {}) {
+  const problems = [];
+  for (const e of entries) problems.push(...entryProblems(e, { kinds }));
+  const { entries: held, errors } = parseEntries(existing, { kinds });
+  if (errors.length) problems.push(`the file does not parse (line ${errors[0].line}: ${errors[0].what})`);
+  if (problems.length) return { problems, superseded: [] };
+  const born = entries.filter((e) => e.kind === 'born').map((e) => e.date).sort()[0];
+  const superseded = [];
+  const keep = held.map(asEntry).filter((e) => {
+    // Only the conversion's own placeholder is replaced, never an entry somebody wrote:
+    // a batch carrying an earlier born would otherwise silently delete real history, and
+    // the point of this lane is to correct a date the conversion never knew.
+    if (born && e.kind === 'born' && e.date > born && CONVERTED_TITLE.test(e.title ?? '')) { superseded.push(headingOf(e)); return false; }
+    return true;
+  });
+  const merged = [...keep];
+  for (const e of entries) if (!merged.some((m) => headingOf(m) === headingOf(e))) merged.push(e);
+  // A stable sort by date alone: entries of one day keep the order they arrived in,
+  // the file's own first and then the batch's, which is the order a run wrote them.
+  const ordered = merged.map((e, i) => ({ e, i })).sort((a, b) => a.e.date.localeCompare(b.e.date) || a.i - b.i).map(({ e }) => e);
+  if (ordered.length && firstKind && ordered[0].kind !== firstKind) problems.push(`the file would open with ${ordered[0].kind}; the first entry of a file is ${firstKind}`);
+  const retiredAt = ordered.findIndex((e) => e.kind === 'retired');
+  if (retiredAt !== -1 && retiredAt !== ordered.length - 1) problems.push(`a retired entry is a file's last; "${headingOf(ordered[retiredAt])}" would sit above ${ordered.length - 1 - retiredAt} more`);
+  if (ordered.filter((e) => e.kind === 'born').length > 1) problems.push('the batch would leave two born entries in one file; an element is born once');
+  if (problems.length) return { problems, superseded };
+  return { problems: [], superseded, text: ordered.map((e) => renderEntry(e)).join('\n') };
 }
 
 // Parse an entry written in the file grammar (what `append` reads from stdin).
@@ -299,6 +356,54 @@ export function checkIdsIn(source) {
   return out;
 }
 
+// The sibling modules a file imports or re-exports, relative specifiers only: what a
+// thin aggregator names when the ids live beside it rather than in its own text.
+export function relativeModulesIn(source) {
+  const out = [];
+  const re = /\bfrom\s*['"](\.{1,2}\/[^'"]+\.mjs)['"]/g;
+  let m;
+  while ((m = re.exec(String(source ?? ''))) !== null) if (!out.includes(m[1])) out.push(m[1]);
+  return out;
+}
+
+// The checks a module carries, following its re-exports: an aggregator's ids live in
+// the modules it names, and the file that DECLARES a check is the one a decision about
+// it changes, so that is the file each id is carried by. Without the follow an
+// aggregated check is carried by nothing, which no fault reports - its history simply
+// has nowhere to land (#2222).
+export function checksOfModule(io, file, within = null, seen = new Set()) {
+  if (seen.has(file)) return [];
+  seen.add(file);
+  const source = io.read(file) ?? '';
+  const own = checkIdsIn(source).map((id) => ({ id, file }));
+  // Only a file declaring NO id of its own is an aggregator. One that declares an id is a
+  // check module, and the modules it names are its helpers - reading their `id:` literals
+  // turns a documented example or an unrelated key into a carrier that no provenance file
+  // will ever have, which reads as a fault in a pack nobody touched.
+  if (own.length) return own;
+  const dir = file.replace(/\/[^/]+$/, '');
+  const out = [...own];
+  for (const rel of relativeModulesIn(source)) {
+    const resolved = normalizePath(`${dir}/${rel}`);
+    // A module outside the pack is shared engine code, never one of the pack's carriers.
+    if (within && !resolved.startsWith(`${within}/`)) continue;
+    if (io.exists(resolved)) out.push(...checksOfModule(io, resolved, within, seen));
+  }
+  return out.filter((c, i) => out.findIndex((o) => o.id === c.id) === i);
+}
+
+// `a/b/../c.mjs` as `a/c.mjs`: the io reads a literal path, so a `..` specifier has to
+// be resolved before it is asked for.
+function normalizePath(path) {
+  const parts = [];
+  for (const part of path.split('/')) {
+    if (part === '.' || part === '') continue;
+    if (part === '..') { parts.pop(); continue; }
+    parts.push(part);
+  }
+  return parts.join('/');
+}
+
 // Every carrier of the pack at `packDir` and the file each names:
 //   rules       [{ file, line, lastLine, trigger, slug, numeric, text }]   RULES.md bullets (1-based lines)
 //   guidelines  [{ file, skill, line, lastLine, trigger, slug, numeric, text }]   a guidelines skill's bullets
@@ -312,6 +417,7 @@ export function packCarriers(packDir, io) {
   const skills = [];
   const checks = [];
   const tasks = [];
+  const declarations = [];
   const prose = `${packDir}/${PROSE_FILE}`;
   if (io.exists(prose)) {
     for (const b of ruleBlocks(io.read(prose))) rules.push({ file: prose, line: b.start + 1, lastLine: b.lastLine + 1, trigger: b.trigger, slug: b.slug, numeric: b.numeric, text: b.text });
@@ -328,7 +434,7 @@ export function packCarriers(packDir, io) {
     }
     skills.push(skill);
     if (skill.body === 'guidelines') guidelines.push(...skill.bullets);
-    if (io.exists(`${dir}/checks.mjs`)) for (const id of checkIdsIn(io.read(`${dir}/checks.mjs`))) checks.push({ id, file: `${dir}/checks.mjs` });
+    if (io.exists(`${dir}/checks.mjs`)) checks.push(...checksOfModule(io, `${dir}/checks.mjs`, packDir));
     const declared = readJson(io, `${dir}/declared-checks.json`);
     if (Array.isArray(declared)) for (const d of declared) if (typeof d?.id === 'string') checks.push({ id: d.id, file: `${dir}/declared-checks.json` });
   }
@@ -345,7 +451,17 @@ export function packCarriers(packDir, io) {
     const dir = `${packDir}/tasks/${t}`;
     if (io.exists(`${dir}/task.json`) || io.exists(`${dir}/task.md`)) tasks.push({ id: t, dir, file: `${dir}/${io.exists(`${dir}/task.json`) ? 'task.json' : 'task.md'}` });
   }
-  return { rules, guidelines, skills, checks, tasks, manifest: io.exists(`${packDir}/pack.mjs`) };
+  // A pack may declare a set of elements as DATA rather than as prose or code -
+  // `<something>-rules.json` at the pack root, `{ "rules": [{ "id" }, …] }`. Each
+  // entry is a carrier like any other: it decides something, so it has a file and
+  // a log. Read by shape rather than by filename, the way declared-checks.json
+  // already is, so the engine learns no one pack's vocabulary.
+  for (const f of listFiles(io, packDir)) {
+    if (!f.endsWith('-rules.json')) continue;
+    const doc = readJson(io, `${packDir}/${f}`);
+    for (const d of doc?.rules ?? []) if (typeof d?.id === 'string') declarations.push({ id: d.id, file: `${packDir}/${f}` });
+  }
+  return { rules, guidelines, skills, checks, tasks, declarations, manifest: io.exists(`${packDir}/pack.mjs`) };
 }
 
 // The provenance files of a pack: id → { file, text, entries, errors, status, empty }.
@@ -359,7 +475,15 @@ export function provenanceFiles(packDir, io) {
     const file = `${dir}/${name}`;
     const text = io.read(file) ?? '';
     const { entries, errors } = parseEntries(text);
-    out.set(idOfFile(name), { file, text, entries, errors, status: elementStatus(entries), empty: text.trim() === '' });
+    out.set(idOfFile(name), {
+      file, text, entries, errors, status: elementStatus(entries),
+      empty: text.trim() === '',
+      // A file the references conversion filled and nothing has since: it holds the
+      // element's rationale but not its history, and its one entry is dated by the
+      // conversion write rather than by the element. It owes a backfill exactly as an
+      // empty file does, and reads as filled to anything counting bytes (#2223).
+      convertedOnly: entries.length === 1 && CONVERTED_TITLE.test(entries[0].title ?? ''),
+    });
   }
   return out;
 }
@@ -400,6 +524,8 @@ export function auditPack(packDir, io) {
     parseErrors: [],       // { file, line, what }
     entryFaults: [],       // { file, line, what }
     empty: [],             // { file, id } - pending history
+    convertedOnly: [],     // { file, id } - filled by the conversion, so history is pending too
+    declined: null,        // { file, entries } - the turned-down candidates, listed beside the elements
     referencesDoc: io.exists(`${packDir}/references.md`) ? `${packDir}/references.md` : null,
   };
   const name = (id, carrier, at) => {
@@ -424,17 +550,20 @@ export function auditPack(packDir, io) {
   }
   for (const c of carriers.checks) name(elementIdOf(c.id), `check ${c.id}`, { file: c.file, line: null });
   for (const t of carriers.tasks) name(t.id, `task ${t.id}`, { file: t.file, line: null });
+  for (const d of carriers.declarations) name(d.id, `declared rule ${d.id}`, { file: d.file, line: null });
   if (carriers.manifest) name(PACK_ELEMENT, 'the manifest', { file: `${packDir}/pack.mjs`, line: null });
   for (const [id, f] of files) {
     for (const e of f.errors) out.parseErrors.push({ file: f.file, line: e.line, what: e.what });
     for (const e of entryFaults(f.entries)) out.entryFaults.push({ file: f.file, line: e.line, what: e.what });
     if (f.empty) out.empty.push({ file: f.file, id });
+    if (f.convertedOnly) out.convertedOnly.push({ file: f.file, id });
     if (f.status === 'live' && !named.has(id)) out.unnamed.push({ file: f.file, id });
   }
   const declined = `${packDir}/${PROVENANCE_DIR}/${DECLINED_FILE}`;
   if (io.exists(declined)) {
-    const { errors } = parseEntries(io.read(declined), { kinds: [DECLINED_KIND] });
+    const { entries, errors } = parseEntries(io.read(declined), { kinds: [DECLINED_KIND] });
     for (const e of errors) out.parseErrors.push({ file: declined, line: e.line, what: e.what });
+    out.declined = { file: declined, entries };
   }
   return out;
 }
@@ -535,6 +664,7 @@ export function markPack(packDir, io, { width = 100 } = {}) {
   for (const r of prose) if (r.slug) ensureFile(r.slug, `rule "${r.trigger}"`);
   for (const s of carriers.skills) if (s.present) ensureFile(s.name, `skill ${s.name}`);
   for (const c of carriers.checks) ensureFile(elementIdOf(c.id), `check ${c.id}`);
+  for (const d of carriers.declarations) ensureFile(d.id, `declared rule ${d.id}`);
   for (const t of carriers.tasks) ensureFile(t.id, `task ${t.id}`);
   if (carriers.manifest) ensureFile(PACK_ELEMENT, 'the manifest');
   return report;

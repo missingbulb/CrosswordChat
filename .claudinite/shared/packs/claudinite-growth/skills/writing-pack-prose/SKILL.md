@@ -3,6 +3,8 @@ name: writing-pack-prose
 description: How pack prose is written - RULES.md rules, SKILL.md bodies and check text in a Claudinite pack, local or canon - brevity, structure, triggerability, findability, the marker that names a rule's provenance file. Loaded for any edit of a pack's RULES.md or SKILL.md, and when landing a lesson as prose.
 metadata:
   body: guidelines
+  usage:
+    expect: triggered
   force-load-on-file-edits-paths:
     - "**/packs/*/RULES.md"
     - "**/packs/*/skills/*/SKILL.md"

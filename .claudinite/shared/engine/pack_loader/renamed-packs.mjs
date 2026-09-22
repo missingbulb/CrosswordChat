@@ -21,36 +21,23 @@
 // one-step hops would need as many passes as there have been renames, and every
 // caller would have to know to loop.
 //
-// RETIREMENT is a convergence window, not a census: the map comes out a week after
-// `legacy-shape-in-use` starts reporting the old spellings (#1641), which is the
-// time a repo that converges nightly needs to read its own finding and rename its
-// declaration. The canon cannot enumerate the repos that use it, so "when no member
-// still declares it" is a condition nothing can ever answer — and until it is
-// answered the map is load-bearing for exactly the repos that stopped converging.
+// RETIREMENT is a convergence window, not a census, and the window is PER ENTRY: an
+// entry comes out a week after `legacy-shape-in-use` starts reporting that spelling,
+// which is the time a repo that converges nightly needs to read its own finding and
+// rename its declaration. The canon cannot enumerate the repos that use it, so "when
+// no member still declares it" is a condition nothing can ever answer — and until it
+// is answered the map is load-bearing for exactly the repos that stopped converging.
+// The seven spellings the 2026-08-19 renames and collapses left shared one window and
+// came out together (#1641); what is here now landed after that advisory shipped, so
+// each waits out its own week (#1909).
 //
 // A pack ABSORBED into another is the same map entry: its id resolves to the pack
 // that now carries its rules, so a member declaring the absorbed one activates the
 // survivor instead of activating nothing. The declaration then holds two ids that
 // resolve to one, which is what `applyPackRenames` merges (registry.mjs).
-// @legacy-tolerance advisory:legacy-shape-in-use retire:#1641
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#1909
 export const RENAMED_PACKS = Object.freeze({
-  core: 'claudinite-lifecycle',
-  grow_with_claudinite: 'claudinite-growth',
-  // Absorbed, not renamed: the release standard collapsed into the coding pack,
-  // and the release rules gate on the repo shipping the pipeline rather than on a
-  // second declaration (#1057).
-  'chrome-extension-release': 'chrome-extension',
-  // Absorbed too (#1079): the workflow-YAML rules moved in beside the git/GitHub
-  // procedure they were always the platform half of.
-  'github-actions': 'git-github',
-  // Absorbed too (#1079): the Firebase release standard became a skill in the pack
-  // that owns the technology, so shipping stops being a second thing to declare.
-  'firebase-release': 'firebase',
-  // Renamed (#1079): a pack whose subject is a Claudinite feature carries the prefix
-  // that says so.
-  'canary-probe': 'claudinite-canary-repo',
-  sheepdog: 'claudinite-fleet-sheepdog',
-  // Absorbed too (#1681): the folder-access graph was never a pack anyone chose —
+  // Absorbed, not renamed (#1681): the folder-access graph was never a pack anyone chose —
   // it carried no fingerprint and arrived through `requires` in every member that
   // declares the baseline — so its check, its contribution seam and its guide moved
   // into the pack that was already carrying it in.
@@ -67,8 +54,8 @@ export const RENAMED_PACKS = Object.freeze({
 
 // The canon id a spelling resolves to. Canon packs only — a LOCAL pack lives in the
 // member's own tree and its id is that repo's to choose, so a local pack that happens
-// to be called `core` is a different pack than the canon one and must not be renamed
-// out from under its owner.
+// to be called `barriers` is a different pack than the canon one and must not be
+// renamed out from under its owner.
 export const canonicalPackId = (id) => RENAMED_PACKS[id] ?? id;
 
 // The id a CANON pack DIRECTORY contributes, given every raw id the same tree

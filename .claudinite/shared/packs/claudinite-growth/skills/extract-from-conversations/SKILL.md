@@ -3,6 +3,8 @@ name: extract-from-conversations
 description: Mine an agent-user conversation — a captured conversation log or the live session — for friction-driven lessons (misunderstandings, backtracks, measured wall-time waits) and land them in the repo's own local packs. Use when extracting lessons from a session transcript or the conversation-logs branch, or when an owner asks for a retrospective.
 metadata:
   body: workflow
+  usage:
+    expect: judgment
 ---
 
 # Extract lessons from a conversation

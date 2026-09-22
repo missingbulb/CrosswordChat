@@ -3,6 +3,8 @@ name: ci-performance-evaluation
 description: Method for finding where a repo's CI time actually goes and what is worth fixing. Use when CI feels slow, when investigating a runtime regression, or when the weekly ci-performance task hands you a finding.
 metadata:
   body: workflow
+  usage:
+    expect: judgment
 ---
 
 # Evaluating CI performance

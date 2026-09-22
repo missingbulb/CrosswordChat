@@ -1,0 +1,20 @@
+{
+  "$schema": "../claudinite-dashboard/dashboard-descriptor.schema.json",
+  "widgets": [
+    {
+      "id": "usage-findings",
+      "kind": "window",
+      "label": "usage findings",
+      "noun": "findings",
+      "glyph": "◎"
+    },
+    {
+      "id": "usage-newest",
+      "kind": "list",
+      "label": "newest findings",
+      "glyph": "◎"
+    }
+  ],
+  "repo": ["usage-findings", "usage-newest"],
+  "fleet": { "member": "usage-findings" }
+}

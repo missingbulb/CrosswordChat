@@ -3,6 +3,8 @@ name: extract-from-activity
 description: Mine a window of a repo's commits, merged PRs and issue activity for durable, reusable lessons and land them in the repo's own local packs. Use when extracting lessons from repo artifacts — the growth-extract task's activity half, or an owner asking what a recent stretch of work taught.
 metadata:
   body: workflow
+  usage:
+    expect: judgment
 ---
 
 # Extract lessons from repo activity

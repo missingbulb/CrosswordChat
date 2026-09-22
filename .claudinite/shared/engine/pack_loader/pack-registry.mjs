@@ -318,12 +318,16 @@ async function scanSkillChecks(packDir, errors) {
     return rules;
   }
   for (const name of names) {
+    // `ownerSkill` is stamped from the directory the check was found in rather than
+    // declared: which skill owns a check is already structural, and the usage review
+    // reads it to ask whether a session that loaded the skill was caught by it anyway.
+    const owned = (found) => (found ?? []).map((rule) => ({ ...rule, ownerSkill: name }));
     const skillDir = join(skillsRoot, name);
-    rules.push(...await declaredChecksIn(skillDir, `the ${name} skill`, errors));
+    rules.push(...owned(await declaredChecksIn(skillDir, `the ${name} skill`, errors)));
     const manifest = join(skillDir, 'checks.mjs');
     if (!existsSync(manifest)) continue;
     try {
-      rules.push(...(await import(pathToFileURL(manifest).href)).default);
+      rules.push(...owned((await import(pathToFileURL(manifest).href)).default));
     } catch (e) {
       errors.push({ what: `local skill check ${name}/checks.mjs failed to load: ${e.message}`, fix: 'fix or remove the skill\'s checks.mjs', dir: skillDir });
     }
@@ -429,7 +433,7 @@ export const declTokenFor = (pack) =>
 // A declaration written before a canon pack was renamed resolves to the pack's
 // CURRENT id here (renamed-packs.mjs), so activation, config lookup and the vendor
 // set all agree on one spelling no matter which one the member wrote. A LOCAL pack
-// is exempt: its namespace belongs to the repo, so `local/core` stays `core`.
+// is exempt: its namespace belongs to the repo, so `local/barriers` stays `barriers`.
 // A local pack declared BARE cannot be told apart from a canon one at this seam and
 // is canonicalized with the rest — which is harmless while the shadow guard in
 // discoverPacks keeps a local id from claiming a canon one.

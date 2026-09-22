@@ -438,12 +438,6 @@ import { normalizeEdges, barrierFindings, staleFindings } from './reference-scan
 //
 // `what`/`fix` are templates: `{path}`, a named capture group's `{name}`, and
 // `{match}` (a matchLines hit's text), `{lines}`/`{limit}` (maxLines) interpolate.
-//
-// LEGACY SPELLINGS, accepted but not for new declarations (a member's own
-// local packs may carry them, and a key rename has no fleet carrier):
-// checkParsedFile / forEachParsedEntry / equalParsedValues load as
-// checkParsedFiles entries, listedInFile / coveredByGlobLine as
-// requireIndexCoverage entries — see normalizeLegacySpellings.
 
 const REGISTRY = [];
 const scans = new WeakMap();
@@ -484,8 +478,7 @@ const SPEC_KEYS = {
     'checkBranchCommits', 'forbidIntroducedMergeCommits', 'forbidAddedValueInArray',
     'forbidAddedLinesMatching', 'forbidRemovedLinesMatching', 'requireCoChange', 'flagUntrackedFilesMatching',
     'whenReplyClassIncludes', 'guardToolCalls',
-    'listedInFile', 'coveredByGlobLine', 'checkParsedFile', 'equalParsedValues',
-    'forEachParsedEntry', 'checkKeyValueFile', 'checkSections'],
+    'checkKeyValueFile', 'checkSections'],
   checkParsedFiles: ['file', 'filesMatching', 'whereFileContains', 'everyScannedFile',
     'forEachEntryAtField', 'whereEntryFieldEquals', 'whenFieldPresent',
     'requireField', 'requireFieldMatching', 'forbidField',
@@ -507,16 +500,7 @@ const SPEC_KEYS = {
   requireIdenticalFiles: ['everyFileMatching', 'twinAt', 'whenTwinAbsent', ...MSG],
   whenTwinAbsent: MSG,
   requireIndexCoverage: ['eachTrackedPathMatching', 'eachScannedPathMatching', 'includeVendored',
-    // `eachValueInParsedArray` is `eachValueOfSet`'s pre-#895 spelling, accepted
-    // here and rewritten by normalizeLegacySpellings. It cannot simply be dropped:
-    // a member's vendored packs are delivered on a PACK VERSION BUMP while the
-    // engine that validates them is delivered on its own, so a rename inside a
-    // pack's declared-checks.json reaches no member while the engine that rejects
-    // the old spelling reaches all of them. The resulting mixed tree fails the
-    // self-test, which parks the update PR — the very PR that would have carried
-    // the new spelling. Retire this only once a member's packs cannot be older
-    // than its engine.
-    'whoseTextMatches', 'eachValueOfSet', 'eachValueInParsedArray',
+    'whoseTextMatches', 'eachValueOfSet',
     'indexFile', 'coveredByText', 'coveredByGlobLinesMatching', 'coveredByValueInArrayAtField',
     'whenIndexFileAbsent', 'anchorFindingsAt', ...MSG],
   coveredByValueInArrayAtField: ['atField', 'value', 'ignoreCase', 'matchingEntryObjectsByField'],
@@ -548,16 +532,7 @@ const SPEC_KEYS = {
   flagUntrackedFilesMatching: ['match', ...MSG],
   guardToolCalls: ['tool', 'inputField', 'match', 'requireMatch', 'unlessMatches', 'inputMatches',
     'unlessInputMatches', 'inputFieldAbsent', 'atMostPerSession', ...MSG],
-  listedInFile: ['eachTrackedPathMatching', 'listFile', 'asText', ...MSG],
-  coveredByGlobLine: ['eachPathMatching', 'includeVendored', 'globFile', 'globLineMatching', ...MSG],
-  checkParsedFile: ['file', 'whenFieldPresent', 'requireField', 'forbidField', ...MSG],
-  equalParsedValues: ['first', 'second', 'whenSecondMissing', 'whenUnequal'],
-  first: ['file', 'filesMatching', 'whereFileContains', 'field'],
-  second: ['file', 'field'],
-  whenSecondMissing: MSG,
   whenUnequal: MSG,
-  forEachParsedEntry: ['inFilesMatching', 'entriesAtField', 'whereFieldEquals', 'forbidValueInArray', ...MSG],
-  whereFieldEquals: ['field', 'equals'],
   forbidValueInArray: ['atField', 'value', 'ignoreCase', 'matchingEntryObjectsByField'],
   requireValueInArray: ['atField', 'value', 'ignoreCase', 'matchingEntryObjectsByField'],
   checkKeyValueFile: ['file', 'keys', 'whenMissing', 'whenLineNotKeyValue', 'whenKeyUnknown', 'whenKeyMissing'],
@@ -605,85 +580,6 @@ export function unplacedSpecKeys(declaration) {
   const unplaced = [];
   partitionSpecKeys(declaration, 'spec', unplaced);
   return unplaced;
-}
-
-// The LEGACY SPELLINGS of the two merged assertion families, normalized into
-// their merged forms here so the runtime knows only those. They stay accepted
-// because declared-checks.json is a contract a member's own local packs may
-// already use, and a key rename has no fleet carrier — but new declarations
-// spell the merged keys.
-//   checkParsedFile / forEachParsedEntry / equalParsedValues → checkParsedFiles
-//   listedInFile / coveredByGlobLine                         → requireIndexCoverage
-// @legacy-tolerance advisory:legacy-check-spellings retire:#1643
-function normalizeLegacySpellings(spec) {
-  const parsed = [...(spec.checkParsedFiles ?? []), ...(spec.checkParsedFile ?? [])];
-  for (const a of spec.forEachParsedEntry ?? []) {
-    parsed.push({
-      filesMatching: a.inFilesMatching, forEachEntryAtField: a.entriesAtField,
-      whereEntryFieldEquals: a.whereFieldEquals, forbidValueInArray: a.forbidValueInArray,
-      what: a.what, fix: a.fix,
-    });
-  }
-  for (const a of spec.equalParsedValues ?? []) {
-    parsed.push({
-      ...(a.first.file !== undefined ? { file: a.first.file }
-        : { filesMatching: a.first.filesMatching, whereFileContains: a.first.whereFileContains }),
-      requireEqualFields: {
-        field: a.first.field, inFile: a.second.file, atField: a.second.field,
-        whenFileMissing: a.whenSecondMissing, whenUnequal: a.whenUnequal,
-      },
-    });
-  }
-  if (parsed.length) spec.checkParsedFiles = parsed;
-  delete spec.checkParsedFile;
-  delete spec.forEachParsedEntry;
-  delete spec.equalParsedValues;
-
-  // The pre-#895 value-set quantifier, which INLINED the extraction it now names:
-  //   eachValueInParsedArray: { filesMatching, whereFileContains, atField }
-  // becomes an `extractValueSets` entry plus a reference to it. Translated rather
-  // than rejected so a member whose vendored packs predate the split still loads
-  // its checks — see the key table for why that combination is reachable at all.
-  // The synthetic set name is indexed so several legacy entries in one pack cannot
-  // collide, and it is prefixed to keep it out of any hand-declared set's space.
-  const legacy = (spec.requireIndexCoverage ?? []).filter((a) => a.eachValueInParsedArray !== undefined);
-  if (legacy.length) {
-    const sets = [...(spec.extractValueSets ?? [])];
-    legacy.forEach((a, i) => {
-      const inline = a.eachValueInParsedArray;
-      const setName = `legacyInlineSet${i}`;
-      sets.push({
-        setName,
-        fromParsedFilesMatching: inline.filesMatching,
-        whereFileContains: inline.whereFileContains,
-        valuesOfArraysAtFields: [inline.atField],
-        whenSetEmpty: 'assertNothing',
-      });
-      a.eachValueOfSet = setName;
-      delete a.eachValueInParsedArray;
-    });
-    spec.extractValueSets = sets;
-  }
-
-  const coverage = [...(spec.requireIndexCoverage ?? [])];
-  for (const a of spec.listedInFile ?? []) {
-    coverage.push({
-      eachTrackedPathMatching: a.eachTrackedPathMatching, indexFile: a.listFile,
-      coveredByText: a.asText, whenIndexFileAbsent: 'assertNothing',
-      anchorFindingsAt: 'indexFile', what: a.what, fix: a.fix,
-    });
-  }
-  for (const a of spec.coveredByGlobLine ?? []) {
-    coverage.push({
-      eachScannedPathMatching: a.eachPathMatching, includeVendored: a.includeVendored,
-      indexFile: a.globFile, coveredByGlobLinesMatching: a.globLineMatching,
-      whenIndexFileAbsent: 'flagEveryPath', anchorFindingsAt: 'eachUncoveredPath',
-      what: a.what, fix: a.fix,
-    });
-  }
-  if (coverage.length) spec.requireIndexCoverage = coverage;
-  delete spec.listedInFile;
-  delete spec.coveredByGlobLine;
 }
 
 // Shape rules the key table can't state: each merged-family entry needs exactly
@@ -2068,7 +1964,6 @@ export function patternRule(declaration, { selfExclude = null } = {}) {
     throw new Error(`${where}: "since" is the date this check was added, as YYYY-MM-DD, not ${JSON.stringify(declaration.since)}`);
   }
   const spec = compileSpec(partitionSpecKeys(declaration, 'spec', []), null, where);
-  normalizeLegacySpellings(spec);
   validateEntryShapes(spec, where);
   const classPatterns = (names) => (names ?? []).map((n) => {
     if (!FILE_CLASSES[n]) {

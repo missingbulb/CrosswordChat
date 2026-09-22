@@ -3,6 +3,8 @@ name: web-speech-io
 description: Wiring browser voice I/O — speech-to-text (webkitSpeechRecognition / the Web Speech SpeechRecognition API) and text-to-speech (chrome.tts / speechSynthesis). Use when adding or changing recognition or synthesis.
 metadata:
   body: workflow
+  usage:
+    expect: judgment
 ---
 
 # Web-speech I/O

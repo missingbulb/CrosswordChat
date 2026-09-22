@@ -14,13 +14,19 @@
 //   node <path-to-this-file> reduce <file> [--public]
 //   node <path-to-this-file> history <pack> <element>
 //   node <path-to-this-file> brief <pack> [<element>…]
-//   node <path-to-this-file> apply <pack> <brief.md>
+//   node <path-to-this-file> apply <pack> <brief.md> [--backfill]
 //
 // In a member the path is .claudinite/shared/packs/claudinite-growth/provenance.mjs; in
 // the canon, packs/claudinite-growth/provenance.mjs. The append reads one entry in the
 // file grammar from stdin - `## <date> · <kind> · <title>` and its `- **Field:** …`
 // lines - and refuses one that carries a secret, since a decision log is prose an
 // agent writes and the one place nothing else scans.
+//
+// A provenance file is append-only for every flow but one: a change recorded now cannot
+// have happened before the change recorded last. The backfill is the exception by design,
+// because it derives a history that already happened - `--backfill` on `append` and
+// `apply` writes entries dated in the past, in date order over the whole file, and is the
+// only lane that does.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,7 +42,7 @@ import { scrub } from './capture-log.mjs';
 const VERSIONS_FILE = conventions.VERSIONS_FILE ?? 'VERSIONS.md';
 
 const {
-  checkoutIo, auditPack, markPack, convertReferences, appendedText, parseEntryText, packCarriers,
+  checkoutIo, auditPack, markPack, convertReferences, appendedText, backfilledText, parseEntryText, packCarriers,
   provenanceFiles, reduceFile, fileOfId, elementIdOf, ruleBlocks, skillShape, parseEntries, renderEntry,
   PACK_ROOTS, PROVENANCE_DIR, DECLINED_FILE, DECLINED_KIND, PACK_ELEMENT,
 } = provenance;
@@ -45,11 +51,14 @@ const USAGE = `usage: provenance.mjs <command> …
   mark <pack>|--all [--dry-run]          markers, bodies and empty files for every carrier
   check <pack>|--all                     what each file is named by, and every fault
   convert-references <pack>|--all        the references.md of a pack into its elements' files
-  append <pack> <element> [--kind K] [--date D] [--changed] < entry.md
+  append <pack> <element> [--kind K] [--date D] [--changed] [--backfill] < entry.md
   reduce <file> [--public]               the promotion reduction, to stdout
   history <pack> <element>               one element's raw evidence from git, VERSIONS.md and the README
   brief <pack> [<element>…]              the backfill brief: every pull request once, a draft entry per event
-  apply <pack> <brief.md>                append every drafted entry of an edited brief, each once`;
+  apply <pack> <brief.md> [--backfill]   append every drafted entry of an edited brief, each once
+  --backfill                             the backfill's lane: entries dated in the past, written in
+                                         date order over the file, creating one the marking pass
+                                         could not. every other caller appends, and only at the end`;
 
 // --- packs and roots ---------------------------------------------------------------
 
@@ -121,9 +130,14 @@ export function check(root, packs) {
     for (const s of a.carriers.skills) if (s.present) name(s.name, `skill ${s.name} (${s.body ?? 'no body'})`);
     for (const c of a.carriers.checks) name(elementIdOf(c.id), `check ${c.id}`);
     for (const t of a.carriers.tasks) name(t.id, `task ${t.id}`);
+    for (const d of a.carriers.declarations) name(d.id, `declared rule ${d.id}`);
     if (a.carriers.manifest) name(PACK_ELEMENT, 'the manifest');
     lines.push(`${pack}/${PROVENANCE_DIR}/`);
-    for (const [id, f] of [...a.files].sort()) lines.push(`  ${fileOfId(id)} ← ${(namedBy.get(id) ?? ['nothing']).join(', ')}${f.status === 'retired' ? ' (retired)' : f.empty ? ' (empty)' : ''}`);
+    const state = (f) => (f.status === 'retired' ? ' (retired)' : f.empty ? ' (empty)' : f.convertedOnly ? ' (conversion only, history pending)' : '');
+    for (const [id, f] of [...a.files].sort()) lines.push(`  ${fileOfId(id)} ← ${(namedBy.get(id) ?? ['nothing']).join(', ')}${state(f)}`);
+    // The declined log is named by no carrier, so it is listed rather than matched: a pass
+    // that turned candidates down cannot be read off a listing that leaves it out.
+    if (a.declined) lines.push(`  ${DECLINED_FILE} ← ${a.declined.entries.length} candidate${a.declined.entries.length === 1 ? '' : 's'} turned down`);
     const fault = (file, line, what) => { faults++; lines.push(`  ${file}${line ? `:${line}` : ''}: ${what}`); };
     for (const u of a.unmarked) fault(u.file, u.line, `"${u.trigger}" ends with no marker`);
     for (const d of a.dangling) fault(d.file, d.line, `${d.carrier} names ${fileOfId(d.id)}, which is ${d.retired ? 'retired' : 'no file'}`);
@@ -181,7 +195,7 @@ export function changedElements(root, pack) {
   return [...out].sort();
 }
 
-export function append(root, pack, elements, entryText, { kind = null, date = null } = {}) {
+export function append(root, pack, elements, entryText, { kind = null, date = null, backfill = false } = {}) {
   const io = checkoutIo(root);
   const scrubbed = scrub(entryText);
   if (scrubbed !== entryText) return { problems: ['the entry carries what reads as a secret; a decision log is the one place nothing else scans, so it is refused whole'] };
@@ -192,8 +206,15 @@ export function append(root, pack, elements, entryText, { kind = null, date = nu
   for (const element of elements) {
     const declined = element === DECLINED_KIND || element === '_declined';
     const file = `${pack}/${PROVENANCE_DIR}/${declined ? DECLINED_FILE : fileOfId(element)}`;
-    if (!declined && !io.exists(file)) return { problems: [`${file} does not exist - no carrier of ${pack} names an element "${element}" (run mark, or check the id)`] };
-    const result = appendedText(io.read(file) ?? '', entry, declined ? { kinds: [DECLINED_KIND], firstKind: null } : {});
+    // The backfill opens a file the marking pass could not: an element retired before that
+    // pass is named by no carrier, so nothing will ever create its file for it (#2222).
+    if (!declined && !io.exists(file) && !(backfill && entry.kind === 'born')) {
+      return { problems: [`${file} does not exist - no carrier of ${pack} names an element "${element}" (run mark, or check the id${backfill ? '; a --backfill batch opens a new file with born' : ''})`] };
+    }
+    const existing = io.read(file) ?? '';
+    const result = backfill && !declined
+      ? (() => { const r = backfilledText(existing, [entry], {}); return r.problems.length ? r : { problems: [], text: r.text }; })()
+      : appendedText(existing, entry, declined ? { kinds: [DECLINED_KIND], firstKind: null } : {});
     if (result.problems.length) return { problems: result.problems.map((p) => `${file}: ${p}`) };
     io.write(file, result.text);
     written.push(file);
@@ -273,7 +294,7 @@ export function history(root, pack, element) {
 const SWEEP_PACKS = 5;
 const TRAILER = /^(?:co-authored-by|claude-session|signed-off-by|reviewed-by|refs|fixes|closes|resolves):?\s/i;
 const MODEL_TRAILER = /^co-authored-by:\s*(Claude\b[^<]*?)\s*</i;
-const REFERENCED = /\b(?:Refs|Fixes|Closes|Resolves)\s*:?\s*#(\d+)/gi;
+const REFERENCED = /\b(Refs|Fixes|Closes|Resolves)\s*:?\s*#(\d+)/gi;
 const PR_AT_END = /\s*\(#(\d+)\)\s*$/;
 const ENTRY_FENCE = /^```entry (\S+)\s*$/;
 const BODY_LINES = 60;
@@ -281,7 +302,7 @@ const BODY_LINES = 60;
 // One commit, read once: what the squash merge carried, and how many packs it touched.
 function commitInfo(root, sha, cache) {
   if (cache.has(sha)) return cache.get(sha);
-  const [full, short, date, email, subject, body = ''] = git(root, 'show', '-s', '--format=%H%x00%h%x00%as%x00%ae%x00%s%x00%b', sha).split('\0');
+  const [full, short, date, email, parents, subject, body = ''] = git(root, 'show', '-s', '--format=%H%x00%h%x00%as%x00%ae%x00%P%x00%s%x00%b', sha).split('\0');
   const models = new Set();
   const lines = [];
   for (const l of (body ?? '').split('\n')) {
@@ -291,16 +312,37 @@ function commitInfo(root, sha, cache) {
     lines.push(l.trimEnd());
   }
   const pr = PR_AT_END.exec(subject ?? '')?.[1] ?? null;
-  const refs = [...new Set([...(body ?? '').matchAll(REFERENCED)].map((m) => m[1]).filter((n) => n !== pr))];
+  // The keyword each reference was written with, kept rather than flattened: a body
+  // saying `Fixes #956` and one saying `Refs #956` are different claims, and the entry
+  // that reports either as the other sends a reader to the wrong kind of link. What the
+  // PULL REQUEST body said can differ again, and git cannot see it - `brief` hands that
+  // over rather than guessing (#2221).
+  const refs = [];
+  for (const [, keyword, n] of (body ?? '').matchAll(REFERENCED)) {
+    if (n === pr || refs.some((r) => r.n === n)) continue;
+    refs.push({ n, keyword: `${keyword[0].toUpperCase()}${keyword.slice(1).toLowerCase()}` });
+  }
+  // A merge commit's own trailer is GitHub's, naming the generic "Claude" where every
+  // commit on the branch names the model that did the work. Reading the branch side back
+  // keeps a known attribution from laundering into an unknown one (#2221).
+  const branch = (parents ?? '').trim().split(/\s+/).filter(Boolean);
+  if (branch.length > 1 && (!models.size || (models.size === 1 && models.has('Claude')))) {
+    for (const l of git(root, 'log', '--format=%b', `${branch[0]}..${sha}`).split('\n')) {
+      const m = MODEL_TRAILER.exec(l.trim());
+      if (m) models.add(m[1].trim());
+    }
+  }
   const packs = new Set();
+  const files = [];
   for (const f of git(root, 'diff-tree', '--root', '-r', '-m', '--first-parent', '--no-commit-id', '--name-only', sha).split('\n')) {
+    if (f) files.push(f);
     const m = /^(?:\.claudinite\/local\/)?packs\/([^/]+)\//.exec(f);
     if (m) packs.add(m[1]);
   }
   // GitHub's own squash line names a bare "Claude" beside the session's trailer.
   if (models.size > 1) models.delete('Claude');
   const info = {
-    sha: full, short, date, subject, pr, refs, models: [...models],
+    sha: full, short, date, subject, pr, refs, models: [...models], files,
     title: (subject ?? '').replace(PR_AT_END, '').trim(),
     handle: /^\d+\+([^@]+)@users\.noreply\.github\.com$/.exec(email ?? '')?.[1] ?? null,
     body: lines.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
@@ -344,6 +386,30 @@ function ruleEvents(root, file, rule, blocksOf) {
   return events;
 }
 
+// One check's own declaration in a file it shares with its siblings, as JSON text.
+const declarationOf = (text, id) => {
+  try { return (JSON.parse(text) ?? []).find((x) => x?.id === id) ?? null; } catch { return null; }
+};
+
+// A check declared in a file shared with every other check of its pack: its events are
+// the commits after which ITS OWN declaration differs. Read as a file, a `declared-checks.json`
+// drafts `reworded` for every id in it at every touch - including ids the commit does not
+// change, and ids that did not yet exist at that commit (#2221).
+function declaredCheckEvents(root, path, id) {
+  const events = [];
+  let state = null;
+  let newer = null;
+  for (const { sha, path: p } of commitsOf(root, path)) {
+    const found = declarationOf(git(root, 'show', `${sha}:${p}`), id);
+    if (!found) break;
+    const text = JSON.stringify(found);
+    if (newer && text !== state) events.push({ kind: 'reworded', sha: newer });
+    state = text;
+    newer = sha;
+  }
+  return newer ? [...events, { kind: 'born', sha: newer }] : [];
+}
+
 // A file-borne element's events: born at the oldest commit of its path, every later
 // commit a reworded candidate - except one that changed nothing but a version line,
 // which is the bump no entry is owed for.
@@ -357,9 +423,11 @@ function fileEvents(root, path, { follow = true } = {}) {
   return [...commits.slice(0, -1).filter((c) => !bump(c)).map((c) => ({ kind: 'reworded', sha: c.sha })), { kind: 'born', sha: commits[commits.length - 1].sha }];
 }
 
-// The version a commit landed in: the VERSIONS.md row naming its pull request, else
-// the manifest's own history - the version the commit itself set, or the first cut
-// after it - since the weekly history task writes the rows late.
+// The version a commit landed in: the VERSIONS.md row naming its pull request, the row
+// its own diff added, else the version its own diff cut. There is deliberately no
+// "first cut after it" limb - it answered the same version for every commit in a long
+// gap between bumps, which read as evidence and was not, and put a version on entries
+// predating the pack entirely (#2221).
 function versionRows(io, pack) {
   return (io.read(`${pack}/${PROVENANCE_DIR}/${VERSIONS_FILE}`) ?? '').split('\n')
     .map((l) => /^\|\s*([^|]+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*(.*?)\s*\|\s*$/.exec(l))
@@ -374,36 +442,152 @@ function versionReader(root, pack) {
   };
   return (info) => {
     const own = versionAt(info.sha);
-    if (own && own !== versionAt(`${info.sha}^`)) return own;
-    for (const sha of git(root, 'log', '--reverse', '--format=%H', `${info.sha}..HEAD`, '--', `${pack}/pack.mjs`).split('\n').filter(Boolean)) {
-      const v = versionAt(sha);
-      if (v && v !== own) return v;
-    }
-    return null;
+    return own && own !== versionAt(`${info.sha}^`) ? own : null;
   };
 }
-function versionFor(rows, info, fromManifest) {
-  const byPr = info.pr && rows.find((r) => r.what.includes(`#${info.pr}`) && !new RegExp(`#${info.pr}\\d`).test(r.what));
-  return byPr ? byPr.version : fromManifest(info);
+// Every path the pack has lived at, its current one first. The commit inventory is scoped
+// to the pack's directory, so a pack that MOVED - one promoted out of a member's local packs,
+// one renamed on the shelf, a skill that began at the repo root - has its first weeks absent
+// from the brief rather than misattributed, which is the harder absence to notice (#2221).
+// The anchors are the files a pack cannot exist without; `--follow` walks each back through
+// its renames and hands back the path it had at each commit.
+export function packPaths(root, pack, io) {
+  const out = [pack];
+  const c = packCarriers(pack, io);
+  const anchors = [`${pack}/pack.mjs`, `${pack}/RULES.md`, `${pack}/README.md`,
+    ...c.skills.filter((s) => s.present).map((s) => s.file), ...c.tasks.map((t) => t.file)];
+  for (const anchor of anchors) {
+    if (!io.exists(anchor)) continue;
+    const suffix = anchor.slice(pack.length + 1);
+    for (const { path } of commitsOf(root, anchor)) {
+      if (path === anchor) continue;
+      // The pack root the old path implies, or - where the element lived outside any pack,
+      // so no prefix is left over - the directory it sat in.
+      const at = (path.endsWith(`/${suffix}`) ? path.slice(0, -(suffix.length + 1)) : '') || path.replace(/\/[^/]+$/, '');
+      if (!at || at === pack || out.includes(at)) continue;
+      // A root of the pack tree itself would widen the inventory to every pack there.
+      if (PACK_ROOTS.includes(at) || at.split('/').length < 2) continue;
+      out.push(at);
+    }
+  }
+  return out;
+}
+
+// The element's life before its current carrier. `born` is drafted at the oldest commit of
+// the carrier it sits in TODAY, which is the moment of the LAST CARRIER CHANGE wherever a
+// rule moved into a skill, a coded check became a declaration, or a rule was a prose section
+// before it was a bullet. The pickaxe finds the earlier carrier by the element's own
+// distinctive text across every path the pack has lived at; the birth moves there, and the
+// commit that had been drafting `born` becomes the carrier change it really was (#2221).
+function followCarrier(root, paths, needle, bornSha, position) {
+  if (!needle || !position.has(bornSha)) return null;
+  const out = git(root, 'log', '--reverse', '--format=%x01%H %as', '--name-only', `-S${needle}`, '--', ...paths);
+  let head = null;
+  const files = [];
+  for (const line of out.split('\n')) {
+    if (line.startsWith('\x01')) { if (head) break; head = line.slice(1).split(' '); continue; }
+    if (head && line.trim()) files.push(line.trim());
+  }
+  // Ordered by where the commits sit in the history rather than by their dates: a carrier
+  // change and the commit it moved from can land on one day, and two dates that tie say
+  // nothing about which came first.
+  if (!head || !position.has(head[0]) || position.get(head[0]) >= position.get(bornSha)) return null;
+  return { sha: head[0], date: head[1], files };
+}
+
+// Every commit's place in the history, oldest first.
+const positionsOf = (root) => new Map(git(root, 'rev-list', '--reverse', '--topo-order', 'HEAD').split('\n').filter(Boolean).map((sha, i) => [sha, i]));
+
+// Which carrier change the old commit records: a move where the element stayed the same
+// kind of file, a conversion where it changed kind - a coded module becoming a declaration,
+// prose becoming code.
+const extensionOf = (f) => /\.(mjs|json|md)$/.exec(f ?? '')?.[1] ?? '';
+function carrierChange(fromFiles, toFile) {
+  const from = fromFiles.map(extensionOf).filter(Boolean);
+  return from.length && !from.includes(extensionOf(toFile)) ? 'converted' : 'moved';
+}
+
+// Every commit that touched the pack at all, oldest first. The drafted events are a subset:
+// a commit can decide something the carrier text does not show - a manifest field, a rule's
+// rationale moving to the README - and a brief that listed only what it drafted would hand
+// the session a history it has to re-derive from git before it can trust the drafts.
+function packCommits(root, paths, cache) {
+  const shas = git(root, 'log', '--format=%H', '--reverse', '--', ...paths).split('\n').filter(Boolean);
+  return shas.map((sha) => commitInfo(root, sha, cache));
+}
+// Relative to the pack's current path, and in full under any path it has since left, so a
+// row from before a move reads as one.
+const filesUnder = (info, paths) => info.files
+  .filter((f) => paths.some((p) => f.startsWith(`${p}/`)))
+  .map((f) => (f.startsWith(`${paths[0]}/`) ? f.slice(paths[0].length + 1) : f));
+
+// A version row's own text is the decision the version was cut for, and it names the pull
+// request that made it - not always the one the commit subject carries, so the commit's own
+// Refs count as a claim too. Never the date: several commits land on one day and a row
+// attached to the wrong one reads as evidence, which is worse than the row going unclaimed.
+const names = (what, n) => what.includes(`#${n}`) && !new RegExp(`#${n}\\d`).test(what);
+// A row whose text names no pull request at all: the deciding commit wrote the row and
+// bumped the manifest together and had no reason to cite itself, so the row's own diff is
+// the only thing that can claim it. A row that DOES name one belongs to that pull request
+// however it arrived - the weekly history task writes rows late, and a bookkeeping commit
+// adding a row about #88 has not thereby accounted for #88 (#2221).
+const citesNothing = (row) => !/#\d+/.test(row.what);
+function rowFor(rows, introducers, info) {
+  return rows.find((r) => [info.pr, ...info.refs.map((x) => x.n)].some((n) => n && names(r.what, n)))
+    ?? rows.find((r) => citesNothing(r) && introducers.get(r.version) === info.sha)
+    ?? null;
+}
+
+// The commit that added each row, by pickaxe on the row's own version cell.
+function rowIntroducers(root, pack, rows) {
+  const file = `${pack}/${PROVENANCE_DIR}/${VERSIONS_FILE}`;
+  const out = new Map();
+  for (const r of rows) {
+    const sha = git(root, 'log', '--reverse', '--format=%H', `-S| ${r.version} |`, '--', file).trim().split('\n')[0];
+    if (sha) out.set(r.version, sha);
+  }
+  return out;
+}
+
+function versionFor(rows, introducers, info, ownCut) {
+  const byPr = info.pr && rows.find((r) => names(r.what, info.pr));
+  if (byPr) return byPr.version;
+  const introduced = rows.find((r) => citesNothing(r) && introducers.get(r.version) === info.sha);
+  return introduced ? introduced.version : ownCut(info);
 }
 
 // Every element the brief covers, with its carrier and its events.
-function packElements(root, pack, io, wanted) {
+// The born event moved back to the carrier before this one, where the pickaxe finds one,
+// and the commit that had been drafting `born` re-read as the move or conversion it is.
+function withEarlierCarrier(root, paths, position, el) {
+  const born = el.events.find((e) => e.kind === 'born');
+  if (!born) return el;
+  const at = followCarrier(root, paths, el.needle, born.sha, position);
+  if (!at) return el;
+  const kind = carrierChange(at.files, el.carrier);
+  el.events = [...el.events.map((e) => (e === born ? { kind, sha: born.sha, from: at.files } : e)), { kind: 'born', sha: at.sha }];
+  el.followed = { ...at, kind };
+  return el;
+}
+
+function packElements(root, pack, io, wanted, { paths = [pack], position = positionsOf(root) } = {}) {
   const c = packCarriers(pack, io);
   const files = provenanceFiles(pack, io);
-  const ids = wanted.length ? wanted : [...files].filter(([, f]) => f.empty).map(([id]) => id);
+  const ids = wanted.length ? wanted : [...files].filter(([, f]) => f.empty || f.convertedOnly).map(([id]) => id);
   const out = [];
+  const follow = (el) => out.push(withEarlierCarrier(root, paths, position, el));
   for (const id of ids) {
     const rule = c.rules.find((r) => r.slug === id);
     const guideline = c.guidelines.find((r) => r.slug === id);
     const skill = c.skills.find((s) => s.name === id && s.present);
     const check = c.checks.find((x) => elementIdOf(x.id) === id);
     const task = c.tasks.find((t) => t.id === id);
-    if (rule) out.push({ id, mechanism: `a RULES.md rule, triggered on "${rule.trigger}".`, events: ruleEvents(root, rule.file, rule, (t) => ruleBlocks(t)) });
-    else if (guideline) out.push({ id, mechanism: `a guideline of the ${guideline.skill} skill, triggered on "${guideline.trigger}".`, events: ruleEvents(root, guideline.file, guideline, (t) => skillShape(t).bullets) });
-    else if (skill) out.push({ id, mechanism: `the ${id} skill, body ${skill.body ?? skill.proposed}, reached by its description.`, events: fileEvents(root, skill.file) });
-    else if (check) out.push({ id, mechanism: `check ${check.id}, in ${check.file}.`, events: fileEvents(root, check.file) });
-    else if (task) out.push({ id, mechanism: `task ${id}.`, events: fileEvents(root, task.dir, { follow: false }) });
+    if (rule) follow({ id, mechanism: `a RULES.md rule, triggered on "${rule.trigger}".`, carrier: rule.file, needle: rule.trigger, events: ruleEvents(root, rule.file, rule, (t) => ruleBlocks(t)) });
+    else if (guideline) follow({ id, mechanism: `a guideline of the ${guideline.skill} skill, triggered on "${guideline.trigger}".`, carrier: guideline.file, needle: guideline.trigger, events: ruleEvents(root, guideline.file, guideline, (t) => skillShape(t).bullets) });
+    else if (skill) follow({ id, mechanism: `the ${id} skill, body ${skill.body ?? skill.proposed}, reached by its description.`, carrier: skill.file, needle: null, events: fileEvents(root, skill.file) });
+    else if (check) follow({ id, mechanism: `check ${check.id}, in ${check.file}.`, carrier: check.file, needle: check.id,
+      events: check.file.endsWith('declared-checks.json') ? declaredCheckEvents(root, check.file, check.id) : fileEvents(root, check.file) });
+    else if (task) follow({ id, mechanism: `task ${id}.`, carrier: task.file, needle: null, events: fileEvents(root, task.dir, { follow: false }) });
     else if (id === PACK_ELEMENT) {
       // `_pack` records decisions about the pack's shape - what its header comment
       // carries - never every commit in its scope, so only its birth is drafted and
@@ -431,19 +615,27 @@ function manifestHeader(io, pack) {
 
 // The fields every entry of one commit shares, written once per commit as the
 // defaults fence apply merges under each entry's own fields.
+// `Landed` carries only what git vouches for: where the change landed, and the version
+// where a row or the commit's own diff says so. The issues it references are NOT written
+// here even though the trailer names them - the trailer's keyword is the branch author's
+// and the pull request body's is usually a different one, and a defaults fence copies
+// whatever it holds onto every entry under it, so one wrong keyword fans out across a
+// whole commit's elements. The brief prints the trailer's references beside the fence
+// for the run to resolve against the pull request body instead (#2221).
 function sharedFields(info, version, owner) {
   const at = info.pr ? `#${info.pr}` : `commit ${info.short}`;
-  const refs = info.refs.length ? ` (Refs ${info.refs.map((n) => `#${n}`).join(', ')})` : '';
   return {
     Actor: info.handle ? `@${info.handle}${info.handle === owner ? ' (owner)' : ''}.` : null,
     Model: info.models.length ? `${info.models.join(', ')}, per the commit trailer.` : null,
-    Landed: `${at}${refs}${version ? ` · pack version ${version}` : ''}.`,
+    Landed: `${at}${version ? ` · pack version ${version}` : ''}.`,
   };
 }
 const fieldLines = (fields) => Object.entries(fields).filter(([, v]) => v).map(([k, v]) => `- **${k}:** ${v}`);
 
 function draftEntry(el, ev, info) {
-  const fields = ev.kind === 'born' ? { Mechanism: el.mechanism } : {};
+  const fields = {};
+  if (ev.kind === 'born') fields.Mechanism = el.mechanism;
+  else if (ev.from) fields.Mechanism = `${el.mechanism} it was carried by ${ev.from.join(', ')} until here; say why the carrier changed.`;
   return renderEntry({ date: info.date, kind: ev.kind, title: `${info.title} (${info.pr ? `#${info.pr}` : info.short})`, fields });
 }
 
@@ -452,8 +644,11 @@ export function brief(root, pack, wanted = []) {
   const cache = new Map();
   const owner = repoOwner(root);
   const rows = versionRows(io, pack);
-  const fromManifest = versionReader(root, pack);
-  const elements = packElements(root, pack, io, wanted);
+  const introducers = rowIntroducers(root, pack, rows);
+  const ownCut = versionReader(root, pack);
+  const paths = packPaths(root, pack, io);
+  const position = positionsOf(root);
+  const elements = packElements(root, pack, io, wanted, { paths, position });
   const byCommit = new Map();  // sha → [{ el, ev }], in date order
   const sweeps = new Map();    // sha → element ids it touched
   const unknown = [];
@@ -468,17 +663,43 @@ export function brief(root, pack, wanted = []) {
     }
   }
   // Oldest first in the history's own order: a date ties every commit of one day.
-  const position = new Map(git(root, 'rev-list', '--reverse', '--topo-order', 'HEAD').split('\n').map((sha, i) => [sha, i]));
   const order = [...byCommit.keys()].map((sha) => cache.get(sha)).sort((a, b) => (position.get(a.sha) ?? 0) - (position.get(b.sha) ?? 0));
   const lines = [`# ${pack} · backfill brief`, ''];
   const count = (n, what) => `${n} ${what}${n === 1 ? '' : 's'}`;
-  lines.push(`${count(elements.length, wanted.length ? 'element' : 'empty file')} · ${count(order.length, 'pack-local commit')} · ${count(sweeps.size, 'sweep')}`);
+  lines.push(`${count(elements.length, wanted.length ? 'element' : 'pending file')} · ${count(order.length, 'pack-local commit')} · ${count(sweeps.size, 'sweep')}`);
+  if (paths.length > 1) lines.push('', `this pack has moved: its history is read under ${paths.join(', ')}, and a row naming a file in full is from before the move`);
+  const converted = [...provenanceFiles(pack, io)].filter(([, f]) => f.convertedOnly).map(([id]) => id);
+  if (converted.length) {
+    lines.push('', '## files the references conversion filled', 'each holds one born entry dated by the CONVERSION rather than by the element, plus the Reason and Retire when the doc carried. these are drafted below like an empty file; where the real birth is earlier, `apply --backfill` merges the derived history in date order and drops the placeholder, and where the placeholder date IS the birth it stands - read each file\'s own evidence rather than truncating them as a class');
+    for (const id of converted) lines.push(`- ${fileOfId(id)}`);
+  }
   lines.push('');
-  lines.push('## sweeps');
-  lines.push(`commits touching ${SWEEP_PACKS} or more packs, set aside: a sweep goes on _pack.md where it changed the pack's shape, never on an element it re-wrapped`);
-  for (const [sha, ids] of sweeps) { const i = cache.get(sha); lines.push(`- ${i.pr ? `#${i.pr}` : i.short} ${i.date} ${i.title} - touched ${ids.join(', ')}`); }
-  if (!sweeps.size) lines.push('(none)');
+  lines.push('## every commit that touched this pack');
+  lines.push('oldest first, each with the files it touched under the pack, the version row that claims it, and what it drafts below. a row reading NOTHING DRAFTED decided nothing, re-wrapped, or decided something no carrier\'s text shows - read its files before passing it');
+  lines.push(`a commit touching ${SWEEP_PACKS} or more packs is marked "sweep": it goes on _pack.md where it changed the pack's shape, and on an element only where it decided something about that one - never where it merely re-wrapped it`);
+  const claimed = new Set();
+  for (const i of packCommits(root, paths, cache)) {
+    const drafts = (byCommit.get(i.sha) ?? []).map(({ el, ev }) => `${el.id} (${ev.kind})`);
+    const swept = sweeps.get(i.sha) ?? [];
+    const row = rowFor(rows, introducers, i);
+    if (row) claimed.add(row.version);
+    const parts = [filesUnder(i, paths).join(', ') || '(nothing under the pack)'];
+    if (row) parts.push(`version ${row.version} "${row.what}"`);
+    if (i.sweep) parts.push('sweep');
+    parts.push([...drafts, ...swept.map((id) => `${id} (set aside)`)].join(', ') || 'NOTHING DRAFTED');
+    lines.push(`- ${i.pr ? `#${i.pr}` : i.short} ${i.date} ${i.title} · ${parts.join(' · ')}`);
+  }
+  const orphans = rows.filter((r) => !claimed.has(r.version));
+  if (orphans.length) {
+    lines.push('', '## version rows no commit here claims', 'the row names the decision and the pull request that made it; neither reached a commit subject, so this is history the drafts below cannot carry');
+    for (const r of orphans) lines.push(`- ${r.version} ${r.date} ${r.what}`);
+  }
   if (unknown.length) { lines.push('', '## no history found', `git holds no commit for: ${unknown.join(', ')} (is the clone shallow?)`); }
+  const followed = elements.filter((el) => el.followed);
+  if (followed.length) {
+    lines.push('', '## elements older than the carrier they sit in', 'the birth below is drafted at the EARLIER carrier the pickaxe found, and the commit that would otherwise have read as the birth is drafted as the move or conversion it is. verify each against the old path before trusting it - `git show <sha>:<old path>`');
+    for (const el of followed) lines.push(`- ${el.id}: ${el.followed.kind} into ${el.carrier}; carried by ${el.followed.files.join(', ')} from ${el.followed.date} (${el.followed.sha.slice(0, 8)})`);
+  }
   const manifest = elements.find((el) => el.id === PACK_ELEMENT);
   if (manifest) {
     lines.push('', `## the manifest, ${pack}/pack.mjs`, 'its header comment is the pack-level record the _pack entries are written from, and is trimmed like the README once they are; a _pack entry is a decision about the pack\'s shape, never every change in its scope, so the manifest\'s later commits are listed here and not drafted');
@@ -492,13 +713,26 @@ export function brief(root, pack, wanted = []) {
     const prose = readme.split('\n').filter((l) => !l.startsWith('|') && !l.startsWith('#')).join('\n');
     const tells = prose.split(/(?<=[.!?])\s+/).filter((s) => /#\d+|\buntil\b|\bdistilled from\b|\bkept as\b|\breplaced\b|\babsorbed\b|\b20\d\d-\d\d-\d\d\b/.test(s));
     lines.push(tells.map((s) => `- ${s.replace(/\s+/g, ' ').trim()}`).join('\n') || '(none)');
+    // The sentence tells find history that dates or numbers itself. A section that explains
+    // WHY an element reads as it does carries neither, so the headings go up whole and the
+    // session judges each: prose the adopter uses stays, the rest is an entry's Reason.
+    lines.push('', '## README sections', 'every heading, the prose under it and its tables. a section explaining why an element reads as it does is an entry\'s Reason, not the README\'s - the adopter\'s half is what the pack activates on, what each element demands, and when to reach for it. a table is counted separately because either answer is possible and the byte count is what says which is at stake: an evidence or per-member table is history and moves onto the entries it evidences, a catalog of what the pack carries stays');
+    const sections = [];
+    for (const l of readme.split('\n')) {
+      if (/^#{1,6} /.test(l)) { sections.push({ heading: l, bytes: 0, table: 0 }); continue; }
+      if (!sections.length) continue;
+      if (l.startsWith('|')) { sections[sections.length - 1].table += l.trim().length; continue; }
+      sections[sections.length - 1].bytes += l.trim().length;
+    }
+    for (const s of sections) lines.push(`- ${s.heading} · ${s.bytes} bytes of prose${s.table ? ` · ${s.table} bytes of table` : ''}`);
   }
   for (const info of order) {
     const drafts = byCommit.get(info.sha);
     lines.push('', `## ${info.pr ? `PR #${info.pr}` : `commit ${info.short}`} · ${info.date} · ${info.title}`);
-    const version = versionFor(rows, info, fromManifest);
-    const facts = [info.handle ? `by @${info.handle}` : null, info.models.length ? `model ${info.models.join(', ')}` : null, info.refs.length ? `refs ${info.refs.map((n) => `#${n}`).join(', ')}` : null, version ? `pack version ${version}` : null].filter(Boolean);
+    const version = versionFor(rows, introducers, info, ownCut);
+    const facts = [info.handle ? `by @${info.handle}` : null, info.models.length ? `model ${info.models.join(', ')}` : null, version ? `pack version ${version}` : null].filter(Boolean);
     if (facts.length) lines.push(`- ${facts.join(' · ')}`);
+    if (info.refs.length) lines.push(`- the commit trailer references ${info.refs.map((r) => `${r.keyword} #${r.n}`).join(', ')} - READ THE PULL REQUEST BODY for the keyword it used and write that into Landed. the two disagree on most older pull requests, the body's Closes being what fills GitHub's Development panel and the trailer's Refs linking nothing there`);
     lines.push(`- ${drafts.map(({ el, ev }) => `${el.id} (${ev.kind})`).join(', ')}`);
     if (info.body) {
       const body = info.body.split('\n');
@@ -519,7 +753,16 @@ const orderedFields = (fields) => Object.fromEntries(Object.entries(fields).sort
 // Apply an edited brief: every entry fence in it, validated as one batch against the
 // files it would join, appended each once - a heading already in its file is skipped,
 // so a second apply writes nothing - and none written while any one is refused.
-export function apply(root, pack, text) {
+//
+// `--backfill` is the one lane licensed to write a file's PAST, and it exists because a
+// backfill is deriving history that already happened: its entries are dated before
+// whatever the file holds, which the ordinary append lane refuses and should. Under it a
+// file is re-rendered in date order rather than appended to, a placeholder born the
+// references conversion left is dropped where the derived born is earlier, and a file
+// missing entirely is created where the batch opens with born. Every other caller -
+// every change being made now - goes through the append lane, where a file only ever
+// grows at its end.
+export function apply(root, pack, text, { backfill = false } = {}) {
   const io = checkoutIo(root);
   const fences = [];
   const problems = [];
@@ -543,28 +786,55 @@ export function apply(root, pack, text) {
   }
   const pending = new Map();  // file → text after every append so far
   const skipped = [];
+  const superseded = [];
+  const created = [];
   // A file's entries go in date order whatever order the brief was edited into; a stable
   // sort keeps the brief's order within one day.
   const dated = fences.map((f, i) => ({ ...f, i, date: /^## (\d{4}-\d{2}-\d{2})/.exec(f.text)?.[1] ?? '' }))
     .sort((a, b) => a.element.localeCompare(b.element) || a.date.localeCompare(b.date) || a.i - b.i);
+  const byFile = new Map();   // file → { element, declined, entries: [] }, in that order
   for (const f of dated) {
     const declined = f.element === '_declined';
     const file = `${pack}/${PROVENANCE_DIR}/${declined ? DECLINED_FILE : fileOfId(f.element)}`;
-    if (!declined && !io.exists(file)) { problems.push(`${f.element}: ${file} does not exist`); continue; }
     const parsed = parseEntryText(f.text);
     if (parsed.problems.length) { problems.push(...parsed.problems.map((p) => `${f.element}: ${p}`)); continue; }
     const entry = { ...parsed.entry, fields: orderedFields({ ...f.defaults, ...parsed.entry.fields }) };
     if (scrub(renderEntry(entry)) !== renderEntry(entry)) { problems.push(`${f.element}: the entry carries what reads as a secret`); continue; }
-    const existing = pending.has(file) ? pending.get(file) : (io.read(file) ?? '');
-    const heading = renderEntry(entry).split('\n')[0];
-    if (existing.split('\n').includes(heading)) { skipped.push(f.element); continue; }
-    const result = appendedText(existing, entry, declined ? { kinds: [DECLINED_KIND], firstKind: null } : {});
-    if (result.problems.length) { problems.push(...result.problems.map((p) => `${f.element}: ${p}`)); continue; }
-    pending.set(file, result.text);
+    if (!byFile.has(file)) byFile.set(file, { element: f.element, declined, entries: [] });
+    byFile.get(file).entries.push(entry);
   }
-  if (problems.length) return { problems, written: [], skipped };
+  for (const [file, f] of byFile) {
+    const opts = f.declined ? { kinds: [DECLINED_KIND], firstKind: null } : {};
+    // A backfill batch is allowed to write a file that is not there: an element retired
+    // before the marking pass has no file and never will get one from a carrier, so its
+    // whole history - born through retired - arrives in one batch or not at all (#2222).
+    const exists = io.exists(file);
+    if (!exists && !f.declined && !(backfill && f.entries[0]?.kind === 'born')) {
+      problems.push(`${f.element}: ${file} does not exist${backfill ? ', and the batch does not open with born' : ''}`);
+      continue;
+    }
+    if (!exists && !f.declined) created.push(file);
+    const existing = io.read(file) ?? '';
+    if (backfill && !f.declined) {
+      const result = backfilledText(existing, f.entries, opts);
+      superseded.push(...result.superseded.map((s) => `${f.element}: ${s}`));
+      if (result.problems.length) { problems.push(...result.problems.map((p) => `${f.element}: ${p}`)); continue; }
+      pending.set(file, result.text);
+      continue;
+    }
+    let text = existing;
+    for (const entry of f.entries) {
+      const heading = renderEntry(entry).split('\n')[0];
+      if (text.split('\n').includes(heading)) { skipped.push(f.element); continue; }
+      const result = appendedText(text, entry, opts);
+      if (result.problems.length) { problems.push(...result.problems.map((p) => `${f.element}: ${p}`)); break; }
+      text = result.text;
+    }
+    if (text !== existing) pending.set(file, text);
+  }
+  if (problems.length) return { problems, written: [], skipped, superseded, created };
   for (const [file, content] of pending) io.write(file, content);
-  return { problems: [], written: [...pending.keys()], skipped };
+  return { problems: [], written: [...pending.keys()], skipped, superseded, created };
 }
 
 // --- main ---------------------------------------------------------------------------
@@ -610,7 +880,8 @@ export async function main(argv = process.argv.slice(2), { root = process.env.CL
       const elements = flags.has('--changed') ? changedElements(root, pack) : positional.slice(1, 2);
       if (!elements.length) { console.error(flags.has('--changed') ? 'the working tree changed no carrier of this pack' : 'append needs an element id'); return 2; }
       const text = stdin ?? readFileSync(0, 'utf8');
-      const { problems, written } = append(root, pack, elements, text, { kind: valueOf('--kind'), date: valueOf('--date') });
+      if (flags.has('--backfill') && typeof backfilledText !== 'function') { console.error('this engine predates the backfill lane - converge the mount first'); return 2; }
+      const { problems, written } = append(root, pack, elements, text, { kind: valueOf('--kind'), date: valueOf('--date'), backfill: flags.has('--backfill') });
       if (problems.length) { console.error(problems.join('\n')); return 1; }
       console.log(written.map((f) => `${f}: appended`).join('\n'));
       return 0;
@@ -636,9 +907,13 @@ export async function main(argv = process.argv.slice(2), { root = process.env.CL
       const packs = packsFor(positional[0]); if (!packs) return 2;
       const file = positional[1];
       if (!file) { console.error('apply needs the brief file'); return 2; }
-      const { problems, written, skipped } = apply(root, packs[0], readFileSync(file, 'utf8'));
+      const backfill = flags.has('--backfill');
+      if (backfill && typeof backfilledText !== 'function') { console.error('this engine predates the backfill lane - converge the mount first'); return 2; }
+      const { problems, written, skipped, superseded = [], created = [] } = apply(root, packs[0], readFileSync(file, 'utf8'), { backfill });
       if (problems.length) { console.error(problems.join('\n')); return 1; }
-      console.log(written.length ? written.map((f) => `${f}: appended`).join('\n') : 'nothing to append');
+      console.log(written.length ? written.map((f) => `${f}: ${backfill ? 'written in date order' : 'appended'}`).join('\n') : 'nothing to append');
+      if (created.length) console.log(`created: ${created.join(', ')}`);
+      if (superseded.length) console.log(`the conversion's placeholder replaced by an earlier born: ${superseded.join('; ')}`);
       if (skipped.length) console.log(`already in its file, skipped: ${[...new Set(skipped)].join(', ')}`);
       return 0;
     }

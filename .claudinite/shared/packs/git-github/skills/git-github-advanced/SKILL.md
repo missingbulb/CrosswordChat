@@ -3,6 +3,9 @@ name: git-github-advanced
 description: Git/GitHub procedures beyond the baseline lifecycle. Use for commit layering, recovering a branch after a squash-merge, CI-trigger rules, GitHub Actions gotchas, or merge-relocation traps.
 metadata:
   body: workflow
+  usage:
+    expect: judgment
+
 ---
 
 # Portable git & GitHub procedures
@@ -13,6 +16,10 @@ A GitHub procedure the consuming repo's own docs set — its merge command, when
 
 To post a **status update** on an issue (the lifecycle's "update the issue's status" step, for a change that has one), use `add_issue_comment`. **Don't** reach for `issue_write` with `method: update` — that edits the issue itself and **replaces the whole body**, silently wiping the original description. Reserve `issue_write`/`update` for genuinely editing the issue (retitling, rewriting the body on purpose).
 
+## Don't cite an issue or PR number before that object exists
+
+Issue and PR numbers share one counter per repo, so a comment or PR body written before its companion object is filed ("filed as a dedicated issue: #222") can end up citing the wrong number once that object actually lands and consumes a different one. Comments generally have no reliable edit path to fix a wrong citation afterward. File or create the referenced object first, read back the real number it returns, then write anything that cites it - or leave an explicit placeholder and patch it once the number is known.
+
 ## An auto-merge refusal is not a verdict — read the PR's state, then act
 
 `enable_pr_auto_merge` only accepts a PR whose required checks are still **pending**, so its refusals answer *timing and configuration*, never the change. Take each at face value and stop:
@@ -22,6 +29,10 @@ To post a **status update** on an issue (the lifecycle's "update the issue's sta
 - *"Protected branch rules not configured"* — auto-merge is a protected-branch feature, so a repo with no rule on its default branch can never arm it. Final; don't let an earlier refusal's wording talk you out of it.
 
 Never re-arm on a loop hoping the answer changes — observed runs answered "unstable" then "clean" seconds later with nothing changed in between, and one spent ~6 minutes of a 13-minute budget circling a single PR without merging it.
+
+## `merge_pull_request` right after a force-push to its head can 500 - retry, don't diagnose
+
+The PR's mergeable-state recompute lags a force-push to its head branch, so a `merge_pull_request` call issued immediately after can 500 even though the merge is otherwise clean. Treat the first such 500 as a timing artifact and retry with backoff, rather than reading it as a real merge failure.
 
 ## Don't prune a `.gitignore` section in the same commit that deletes what produced its artifacts
 
@@ -43,6 +54,7 @@ There's no cost to a branch carrying many commits when the project uses a **squa
 - **When a rebase or a review round drops part of a branch, amend the commit message in the same step** — then read it back against `git show --stat` before merging. Under a squash merge the branch's commit body *becomes* `main`'s permanent record, while the explanation of what was dropped, if it lives in a PR comment, is not carried by the squash at all. A commit describing a change to files it never touched sends the next reader of `git log -- <path>` hunting for work that isn't there.
 
 - **When a Stop-hook or CI finding names its own fix as a plain amend, take that fix** — a check whose message says "amend the latest commit" is answered by exactly that; scripting a `filter-branch`/rewrite pass to backdate the fix into every prior commit is needless risk (a wrong regex, a bad force-push) for no benefit over the one-line remedy.
+- **Fixing a trailer or arming auto-merge on a branch already pushed - add a commit, don't force-push.** The session's own permission classifier can deny `git push --force-with-lease` outright as a destructive rewrite of an already-pushed commit, even for the smallest edit, and a differently-phrased retry hits the same classifier. Skip the amend: make a new commit (`--allow-empty` if nothing in the tree actually changed) and push it as a plain fast-forward - it carries the fix forward with no force-push in the loop at all.
 - Don't rewrite published/shared history to satisfy a tooling or authorship check (e.g. a hook flagging "unverified" commits): only amend your own un-pushed branch commits. Commits already on a shared branch — including ones merged in from `main` — belong to that history; reset-authoring or rebasing them forks your branch away from it.
 - After your commit is **squash-merged** to `main`, a *reused* feature branch still carries that original commit (the squash created a *new* commit on `main`, so the branch's own is unreachable from it) — and the next PR off the branch re-includes it in the diff, because the three-dot merge-base predates the squash. Sync the branch to `origin/main` before opening the next PR (`git rebase origin/main`, which drops the commit as an already-applied cherry-pick, or a hard reset): it's your own un-merged branch, so this is the amend-your-own-commits case above, not rewriting shared history.
   - **`git rebase origin/main` only drops the old commit cleanly when the branch carried a *single* squash-merged commit.** When it carried *several* commits that `main` squashed into *one* (then kept developing), git can't match them to the squash as already-applied, so it replays them and conflicts mid-rebase. Replant only the genuinely-new commits instead: `git rebase --onto origin/main <last-squash-merged-commit>` (then `git push --force-with-lease`). If the new work is small, a `git reset --hard origin/main` + redo beats fighting the replay.
@@ -92,6 +104,8 @@ Two tells: a check stuck `queued` that auto-cancels around 15 minutes with its j
 ## After a remote-side merge, fetch before branching off origin/main
 
 A GitHub API/UI (or any remote-side) merge does **not** advance your local `origin/main` — it stays at the pre-merge commit until you `git fetch`. Branching off `origin/main` immediately after a remote merge forks the pre-merge state, silently missing the just-merged work; symptoms surface later as a missing file or a failed `git mv` on the new branch. Fix: `git fetch origin main` before creating the branch.
+
+The same fix, for a worse version of the same mistake: never branch from the bare local `main` (`git checkout -b <branch> main` / `git branch <branch> main`) in a checkout nothing keeps current — a long-lived clone in an unattended agent's workspace can sit with local `main` pinned at whatever commit it was cloned at, arbitrarily stale rather than merely one merge behind, because nothing ever fast-forwards a ref nobody checks into. `git fetch origin main` first, then branch from `origin/main` explicitly, every time — not only right after a merge you just watched happen.
 
 ## `git pull` failing "refusing to merge unrelated histories" usually means upstream re-rooted
 
@@ -159,7 +173,7 @@ Resolve the wait through exactly one path — a `Monitor` until-loop, **or** dir
 
 ## A run artifact resolves to a blob-storage URL a sandboxed session can't reach
 
-`actions_get`'s `download_workflow_run_artifact` hands back a `*.blob.core.windows.net`-style URL that a sandbox's egress proxy denies at CONNECT, so chasing it burns a call for nothing. Read `get_job_logs` with a generous `tail_lines` to learn which step or case failed, then reproduce it locally.
+`actions_get`'s `download_workflow_run_artifact` hands back a `*.blob.core.windows.net`-style URL that a sandbox's egress proxy denies at CONNECT, so chasing it burns a call for nothing. Read `get_job_logs` with a generous `tail_lines` to learn which step or case failed, then reproduce it locally — but "generous" has a ceiling: `tail_lines` is unbounded on the request side, and a guessed-large value can itself blow the tool's own token limit on the way back, failing the exact call meant to diagnose the failure. Start with a small `tail_lines` instead; the error names the log's saved-to-disk path either way, and `grep`ing that file for the failure marker (`not ok`, `FAIL`, the step name) works whether or not the small call already showed it.
 
 ## A long-running workflow that commits generated files will race a more-frequent scheduled writer
 
@@ -169,6 +183,10 @@ A workflow that regenerates and commits derived files and runs longer than a com
 
 Its `merged`/`merged_at` fields can read `false`/empty for a PR that has genuinely landed by squash-merge, even with `fields` narrowed. Confirm landed-ness by grepping the base branch's commit subjects for the squash's `(#N)`, or call `pull_request_read` `get` on the one PR you care about.
 
+## `list_pull_requests`'s `head` filter silently returns the wrong PR on a bare branch name
+
+Passing a bare branch name in `head` (no `owner:` prefix) does not filter - it can hand back an unrelated PR as if it matched, for every branch queried, with no error to flag the miss. Qualify it as `owner:branch-name`, or skip the lookup and confirm status with a git-based check (`merge-base`/`diff --stat` against the branch) instead.
+
 ## `issue_read`'s `get_*` methods are split on a PR number, so one that answers proves nothing about the next
 
 `issue_read` `get` resolves a PR number and returns the pull request, while `get_labels` on that same number errors "Could not resolve to an Issue with the number of N" — the method set is not uniform, so a read that succeeded is no licence to reach for a sibling method. Read a PR's labels, comments or metadata through `pull_request_read`, which answers for all of them.
@@ -176,6 +194,14 @@ Its `merged`/`merged_at` fields can read `false`/empty for a PR that has genuine
 ## Leaving several PRs open after one sweep, subscribe every one of them
 
 An unsubscribed PR gets noticed only on a manual re-poll, while a subscribed one's merge or comment arrives as an activity event the moment it happens. When a run's output is more than one open PR, subscribe all of them before ending the session, not a sample.
+
+## `search_code`'s index can lag - don't trust it alone to enumerate affected repos
+
+Scoping a sweep across many repos by `search_code` alone can silently undercount: its index has been observed to lag well behind a repo's actual content, returning a fraction of the repos a direct check turns up for the identical pattern. Before scoping a fleet-wide sweep on a search result, cross-check against a direct, structural enumeration (fetch each candidate repo's own relevant file rather than relying on the search index to have seen it).
+
+## The rendered PR-diff view can silently omit a new file - confirm with git, not the UI
+
+A GitHub PR's rendered diff view has been observed to drop a new root-level file or directory addition from what it displays, even though the file is genuinely present in the commit. Confirm whether a file landed with `git ls-files` / `git diff --stat` against the branch, never by reading the rendered diff - a false "it's missing" read costs a round-trip and an unnecessary re-push.
 
 ## A deleted workflow's old runs outlive it, and no session tool can clear them
 
@@ -223,9 +249,12 @@ A list or search API call that isn't bounded returns a full page of full-bodied 
 - **When you already know the exact title, don't search at all — list and match it yourself.** Field anchoring is a *GitHub search API* feature, and an MCP layer in front of it may match **semantically** instead, ranking by resemblance and honouring no qualifier: the title you named can then rank below unrelated issues or be absent from the page entirely, and `in:title` changes nothing. Enumerate with `list_issues` (a narrow field list, a large page size, no state filter — a log issue is often deliberately closed) and compare the string in-session. Reserve search for what it is good at: finding items you can only *describe*.
 - **Trim the fields, not just the page size.** The per-object field set is what governs the payload, so capping the page can leave the response byte-identical — measured, the same call at two page sizes returned output identical to the character. Ask for the fields you need (`["number","title","state"]` covers most lookups); dropping the body alone is usually the whole difference. Where a tool offers no field selection, narrow the query instead, or take the overflow as the answer and read the spilled result file directly rather than retrying it smaller.
 - **Pass a small explicit page size.** Default page sizes are tuned for a browser, not a tool result; when the answer wanted is one issue or one run, ask for 5–10, never a bare unpaged call.
-- **`actions_list`'s `list_workflow_runs` does honour `perPage`.** On a repo holding 4,175 runs it returned exactly one and exactly two records at those page sizes, both unfiltered and scoped to one workflow file — so an overflow there means the records are fat, not that the bound was ignored, and the remedy is a smaller page plus a run-id or head-SHA scope rather than giving up on the page size.
+- **`actions_list`'s `list_workflow_runs` does honour `perPage`.** On a repo holding 4,175 runs it returned exactly one and exactly two records at those page sizes, both unfiltered and scoped to one workflow file - so an overflow there means the records are fat, not that the bound was ignored, and the remedy is a smaller page plus a run-id or head-SHA scope rather than giving up on the page size. The bound is spelled `perPage`: `per_page` is not a key the tool reads, so passing it changes nothing and reads as the page size being ignored.
+- **The spilled overflow file for a search call is GitHub's own response envelope** - `{ total_count, incomplete_results, items: [...] }` - not a bare list. Index `['items']` on the first parse instead of guessing the shape across several failed attempts.
 
 All of them, not one: a qualified query still returns a full page, a small page of unqualified matches is still the wrong records, and a small page of full-bodied records still overruns the cap.
+
+**The same cap catches a single large text result, not only a list.** `get_job_logs`'s `tail_lines` is not exempt - guessing a large value to pull enough context for a CI diagnosis can itself exceed the limit, independently of how many records a call returns. Pass a small `tail_lines` first; on overflow, read the tool's own saved-to-disk log path and grep that file for the failure marker (`not ok`, `FAIL`) rather than guessing a bigger number.
 
 ## Merging gotchas
 

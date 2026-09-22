@@ -11,8 +11,7 @@ doesn't ship. The script's content is the same for every project — it just run
 declared `env` install through the engine's `env-requirements.mjs`, so it never changes as
 requirements do (bootstrap.md Part 9 walks the setup). Nobody has to go looking for that body:
 the pack's `adoptionHandover` step has the filing session quote it inline, so the issue asking
-for the paste carries the block to copy. The file stays the canonical copy because core may not
-name a pack — `bootstrap.md` and the engine's env check reach it by its unique filename.
+for the paste carries the block to copy.
 
 Declared, and seeded by `--init`. The pack holds an **address**, not the content: `config.repo` (and
 an optional `config.path`, default `preferences`) name the store that holds one `<email>/` directory

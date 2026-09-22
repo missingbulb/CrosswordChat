@@ -3,6 +3,8 @@ name: prose-to-checks
 description: Mine pack prose (RULES.md, SKILL.md) for always-testable rules that were never converted to checks, and convert the strongest ones. Use when auditing packs for convertible rules, when the weekly prose-to-checks sweep runs, or as the upgrade pass over prose a growth-extract run just wrote.
 metadata:
   body: workflow
+  usage:
+    expect: judgment
 ---
 
 # Convert existing prose to checks

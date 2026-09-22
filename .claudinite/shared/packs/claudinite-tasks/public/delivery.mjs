@@ -11,7 +11,7 @@
 // copy: the per-repo skill-usage fold and the fleet-enforcer's cross-repo aggregate both
 // recompute a `*.GENERATED.json` from scratch and want it landed without a human in
 // the loop. (the update runner's own delivery is deliberately NOT folded in here: it
-// commits a whole working tree and re-cuts a dated family branch each cycle — a
+// commits a whole working tree from a checkout it converged in place — a
 // different job that happens to end in a PR too. What the two DO share — every
 // nuance of actually landing the PR under the member's `maintenance.delivery` and
 // the repo's own shape — lives in land-pr.mjs, and both call it.)
@@ -97,18 +97,19 @@ export function pushGenerated(root, { remote, baseSha, branch, files, message })
 // closed under the run; the branch is still the one to push to, and a new pull
 // request opens on it.
 //
-// With no `branch` handed in — an executor that predates the hand-off — the lane
-// falls back to what it did on its own: reuse an open pull request whose head
-// carries `branchPrefix`, else mint `<branchPrefix>/<stamp>`.
-// @legacy-tolerance advisory:none retire:#1698
-export function generatedTarget({ pulls, branchPrefix = null, stamp = null, branch = null, pr = null }) {
-  const open = Array.isArray(pulls) ? pulls : [];
-  if (branch) {
-    const named = pr == null ? null : open.find((p) => p.number === Number(pr)) ?? null;
-    return { branch, pr: named, reused: Boolean(named) };
+// The branch is REQUIRED. The lane used to reuse an open pull request whose head
+// carried a prefix and mint `<prefix>/<stamp>` where it found none — a second
+// decision site beside the executor's, held only while a member's vendored executor
+// could predate the hand-off (#1698). An outcome that opens a pull request always
+// resolves one, so an absent branch is a caller the executor is not driving, and
+// delivering on a branch nothing is watching is worse than saying so.
+export function generatedTarget({ pulls, branch = null, pr = null }) {
+  if (!branch) {
+    throw new Error('no branch to deliver on — the executor resolves it and hands it in as CLAUDINITE_TARGET_BRANCH');
   }
-  const found = open.find((p) => p.head?.ref?.startsWith(`${branchPrefix}/`)) ?? null;
-  return { branch: found ? found.head.ref : `${branchPrefix}/${stamp}`, pr: found, reused: Boolean(found) };
+  const open = Array.isArray(pulls) ? pulls : [];
+  const named = pr == null ? null : open.find((p) => p.number === Number(pr)) ?? null;
+  return { branch, pr: named, reused: Boolean(named) };
 }
 
 // Deliver `files` on a PR that lands itself where the member allows it, on the
@@ -123,9 +124,9 @@ export function generatedTarget({ pulls, branchPrefix = null, stamp = null, bran
 // land stays open — the next run rebuilds it from the base, so nothing is lost.
 //
 // Returns { branch, number, reused, delivery, merged }.
-export async function deliverGenerated({ root, repo, base, token, branchPrefix = null, stamp = null, branch: targetBranch = null, pr: targetPr = null, files, title, body, message, task = null, log = console.log }) {
+export async function deliverGenerated({ root, repo, base, token, branch: targetBranch = null, pr: targetPr = null, files, title, body, message, task = null, log = console.log }) {
   const { json: pulls } = await gh(token, `/repos/${repo}/pulls?state=open&per_page=100`);
-  const chosen = generatedTarget({ pulls, branchPrefix, stamp, branch: targetBranch, pr: targetPr });
+  const chosen = generatedTarget({ pulls, branch: targetBranch, pr: targetPr });
   let { pr } = chosen;
   const { branch, reused } = chosen;
   const remote = remoteUrl(repo, token);
@@ -168,5 +169,5 @@ export async function deliverGenerated({ root, repo, base, token, branchPrefix =
 
 // --- the landing lane, re-exported -----------------------------------------------
 export {
-  deliveryFor, landDelivery, openDeliveredPull, disposeOpenPull, pullCreateError,
+  deliveryFor, landDelivery, pullCreateError,
 } from '../src/deliver/land-pr.mjs';

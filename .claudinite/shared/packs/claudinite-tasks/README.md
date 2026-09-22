@@ -5,9 +5,9 @@ its signals, calendar/anchor math, run records, code-work, and the delivery lane
 lands through. Declaring this pack is what gives a repo scheduled work; a repo that does not
 declare it runs none, which is a supported state rather than a degraded one.
 
-The mechanism itself — the state machine, the generator, the executor's protocol, urgency and
-forcing, recovery — is the canon's own tasks-dispatch design document, and authoring a task is the
-`writing-tasks` skill's subject. This file is the pack's own map.
+The mechanism itself, from the state machine and the generator to the executor's protocol,
+urgency, forcing and recovery, is [`docs/PRINCIPLES.md`](docs/PRINCIPLES.md); authoring a task is
+the `writing-tasks` skill's subject. This file is the pack's own map.
 
 ## Layout
 
@@ -29,7 +29,7 @@ and `tasks-world-edges-live-in-world` checks are what hold the shape.
 | `src/deliver/` | turning a run's output into a landed pull request or a regenerated file |
 | `src/recover/` | repair: the janitor's rules, workflow-failure escalation, the dead-run continuation |
 | `src/adopt/` | what an adopting repo receives: the workflows converged from the stubs, the per-repo cron minute |
-| `queue/` | `tasks/implement-request/` — the engine's own built-in task. Its `task.md` is a redirect kept for work items minted before the move (retired 2026-10-15); the spec itself is `public/implement-request.md` |
+| `queue/` | `tasks/implement-request/`, the engine's own built-in task; the spec is `public/implement-request.md` |
 | `stubs/` | the two workflow files an adopting repo receives |
 | `public/` | **everything outside this pack may reference** — the vocabulary and grammar `src/` builds on, the import surface, and the documents a routine reads. See below |
 | `tasks/` | this pack's own tasks: `task-janitor` (the queue's sweeps), `usage-fold` (it folds this mechanism's run records and outcome labels), `tasks-usage-fold` (what the machinery itself cost — runs, billed minutes, API calls, outcomes, parks, latencies) and `verify-production` (coded production validations — URL probes judged as code-work) |
@@ -75,10 +75,9 @@ machinery's own operations under a stable name.
 | `delivery.mjs` | `deliverGenerated` — a regenerated file landed on a pull request that lands itself — and the landing lane's five names for a worker that lands its own pull request |
 | `task-declaration.mjs` | the declaration's executable contract: the loader, its validation, the precondition evaluator the executor runs at pick, and the auto-merge policy engine |
 
-A module publishes **named** exports rather than `export *`: the list in the file is the promise,
-so a reader sees the whole surface in one place and an internal rename can neither widen nor
-narrow it. A consumer needing something absent asks for the named export to be added here —
-never a deeper import, which `tasks-pack-read-through-its-surface` refuses. Who reads each name
+A module publishes **named** exports rather than `export *`. A consumer needing something absent
+asks for the named export to be added here, never a deeper import, which
+`tasks-pack-read-through-its-surface` refuses. Who reads each name
 is derived on demand: `node packs/claudinite-canon-curation/pack-surface.mjs packs/claudinite-tasks`
 renders the surface and its consumers from the tree.
 
@@ -109,19 +108,16 @@ pack paths behind which everything converges nightly.
 `tasks-pack-read-through-its-surface` is this pack's, not the canon's, because the consumers that
 can get it wrong are members: it scans a repo's own `packs/` **and** its `.claudinite/local/packs/`,
 the tree no converge may rewrite, so a deep import written there is caught in that repo's own run
-rather than when it crashes. Declared here so every repo declaring this pack runs it — a canon-only
-pack would never reach them (missingbulb/Shepherd#613).
+rather than when it crashes.
 
 `repo-variables-through-the-bag` — a module reads a repository variable over the REST variables
 API, which the Actions `GITHUB_TOKEN` is refused on in every member (403, and no `permissions:` key
 grants it), so the read never answers. Every repository variable already travels in the executor's
-vars bag: a task's code-work finds it in `process.env`, engine code reads `varsBag(env)`. Declared
-for the same reason as the check above — a member's own local task is where the next such read is
-written.
+vars bag: a task's code-work finds it in `process.env`, engine code reads `varsBag(env)`.
 
 The first two are relevance-first — inert until the repo carries a `tasks/<name>/task.json` of its own; the third is self-gating on the branch's own arming trailer.
 
-- `task-declaration-shape` — a task declaration the scheduler reads is incomplete or illegal — no `preconditions` saying when it runs, an unknown condition, an illegal value — so the task never fires or fires wrong.
+- `task-declaration-shape` — a task declaration the scheduler reads is incomplete or illegal — no `trigger` saying who mints an occurrence, an unknown condition, an illegal value — so the task never fires or fires wrong.
 - `task-code-work-env` — a task reads a `CLAUDINITE_*` variable code-work never sets, so a parameter (a scope filter, a dry-run switch) silently never arrives and the run goes green in its most dangerous mode.
 - `executor-workflow-secrets` — the executor workflow does not pass a secret the tasks of this repo's packs declare, so the queue picks the item up and only the run finds out the secret is not there. The list is the tasks' alone; an invocation endpoint's `tokenSecret` is config, stamped by the converge and reported by the invocation call itself. Advisory because the remedy is a human-merged PR to `.github/workflows/`, the one fix a member's own machinery cannot make.
 - `automerge-policy-scope` — a branch that stamped the `Claudinite-Automerge-Policy` trailer (its run intends to land its own PR) carries a diff its declared policy does not cover, which is exactly the unreviewed change the policy exists to stop.

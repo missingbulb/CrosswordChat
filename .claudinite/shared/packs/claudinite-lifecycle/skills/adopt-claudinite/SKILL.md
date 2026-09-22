@@ -3,6 +3,8 @@ name: adopt-claudinite
 description: Bootstrap Claudinite into a consuming repo — mount, hooks, checks, skills. Use when asked to bootstrap, adopt, or set up Claudinite, or to baseline a repo to pick up updates.
 metadata:
   body: workflow
+  usage:
+    expect: adoption
 ---
 
 Follow [bootstrap.md](../../../../bootstrap.md)'s **fast path** — canonical there, and idempotent

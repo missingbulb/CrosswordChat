@@ -28,56 +28,19 @@ import { TASK_EXEC_STATUSES, parseTaskExecs } from '../../src/items/run-record.m
 // The file's on-disk shape is its SIBLING here (usage-format.mjs). Everything below
 // works in the NAMED counter shape and meets the tuples only at the two boundary
 // functions at the foot of this file.
+import { isUserMessage, commandName, skillToolLoads, entryText } from './capture-entries.mjs';
+import { countCorpusUse, countMoments, countCheckTiming } from './corpus-use.mjs';
 import {
   USAGE_FIELDS, USAGE_VERSION, CAPTURE_DAY_FIELDS, WEEK_FROM_DAY, QUEUE_OUTCOMES,
-  COUNTER_GROUPS, BARE_MAPS, USAGE_CAPS, hourKey, encodeUsageFile, decodeUsageFile,
+  COUNTER_GROUPS, BARE_MAPS, MAX_FIELDS, USAGE_CAPS, hourKey, encodeUsageFile, decodeUsageFile,
 } from '../../src/items/usage-format.mjs';
 
 // --- entry classification -----------------------------------------------------
-// Every shape below was verified against real captured transcripts on a
-// conversation-logs branch, not inferred from the harness docs.
-
-// A genuine human turn. POSITIVE test, deliberately: the transcript stamps a
-// typed-by-a-person turn with `origin: { kind: 'human' }`, and everything else a
-// user-role entry can be — a tool result, an injected/meta turn, a subagent's
-// sidechain traffic, a compaction summary, a slash-command expansion, and (the one
-// that matters most here) a scheduled-task firing, which carries
-// `origin: { kind: 'task-notification', subkind: 'scheduled-trigger' }` — simply
-// lacks that stamp. Testing FOR the human marker rather than against a list of
-// automated ones means a new automated entry shape is excluded the day it appears
-// instead of silently inflating the denominator.
-//
-// The honest boundary: an older harness wrote no `origin` at all. Those turns count
-// as non-human, so a repo's very old captures under-report userMessages rather than
-// over-reporting them. This is the most fragile line in the fold, which is why it is
-// one function with a fixture per shape it excludes.
-export function isUserMessage(entry) {
-  return entry?.type === 'user' && entry?.origin?.kind === 'human';
-}
-
-// A user-typed slash command. The harness expands `/name args` into a user entry
-// whose string content opens with a `<command-name>` tag — the tag is the marker,
-// so prose that merely mentions a slash command never counts. Returns the bare
-// command name (no leading slash), or null.
-const COMMAND_RE = /<command-name>\s*\/?([A-Za-z0-9:_-]+)\s*<\/command-name>/;
-export function commandName(entry) {
-  if (entry?.type !== 'user') return null;
-  const content = entry?.message?.content;
-  if (typeof content !== 'string') return null;
-  return COMMAND_RE.exec(content)?.[1] ?? null;
-}
-
-// Skill names loaded by an assistant entry: every `Skill` tool_use block's
-// `input.skill`. Sidechain (subagent) entries are included by the caller — a
-// subagent loading a skill is a load.
-export function skillToolLoads(entry) {
-  if (entry?.type !== 'assistant') return [];
-  const content = entry?.message?.content;
-  if (!Array.isArray(content)) return [];
-  return content
-    .filter((b) => b?.type === 'tool_use' && b?.name === 'Skill' && typeof b?.input?.skill === 'string')
-    .map((b) => b.input.skill);
-}
+// The per-entry readers live in capture-entries.mjs, beside the second counting
+// pass that asks the same questions of the same shapes. Re-exported here because
+// they were this module's before that split, and a member's own code may import
+// them by this path.
+export { isUserMessage, commandName, skillToolLoads, entryText };
 
 // --- check activations ---------------------------------------------------------
 // The conformance checks are the other half of the picture, and the more valuable
@@ -316,22 +279,33 @@ export function countChecks(entries) {
   const checks = {};
   const checkFindings = {};
   const scope = (name) => (checks[name] ??= emptyScope());
-  const finding = (rule, severity) => {
-    (checkFindings[rule] ??= { blocking: 0, advisory: 0 })[severity] += 1;
-  };
+  const emptyFinding = () => Object.fromEntries(USAGE_FIELDS.checkFindings.map((f) => [f, 0]));
+  const finding = (rule, severity) => { (checkFindings[rule] ??= emptyFinding())[severity] += 1; };
+  // The findings each Stop sweep printed, in order - `persisted` reads the last
+  // one (what the session left standing), `relent` the one before a sweep that
+  // gave up, which prints its reason instead of its findings.
+  const blocks = [];
 
   for (const { source, text, command } of checkOutputs(entries)) {
     const summaries = checkSummaries(text);
 
     if (source === 'hook') {
+      const headers = findingHeaders(text);
+      if (headers.length) blocks.push(headers);
       // The hook only ever runs the WORK scope, and its completion line is the run.
       for (const run of hookCheckRuns(text)) {
         const work = scope('work');
         work.runs += 1;
         if (run.reason === 'runner-error') work.errors += 1;
         // A relent prints the reason instead of the findings, so its failure is
-        // visible here and nowhere else.
-        if (run.reason === 'loop-guard-relent') work.failures += 1;
+        // visible here and nowhere else - and the sweep it gave up on is the last
+        // one that printed any, which is the block its rules are read from.
+        if (run.reason === 'loop-guard-relent') {
+          work.failures += 1;
+          for (const rule of new Set((blocks.at(-1) ?? []).map((f) => f.rule))) {
+            (checkFindings[rule] ??= emptyFinding()).relent += 1;
+          }
+        }
       }
       for (const s of summaries) if (s.blocking > 0) scope(s.scope).failures += 1;
     } else if (source === 'ci') {
@@ -366,6 +340,15 @@ export function countChecks(entries) {
     }
     for (const f of findingHeaders(text)) finding(f.rule, f.severity);
   }
+  // A rule this capture file saw at all was seen in one session - the day tier
+  // reduces these to distinct sessions, which is the denominator the "fires in most
+  // sessions" rule reads.
+  for (const row of Object.values(checkFindings)) row.sessions = 1;
+  // What the session's LAST sweep still carried: an advisory standing there is one
+  // nobody acted on, which is the whole of the advisory-ignored rule's evidence.
+  for (const f of blocks.at(-1) ?? []) {
+    if (f.severity === 'advisory') (checkFindings[f.rule] ??= emptyFinding()).persisted += 1;
+  }
   return { checks, checkFindings };
 }
 
@@ -382,12 +365,6 @@ export function countChecks(entries) {
 // CODE (resolve-dispatch, record-exec) into Bash tool results, but the model may
 // also quote one back, and the harness records both — so the caller dedupes on
 // the full record tuple rather than trusting any one entry shape.
-function entryText(value, out = []) {
-  if (typeof value === 'string') out.push(value);
-  else if (Array.isArray(value)) for (const v of value) entryText(v, out);
-  else if (value && typeof value === 'object') for (const v of Object.values(value)) entryText(v, out);
-  return out;
-}
 
 // An empty per-task execution row — every status present, zeros included, same
 // fixed-shape discipline as the scheduler's task-run rows.
@@ -564,7 +541,12 @@ export const ruleTokensIn = () => null;
 // @legacy-tolerance advisory:none retire:#1989
 export const ruleTokensByPackIn = () => null;
 
-export function countEntries(entries, mounted = new Set()) {
+// `corpus` is what the mounted corpus offers this repo, for the counters that need
+// to know it: `{ mounted, declarations, hits, ownerOf }`. Absent - a caller that
+// only wants the production counters, or an engine too old to resolve the
+// declarations - the counters that depend on it record no key rather than a zero.
+export function countEntries(entries, corpus = {}) {
+  const mounted = corpus instanceof Set ? corpus : (corpus.mounted ?? new Set());
   const skillLoads = {};
   let userMessages = 0;
   let userCommands = 0;
@@ -579,6 +561,8 @@ export function countEntries(entries, mounted = new Set()) {
       if (mounted.has(command)) load(command);
     }
   }
+  const checks = countChecks(entries);
+  const use = countCorpusUse(entries, mounted);
   return {
     userMessages,
     userCommands,
@@ -587,8 +571,28 @@ export function countEntries(entries, mounted = new Set()) {
     tokensByModel: tokensByModelIn(entries),
     seconds: turnSeconds(entries),
     taskExec: countTaskExecs(entries),
-    ...countChecks(entries),
+    ...checks,
+    ...use,
+    moments: countMoments(entries, corpus.declarations ?? [], corpus.hits ?? {}),
+    checkTiming: countCheckTiming(entries),
+    skillCaught: caughtSkills(Object.keys(use.skillLoadsBy), checks.checkFindings, corpus.ownerOf),
   };
+}
+
+// The skills that loaded and were then caught anyway by a check they own. Per
+// capture file, so the day tier's count is sessions rather than findings - a
+// session caught three times by one rule is one session the skill did not save.
+// `ownerOf` maps a rule id to the skill that owns it; without it no key is written.
+export function caughtSkills(loaded, checkFindings, ownerOf) {
+  if (typeof ownerOf !== 'function') return {};
+  const out = {};
+  const held = new Set(loaded);
+  for (const [rule, row] of Object.entries(checkFindings ?? {})) {
+    if (!(row?.blocking > 0)) continue;
+    const skill = ownerOf(rule);
+    if (skill && held.has(skill)) out[skill] = 1;
+  }
+  return out;
 }
 
 // --- day buckets ---------------------------------------------------------------
@@ -600,9 +604,10 @@ export function countEntries(entries, mounted = new Set()) {
 // zero written for it would read as a quiet day.
 const emptyDay = () => ({
   ...Object.fromEntries(CAPTURE_DAY_FIELDS.map((f) => [f, 0])),
-  skillLoads: {},
-  checks: {}, checkFindings: {}, tasks: {}, taskExec: {}, queue: {},
-  tokensByModel: {}, prs: {}, taskCost: {}, parks: {},
+  // Driven off the vocabularies rather than a list here, so a newly appended map
+  // or group cannot be silently absent from the day tier that feeds the week one.
+  ...Object.fromEntries(BARE_MAPS.map((m) => [m, {}])),
+  ...Object.fromEntries(COUNTER_GROUPS.map((g) => [g, {}])),
 });
 
 // An empty hour row. All four counters are zeroed: an hour inside the window with no
@@ -611,15 +616,20 @@ const emptyDay = () => ({
 const emptyHour = () => ({ ...Object.fromEntries(USAGE_FIELDS.hour.map((f) => [f, 0])), taskExec: {} });
 
 function addLoads(into, from) {
-  for (const [name, n] of Object.entries(from)) into[name] = (into[name] ?? 0) + n;
+  for (const [name, n] of Object.entries(from ?? {})) into[name] = (into[name] ?? 0) + n;
 }
 
 // The check maps fold the same way skillLoads do — key-wise, zeros implicit — only
-// with a fixed-shape counter object under each key instead of a bare number.
-function addCounters(into, from) {
+// with a fixed-shape counter object under each key instead of a bare number. A
+// field the group declares as a peak takes the larger of the two rather than their
+// sum; everything else adds.
+function addCounters(into, from, group = null) {
+  const peaks = new Set(MAX_FIELDS[group] ?? []);
   for (const [key, row] of Object.entries(from ?? {})) {
     const target = (into[key] ??= Object.fromEntries(Object.keys(row).map((k) => [k, 0])));
-    for (const [field, n] of Object.entries(row)) target[field] = (target[field] ?? 0) + n;
+    for (const [field, n] of Object.entries(row)) {
+      target[field] = peaks.has(field) ? Math.max(target[field] ?? 0, n) : (target[field] ?? 0) + n;
+    }
   }
 }
 
@@ -633,6 +643,14 @@ function addCounters(into, from) {
 export function foldDays(files) {
   const days = {};
   const sessionsByDay = {};
+  const skillSessionsByDay = {};
+  const ruleSessionsByDay = {};
+  // This capture's session, filed under the day and the name it attests.
+  const touched = (into, file, name) => {
+    const byName = (into[file.date] ??= new Map());
+    if (!byName.has(name)) byName.set(name, new Set());
+    byName.get(name).add(file.sessionId);
+  };
   // The two PER-SESSION figures, which must not be summed over capture files: a
   // session that captured twice (a merge, then the session-end tail) writes the same
   // facts into both files, and the second is usually a superset of the first. So they
@@ -654,10 +672,15 @@ export function foldDays(files) {
     if (file.pr > 0 || file.issue > 0) day.merges += 1;
     day.userMessages += file.counts.userMessages;
     day.userCommands += file.counts.userCommands;
-    addLoads(day.skillLoads, file.counts.skillLoads);
-    addCounters(day.checks, file.counts.checks);
-    addCounters(day.checkFindings, file.counts.checkFindings);
-    addCounters(day.taskExec, file.counts.taskExec);
+    for (const map of BARE_MAPS) if (map !== 'skillSessions') addLoads(day[map], file.counts[map]);
+    for (const group of ['checks', 'checkFindings', 'taskExec', 'skillLoadsBy', 'triggerFires', 'guardFires', 'checkTiming']) {
+      addCounters(day[group], file.counts[group], group);
+    }
+    // The two DISTINCT-SESSION counters, which are not sums over capture files: a
+    // session that captured twice wrote the same facts into both, and both figures
+    // are rates per session rather than per load or per finding.
+    for (const skill of Object.keys(file.counts.skillLoadsBy ?? {})) touched(skillSessionsByDay, file, skill);
+    for (const rule of Object.keys(file.counts.checkFindings ?? {})) touched(ruleSessionsByDay, file, rule);
     (sessionsByDay[file.date] ??= new Set()).add(file.sessionId);
 
     const s = session(file.date, file.sessionId);
@@ -687,6 +710,14 @@ export function foldDays(files) {
   // Distinct sessions, not capture count: one session can capture more than once
   // (a merge, then the session-end tail).
   for (const [date, set] of Object.entries(sessionsByDay)) days[date].sessions = set.size;
+  // Overwriting rather than adding: the per-file counters above attested presence,
+  // and what the day carries is how many distinct sessions that came to.
+  for (const [date, byName] of Object.entries(skillSessionsByDay)) {
+    for (const [skill, set] of byName) days[date].skillSessions[skill] = set.size;
+  }
+  for (const [date, byName] of Object.entries(ruleSessionsByDay)) {
+    for (const [rule, set] of byName) days[date].checkFindings[rule].sessions = set.size;
+  }
 
   for (const [date, bySession] of Object.entries(perSession)) {
     const day = days[date];
@@ -972,8 +1003,7 @@ export function addDayToWeek(week, day) {
   }
   // The bare maps a week row can carry, so a week frozen before one existed reads
   // back the same shape a fresh fold builds.
-  for (const map of BARE_MAPS) w[map] ??= {};
-  addLoads(w.skillLoads, day.skillLoads);
+  for (const map of BARE_MAPS) addLoads((w[map] ??= {}), day[map]);
   // Every counter group folds key-wise, driven off the vocabulary rather than a
   // hand-written list here — which is where a newly appended group would otherwise be
   // silently dropped out of the week tier.
@@ -982,7 +1012,7 @@ export function addDayToWeek(week, day) {
   // crashed, so the first fold after the group ships extends those weeks from the day
   // it closes forward instead of wedging the watermark behind them.
   //
-  for (const group of COUNTER_GROUPS) addCounters((w[group] ??= {}), day[group]);
+  for (const group of COUNTER_GROUPS) addCounters((w[group] ??= {}), day[group], group);
   return w;
 }
 
@@ -1070,8 +1100,38 @@ export { encodeUsageFile as encodeUsage, decodeUsageFile as decodeUsage };
 // carry at all. Fails soft to an empty set: with no mounted set, a typed `/command`
 // still counts as a userCommand and simply never counts as a skill load.
 export async function mountedSkillNames(root, config) {
+  return (await mountedCorpus(root, config)).mounted;
+}
+
+// What the mounted corpus offers the counters that need to know it: the skill
+// names, the force-load declarations a moment is counted against, the predicates
+// that decide whether a moment hit, and which skill owns which check.
+//
+// The engine is probed rather than depended on. Its predicates and the
+// `ownerSkill` stamp are newer than this pack's first delivery of these counters,
+// and the two lanes land on separate cycles, so every member spends a window
+// holding an older engine beside this pack. A namespace import that comes back
+// without them leaves `hits`/`ownerOf` unset, and the counters reading them write
+// NO KEY - *not recorded*, which is the honest answer, where a zero would report a
+// skill whose moments could not be resolved as one whose moments never came.
+export async function mountedCorpus(root, config) {
+  const empty = { mounted: new Set(), declarations: [], hits: {}, ownerOf: null };
   try {
     const active = (await loadPacks({ localRoot: root })).filter((p) => isActive(p, config));
-    return new Set(bundledSkillSources(active).keys());
-  } catch { return new Set(); }
+    const scoped = await import('../../../../engine/pack_loader/path-scoped-skills.mjs');
+    const hits = scoped.hitsCall && scoped.hitsPrompt && scoped.hitsPath
+      ? { call: scoped.hitsCall, prompt: scoped.hitsPrompt, path: scoped.hitsPath }
+      : {};
+    const declarations = [...scoped.triggeredSkills(active), ...scoped.pathScopedSkills(active)];
+    const byRule = new Map();
+    for (const pack of active) {
+      for (const rule of pack.skillChecks ?? []) if (rule?.ownerSkill) byRule.set(rule.id, rule.ownerSkill);
+    }
+    return {
+      mounted: new Set(bundledSkillSources(active).keys()),
+      declarations,
+      hits,
+      ownerOf: byRule.size ? (id) => byRule.get(id) ?? null : null,
+    };
+  } catch { return empty; }
 }

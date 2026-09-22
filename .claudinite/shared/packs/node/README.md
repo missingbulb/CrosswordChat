@@ -1,6 +1,6 @@
 # node pack
 
-Active when the repo has a root `package.json`. The module-resolution and jsdom gotchas are prose (runtime behaviours with no clean static signature), a `btoa`/`atob` call on text is a check; test discovery is a skill forced onto the files a `node --test` invocation lives in.
+Active when the repo has a `package.json` at its root or one directory down.
 
 ## Rules (`RULES.md`)
 
@@ -14,9 +14,6 @@ Active when the repo has a root `package.json`. The module-resolution and jsdom 
 | A printing script must not process.exit() | high | correctness | prose: <50 words |
 | body.innerText is null in jsdom. | medium | correctness | prose: <100 words |
 | jsdom parses <noscript> into live DOM | medium | correctness | prose: <100 words |
-
-The `node --test` discovery rule is the [`node-test-discovery`](skills/node-test-discovery/SKILL.md)
-skill, forced for `.github/workflows/**` and `package.json`.
 
 ## Skills
 

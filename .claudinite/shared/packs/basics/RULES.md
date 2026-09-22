@@ -292,7 +292,9 @@
   new, opening a listener or adding an outbound connection changes the promise rather than adding a
   field: decide it explicitly and rewrite the disclosure before the code. Expect the claim in more
   than one place — grep the whole surface for the standing absolutes it touches ("no tracking",
-  "no cookies", "no external assets") and reconcile every hit. (changing-software-does)
+  "no cookies", "no external assets") and reconcile every hit. Write the reconciled disclosure to
+  lead with what is now actually done, then the narrower true claims still standing - never a
+  blanket denial the new behavior has already made false. (changing-software-does)
 
 - **Changing an observable behavior your own docs make a claim about** — not only privacy: when
   a site deploys, a job's cadence, which targets are supported. Grep the doc surface for what the

@@ -81,7 +81,15 @@ function missing(declarations, loaded, hit) {
   return out;
 }
 
-export const missingSkillsFor = (path, declarations, loaded) => missing(declarations, loaded, (d) => d.re.test(path));
+export const missingSkillsFor = (path, declarations, loaded) => missing(declarations, loaded, (d) => hitsPath(d, path));
+
+// Does this one declaration admit this moment? The four predicates below are what
+// `missing*` asks of each declaration, exported in their own right because a
+// counter asks the same question for a different reason: the usage review counts
+// the moments a triggered skill declared, which is every hit rather than the
+// undeduped-and-not-yet-loaded subset `missing*` narrows to. One definition per
+// moment, so the count and the hook cannot disagree about what a trigger matches.
+export const hitsPath = (d, path) => d.re.test(path);
 
 // The TRIGGERED skills of the given packs, the three moments beside the path
 // one: [{ pack, skill, dir, kind: 'toolCall' | 'prompt' | 'toolResult', tool,
@@ -111,15 +119,19 @@ const subjectOf = (d, value) => {
   return at === undefined || at === null ? '' : asText(at);
 };
 
+export const hitsCall = (d, call) => d.kind === 'toolCall' && namesTool(d, call.name)
+  && (!d.pattern || d.pattern.test(subjectOf(d, call.input)));
+export const hitsPrompt = (d, text) => d.kind === 'prompt' && d.pattern.test(text ?? '');
+export const hitsResult = (d, call, output) => d.kind === 'toolResult' && namesTool(d, call.name)
+  && d.pattern.test(subjectOf(d, output));
+
 // A call ({ name, input }) about to run, or recorded: the tool-call triggers it
 // hits whose skill the session has not loaded.
-export const missingSkillsForCall = (call, declarations, loaded) => missing(declarations, loaded,
-  (d) => d.kind === 'toolCall' && namesTool(d, call.name) && (!d.pattern || d.pattern.test(subjectOf(d, call.input))));
+export const missingSkillsForCall = (call, declarations, loaded) => missing(declarations, loaded, (d) => hitsCall(d, call));
 
 // An owner prompt: the prompt triggers its text hits.
-export const missingSkillsForPrompt = (text, declarations, loaded) => missing(declarations, loaded,
-  (d) => d.kind === 'prompt' && d.pattern.test(text ?? ''));
+export const missingSkillsForPrompt = (text, declarations, loaded) => missing(declarations, loaded, (d) => hitsPrompt(d, text));
 
 // A call's result: the result triggers it hits.
 export const missingSkillsForResult = (call, output, declarations, loaded) => missing(declarations, loaded,
-  (d) => d.kind === 'toolResult' && namesTool(d, call.name) && d.pattern.test(subjectOf(d, output)));
+  (d) => hitsResult(d, call, output));

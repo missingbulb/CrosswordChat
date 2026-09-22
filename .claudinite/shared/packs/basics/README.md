@@ -58,7 +58,7 @@ The baseline pack — the `RULES.md` prose every session loads (injected by the 
 | Documenting a procedure | medium | complexity | prose: <50 words |
 | Writing code that can silently do nothing | high | correctness | prose: <100 words |
 | Persisting anything on a user's machine | medium | correctness | prose: <50 words |
-| Changing what you do with user data | critical | legal | prose: <100 words |
+| Changing what you do with user data | critical | legal | prose: <200 words |
 | Changing a behavior your docs claim | medium | correctness | prose: <100 words |
 | Driving an external runtime repeatedly | low | complexity | prose: <100 words |
 | Automating something that needs live conversation context | medium | complexity | prose: <50 words |

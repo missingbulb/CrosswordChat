@@ -3,15 +3,11 @@
 A project-class pack (prose, declared — no fingerprint) for the recurring class: build and ship a
 small end-user product against an executable spec — every requirement a numbered leaf claimed by
 exactly one right-kind proof, expected results owner-owned, releases automatic while `main` is green.
-Its enforcement deliberately lives inside the declaring project (the committed coverage gate and
-allowlist the playbook requires), so the pack itself ships no checks; the sections are loop and
-judgment, kept as prose.
+It ships no checks: the committed coverage gate and the allowlist the playbook requires are the
+declaring project's own suite.
 
-Distilled from the two worked examples of the class in the owner's fleet:
-missingbulb/GoogleCalendarEventCreator's executable-requirements methodology (`dev/requirements/` —
-the origin) and missingbulb/TLDR's adaptation of it (`dev/requirements/`,
-`dev/docs/ui-testing-guideline.md`, which adds the cross-tier server kind). The general test-trust
-rules both build on are corpus canon already, and are pointed to rather than restated here.
+The general test-trust rules the playbook leans on are corpus canon in the writing-tests skill,
+pointed at rather than restated here.
 
 ## Rules (`RULES.md`)
 
@@ -21,6 +17,7 @@ rules both build on are corpus canon already, and are pointed to rather than res
 | A leaf is what the harness asserts | medium | complexity | prose: <100 words |
 | Every leaf carries a stable id. | high | complexity | prose: <50 words |
 | Doc-first, red by default. | high | correctness | prose: <50 words |
+| A process change is never `feature` | high | correctness | prose: <100 words |
 | The spec drives the tests | high | correctness | prose: <100 words |
 | Enforce the bijection with a coverage gate | high | correctness | prose: <50 words |
 | A kind is one way to assert | low | complexity | prose: <50 words |

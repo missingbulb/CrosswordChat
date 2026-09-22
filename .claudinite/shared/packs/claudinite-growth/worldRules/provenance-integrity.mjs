@@ -102,7 +102,7 @@ const rule = {
         out.push(finding(rule, {
           file: `${dir}/${PROVENANCE_DIR}`, severity: 'advisory',
           what: `${ids.length} provenance file${ids.length === 1 ? ' is' : 's are'} empty - elements whose history is not written yet (${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', …' : ''})`,
-          fix: 'the backfill fills them from each carrier\'s history (the backfilling-provenance skill), one pack per pull request; nothing else is owed',
+          fix: 'the backfill fills them from each carrier\'s history (the backfilling-provenance skill), which says how a run is sized into pull requests; nothing else is owed',
         }));
       }
       // @legacy-tolerance advisory:provenance-integrity retire:#2170

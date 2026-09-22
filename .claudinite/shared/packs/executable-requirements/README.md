@@ -8,14 +8,7 @@ declaring project itself commits** (coverage gate, gallery gate) — the pack st
 gates must check, not the checking.
 
 The judgment layer above it — doc-first discipline, owner-owned expecteds, honest-gap tracking —
-is not here. This pack exists so a *new* project (or a new stack) adopts the framework by
-convention instead of re-deriving it.
-
-Distilled from three worked implementations in the owner's fleet:
-missingbulb/GoogleCalendarEventCreator (`dev/requirements/` — the origin: jsdom+satori rendering,
-pixel-exact snapshots), missingbulb/TLDR (adds the cross-tier `server` kind), and
-missingbulb/ShoutsAndWhispers (`dev/requirements/` — the Flutter port: golden-file rendering, the
-fake-world harness, and the `saga` storyboard kind's first implementation).
+is not here.
 
 ## Rules (`RULES.md`)
 
@@ -29,8 +22,7 @@ The always-on rules — the layout every case lands in, the gallery and the refr
 Everything an author needs while *writing* a leaf or a case lives in the skills below: the
 leaf-line convention and the kind vocabulary in `write-a-requirement-leaf`, the storyboard and
 animated-golden rules in `write-a-saga`, the determinism rules and the per-stack rendering recipes
-in `deterministic-expecteds`. Each forces itself for the files it governs, so the PreToolUse guard
-holds an edit there until the session has loaded it.
+in `deterministic-expecteds`.
 
 ## The mechanism the project's gates enforce
 

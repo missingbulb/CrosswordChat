@@ -7,6 +7,7 @@
   "required": [
     "id",
     "description",
+    "trigger",
     "expected_outcome"
   ],
   "additionalProperties": false,
@@ -33,7 +34,7 @@
         "manual"
       ],
       "deprecated": true,
-      "description": "The retired cadence field; read at the door as the first condition it always meant (`due:<cadence>`) with a `schedule` trigger, and `manual` as no condition at all with a `request` trigger. Write those two fields instead."
+      "description": "The retired cadence field; read at the door as the first condition it always meant (`due:<cadence>`), and `manual` as no condition at all. Write the condition instead, with the `trigger` it belongs beside, which the door does not supply."
     },
     "trigger": {
       "type": "string",
@@ -41,7 +42,7 @@
         "schedule",
         "request"
       ],
-      "description": "Who mints an occurrence of this task. `schedule` is asked by the scheduler at every tick, and runs when its `preconditions` hold. `request` is asked by nobody: it runs only from an item somebody creates — a marked issue, a wake, a chain link, a fan-out target — at whose pick those same conditions are judged. A declaration stating no trigger is read off the shape of its `preconditions` for one convergence window (#1789)."
+      "description": "Who mints an occurrence of this task. `schedule` is asked by the scheduler at every tick, and runs when its `preconditions` hold. `request` is asked by nobody: it runs only from an item somebody creates — a marked issue, a wake, a chain link, a fan-out target — at whose pick those same conditions are judged."
     },
     "preconditions": {
       "type": "array",

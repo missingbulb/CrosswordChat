@@ -35,8 +35,9 @@ export function packRules(packs) {
 // Every finding from the active packs' rules that `includeRule` admits. A rule
 // turned `off` in settings is skipped. `onContributeError(pack, err)` is invoked
 // when a pack's contributedRules seam throws (the caller decides whether that
-// becomes a finding).
-export function runActivePackRules(ctx, packs, { includeRule, onContributeError = null }) {
+// becomes a finding). `timings`, when a caller passes an array, collects
+// `{ id, ms }` per rule run - what the runner renders its timing record from.
+export function runActivePackRules(ctx, packs, { includeRule, onContributeError = null, timings = null }) {
   const findings = [];
   // Expose the discovered packs to any rule that reasons about pack metadata
   // (e.g. the adoption-interview hygiene check reads each active pack's declared
@@ -49,7 +50,9 @@ export function runActivePackRules(ctx, packs, { includeRule, onContributeError 
     for (const rule of [...(pack.rules ?? []), ...(pack.skillChecks ?? []), ...contributed]) {
       if (!includeRule(rule)) continue;
       if (ctx.config.rules[rule.id] === 'off') continue;
+      const started = timings ? performance.now() : 0;
       findings.push(...runRule(rule, ctx));
+      if (timings) timings.push({ id: rule.id, ms: performance.now() - started });
     }
   }
   return findings;

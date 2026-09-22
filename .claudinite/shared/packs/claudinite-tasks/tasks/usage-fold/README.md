@@ -15,6 +15,13 @@ What keeps a quiet repo quiet is the **precondition**, which runs the fold only 
 What it counts, per bucket:
 
 - **`skillLoads`**, per skill name — `Skill` tool-use entries, plus user-typed `/command`s naming a skill this repo mounts (built-in CLI commands never match). Subagent streams included: a subagent loading a skill is a load.
+- **`skillLoadsBy`**, per skill - the same loads split by **what made them happen**: a guard's block on an edit or a call, an injected trigger context, a typed command, a `Read` of the SKILL.md, or `voluntary`, which is the session reaching for it. The cause is the nearest earlier mark naming that skill since its last load, so the split is read from one ordered pass rather than guessed.
+- **`skillSessions`**, per skill - distinct sessions with a load, per day. A session spanning midnight counts in both, so a window figure summed from these is a ceiling on distinct sessions rather than a count.
+- **`skillBlocks`**, per skill - PreToolUse blocks naming it. **`triggerFires`**, per skill - a declared result or prompt trigger that fired, and whether a load followed it in the same session.
+- **`moments`**, per skill - the occasions a skill's own force-load declarations named, counted with the resolver the hooks match with. Every occasion, whether or not the skill was already loaded: the hook loads once per session, so deduping to that would compare a number to itself. **No key at all** where the engine running the fold does not export the predicates - *not recorded*, which is not zero moments.
+- **`toolCalls`**, per tool - every `tool_use` block, sidechains included. **`guardFires`**, per rule - an action guard's firings, split by what the call was told.
+- **`skillCaught`**, per skill - sessions that loaded it and were caught blocking anyway by a check it owns. No key where the engine does not stamp which skill owns a check.
+- **`checkTiming`**, per `<scope>` and `<scope>/<rule>` - what the Stop hook's sweep cost, from the timing record the runner prints. `maxMs` folds as a peak rather than a sum, because a week's slowest run is the slowest of its days' and never their total.
 - **`captures`** — capture events folded. **`merges`** — the subset with an issue behind them (issue `0` means none).
 - **`sessions`** — distinct session ids; one session can capture more than once.
 - **`userMessages`** — genuine human turns. **`userCommands`** — every typed `/command`.
