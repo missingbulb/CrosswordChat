@@ -11,20 +11,29 @@
 // keyed by a pack id nothing else in the file had to agree with, so a rename left a
 // version priced against a pack the declaration no longer named.
 //
-// THE LEGACY BLOCK IS READ, NEVER WRITTEN. A member reaches the record that reshapes
-// its file one converge AFTER the engine that can read the new shape, so every read
-// here falls back to `claudinite` and every write leaves it exactly as it found it —
-// the reshape is the record's single job, not something four writers do a bit of.
+// THE LEGACY BLOCK IS GONE (#1640). Until then every read here fell back to a
+// nested `claudinite` block, because a member reached the record that reshapes its
+// file one converge after the engine that could read the new shape. The convergence
+// window the `legacy-shape-in-use` advisory opened has passed, and a member still
+// carrying the block now reads as having no mount at all.
+// A version is stored data, so an entry written before its pack was renamed still
+// keys under the old spelling and must PRICE that pack rather than read as
+// never-installed - absent means the install flow claims it, stamps it at latest,
+// and runs no migration record in the gap.
 import { canonicalPackVersions } from './pack_loader/renamed-packs.mjs';
 // `isVersion`, not `isDeclaredVersion`: the install floor (0) is a real state for a
 // version a repo HAS — "below everything" — even though nothing may DECLARE it as a
 // manifest's or a release's own number.
 import { isVersion } from './version.mjs';
 
-// The retired block. Named so the readers below and the #1252 record agree on the
-// one spelling, and so Phase 3 has a symbol to grep for when it deletes the
-// tolerance.
-// @legacy-tolerance advisory:legacy-shape-in-use retire:#1640
+// INERT, and exported for one reason. Nothing here reads the retired stamp block any
+// more - a member still carrying one reads as having no versions installed, which is
+// this change's stated cost. But a fielded pack version imports this name BY NAME,
+// and the engine lane reaches a member ahead of the pack lane, so deleting it would
+// fault that pack at link time and the failed self-test would refuse the converge
+// carrying the fix. It comes out when no fielded pack version names it any more
+// (#1911), which is the scan `engine-pack-lane-shims` runs.
+// @legacy-tolerance advisory:none retire:#1911
 export const LEGACY_STAMP_KEY = 'claudinite';
 
 // `{ engineVersion, packVersions }` for a parsed settings object — the shape every
@@ -32,21 +41,15 @@ export const LEGACY_STAMP_KEY = 'claudinite';
 // keys: "not installed" is a state of its own, and a caller comparing against a
 // zero or an empty string would read a fresh mount as ancient.
 export function installedVersions(raw) {
-  const legacy = raw?.[LEGACY_STAMP_KEY] ?? null;
-  const engineVersion = isVersion(raw?.engineVersion) ? raw.engineVersion
-    : (isVersion(legacy?.engineVersion) ? legacy.engineVersion : null);
+  const engineVersion = isVersion(raw?.engineVersion) ? raw.engineVersion : null;
 
   const packVersions = {};
-  const legacyPacks = legacy?.packVersions;
-  if (legacyPacks && typeof legacyPacks === 'object' && !Array.isArray(legacyPacks)) {
-    Object.assign(packVersions, canonicalPackVersions(legacyPacks));
-  }
   for (const entry of Array.isArray(raw?.packs) ? raw.packs : []) {
     if (entry && typeof entry === 'object' && typeof entry.id === 'string' && isVersion(entry.version)) {
       packVersions[entry.id] = entry.version;
     }
   }
-  return { engineVersion, packVersions };
+  return { engineVersion, packVersions: canonicalPackVersions(packVersions) };
 }
 
 // Has this repo been vendored at all? A mount that has never run stamps neither

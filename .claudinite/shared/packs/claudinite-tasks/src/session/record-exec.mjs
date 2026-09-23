@@ -31,7 +31,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { line, error } = execRecordLine(process.argv.slice(2));
   if (error) {
     console.error(`record-exec: ${error} — usage: node record-exec.mjs <pack>/<task> <slot> <${TASK_EXEC_STATUSES.join('|')}>`);
-    process.exit(2);
+    process.exitCode = 2;
+  } else {
+    console.log(line);
   }
-  console.log(line);
 }

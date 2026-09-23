@@ -32,7 +32,6 @@ import { LOCAL_PACKS_SUBDIR, LOCAL_DECL_PREFIX, SHARED_SUBDIR } from './pack_loa
 const MOUNT_ROOT = dirname(SHARED_SUBDIR).split(sep).join('/');
 const SHARED_NAME = SHARED_SUBDIR.split(sep).pop();
 import { settingsPath } from './settings-file.mjs';
-import { ENDPOINTS_KEY, LEGACY_ENDPOINTS_KEY } from './checks/helpers/repo-context.mjs';
 
 // The settings-hook registrations a scheduled repo carries (bootstrap Part 5).
 // Ensured present without clobbering — a set-union keyed on the command string, so
@@ -404,7 +403,7 @@ async function main() {
   const argv = process.argv.slice(2);
   const seedLocalPack = argv.includes('--seed-local-pack');
   const fullName = argv.find((a) => !a.startsWith('--')) || process.env.GITHUB_REPOSITORY || process.env.CLAUDINITE_REPO;
-  if (!fullName) { console.error('converge-wiring: need owner/repo (argv or GITHUB_REPOSITORY)'); process.exit(1); }
+  if (!fullName) { console.error('converge-wiring: need owner/repo (argv or GITHUB_REPOSITORY)'); process.exitCode = 1; return; }
   const root = process.env.CLAUDINITE_REPO_ROOT || process.cwd();
   const { changed, error } = await convergeWiring(root, fullName, { seedLocalPack });
   if (error) console.log(`! ${error}`);

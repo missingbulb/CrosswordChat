@@ -21,7 +21,7 @@ import { isSuspended, suspendedNotice } from '../world/hold.mjs';
 import { HEARTBEAT_MS, heartbeatComment, withHeartbeat, realTimers } from '../items/heartbeat.mjs';
 import { renderTaskExec, startRunCost } from '../items/run-record.mjs';
 import { evaluatePrecondition } from '../contract/precondition.mjs';
-import { isScheduledTask } from '../contract/task-contract.mjs';
+import { declaresCodeWork, isScheduledTask } from '../contract/task-contract.mjs';
 import { swapStatus, clearStatus } from '../items/apply-status.mjs';
 import { pickOrder, taskIdOf, titleOf, running } from '../items/pick-order.mjs';
 import { resolveTarget, closeSuperseded } from './target.mjs';
@@ -410,7 +410,7 @@ async function executeItem({
     return STATUS_DONE;
   }
 
-  if (task.decl.code_work) {
+  if (declaresCodeWork(task.decl)) {
     // The work step may legitimately run for hours (PRINCIPLES.md). While it does, the
     // item's only sign of life is this beat — which is also what the scheduler run's leash
     // measures, so a long run is legal rather than reclaimed underneath itself.
@@ -558,7 +558,7 @@ async function handOff({ api, gh, repo, item, task, id, context, result, target 
     // pushes to, the pull request it amends, the ones its converge supersedes.
     if (target) out = withTarget(out, target);
     if (context.length) out = withSection(out, 'Context', context);
-    if (result.delivered?.length) out = withSection(out, DELIVERED_HEADING, result.delivered, LEGACY_DELIVERED_HEADINGS);
+    if (result.delivered?.length) out = withSection(out, DELIVERED_HEADING, result.delivered);
     if (result.reason) out = withSection(out, 'Why the agent is here', [result.reason]);
     return out;
   });
@@ -711,7 +711,7 @@ export async function runExecutorJob() {
 
   const root = repoRoot();
   const { repo, defaultBranch } = actionRepoContext();
-  if (!repo) { console.error('GITHUB_REPOSITORY not set — not in an Actions context'); process.exit(1); }
+  if (!repo) { console.error('GITHUB_REPOSITORY not set - not in an Actions context'); process.exitCode = 1; return; }
   const config = loadConfig(root);
 
   console.log('## Claudinite executor\n');
@@ -762,5 +762,5 @@ export async function runExecutorJob() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runExecutorJob().catch((e) => { console.error(e); process.exit(1); });
+  runExecutorJob().catch((e) => { console.error(e); process.exitCode = 1; });
 }

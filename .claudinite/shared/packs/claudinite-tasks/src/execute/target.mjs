@@ -74,16 +74,23 @@ export function planTarget({ outcome, incumbents = [], mergeable = null, disposi
   if (!opensPullRequest(canonical)) return none('this task changes no code');
   if (canonical === 'fresh_pr') return fresh('a fresh branch; earlier pull requests of this task are left as they are');
 
+  // A task declared to amend has NO PREROGATIVE to open a second pull request
+  // (owner, 2026-09-22). "Create new" names one situation - there is nothing to
+  // amend - and a conflicted or unjudgeable incumbent is not that situation. The
+  // run either works, by resolving the conflict on the branch it was given, or it
+  // fails; a quiet fork leaves the first pull request open and accumulating beside
+  // the second, which is how one task came to hold two.
   if (canonical === 'amend_existing_or_create_new_pr') {
     if (!newest) return fresh('no open pull request of this task to amend');
-    if (mergeable === true) {
-      return {
-        mode: 'amend', branch: newest.head.ref, pr: newest.number, supersedes: [], landed: null,
-        reason: `amending #${newest.number}, which has no conflicts with its base`,
-      };
+    if (mergeable === null) {
+      return { error: `#${newest.number}'s mergeability could not be read, and this task amends rather than forks - nothing ran` };
     }
-    if (mergeable === false) return fresh(`#${newest.number} has conflicts with its base, so this run takes a fresh branch`);
-    return fresh(`#${newest.number}'s mergeability could not be read, so this run takes a fresh branch rather than push onto it`);
+    return {
+      mode: 'amend', branch: newest.head.ref, pr: newest.number, supersedes: [], landed: null,
+      reason: mergeable
+        ? `amending #${newest.number}, which has no conflicts with its base`
+        : `amending #${newest.number}, which CONFLICTS with its base - resolve that conflict as part of this run, by merging the base branch in; do not open a second pull request`,
+    };
   }
 
   // supersede_existing_pr
@@ -110,7 +117,8 @@ const defaultSleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms);
 
 // GitHub computes `mergeable` lazily: the first read after a push answers null
 // while it works. Three reads two seconds apart cover the documented delay; an
-// answer that never comes plans as unknown, which takes a fresh branch.
+// answer that never comes fails the run, so the item is parked and re-queued
+// rather than given a target nobody could justify.
 const MERGEABLE_READS = 3;
 const MERGEABLE_WAIT_MS = 2000;
 

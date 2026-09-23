@@ -11,13 +11,7 @@
 // regression is decided in one place and tested there rather than inferred from a
 // live repo's weather.
 
-import { writeFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
-import { makeGh } from '../../../claudinite-tasks/public/github.mjs';
 import { findOrCreateTracker, writeTracker } from '../../../claudinite-tasks/public/github.mjs';
-
-const item = process.env.CLAUDINITE_ITEM || '';
-const log = (s) => console.log(`ci-performance${item ? ` [#${item}]` : ''}: ${s}`);
 
 export const WINDOW_DAYS = 7;
 // A regression has to clear BOTH bars. The ratio alone fires on a fast workflow
@@ -130,11 +124,7 @@ export function reportBody(summary, { repo, nowIso, steps = [] }) {
 // The standing record this task keeps. Its own, named here and nowhere else.
 export const TRACKER_TITLE = '[claudinite] CI performance';
 
-async function main() {
-  const repo = process.env.GITHUB_REPOSITORY;
-  if (!repo || !repo.includes('/')) throw new Error('GITHUB_REPOSITORY is not set (owner/repo)');
-  if (!process.env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN is not set — the scheduler always provides it');
-  const gh = makeGh();
+export async function worker({ repo, gh, log }) {
 
   const { status, json } = await gh(`/repos/${repo}/actions/runs?per_page=100&status=completed`);
   if (status !== 200) throw new Error(`run ledger unreadable: GET actions/runs returned ${status}`);
@@ -180,18 +170,14 @@ async function main() {
     return;
   }
 
-  const requestPath = process.env.CLAUDINITE_REQUEST_AGENT;
-  if (!requestPath) throw new Error('CLAUDINITE_REQUEST_AGENT is not set — cannot hand off to the agent stage');
+  log(`agent requested - ${detail}`);
   // The number reaches the agentic phase the ordinary way: the hand-off payload's
   // `delivered`, which the dispatch renders as an `Issue:` line. Nothing else in
   // this run's life carries it.
-  writeFileSync(requestPath, JSON.stringify({
-    delivered: { issue: tracker },
-    reason: { code: 'ci-duration-regression', detail },
-  }));
-  log(`agent requested — ${detail}`);
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`ci-performance failed: ${e.message}`); process.exit(1); });
+  return {
+    requestAgent: {
+      delivered: { issue: tracker },
+      reason: { code: 'ci-duration-regression', detail },
+    },
+  };
 }

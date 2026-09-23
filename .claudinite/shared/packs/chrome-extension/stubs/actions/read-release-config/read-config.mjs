@@ -37,9 +37,11 @@ export const REQUIRED_KEYS = [
   'ship_paths',
 ];
 
+// The abort: a throw, caught at the entry point below, so the message is printed
+// where the process is about to end naturally rather than beside a hard exit that
+// would discard it.
 function fail(msg) {
-  console.error(`read-release-config: ${msg}`);
-  process.exit(1);
+  throw new Error(msg);
 }
 
 // PascalCase / camelCase / ALLCAPS repo name -> kebab, for the standard zip name
@@ -129,4 +131,6 @@ function main() {
   appendFileSync(sink, block);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  try { main(); } catch (e) { console.error(`read-release-config: ${e.message}`); process.exitCode = 1; }
+}

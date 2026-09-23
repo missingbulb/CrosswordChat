@@ -136,4 +136,4 @@ export function main(argv = [], { root = process.cwd() } = {}) {
 }
 
 // Executed, not imported: the tests drive main() directly.
-if (process.argv[1] && process.argv[1].endsWith('ci-work-scope.mjs')) process.exit(main(process.argv.slice(2)));
+if (process.argv[1] && process.argv[1].endsWith('ci-work-scope.mjs')) process.exitCode = main(process.argv.slice(2));

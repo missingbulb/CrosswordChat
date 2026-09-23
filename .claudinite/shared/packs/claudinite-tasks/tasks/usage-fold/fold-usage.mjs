@@ -1,6 +1,6 @@
-// The usage FOLD's counting and folding core (skill-usage-metrics DESIGN §4, §5).
-// Every function here is pure and individually tested; worker.mjs is the I/O shell
-// that reads the logs branch, calls these, and delivers the result.
+// The usage FOLD's counting and folding core. Every function here is pure and
+// individually tested; worker.mjs is the I/O shell that reads the logs branch,
+// calls these, and delivers the result.
 //
 // The questions this answers, one tested function each:
 //   - which skills did a captured session LOAD, and how often;

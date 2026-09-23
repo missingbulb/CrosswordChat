@@ -79,15 +79,18 @@
     }
   },
   {
-    "id": "claude-md-length",
+    "id": "skill-description-length",
     "severity": "advisory",
-    "failureMessage": "everything in CLAUDE.md loads every session; past ~200 lines it crowds out the rules that matter",
-    "scanFiles": "CLAUDE.md",
-    "maxLines": {
-      "limit": 200,
-      "what": "{lines} lines (target under {limit})",
-      "fix": "move multi-step procedures to skills and part-of-repo rules to path-scoped packs; keep CLAUDE.md to always-true facts"
-    }
+    "failureMessage": "a skill's description is in every session's window whether the skill loads or not, so one written as a summary charges every session for a method almost none of them need",
+    "scanTracked": true,
+    "scanFiles": "/(^|\\/)SKILL\\.md$/",
+    "matchLines": [
+      {
+        "match": "/^description:(?:\\s+\\S+){61}/",
+        "what": "this description runs past 60 words",
+        "fix": "cut it to what decides whether to reach for the skill, and leave the method to the body, which loads only when the skill does"
+      }
+    ]
   },
   {
     "id": "generated-merge-driver",
@@ -120,7 +123,9 @@
     "id": "catalog-completeness",
     "severity": "blocking",
     "failureMessage": "a hand-maintained catalog that omits a real pack misroutes readers and hides capability; the check keeps the index honest against the tree",
-    "relevantWhen": { "trackedFileMatches": "/^engine\\/pack_loader\\/pack-registry\\.mjs$/" },
+    "relevantWhen": {
+      "trackedFileMatches": "/^engine\\/pack_loader\\/pack-registry\\.mjs$/"
+    },
     "requireIndexCoverage": [
       {
         "eachTrackedPathMatching": "/^packs\\/(?<name>[^/]+)\\/pack\\.mjs$/",

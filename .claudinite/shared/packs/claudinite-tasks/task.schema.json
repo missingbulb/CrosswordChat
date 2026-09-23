@@ -25,17 +25,6 @@
       "minLength": 1,
       "description": "What the task does, or why it exists, in at most fifty words — never what the other fields already say (the cadence, the conditions, the policy, the files)."
     },
-    "frequency": {
-      "type": "string",
-      "enum": [
-        "daily",
-        "weekly",
-        "monthly",
-        "manual"
-      ],
-      "deprecated": true,
-      "description": "The retired cadence field; read at the door as the first condition it always meant (`due:<cadence>`), and `manual` as no condition at all. Write the condition instead, with the `trigger` it belongs beside, which the door does not supply."
-    },
     "trigger": {
       "type": "string",
       "enum": [
@@ -105,12 +94,18 @@
     "code_work": {
       "type": "string",
       "minLength": 1,
-      "description": "The deterministic first phase: a command run with the task directory as cwd, e.g. \"node worker.mjs\". Task-local — no absolute path, no `..`. Optional: absent, there is no code work."
+      "description": "The deterministic first phase as a whole command, run with the task directory as cwd, e.g. \"node worker.mjs\". Task-local - no absolute path, no `..`. Prefer code_worker_mjs, which the runner wraps; never declare both."
+    },
+    "code_worker_mjs": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\s/][^\\s]*\\.mjs$",
+      "description": "The deterministic first phase as a MODULE beside task.json exporting `worker`, e.g. \"worker.mjs\". The runner supplies the entry point: the parameters bag in, and the exit code, failure line, timing and queue markers out. Never declared beside code_work."
     },
     "code_work_timeout": {
       "type": "integer",
       "minimum": 1,
-      "description": "Seconds after which the code_work subprocess is killed and the task fails. Required beside code_work: a subprocess always has a bound."
+      "description": "Seconds after which the work subprocess is killed and the task fails. Required beside either work-step field: a subprocess always has a bound."
     },
     "schedule_after": {
       "type": "array",
@@ -141,27 +136,15 @@
       },
       "description": "The repo Actions secret names the code-work phase needs configured — the phase that runs Action-side, where a secret exists. Never GITHUB_* or CLAUDINITE_*."
     },
-    "required_secrets": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      },
-      "deprecated": true,
-      "description": "The retired spelling of code_work_required_secrets; normalized at the door. Rename it."
-    },
     "model_from_request": {
       "const": true,
       "description": "Reserved to the engine's built-in request task: run at the model the work item names."
-    },
-    "session_scope": {
-      "type": "string",
-      "enum": [
-        "self",
-        "fleet"
-      ],
-      "deprecated": true,
-      "description": "Read by nothing since #974. Drop it; name an invocation_endpoint if the task needs wider reach."
     }
+  },
+  "not": {
+    "required": [
+      "code_work",
+      "code_worker_mjs"
+    ]
   }
 }

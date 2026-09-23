@@ -31,33 +31,6 @@
 // contract validation, code-work, the work item) when a human pulls it.
 export const FREQUENCIES = ['daily', 'weekly', 'monthly', 'manual'];
 
-// The retired spellings, and what each reads as. `hourly` cannot mean anything under a cron that
-// fires twice a day (PRINCIPLES.md), and the `daily±Nh` offsets staggered dependent tasks by clock
-// hour where `after:` (PRINCIPLES.md) declares the same intent and actually enforces it.
-//
-// This map is PERMANENT, not a migration window. A task declaration is member-owned data that no
-// vendoring pass rewrites, so a member can carry a retired token indefinitely and must keep
-// working; `task-declaration-shape` is what stops a NEW declaration naming one.
-// EMPTIED, NOT DELETED (#1234). The map IS the tolerance, so emptying it collapses
-// `ACCEPTED_FREQUENCIES` onto `FREQUENCIES`, makes a declaration still naming a retired
-// token fail contract validation, and leaves `normalizeFrequency` as the identity every
-// caller can keep calling — nothing is unwired, and the next retirement fills it in again.
-// Emptied once the fleet's own declarations were read and none named a retired token:
-// GoogleCalendarEventCreator's `create-extractor` was the last, and moved to `daily`.
-// @legacy-tolerance advisory:none retire:#1642
-export const LEGACY_FREQUENCIES = Object.freeze({});
-
-// What a declaration may CARRY, as against what a new one may be WRITTEN with.
-export const ACCEPTED_FREQUENCIES = [...FREQUENCIES, ...Object.keys(LEGACY_FREQUENCIES)];
-
-// THE ONE DOOR (PRINCIPLES.md). Applied by `normalizeTaskDeclaration`, so every reader downstream
-// of a loaded declaration sees a canonical token — and there is more downstream than the
-// calendar: `periodMs` feeds the janitor's stale-ready bound (`queue/janitor-rules.mjs`) and the
-// precondition's signal window (`queue/signals.mjs`). Normalizing only the anchor would leave a
-// task that now runs daily judged stale after two HOURS, which is a spurious needs-human park on
-// exactly the members this tolerance exists for.
-export const normalizeFrequency = (frequency) => LEGACY_FREQUENCIES[frequency] ?? frequency;
-
 const HOUR_MS = 3600 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
@@ -69,17 +42,13 @@ const SUNDAY = 0;
 // accepts. A period that opens exactly at `now` is the current one.
 export function anchorInstant(frequency, now) {
   const at = new Date(now);
-  // Total over the accepted vocabulary, not just the canonical one: the door normalizes every
-  // LOADED declaration, and normalizing here too means a direct caller, a test or a frequency
-  // read off something other than a discovered task, cannot get a different answer.
-  const freq = normalizeFrequency(frequency);
-  if (freq === 'manual') return null;
+  if (frequency === 'manual') return null;
 
   const midnight = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate());
-  if (freq === 'daily') return new Date(midnight);
+  if (frequency === 'daily') return new Date(midnight);
   // Back to the Sunday that opened this week. Today counts when today IS Sunday.
-  if (freq === 'weekly') return new Date(midnight - ((at.getUTCDay() - SUNDAY + 7) % 7) * DAY_MS);
-  if (freq === 'monthly') return new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
+  if (frequency === 'weekly') return new Date(midnight - ((at.getUTCDay() - SUNDAY + 7) % 7) * DAY_MS);
+  if (frequency === 'monthly') return new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
 
   throw new Error(`unknown frequency "${frequency}"`);
 }
@@ -124,7 +93,7 @@ export function cadenceOfScheduleArg(arg) {
 }
 
 // `due:<cadence>`, the same term under the name it was introduced with. PERMANENT, not
-// a migration window, for the reason LEGACY_FREQUENCIES above is: a task declaration is
+// a migration window: a task declaration is
 // member-owned data that no vendoring pass rewrites, so a member can carry the old
 // spelling indefinitely and must keep working. `task-declaration-shape` is what stops a
 // NEW declaration naming it, and `normalizeCadenceTerms` is the door that makes every
@@ -196,4 +165,4 @@ export const holdsOnAnyPark = (preconditions) => gatesOn(preconditions, NOT_PARK
 // What the retired `frequency` field always meant, as the term that says it now, or
 // null for `manual`, which meant no schedule at all and so adds no term.
 export const cadenceTermFor = (frequency) =>
-  (normalizeFrequency(frequency) === 'manual' ? null : scheduleTermFor(normalizeFrequency(frequency)));
+  (frequency === 'manual' ? null : scheduleTermFor(frequency));

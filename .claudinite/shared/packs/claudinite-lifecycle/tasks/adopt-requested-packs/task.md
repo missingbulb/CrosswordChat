@@ -1,6 +1,6 @@
 # Adopt the packs this repo's work list asks for
 
-**Your work item IS the work list** — an `add-packs` issue a fleet enforcer placed in **this** repo (its claudinite-fleet-sheepdog `fleet-add-missing-packs` task) and marked for the queue, which this repo's own scheduler run then adopted. Its body is the ask; the machine block at the bottom is the machinery's and not part of it. Your job: turn that work list into **one reviewed PR on this repo**. The whole of *how* is the [adopt-pack](../../skills/adopt-pack/SKILL.md) skill — declaring, the interview, re-vendoring, scaffolding, getting the checks green, landing. Don't re-derive it here.
+**Your work item IS the work list** — an `add-packs` issue a fleet enforcer placed in **this** repo (its claudinite-fleet-sheepdog `fleet-add-missing-packs` task) and marked `task:origin:ad-hoc`, which this repo's own scheduler run then adopted. Its body is the ask; the machine block at the bottom is the machinery's and not part of it. Your job: turn that work list into **one reviewed PR on this repo**. The whole of *how* is the [adopt-pack](../../skills/adopt-pack/SKILL.md) skill — declaring, the interview, re-vendoring, scaffolding, getting the checks green, landing. Don't re-derive it here.
 
 ## The work list
 

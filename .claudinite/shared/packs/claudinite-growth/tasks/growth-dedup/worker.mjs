@@ -21,9 +21,6 @@
 // is the whole life the brief has. A standing issue would outlive it by a week and
 // then hold a stale window.
 
-import { writeFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
-import { makeGh } from '../../../claudinite-tasks/public/github.mjs';
 import { loadConfig } from '../../../../engine/checks/helpers/repo-context.mjs';
 
 const log = (s) => console.log(`growth-dedup code_work: ${s}`);
@@ -215,13 +212,8 @@ async function windowCommits(gh, repo, branch, sinceIso) {
   return out;
 }
 
-async function main() {
-  const repo = process.env.GITHUB_REPOSITORY || process.env.CLAUDINITE_REPO;
-  if (!repo || !repo.includes('/')) throw new Error('GITHUB_REPOSITORY is not set (owner/repo)');
-  if (!process.env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN is not set — the scheduler always provides it');
-  const root = process.env.CLAUDINITE_REPO_ROOT || process.cwd();
-  const branch = process.env.CLAUDINITE_DEFAULT_BRANCH || 'main';
-  const gh = makeGh();
+export async function worker({ repo, root, defaultBranch, gh, item: workItem, log }) {
+  const branch = defaultBranch ?? 'main';
 
   const sinceIso = new Date(Date.now() - WINDOW_DAYS * 86400000).toISOString();
   // The repo's OWN declaration decides which packs are the yardstick: a canon
@@ -232,11 +224,10 @@ async function main() {
   const declared = loadConfig(root).packs ?? [];
   const summary = summarizeCanonWindow(await windowCommits(gh, repo, branch, sinceIso), declared);
 
-  // The brief, onto the run's OWN work item. `CLAUDINITE_ITEM` is the number the
-  // queue hands every code-work run; without it there is nowhere to put the brief
-  // and the agentic phase would start from nothing, so this is a hard failure.
-  const item = process.env.CLAUDINITE_ITEM;
-  if (!item) throw new Error('CLAUDINITE_ITEM is not set — nowhere to post the window brief');
+  // The brief, onto the run's OWN work item. The queue hands every code-work run its
+  // number; without it there is nowhere to put the brief and the agentic phase would
+  // start from nothing, so this is a hard failure.
+  const item = workItem.number;
   const posted = await gh(`/repos/${repo}/issues/${item}/comments`, {
     method: 'POST',
     body: { body: renderBrief(summary, { sinceIso }) },
@@ -249,15 +240,7 @@ async function main() {
   // empty canon window still leaves the repo's fresh local items to re-check, so
   // there is no condition here to re-litigate — only work code-work cannot do:
   // judging whether an added canon line genuinely covers a local item.
-  const requestPath = process.env.CLAUDINITE_REQUEST_AGENT;
-  if (!requestPath) throw new Error('CLAUDINITE_REQUEST_AGENT is not set — cannot hand off to the agentic phase');
   // No `delivered`: the brief is a comment on the item the agentic phase is already
   // reading, so there is no artifact identity this run has to hand over.
-  writeFileSync(requestPath, JSON.stringify({
-    reason: { code: 'canon-window-diff', detail },
-  }));
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`growth-dedup code_work failed: ${e.message}`); process.exit(1); });
+  return { requestAgent: { reason: { code: 'canon-window-diff', detail } } };
 }

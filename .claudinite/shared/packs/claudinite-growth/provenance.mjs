@@ -473,26 +473,114 @@ export function packPaths(root, pack, io) {
   return out;
 }
 
+// The text a needle is matched against. A trigger is read off the carrier with its markup
+// already dropped, so the same rule spelled `LSMinimumSystemVersion` at the path it came
+// from matches nothing until both sides are stripped, and a bullet wrapped at 100 columns
+// matches nothing until the newline is a space (#2253).
+const searchable = (text) => text.replace(/[`*]/g, '').replace(/\s+/g, ' ');
+// A table row names every element the table covers by construction - a README rule index, a
+// version log, a check catalog - so the element's text appearing in one is evidence it was
+// LISTED, never that it was carried there. The two texts are searched separately: the rows
+// answer a different question from the file they sit in.
+const withoutRows = (text) => text.split('\n').filter((l) => !l.trimStart().startsWith('|')).join('\n');
+// A file that could hold a carrier's text: the kinds a carrier is written in, minus a test
+// and minus the provenance log itself, which is a record ABOUT the element.
+const couldCarry = (path) => /\.(md|mjs|json)$/.test(path) && !path.endsWith('.test.mjs') && !path.includes(`/${PROVENANCE_DIR}/`);
+
+// Several blobs' contents in one call. `--batch` answers `<sha> blob <size>` and then the
+// bytes, so the sizes rather than the newlines are what delimit them.
+function readBlobs(root, shas) {
+  const out = new Map();
+  if (!shas.length) return out;
+  let buf;
+  try {
+    buf = execFileSync('git', ['cat-file', '--batch'], { cwd: root, input: `${shas.join('\n')}\n`, maxBuffer: 1 << 30, stdio: ['pipe', 'pipe', 'ignore'] });
+  } catch { return out; }
+  let at = 0;
+  while (at < buf.length) {
+    const nl = buf.indexOf(0x0a, at);
+    if (nl < 0) break;
+    const [sha, type, size] = buf.toString('utf8', at, nl).split(' ');
+    if (type !== 'blob') break;
+    const start = nl + 1;
+    out.set(sha, buf.toString('utf8', start, start + Number(size)));
+    at = start + Number(size) + 1;
+  }
+  return out;
+}
+
+// Every revision of every file the pack's carriers could live in, oldest commit first, each
+// as the two texts a needle is searched against. Read whole rather than by pickaxe: `-S`
+// matches the literal needle in a diff, which a wrap or a backtick at the old path defeats
+// silently, and its hits include the index rows that name every element anyway (#2253).
+function carrierIndex(root, paths) {
+  const revs = [];
+  const wanted = new Set();
+  for (const rec of git(root, 'log', '--reverse', '--format=%x01%H %as', '--raw', '--no-abbrev', '--no-renames', '--', ...paths).split('\x01')) {
+    const lines = rec.split('\n');
+    const [sha, date] = lines[0].split(' ');
+    if (!sha) continue;
+    const files = [];
+    const lost = [];
+    for (const line of lines.slice(1)) {
+      const m = /^:\d+ \d+ ([0-9a-f]+) ([0-9a-f]+) \w+\t(.+)$/.exec(line);
+      if (!m || !couldCarry(m[3])) continue;
+      // A carrier that lost text here, deleted or shortened, is the other half of a move -
+      // the only structural evidence left when the element was reworded on its way across.
+      if (!/^0+$/.test(m[1])) { lost.push([m[3], m[1]]); wanted.add(m[1]); }
+      if (/^0+$/.test(m[2])) continue;
+      files.push([m[3], m[2]]);
+      wanted.add(m[2]);
+    }
+    if (files.length || lost.length) revs.push({ sha, date, files, lost });
+  }
+  const texts = readBlobs(root, [...wanted]);
+  const carried = new Map();
+  const listed = new Map();
+  const size = new Map();
+  for (const [sha, text] of texts) { carried.set(sha, searchable(withoutRows(text))); listed.set(sha, searchable(text)); size.set(sha, text.length); }
+  return { revs, carried, listed, size };
+}
+
 // The element's life before its current carrier. `born` is drafted at the oldest commit of
 // the carrier it sits in TODAY, which is the moment of the LAST CARRIER CHANGE wherever a
 // rule moved into a skill, a coded check became a declaration, or a rule was a prose section
-// before it was a bullet. The pickaxe finds the earlier carrier by the element's own
+// before it was a bullet. The search finds the earlier carrier by the element's own
 // distinctive text across every path the pack has lived at; the birth moves there, and the
 // commit that had been drafting `born` becomes the carrier change it really was (#2221).
-function followCarrier(root, paths, needle, bornSha, position) {
-  if (!needle || !position.has(bornSha)) return null;
-  const out = git(root, 'log', '--reverse', '--format=%x01%H %as', '--name-only', `-S${needle}`, '--', ...paths);
-  let head = null;
-  const files = [];
-  for (const line of out.split('\n')) {
-    if (line.startsWith('\x01')) { if (head) break; head = line.slice(1).split(' '); continue; }
-    if (head && line.trim()) files.push(line.trim());
+// Where no carrier holds the text earlier, the answer is not a birth but a failed search,
+// and a listing that DOES hold it is what says which (#2253).
+function followCarrier(index, el, bornSha, position) {
+  if (!el.needle || !position.has(bornSha)) return null;
+  const want = searchable(el.needle);
+  let listedAt = null;
+  for (const rev of index.revs) {
+    // Ordered by where the commits sit in the history rather than by their dates: a carrier
+    // change and the commit it moved from can land on one day, and two dates that tie say
+    // nothing about which came first.
+    if (!position.has(rev.sha) || position.get(rev.sha) >= position.get(bornSha)) continue;
+    const files = rev.files.filter(([, blob]) => index.carried.get(blob)?.includes(want)).map(([path]) => path);
+    if (files.length) return { sha: rev.sha, date: rev.date, files };
+    if (listedAt) continue;
+    const row = rev.files.find(([, blob]) => index.listed.get(blob)?.includes(want));
+    if (row) listedAt = { sha: rev.sha, date: rev.date, file: row[0] };
   }
-  // Ordered by where the commits sit in the history rather than by their dates: a carrier
-  // change and the commit it moved from can land on one day, and two dates that tie say
-  // nothing about which came first.
-  if (!head || !position.has(head[0]) || position.get(head[0]) >= position.get(bornSha)) return null;
-  return { sha: head[0], date: head[1], files };
+  return { listedAt, shrank: shrankAt(index, bornSha, el.carrier) };
+}
+
+// A carrier other than this element's that the commit deleted or shortened. A move leaves
+// this trace at the old path whatever it did to the text on the way, so it is what says an
+// unfollowable birth is worth doubting rather than an element simply starting here.
+function shrankAt(index, sha, except) {
+  const rev = index.revs.find((r) => r.sha === sha);
+  if (!rev) return null;
+  for (const [path, pre] of rev.lost) {
+    if (path === except) continue;
+    const post = rev.files.find(([p]) => p === path)?.[1];
+    if (!post) return path;
+    if ((index.size.get(post) ?? 0) < (index.size.get(pre) ?? 0)) return path;
+  }
+  return null;
 }
 
 // Every commit's place in the history, oldest first.
@@ -559,11 +647,17 @@ function versionFor(rows, introducers, info, ownCut) {
 // Every element the brief covers, with its carrier and its events.
 // The born event moved back to the carrier before this one, where the pickaxe finds one,
 // and the commit that had been drafting `born` re-read as the move or conversion it is.
-function withEarlierCarrier(root, paths, position, el) {
+function withEarlierCarrier(index, position, el) {
   const born = el.events.find((e) => e.kind === 'born');
-  if (!born) return el;
-  const at = followCarrier(root, paths, el.needle, born.sha, position);
-  if (!at) return el;
+  if (!born || !el.needle) return el;
+  const at = followCarrier(index, el, born.sha, position);
+  // No carrier held the text earlier. That is an ordinary birth for most elements, so only
+  // the two shapes carrying evidence against it are named: something listed the element
+  // before its carrier held it, or the birth commit took text out of another carrier.
+  if (!at || !at.files) {
+    if (at?.listedAt || at?.shrank) el.unfollowed = { listedAt: at.listedAt, shrank: at.shrank };
+    return el;
+  }
   const kind = carrierChange(at.files, el.carrier);
   el.events = [...el.events.map((e) => (e === born ? { kind, sha: born.sha, from: at.files } : e)), { kind: 'born', sha: at.sha }];
   el.followed = { ...at, kind };
@@ -575,7 +669,8 @@ function packElements(root, pack, io, wanted, { paths = [pack], position = posit
   const files = provenanceFiles(pack, io);
   const ids = wanted.length ? wanted : [...files].filter(([, f]) => f.empty || f.convertedOnly).map(([id]) => id);
   const out = [];
-  const follow = (el) => out.push(withEarlierCarrier(root, paths, position, el));
+  let index = null;
+  const follow = (el) => { if (el.needle) index ??= carrierIndex(root, paths); return out.push(withEarlierCarrier(index, position, el)); };
   for (const id of ids) {
     const rule = c.rules.find((r) => r.slug === id);
     const guideline = c.guidelines.find((r) => r.slug === id);
@@ -585,7 +680,7 @@ function packElements(root, pack, io, wanted, { paths = [pack], position = posit
     if (rule) follow({ id, mechanism: `a RULES.md rule, triggered on "${rule.trigger}".`, carrier: rule.file, needle: rule.trigger, events: ruleEvents(root, rule.file, rule, (t) => ruleBlocks(t)) });
     else if (guideline) follow({ id, mechanism: `a guideline of the ${guideline.skill} skill, triggered on "${guideline.trigger}".`, carrier: guideline.file, needle: guideline.trigger, events: ruleEvents(root, guideline.file, guideline, (t) => skillShape(t).bullets) });
     else if (skill) follow({ id, mechanism: `the ${id} skill, body ${skill.body ?? skill.proposed}, reached by its description.`, carrier: skill.file, needle: null, events: fileEvents(root, skill.file) });
-    else if (check) follow({ id, mechanism: `check ${check.id}, in ${check.file}.`, carrier: check.file, needle: check.id,
+    else if (check) follow({ id, mechanism: `check ${check.id}, in ${check.file}.`, carrier: check.file, needle: check.id, check: check.id,
       events: check.file.endsWith('declared-checks.json') ? declaredCheckEvents(root, check.file, check.id) : fileEvents(root, check.file) });
     else if (task) follow({ id, mechanism: `task ${id}.`, carrier: task.file, needle: null, events: fileEvents(root, task.dir, { follow: false }) });
     else if (id === PACK_ELEMENT) {
@@ -632,9 +727,21 @@ function sharedFields(info, version, owner) {
 }
 const fieldLines = (fields) => Object.entries(fields).filter(([, v]) => v).map(([k, v]) => `- **${k}:** ${v}`);
 
+// The carrier the element was born in, which a followed birth predates the move to: the
+// mechanism naming today's file is a true sentence about the wrong date. Only the shapes the
+// text search can reach are named; any other old carrier keeps today's mechanism for the run
+// to correct, since a drafted shape nobody derived is the guess this lane exists to avoid.
+function mechanismAt(file, el) {
+  if (el.check) return `check ${el.check}, in ${file}.`;
+  const skill = /\/skills\/([^/]+)\/SKILL\.md$/.exec(file);
+  if (skill) return `a guideline of the ${skill[1]} skill, triggered on "${el.needle}".`;
+  if (file.endsWith('/RULES.md')) return `a RULES.md rule, triggered on "${el.needle}".`;
+  return null;
+}
+
 function draftEntry(el, ev, info) {
   const fields = {};
-  if (ev.kind === 'born') fields.Mechanism = el.mechanism;
+  if (ev.kind === 'born') fields.Mechanism = (el.followed && mechanismAt(el.followed.files[0], el)) || el.mechanism;
   else if (ev.from) fields.Mechanism = `${el.mechanism} it was carried by ${ev.from.join(', ')} until here; say why the carrier changed.`;
   return renderEntry({ date: info.date, kind: ev.kind, title: `${info.title} (${info.pr ? `#${info.pr}` : info.short})`, fields });
 }
@@ -699,6 +806,17 @@ export function brief(root, pack, wanted = []) {
   if (followed.length) {
     lines.push('', '## elements older than the carrier they sit in', 'the birth below is drafted at the EARLIER carrier the pickaxe found, and the commit that would otherwise have read as the birth is drafted as the move or conversion it is. verify each against the old path before trusting it - `git show <sha>:<old path>`');
     for (const el of followed) lines.push(`- ${el.id}: ${el.followed.kind} into ${el.carrier}; carried by ${el.followed.files.join(', ')} from ${el.followed.date} (${el.followed.sha.slice(0, 8)})`);
+  }
+  const unfollowed = elements.filter((el) => el.unfollowed);
+  if (unfollowed.length) {
+    lines.push('', '## births the search could not go behind', 'no carrier the pack has held holds the element\'s text before the birth drafted below, yet something says the element is older, so that birth is an ASSUMPTION rather than a derivation - an element REWORDED before it moved carries different text and cannot be followed by its text at all. read the evidence named beside each, `git show <sha>:<old path>`, before trusting the draft. (an unfollowable birth with nothing against it is an ordinary one and is not listed)');
+    for (const el of unfollowed) {
+      const at = el.unfollowed.listedAt;
+      const i = at ? commitInfo(root, at.sha, cache) : null;
+      const why = [i ? `${at.file} listed it at ${at.date} (${i.pr ? `#${i.pr}` : i.short}), a table row that carries nothing` : null,
+        el.unfollowed.shrank ? `the birth commit took text out of ${el.unfollowed.shrank}` : null].filter(Boolean);
+      lines.push(`- ${el.id}: nothing earlier carries "${el.needle}"; ${why.join(', and ')}`);
+    }
   }
   const manifest = elements.find((el) => el.id === PACK_ELEMENT);
   if (manifest) {

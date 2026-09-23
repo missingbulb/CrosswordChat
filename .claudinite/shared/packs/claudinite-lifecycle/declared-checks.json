@@ -10,7 +10,7 @@
         "from": ".",
         "to": ".claudinite",
         "matchUniqueFilenames": false,
-        "except": [".claudinite", ".claude", ".github/workflows", ".gitignore", ".gitattributes", "CLAUDE.md", ".claudinite-settings.json", ".claudinite-checks.json"],
+        "except": [".claudinite", ".claude", ".github/workflows", ".gitignore", ".gitattributes", "CLAUDE.md", ".claudinite-settings.json"],
         "reason": "consumer files must not couple to the vendored canon — the wiring files are the reviewed exceptions (vendoring/DESIGN.md)"
       }
     ]

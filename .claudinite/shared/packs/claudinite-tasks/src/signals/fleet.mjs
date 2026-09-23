@@ -24,7 +24,7 @@ import { packEntryId } from '../../../../engine/pack_loader/pack-registry.mjs';
 // -pack change (promote's trigger). Both are live until the Phase 4 cleanup drops
 // the legacy dual root. One definition, shared with the per-repo probes.
 import { LOCAL_PACK_ROOT } from '../world/git.mjs';
-import { SETTINGS_FILES } from '../../../../engine/settings-file.mjs';
+import { SETTINGS_FILE } from '../../../../engine/settings-file.mjs';
 // The one definition of dormancy, shared with every other fleet reader: a second
 // notion of it would sweep exactly the members that had already opted out. It is the
 // scheduler's own parameter, so it is read from the pack that owns the scheduler.
@@ -136,16 +136,8 @@ export async function readFleet(fleetGh, { owner, canonRepo, sinceIso }) {
     const fullName = r.full_name;
     if (fullName.toLowerCase() === String(canonRepo).toLowerCase()) continue; // the canon doesn't mount itself
     if (r.archived || r.fork) continue;
-    // Either settings-file name: a member the #1252 rename record has not reached
-    // still carries the old one, and reading only the new name would drop it from
-    // the fleet silently — as an uncovered repo, which is a plan for nothing.
-    let res = null;
-    for (const name of SETTINGS_FILES) {
-      res = await fleetGh(`/repos/${fullName}/contents/${name}`);
-      if (res.status === 200 && res.json?.content) break;
-      res = null;
-    }
-    if (!res) continue; // uncovered — no tracked declaration
+    const res = await fleetGh(`/repos/${fullName}/contents/${SETTINGS_FILE}`);
+    if (res.status !== 200 || !res.json?.content) continue; // uncovered - no tracked declaration
     const checks = parseChecks(res.json.content);
     if (!checks) continue; // unparsable declaration → not a member we can plan for
     // Declared dormant → out of the recurring work, which is the only thing this

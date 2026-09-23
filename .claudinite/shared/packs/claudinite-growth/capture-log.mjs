@@ -395,7 +395,8 @@ async function main() {
   const issueOk = hasIssue && /^(0|[1-9]\d*)$/.test(args.issue);
   if (hasPr === hasIssue || !(prOk || issueOk)) {
     console.error('required: exactly one of --pr <n> (the pull request the merge landed) or --issue <n> (the issue an unmerged capture is about, or 0 for none)');
-    process.exit(2);
+    process.exitCode = 2;
+    return;
   }
   const root = git(process.cwd(), ['rev-parse', '--show-toplevel']).stdout.trim();
   // The discovery key: the session id names the transcript file. Explicit
@@ -406,7 +407,8 @@ async function main() {
     console.error(args.transcript
       ? `no session transcript found at ${args.transcript}`
       : `no session transcript found for session ${sessionId ?? '(unknown)'} under ${projectsRoot()}`);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   // The identity for delta-keying and naming comes from the file we actually
   // read (its basename IS its session id), so an explicit --transcript keeps its
@@ -419,7 +421,8 @@ async function main() {
   const bundled = bundleStreams(streams);
   if (bundled.length === 0) {
     console.error(`transcript ${transcript} holds no parseable entries`);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const result = await capture({
@@ -442,5 +445,5 @@ async function main() {
 
 const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (invokedDirectly) {
-  main().catch((e) => { console.error(e.message); process.exit(1); });
+  main().catch((e) => { console.error(e.message); process.exitCode = 1; });
 }

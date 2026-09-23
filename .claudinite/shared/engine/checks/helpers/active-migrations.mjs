@@ -1,7 +1,7 @@
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SETTINGS_FILE, SETTINGS_FILES } from '../../settings-file.mjs';
+import { SETTINGS_FILE } from '../../settings-file.mjs';
 import { installedVersions as readInstalled, hasInstalledMount } from '../../installed-versions.mjs';
 import { VERSION_SOURCE, versionFromLiteral, isVersion, versionAbove } from '../../version.mjs';
 
@@ -125,25 +125,21 @@ const repoRoot = corpusRoot.endsWith(join('.claudinite', 'shared'))
 // stamp) is *unknown*, which the predicate below answers by date instead of by
 // pretending the repo is at version 0.
 export function installedVersions(read = () => {
-  for (const name of SETTINGS_FILES) {
-    try { return readFileSync(join(repoRoot, name), 'utf8'); } catch { /* try the other name */ }
-  }
-  return null;
+  try { return readFileSync(join(repoRoot, SETTINGS_FILE), 'utf8'); } catch { return null; }
 }) {
   const raw = read();
   if (raw == null) return null;
   let parsed;
   try { parsed = JSON.parse(raw); } catch { return null; }
   // The shape reader owns where the numbers live — the top-level `engineVersion`
-  // and each pack entry's own `version`, with the retired `claudinite` block read
-  // underneath (#1252). Nothing about migration selection changes with the move,
-  // so the two must not each know the layout.
+  // and each pack entry's own `version` (#1252). Nothing about migration selection
+  // changes with the move, so the two must not each know the layout.
   return hasInstalledMount(parsed) ? readInstalled(parsed) : null;
 }
 
 // @deprecated — the settings file's name, kept as an export for the fielded callers
 // that import it. `SETTINGS_FILE` is where the name is decided; a caller that must
-// READ the file wants `settingsPath`, which tries both names.
+// READ the file wants `settingsPath`.
 export const DECLARATION_FILE = SETTINGS_FILE;
 
 // What this repo has installed of the flow that owns `dirPath` — undefined when

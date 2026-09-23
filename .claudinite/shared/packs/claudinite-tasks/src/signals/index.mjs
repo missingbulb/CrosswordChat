@@ -15,7 +15,7 @@ import {
   QUEUED_LABEL, ORIGIN_AD_HOC, REQUEST_LABEL, STATUS_BLOCKED, STATUS_READY,
 } from '../../public/task-constants.mjs';
 import {
-  workItemTitle, statusOf, statusesOn, parkKindOf, outcomeOf, parseWorkItemBody,
+  workItemTitle, statusOf, statusesOn, parkKindOf, outcomeOf, parseWorkItemBody, labelNames,
 } from '../../public/work-item-grammar.mjs';
 import { isQueueItem } from '../items/read.mjs';
 import { APPROVAL_RE } from '../contract/built-in-tasks.mjs';
@@ -461,7 +461,7 @@ const COLLECTORS = {
     if (!ctx.task?.pack || !ctx.task?.id) throw new Error('the runs collector needs the task whose history it reads');
     const title = workItemTitle({ pack: ctx.task.pack, task: ctx.task.id });
     const horizonIso = new Date(new Date(ctx.now).getTime() - RUN_HORIZON_DAYS * 86400e3).toISOString();
-    const items = ctx.items ?? await readWorkItems(gh, ctx.repo, horizonIso);
+    const items = ctx.items ?? await readWorkItems(gh, ctx.repo, `state=all&since=${encodeURIComponent(horizonIso)}`);
     // A run begins at the pick. An item nobody has picked yet, or that was closed
     // before anyone picked it, still wears the status it waited in — open, or
     // beside the terminal label the scheduler's dedupe, orphan and supersede
@@ -487,19 +487,45 @@ const COLLECTORS = {
     return { list, horizonDays: RUN_HORIZON_DAYS };
   },
 
+  // THE OPEN QUEUE - every open work item in the repo, whichever task it belongs
+  // to, in the shape the janitor's rules read. Deliberately the one dimension
+  // `issues` hides: that collector drops work items so the queue's own churn
+  // cannot wake an issue-gated task (F8), which leaves the queue itself
+  // unobservable - and a task whose subject IS the queue then has nothing to gate
+  // on. Only a term naming `queue` sees it, so the exclusion above stands for
+  // everyone else.
+  //
+  // Served off `ctx.items` where the caller already holds the queue - the
+  // scheduler run listed it before asking anybody, so this costs no read at the
+  // tick, which is what makes it affordable on a daily task's gate. The executor
+  // at pick holds none and reads the open list.
+  async queue(gh, ctx) {
+    if (ctx.items) return { open: ctx.items.filter((i) => i.state === 'open') };
+    const raw = await readWorkItems(gh, ctx.repo, 'state=open');
+    return {
+      open: raw.map((i) => ({
+        number: i.number, title: i.title, body: i.body ?? '', state: i.state,
+        labels: labelNames(i), created_at: i.created_at, closed_at: i.closed_at ?? null,
+        updated_at: i.updated_at,
+      })),
+    };
+  },
+
   async fleet(gh, ctx) {
     return ctx.fleet ?? null;
   },
 };
 
-// Every work item updated since `sinceIso`, off the issues list. A page that
+// Every work item matching `scope`, off the issues list. A page that
 // could not be read THROWS — the collector then records `{ error }` and every
 // term over it fails loud — because a truncated history reads as a shorter one,
-// and "no run in this period" on that evidence is a double run.
-async function readWorkItems(gh, repo, sinceIso) {
+// and "no run in this period" on that evidence is a double run. The open queue
+// reads the same way for the same reason: a page that never arrived is a repair
+// nobody is asked to make.
+async function readWorkItems(gh, repo, scope) {
   const out = [];
   for (let page = 1; ; page += 1) {
-    const q = `state=all&sort=created&direction=desc&per_page=100&page=${page}&since=${encodeURIComponent(sinceIso)}`;
+    const q = `${scope}&sort=created&direction=desc&per_page=100&page=${page}`;
     const { status, json } = await listIssuesByQuery(gh, repo, q);
     if (status !== 200 || !Array.isArray(json)) throw new Error(`the work-item list could not be read at page ${page} (${status})`);
     for (const i of json) {

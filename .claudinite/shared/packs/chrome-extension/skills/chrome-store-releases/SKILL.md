@@ -1,6 +1,6 @@
 ---
 name: chrome-store-releases
-description: The Chrome Web Store release standard every extension repo of ours ships — the vendored release workflows and composite actions, .github/release.config, versioning and the packaged artifact, the store secrets, the README install sections, and the manual Chrome Web Store steps. Use when setting up an extension repo to publish, changing or debugging its release pipeline, when asked to "bump version" on an extension repo, or when a cer/ check fires.
+description: The Chrome Web Store release standard every extension repo of ours ships. Use when setting up an extension repo to publish, when changing or debugging its release pipeline, when asked to "bump version" on an extension repo, or when a cer/ check fires.
 metadata:
   body: workflow
   usage:

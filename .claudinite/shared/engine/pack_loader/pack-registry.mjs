@@ -25,8 +25,8 @@ export const localPacksDir = (root) => join(resolve(root), LOCAL_PACKS_SUBDIR);
 // the mount's self-test and blocks the converge that would have fixed it. It comes
 // out when no fielded pack version imports it any more — a question answered off
 // the trunk's own pack history by the lane-shim test that guards this surface, not
-// by what the current tree happens to import.
-// @legacy-tolerance advisory:none retire:#1640
+// by what the current tree happens to import (#1911).
+// @legacy-tolerance advisory:none retire:#1911
 export const LEGACY_LOCAL_PACKS_SUBDIR = join('.claudinite', 'local_packs');
 
 // A pack COPIED INTO THE SESSION rather than tracked: `.claudinite/temp/packs/<name>/`,
@@ -402,21 +402,13 @@ export async function loadPacks(opts) {
 // self-documenting in .claudinite-settings.json (a reader sees at a glance the
 // pack lives in the repo's own tree under .claudinite/local/, and a canon id can
 // never be claimed by accident; the discoverPacks shadow guard stays as the
-// backstop). Both the pre-rename `local_packs/<id>` form and the bare id remain
-// permanently accepted — a declaration is text a member wrote once, and no
-// convergence pass rewrites every one of them — so packEntryId strips whichever
-// prefix is present and every id comparison happens on the bare id. This is the
-// parser for a token, not a tolerance for the retired `.claudinite/local_packs/`
-// DIRECTORY, which discovery no longer scans.
+// backstop). A bare id is still accepted - that is what a declaration written
+// before the namespace existed says - so packEntryId strips the prefix where one is
+// present and every id comparison happens on the bare id. The pre-rename
+// `local_packs/<id>` form was read alongside it until #1640; a member still
+// declaring it now activates nothing.
 export const LOCAL_DECL_PREFIX = 'local/';
-// @legacy-tolerance advisory:legacy-shape-in-use retire:#1640
-export const LEGACY_LOCAL_DECL_PREFIX = 'local_packs/';
-const stripLocalPrefix = (id) => {
-  for (const prefix of [LOCAL_DECL_PREFIX, LEGACY_LOCAL_DECL_PREFIX]) {
-    if (id.startsWith(prefix)) return id.slice(prefix.length);
-  }
-  return id;
-};
+const stripLocalPrefix = (id) => (id.startsWith(LOCAL_DECL_PREFIX) ? id.slice(LOCAL_DECL_PREFIX.length) : id);
 
 // The writer-side inverse: the token a declaration writer records for a pack —
 // namespaced (canonical form) for a local pack, the bare id for a canon one.
@@ -428,7 +420,7 @@ export const declTokenFor = (pack) =>
 // (see engine/checks/README.md). This is the one id-extractor every reader shares, so
 // raw-JSON consumers (the SessionStart hooks, the fleet signal probe) and the
 // engine agree on both shapes — and on both declaration forms: it returns the
-// BARE pack id, stripping a `local_packs/` namespace where one is declared.
+// BARE pack id, stripping a `local/` namespace where one is declared.
 // Returns undefined for a malformed entry.
 // A declaration written before a canon pack was renamed resolves to the pack's
 // CURRENT id here (renamed-packs.mjs), so activation, config lookup and the vendor

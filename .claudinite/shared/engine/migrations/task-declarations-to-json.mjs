@@ -266,5 +266,5 @@ export async function main(argv = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`task-declarations-to-json failed: ${e.message}`); process.exit(1); });
+  main().catch((e) => { console.error(`task-declarations-to-json failed: ${e.message}`); process.exitCode = 1; });
 }

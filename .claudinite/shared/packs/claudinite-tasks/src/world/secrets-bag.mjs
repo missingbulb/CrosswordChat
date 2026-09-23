@@ -15,12 +15,12 @@
 // jobs until a person clicked Approve, silently, fleet-wide. The owner took the
 // trade back — a rare human-merged PR beats a permanent human click on every run.
 //
-// So the workflow names its secrets again and NOTHING SETS THE BAG. The reader stays
-// because members carry the bag-setting workflow until their own PR lands, and reading
-// it where present is what makes that window uneventful; `secretValue`'s fallback to
-// the plain environment is what makes the reverse window uneventful too. The reader
-// comes out on #1642's window rather than on a count of who still stamps a bag —
-// the canon cannot take that count.
+// So the workflow names its secrets again and NOTHING SETS THE BAG. The plain
+// environment is therefore the LIVE source, and the bag READER is the tolerance: it
+// stays because a member whose live executor still stamps one moves off it only
+// through a human-merged PR of its own, and dropping the reader early would hand
+// that member's code-work the whole blob, since the scrub in code-work-run.mjs goes
+// with it. Its retirement is a fleet read rather than a canon release (#1914).
 
 import { parseBag } from './env-bag.mjs';
 import { actionsEnv } from './actions.mjs';

@@ -50,7 +50,11 @@ export const isBlockingPark = (item) => statusOf(item) === STATUS_NEEDS_HUMAN_FA
 // closed items keep theirs forever, and members converge on their own schedules. So
 // every reader here goes through one pass that maps every spelling ever written
 // straight to today's — never through a literal comparison against one of them.
-// @legacy-tolerance advisory:none retire:#1642
+//
+// The `task:*` entries come out when no OPEN item wears one (#1913); the two
+// `outcome:*` entries never do, because a closed item's labels are stored data and
+// dropping them would turn every historical run into an un-outcomed one.
+// @legacy-tolerance advisory:none retire:#1913
 const LEGACY_STATUS = new Map([
   [LEGACY_BLOCKED, STATUS_BLOCKED],
   [LEGACY_READY, STATUS_READY],
@@ -60,7 +64,7 @@ const LEGACY_STATUS = new Map([
   [LEGACY_TASK_OBSOLETE, STATUS_REJECTED], [OUTCOME_OBSOLETE, STATUS_REJECTED],
 ]);
 
-// @legacy-tolerance advisory:none retire:#1642
+// @legacy-tolerance advisory:none retire:#1913
 const LEGACY_PARK_RE = /^task:needs-human-(.+)$/;
 
 // The park an issue's labels name, canonical, or null. Both shapes decode here:
@@ -582,16 +586,13 @@ function stampTarget(body, target) {
 // A section runs to the next `### ` heading or to the end of the body, so a replaced
 // section keeps its position rather than migrating to the bottom — the body stays in
 // the order a reader learned it.
-// `aliases` are older spellings of the SAME heading. The section is rewritten under
-// `heading`, but located by any of them, so a body written before a rename is updated
-// in place instead of gaining a second section.
-export function withSection(body, heading, lines, aliases = []) {
+export function withSection(body, heading, lines) {
   if (!lines.length) return body;
   const text = String(body ?? '').replace(/\s*$/, '');
   const section = [`### ${heading}`, '', ...lines.map((l) => `- ${l}`)];
   const existing = text.split('\n');
-  const wanted = new Set([heading, ...aliases].map((h) => `### ${h}`));
-  const at = existing.findIndex((l) => wanted.has(l.trim()));
+  const wanted = `### ${heading}`;
+  const at = existing.findIndex((l) => l.trim() === wanted);
   if (at === -1) return `${text}\n\n${section.join('\n')}\n`;
   const after = existing.findIndex((l, i) => i > at && l.startsWith('### '));
   const tail = after === -1 ? [] : ['', ...existing.slice(after)];

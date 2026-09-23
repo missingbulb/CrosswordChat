@@ -69,10 +69,11 @@ try {
 
   const { loadPacks, isActive, bundledSkillSources } = await import(join(loaderDir, 'pack-registry.mjs'));
   const packs = await loadPacks({ localRoot: projectRoot, session: true });
-  // A pack COPIED for the person in this session is left out of every count here. What it
-  // loaded is already stated, by the step that copied it, on the facet channel this line
-  // folds in - counting it again would state one set of rules twice, under two names.
-  const active = packs.filter((pack) => isActive(pack, { packs: declared }) && !pack.temp);
+  // A pack COPIED for the person in this session counts like any other that loaded: its
+  // rules reach the window through the same import as the rest, so one number covers all
+  // of it. Held out, it needed a second number under a second name for prose that loads
+  // identically - and a reader with only the first was told a corpus smaller than theirs.
+  const active = packs.filter((pack) => isActive(pack, { packs: declared }));
   // Nothing active means this repo runs no Claudinite. Nothing loaded, so there
   // is nothing to state — the same silence the prose injector keeps.
   if (!active.length) process.exit(0);
@@ -152,10 +153,9 @@ try {
   // has ended right there, both obligations discharged and no work done.
   const repo = repoName(projectRoot);
   process.stdout.write(
-    'SESSION-START SUMMARY — an instruction to you, not text to repeat. '
-    + 'Open your first reply of this session with exactly this line, and nothing before it. '
-    + 'It prefixes that reply and is never the whole of it: the same turn goes on to answer '
-    + 'the owner and act on what they asked. The line:\n\n'
+    'SESSION-START SUMMARY: an instruction, not text to repeat. '
+    + 'Open your first reply with exactly this line and nothing before it, '
+    + 'then go on to answer the owner in the same turn. The line:\n\n'
     + `Loaded Claudinite${repo ? ` from repo ${repo}` : ''}: ${facets.join(', ')}.\n`,
   );
 } catch {
