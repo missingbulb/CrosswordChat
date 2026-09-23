@@ -144,30 +144,31 @@ export async function runCreateWorkItem() {
 
   const opts = parseArgs(process.argv.slice(2));
   const { repo } = actionRepoContext();
-  if (!repo) { console.error('GITHUB_REPOSITORY not set'); process.exit(1); }
+  if (!repo) { console.error('GITHUB_REPOSITORY not set'); process.exitCode = 1; return; }
   const gh = makeGh();
 
   if (opts.wake) {
     const res = await wakeItem(gh, repo, opts.wake, { urgent: opts.urgent });
-    if (!res.ok) { console.error(res.error); process.exit(1); }
+    if (!res.ok) { console.error(res.error); process.exitCode = 1; return; }
     console.log(`woke #${opts.wake}${opts.urgent ? ' (urgent)' : ''}`);
     return;
   }
   if (!opts.target || !opts.target.includes('/')) {
     console.error('usage: create-work-item <pack>/<task> [--urgent] [--context …] [--not-before ISO] [--blocked-by #N] [--qualifier text] [--supersedes #N]\n       create-work-item --wake <#N> [--urgent]');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   const [pack, task] = opts.target.split('/');
   const root = repoRoot();
   const { tasks } = await discoverTasks(root, loadConfig(root));
   const found = tasks.find((t) => t.pack === pack && t.id === task);
-  if (!found) { console.error(`no task "${opts.target}" in this repo's declared packs`); process.exit(1); }
+  if (!found) { console.error(`no task "${opts.target}" in this repo's declared packs`); process.exitCode = 1; return; }
 
   const res = await createWorkItem(gh, repo, { pack, task, taskPath: found.taskPath, scheduled: isScheduledTask(found.decl), opts });
-  if (!res.ok) { console.error(res.error); process.exit(1); }
+  if (!res.ok) { console.error(res.error); process.exitCode = 1; return; }
   console.log(`created #${res.number} ${opts.target}${opts.urgent ? ' (urgent)' : ''}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runCreateWorkItem().catch((e) => { console.error(e); process.exit(1); });
+  runCreateWorkItem().catch((e) => { console.error(e); process.exitCode = 1; });
 }

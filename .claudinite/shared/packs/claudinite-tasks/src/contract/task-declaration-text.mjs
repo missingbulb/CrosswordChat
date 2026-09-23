@@ -30,7 +30,7 @@ export const KEY_ORDER = [
   '$schema', 'id', 'description',
   'schedule_after', 'trigger', 'preconditions',
   'expected_outcome', 'automerge', 'on_interrupt', 'invocation_endpoint',
-  'code_work', 'code_work_timeout', 'code_work_required_secrets',
+  'code_worker_mjs', 'code_work', 'code_work_timeout', 'code_work_required_secrets',
   'agent_model', 'model_from_request', 'agent_instructions', 'agent_execution_timeout',
 ];
 export function orderTaskKeys(decl) {

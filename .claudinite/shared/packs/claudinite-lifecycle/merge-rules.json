@@ -8,7 +8,7 @@
   },
   {
     "name": "claudinite-settings-updates",
-    "pathMatching": "/^(\\.claudinite-settings\\.json|\\.claudinite-checks\\.json)$/",
+    "pathMatching": "/^\\.claudinite-settings\\.json$/",
     "changeKinds": ["added", "modified"],
     "editShape": "any"
   }

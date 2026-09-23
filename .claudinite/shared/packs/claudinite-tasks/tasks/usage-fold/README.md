@@ -107,8 +107,8 @@ The file carries `generated`, the time of the fold that last confirmed its numbe
 
 Carried over from the declaration's comments when it became `task.json`.
 
-claudinite-growth task: usage-fold — the per-repo usage aggregate
-(skill-usage-metrics DESIGN §5). `agent_model: 'none'` with
+claudinite-growth task: usage-fold - the per-repo usage aggregate.
+`agent_model: 'none'` with
 `code_work: 'node worker.mjs'`: the whole pass is deterministic code the
 executor runs as code-work — no agent phase, seconds of runtime.
 

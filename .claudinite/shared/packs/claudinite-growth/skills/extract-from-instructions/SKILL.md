@@ -1,6 +1,6 @@
 ---
 name: extract-from-instructions
-description: Convert instruction prose somebody already wrote - a repo's CLAUDE.md and everything it imports, or the person's own machine-local CLAUDE.md - into pack carriers, routing each rule to the repo's local pack or to that person's own pack and leaving the prose file a thin routing map. Use when adopting Claudinite on a repo that already carries a CLAUDE.md, when a person wants their machine-local instructions carried properly, or when asked to convert instruction prose into a pack.
+description: Convert instruction prose somebody already wrote into pack carriers, leaving the prose file a thin routing map. Use when adopting Claudinite on a repo that already carries a CLAUDE.md, when a person wants their machine-local instructions carried properly, or when asked to convert instruction prose into a pack.
 metadata:
   body: workflow
   usage:

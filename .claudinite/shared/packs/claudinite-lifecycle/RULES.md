@@ -68,7 +68,7 @@
   `scope: 'work'` rules - the diff-plus-transcript checks. A clean `check_the_world` run says
   nothing about what Stop will find. (stop-hook-not-world)
 
-- **Pushing a change that touches `.github/workflows/`, `.claudinite-checks.json` or pack config**
+- **Pushing a change that touches `.github/workflows/`, `.claudinite-settings.json` or pack config**
   — the world sweep runs in CI, not the Stop hook, so run it locally first rather than spend a
   push → CI → fix round trip on a finding it reports in seconds: (pushing-change-touches)
 

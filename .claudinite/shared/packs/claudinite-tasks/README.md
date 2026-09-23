@@ -100,10 +100,11 @@ pack paths behind which everything converges nightly.
 | `task-declaration-shape` | high | correctness | check: blocking |
 | `task-code-work-env` | high | correctness | check: blocking |
 | `automerge-policy-scope` | high | correctness | check: blocking |
-| `legacy-task-fields` | low | complexity | check: advisory |
 | `executor-workflow-secrets` | high | correctness | check: advisory |
 | `tasks-pack-read-through-its-surface` | high | correctness | declared check: blocking |
 | `repo-variables-through-the-bag` | high | correctness | declared check: blocking |
+| `issue-label-outside-the-queue-vocabulary` | high | correctness | declared check: blocking |
+| `queue-mark-named-literally` | high | correctness | declared check: blocking |
 
 `tasks-pack-read-through-its-surface` is this pack's, not the canon's, because the consumers that
 can get it wrong are members: it scans a repo's own `packs/` **and** its `.claudinite/local/packs/`,
@@ -120,4 +121,6 @@ The first two are relevance-first — inert until the repo carries a `tasks/<nam
 - `task-declaration-shape` — a task declaration the scheduler reads is incomplete or illegal — no `trigger` saying who mints an occurrence, an unknown condition, an illegal value — so the task never fires or fires wrong.
 - `task-code-work-env` — a task reads a `CLAUDINITE_*` variable code-work never sets, so a parameter (a scope filter, a dry-run switch) silently never arrives and the run goes green in its most dangerous mode.
 - `executor-workflow-secrets` — the executor workflow does not pass a secret the tasks of this repo's packs declare, so the queue picks the item up and only the run finds out the secret is not there. The list is the tasks' alone; an invocation endpoint's `tokenSecret` is config, stamped by the converge and reported by the invocation call itself. Advisory because the remedy is a human-merged PR to `.github/workflows/`, the one fix a member's own machinery cannot make.
+- `issue-label-outside-the-queue-vocabulary`: an `issue_write` call applies a label outside the `task:` namespace, which no scheduler run, executor or janitor reads: the issue is filed as if something would pick it up. `task:origin:ad-hoc` asks the queue for the work; no label at all is the ordinary issue.
+- `queue-mark-named-literally`: a pack's prose tells a session to mark an issue for the queue, or to tag a backlog issue, without naming the label; naming `task:origin:ad-hoc` on the line satisfies it.
 - `automerge-policy-scope` — a branch that stamped the `Claudinite-Automerge-Policy` trailer (its run intends to land its own PR) carries a diff its declared policy does not cover, which is exactly the unreviewed change the policy exists to stop.

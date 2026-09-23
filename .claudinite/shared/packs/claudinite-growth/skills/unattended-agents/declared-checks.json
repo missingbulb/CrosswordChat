@@ -2,9 +2,9 @@
   {
     "id": "in-session-github-access",
     "severity": "blocking",
-    "failureMessage": "a routine runs in an MCP-only session with no GitHub REST credential — REST calls in its own steps cannot authenticate there",
+    "failureMessage": "a migration pass runs in an MCP-only session with no GitHub REST credential, so REST calls in its own steps cannot authenticate there",
     "fix": "reach GitHub through the session's injected MCP-backed I/O (a gh(path) reader for reads, a semantic io object for writes); move credential-needing work into a workflow_dispatch-only executor",
-    "scanFiles": "/^(routines|migrations)\\/.*\\.mjs$/",
+    "scanFiles": "/(^|\\/)migrations\\/.*\\.mjs$/",
     "excludeFileClasses": ["testFiles"],
     "scanIgnoringComments": true,
     "matchLines": [

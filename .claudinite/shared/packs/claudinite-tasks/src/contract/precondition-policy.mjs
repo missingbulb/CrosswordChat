@@ -37,9 +37,8 @@ import {
   DUE_TERM, SCHEDULE_TERM, NOT_FAILED_TERM, NOT_PARKED_TERM,
 } from './calendar.mjs';
 
-// The retired empty precondition. The contract's door still strips it from a
-// declaration that carries a `frequency` (the cadence term takes its place); on
-// its own it is an error, named below.
+// The retired empty precondition. A declaration requiring nothing says so by
+// stating no conditions at all; the word on its own is an error, named below.
 export const NONE = 'none';
 
 const ALTERNATIVE = '||';

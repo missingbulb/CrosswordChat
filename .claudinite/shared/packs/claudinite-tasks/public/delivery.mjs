@@ -40,7 +40,7 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deliveryForText, pullCreateError, landDelivery } from '../src/deliver/land-pr.mjs';
-import { SETTINGS_FILES } from '../../../engine/settings-file.mjs';
+import { SETTINGS_FILE } from '../../../engine/settings-file.mjs';
 import { withTaskTrailer } from './work-item-grammar.mjs';
 import { restCall } from './github.mjs';
 import { runGit } from '../src/world/processes.mjs';
@@ -133,10 +133,8 @@ export async function deliverGenerated({ root, repo, base, token, branch: target
 
   const baseSha = baseTip(root, remote, base);
   // The member's delivery override gates everything after the push, read from the
-  // BASE tip. Both settings-file names are tried in the read order the rename
-  // defines: a member that has not run the #1252 record still carries the old one,
-  // and reading only the new name would silently land a `review` member's PR.
-  const settingsText = SETTINGS_FILES.map((f) => readAt(root, baseSha, f)).find((t) => t != null);
+  // BASE tip.
+  const settingsText = readAt(root, baseSha, SETTINGS_FILE);
   const delivery = deliveryForText(settingsText);
 
   // Every commit this lane writes says which task wrote it. That trailer is what

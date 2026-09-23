@@ -41,16 +41,16 @@ export const ENGINE_VERSION = '60902.1';
 // against a canon at 13 is behind by an unknown amount of time, and the fleet
 // surfaces that as a number a reader has to go and date by hand.
 //
-// LEGACY TOLERANCE (#1640). Versions were plain positive integers
-// until 2026-08-20, and the integers are still sitting in every member's stamp, in
-// each pack's `minEngineVersion` floor and in every migration record's range. So a
-// legacy integer parses here as `<n>.0` — below every date-anchored version, which
-// is exactly where a member that has not re-stamped belongs. Dependency-free, like
-// the manifest spec it serves.
+// LEGACY TOLERANCE (#1912). Versions were plain positive integers until 2026-08-20,
+// so a legacy integer parses here as `<n>.0` - below every date-anchored version,
+// which is exactly where a member that has not re-stamped belongs. Dependency-free,
+// like the manifest spec it serves.
 //
-// It comes out on #1640's window — a week after the advisory that reports an integer
-// stamp. The date this once carried passed with the tolerance still here and nothing
-// scheduled to notice; a window a queued link waits on is the difference.
+// It did not come out with the declaration-shape tolerances (#1640), and the reason
+// is in this repo rather than in the fleet: the canon's own migration records
+// declare an integer `version:`, `recordVersion` reads that field through
+// `versionFromLiteral`, and an unpriceable record silently changes which records
+// `migrationActive` selects. #1912 takes those records first.
 
 // The day part of a Date, in UTC. Callers that have a `YYYY-MM-DD` string already
 // (the corpus passes `today` around in that form) can hand it straight over.
@@ -86,9 +86,9 @@ export const isVersion = (v) => parseVersion(v) !== null;
 // What a manifest or a release may WRITE: a real version, never the install floor.
 export const isDeclaredVersion = (v) => isVersion(v) && v !== 0;
 
-// True for the retiring spelling only — the one thing the removal change (#1640)
+// True for the retiring spelling only - the one thing the removal change (#1912)
 // greps for, and what a reader needing to say "this predates the scheme" asks.
-// @legacy-tolerance advisory:legacy-shape-in-use retire:#1640
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#1912
 export const isLegacyVersion = (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0;
 
 // Order two versions: negative when `a` is older. An UNPARSEABLE version is not an

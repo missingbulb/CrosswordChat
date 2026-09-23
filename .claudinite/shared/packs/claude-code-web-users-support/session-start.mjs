@@ -40,16 +40,9 @@ if (prose === PLACEHOLDER) {
   note(why);
 }
 
-// What the pack costs the session, on the engine's facet channel
-// (engine/pack_loader/run-pack-session-start.mjs) so the opening summary can state it in the
-// unit it states the rest of the load in. This step is the only thing in the session that can
-// weigh it: what it weighs came from another repository.
-//
-// Words at the standard English ratio, the same estimate the summary line makes of the corpus
-// prose: a character count is thrown off by exactly what these files are full of,
-// punctuation-dense Markdown. Rounded to 10 where the corpus rounds to 500, because this is
-// hundreds of tokens against its tens of thousands.
-const words = prose.trim().split(/\s+/).filter(Boolean).length;
-const tokens = Math.round(words / 0.75 / 10) * 10;
-if (tokens) process.stdout.write(`CLAUDINITE-FACET: ${tokens.toLocaleString('en-US')} personal pack tokens\n`);
+// AND IT WEIGHS NOTHING. The copy is on disk before the summary step runs, off the same
+// registry the summary reads every other pack from, so the summary counts this pack with the
+// rest and one number covers the whole load. A figure emitted here would be that same prose
+// stated twice under two names, and a reader holding only the corpus figure would be told a
+// corpus smaller than the one they have.
 process.exit(0);

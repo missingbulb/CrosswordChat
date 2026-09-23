@@ -1,5 +1,5 @@
-// The usage-fold code-work entry point — the script the executor runs as code-work,
-// `node worker.mjs` (cwd = this task dir, bounded by code_work_timeout).
+// The usage-fold work step - the module the runner calls `worker` on
+// (cwd = this task dir, bounded by code_work_timeout).
 // The whole task: no agent phase.
 //
 // It holds NO counting logic. The counting and folding are `fold-usage.mjs`, its
@@ -21,8 +21,7 @@
 //   5. read the local git history and the releases listing for the day series neither
 //      of the above can answer — commits, lines and releases;
 //   6. fold: hour rows over the last three days, day rows recomputed from scratch,
-//      appended rows past their watermarks, week rows advanced past `foldedThrough`
-//      (skill-usage-metrics DESIGN §5);
+//      appended rows past their watermarks, week rows advanced past `foldedThrough`;
 //   7. deliver the regenerated `.claudinite/local/usage.GENERATED.json` on a PR
 //      that lands itself where this repo's delivery settings allow (the shared
 //      landing helper owns those nuances — packs/claudinite-tasks/src/deliver/land-pr.mjs) — and
@@ -34,14 +33,9 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { deliverGenerated, baseTip, readAt, remoteUrl } from '../../public/delivery.mjs';
-import { AUTOMERGE_TRAILER, policyExpression } from '../../src/contract/merge-policy.mjs';
-import taskJson from './task.json' with { type: 'json' };
-import { normalizeTaskDeclaration } from '../../src/contract/task-contract.mjs';
+import { baseTip, readAt, remoteUrl } from '../../public/delivery.mjs';
+import { AUTOMERGE_TRAILER } from '../../src/contract/merge-policy.mjs';
 
-// The declaration as the loader sees it, defaults filled.
-const task = normalizeTaskDeclaration(taskJson);
 import {
   countEntries, foldUsage, encodeUsage, decodeUsage, mountedCorpus, DAY_WINDOW_DAYS,
 } from './fold-usage.mjs';
@@ -54,8 +48,9 @@ import { settingsPath } from '../../../../engine/settings-file.mjs';
 const BRANCH = 'conversation-logs';
 export const USAGE_PATH = '.claudinite/local/usage.GENERATED.json';
 
-const item = process.env.CLAUDINITE_ITEM || '';
-const log = (s) => console.log(`usage-fold${item ? ` [#${item}]` : ''}: ${s}`);
+// The run's own logger, under the task's name and its item. Module-level because the
+// helpers below log too; `worker` takes the one the runner built.
+let log = console.log;
 
 const git = (root, args) => execFileSync('git', ['-C', root, ...args], {
   encoding: 'utf8',
@@ -231,13 +226,9 @@ export function dayLadder(nowIso, days = DAY_WINDOW_DAYS) {
 
 // --- main ---------------------------------------------------------------------
 
-export async function main() {
-  const root = process.env.CLAUDINITE_REPO_ROOT || process.cwd();
-  const repo = process.env.CLAUDINITE_REPO || process.env.GITHUB_REPOSITORY;
-  const token = process.env.GITHUB_TOKEN;
-  const base = process.env.CLAUDINITE_DEFAULT_BRANCH || 'main';
-  if (!repo) throw new Error('CLAUDINITE_REPO / GITHUB_REPOSITORY is not set (owner/repo)');
-  if (!token) throw new Error('GITHUB_TOKEN is not set — the fold cannot read the logs branch or deliver its PR');
+export async function worker({ root, repo, token, defaultBranch, automerge, deliver, log: runLog }) {
+  log = runLog;
+  const base = defaultBranch ?? 'main';
   const remote = remoteUrl(repo, token);
 
   // No logs branch is no longer "nothing to do": the capture-derived half of the
@@ -322,22 +313,13 @@ export async function main() {
     return;
   }
 
-  const pr = await deliverGenerated({
-    root, repo, base, token, log,
-    // Which branch and pull request this fold lands on is the executor's decision
-    // (PRINCIPLES.md), handed in as environment — the lane has no discovery of its
-    // own and refuses a run that arrives without one.
-    branch: process.env.CLAUDINITE_TARGET_BRANCH || null,
-    pr: process.env.CLAUDINITE_TARGET_PR ? Number(process.env.CLAUDINITE_TARGET_PR) : null,
-    // Which task wrote this, stamped onto the branch commit and the merge commit:
-    // the fold's own delivery must read as machinery, never as the repo moving.
-    task: 'claudinite-tasks/usage-fold',
+  const pr = await deliver({
     files: { [USAGE_PATH]: text },
     // The arming trailer carries the task's own automerge, so the
     // automerge-policy-scope check re-measures this delivery's diff wherever the
     // PR's CI runs check_the_work — the code lane's equivalent of the agent
     // lane's stamp-before-merge.
-    message: `Claudinite: fold usage metrics\n\n${AUTOMERGE_TRAILER}: ${policyExpression(task.automerge)}`,
+    message: `Claudinite: fold usage metrics\n\n${AUTOMERGE_TRAILER}: ${automerge}`,
     title: 'Claudinite: usage fold',
     body: [
       `Regenerated \`${USAGE_PATH}\` from this repo's captured conversation logs, its`,
@@ -356,9 +338,4 @@ export async function main() {
     + `and ${prs.prs.length} merged PR(s) folded — `
     + `${pr.reused ? 'updated' : 'opened'} PR ${pr.number !== null ? `#${pr.number}` : `on ${pr.branch}`}`
     + `${pr.merged ? ' (landed)' : pr.delivery === 'review' ? ' (left for review)' : ''}`);
-}
-
-// Run only when invoked directly (code-work's `node worker.mjs`), never on import.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`usage-fold failed: ${e.message}`); process.exit(1); });
 }

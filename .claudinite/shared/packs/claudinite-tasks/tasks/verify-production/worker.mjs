@@ -14,7 +14,6 @@
 //              job by finding the fault, which is now that issue's), link it from
 //              the item, and exit clean.
 
-import { pathToFileURL } from 'node:url';
 import { humanTextOf } from '../../public/work-item-grammar.mjs';
 import { parseVerificationSpec, runProbes, renderResult } from './probes.mjs';
 import { getIssue, reopenIssue, comment as ghComment } from '../../src/world/github.mjs';
@@ -36,7 +35,7 @@ export async function fetchOnce(url) {
 
 // The whole judgment, injectable for tests: reads the item, parses the spec out
 // of the HUMAN half of its body (the machine block is the queue's), runs the
-// probes, and lands the verdict's writes. Returns what main() turns into markers
+// probes, and lands the verdict's writes. Returns what `worker` turns into the verdict
 // and an exit code.
 export async function runVerification({ gh, repo, itemNumber, fetchUrl, now = () => new Date(), log = console.log }) {
   const { status, json: item } = await getIssue(gh, repo, itemNumber);
@@ -74,26 +73,18 @@ export async function runVerification({ gh, repo, itemNumber, fetchUrl, now = ()
   return { outcome: 'fail', originalIssue: spec.originalIssue };
 }
 
-export async function main() {
-  const repo = process.env.CLAUDINITE_REPO;
-  const itemNumber = Number(process.env.CLAUDINITE_ITEM);
-  if (!repo || !itemNumber) throw new Error('CLAUDINITE_REPO / CLAUDINITE_ITEM not set — not running under the executor');
-  if (!process.env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN is not set — the verification cannot read its item');
-  const { makeGh } = await import('../../src/world/github.mjs');
-  const verdict = await runVerification({ gh: makeGh(), repo, itemNumber, fetchUrl: fetchOnce });
+export async function worker({ repo, item, gh }) {
+  const itemNumber = item.number;
+  const verdict = await runVerification({ gh, repo, itemNumber, fetchUrl: fetchOnce });
 
   if (verdict.outcome === 'invalid') {
-    console.log(`claudinite-needs-human: action — this verification's probe spec is unreadable: ${verdict.problems.join('; ')}`);
-    process.exit(1);
+    return { triage: { kind: 'action', detail: `this verification's probe spec is unreadable: ${verdict.problems.join('; ')}` } };
   }
+  // NOT YET LIVE is the third answer an exit code does not have: the run happened,
+  // found nothing wrong, and must come back when the release has landed.
   if (verdict.outcome === 'not-live') {
-    console.log(`claudinite-requeue: ${verdict.until} — ${verdict.reason}`);
-    return;
+    return { requeue: { until: verdict.until, reason: verdict.reason } };
   }
   console.log(`verification ${verdict.outcome === 'pass' ? 'passed' : `failed — reopened #${verdict.originalIssue}`}`);
-}
-
-// Run only when invoked directly (code-work's `node worker.mjs`), never on import.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`verify-production failed: ${e.message}`); process.exit(1); });
+  return undefined;
 }

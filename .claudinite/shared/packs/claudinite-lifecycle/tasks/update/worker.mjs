@@ -15,7 +15,7 @@
 // every member that could ask it; the `maintenance` block that held it is gone
 // (#1252) and `engine/served-by.mjs` is deprecated with it.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -107,20 +107,14 @@ export function updatePullText(terminal, { engine, packs }) {
 
 // --- I/O shell (validated by the live pilot, not unit tests) ----------------
 
-export async function main() {
-  const root = process.env.CLAUDINITE_REPO_ROOT || process.cwd();
-  const repo = process.env.CLAUDINITE_REPO || process.env.GITHUB_REPOSITORY;
-  const base = process.env.CLAUDINITE_DEFAULT_BRANCH || 'main';
-  const token = process.env.GITHUB_TOKEN;
-  const requestFile = process.env.CLAUDINITE_REQUEST_AGENT;
+export async function worker({ root, repo, defaultBranch, token, target }) {
+  const base = defaultBranch ?? 'main';
   // REHEARSAL MODE (the live canary): converge this repo against a NAMED canon ref,
   // report, and restore the working tree — no branch, no commit, no PR, and above
   // all no stamp. A stamped branch head would leave the canary pointing off trunk,
   // which is exactly what the next converge's anti-rewind guard refuses: a rehearsal
   // that wedges its own canary.
   const rehearsalRef = process.env.CLAUDINITE_CANON_REF || null;
-  if (!repo) { console.error('update: no repo (CLAUDINITE_REPO/GITHUB_REPOSITORY)'); process.exit(1); }
-  if (!token) { console.error('update: no GITHUB_TOKEN in env'); process.exit(1); }
 
   // Either settings-file name, in the rename's read order: this worker is VENDORED,
   // so the copy running on a member may predate the record that renamed its own
@@ -152,8 +146,8 @@ export async function main() {
   // on are gone with the window they were held for (#1698). A REHEARSAL is exempt —
   // it restores the tree and delivers nothing, and the canary gate drives this worker
   // with no executor at all.
-  const branch = process.env.CLAUDINITE_TARGET_BRANCH || null;
-  const targetPr = process.env.CLAUDINITE_TARGET_PR || null;
+  const branch = target.branch;
+  const targetPr = target.pr;
   if (!rehearsalRef && !branch) {
     console.error('claudinite-needs-human: action — this mount is too far behind to converge itself;'
       + ' re-baseline it against the canon');
@@ -202,7 +196,8 @@ export async function main() {
       git(['-C', root, 'clean', '-fd']);
       if (terminal.action === 'needs-human') {
         console.error(`update: rehearsing ${rehearsalRef} FAILED — ${terminal.why}`);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       console.log(`${REHEARSAL_MARKER} ${repo} against ${rehearsalRef} — ${terminal.action}: ${terminal.why}`);
       return;
@@ -288,19 +283,17 @@ export async function main() {
       // "reserve non-zero for genuine breakage" rule's genuine breakage: the
       // member is not converging and nothing else will say so.
       process.exitCode = 1;
-    } else if (terminal.action === 'apply-stage' && requestFile) {
-      writeFileSync(requestFile, `${JSON.stringify({
-        marker: 'agent-requested',
-        delivered: { branch, pr: pr.number, merged: false },
-        reason: { code: 'apply-stage', detail: terminal.why },
-      })}\n`);
+    } else if (terminal.action === 'apply-stage') {
       console.log(`update: requested the apply stage — ${terminal.why}`);
+      return {
+        requestAgent: {
+          delivered: { branch, pr: pr.number, merged: false },
+          reason: { code: 'apply-stage', detail: terminal.why },
+        },
+      };
     }
+    return undefined;
   } finally {
     removeTree(tmp);
   }
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`update failed: ${e.message}`); process.exit(1); });
 }

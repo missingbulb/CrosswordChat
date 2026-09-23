@@ -838,7 +838,7 @@ async function main() {
 
   const root = repoRoot();
   const { repo, defaultBranch } = actionRepoContext();
-  if (!repo) { console.error('GITHUB_REPOSITORY not set — not in an Actions context'); process.exit(1); }
+  if (!repo) { console.error('GITHUB_REPOSITORY not set - not in an Actions context'); process.exitCode = 1; return; }
   const config = loadConfig(root);
 
   console.log('## Claudinite scheduler run\n');
@@ -882,7 +882,7 @@ async function main() {
 // Run only when invoked directly (the workflow's `node run.mjs`), never on import.
 export { main as runSchedulerRun };
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(e); process.exit(1); });
+  main().catch((e) => { console.error(e); process.exitCode = 1; });
 }
 
 export { parseWorkItemTitle };

@@ -1,5 +1,5 @@
-// The machine-readable records a task's execution leaves in an Actions log
-// (skill-usage-metrics DESIGN §4.2), and the parsers that read them back.
+// The machine-readable records a task's execution leaves in an Actions log,
+// and the parsers that read them back.
 //
 // THE SINGLE HOME OF THE RECORD FORMATS. Every line shape the machinery prints
 // about its own work is rendered and parsed here — the two execution families
@@ -60,21 +60,10 @@ const LINE_RE = new RegExp(
 // One line → `{ pack, task, slotId, outcome }`, or null for anything that is not a
 // record of this version. Deliberately strict: an unknown outcome word is NOT a
 // record, because counting it would mint a counter key nothing ever reads.
-// The code phase has been renamed twice, and job logs outlive both renames:
-// `preprocess` (pre-2026-08-06) and `prework` (pre-2026-08-18) are the earlier
-// words for what is now `code-work`. Runs logged under either still parse, each
-// normalized straight to the canonical word.
-// Exported because the outcome words are also the usage aggregate's counter KEYS,
-// and that file holds rows written under the older words. Its decode renames them
-// by this same map, so a rename never silently drops a historical count.
-// @legacy-tolerance advisory:none retire:#1642
-export const LEGACY_TASK_RUN_OUTCOMES = Object.freeze({ preprocess: 'code-work', prework: 'code-work' });
-
 export function parseTaskRun(line) {
   const m = LINE_RE.exec(line);
   if (!m) return null;
-  const [, pack, task, slotId, word] = m;
-  const outcome = LEGACY_TASK_RUN_OUTCOMES[word] ?? word;
+  const [, pack, task, slotId, outcome] = m;
   if (!TASK_RUN_OUTCOMES.includes(outcome)) return null;
   return { pack, task, slotId, outcome };
 }

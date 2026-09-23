@@ -1,5 +1,5 @@
-// The logs-prune preprocessing entry point — the script the scheduler runs as
-// `node worker.mjs` (cwd = this task dir, bounded by code_work_timeout). The whole
+// The logs-prune work step - the module the runner calls `worker` on
+// (cwd = this task dir, bounded by code_work_timeout). The whole
 // task: no agent, no dispatch issue.
 //
 // It holds no decision logic: what is deletable is `prune-logs.mjs`, its sibling in
@@ -27,15 +27,15 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { DEFAULT_BRANCH } from '../../capture-log.mjs';
 import { planPrune, resolveRetentionDays } from './prune-logs.mjs';
 import { settingsPath } from '../../../../engine/settings-file.mjs';
 
 const PUSH_ATTEMPTS = 3;
 
-const item = process.env.CLAUDINITE_ITEM || '';
-const log = (s) => console.log(`logs-prune${item ? ` [#${item}]` : ''}: ${s}`);
+// The run's own logger, under the task's name and its item. Module-level because the
+// helpers below log too; `worker` takes the one the runner built.
+let log = console.log;
 
 const git = (root, args, opts = {}) => execFileSync('git', ['-C', root, ...args], {
   encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts,
@@ -78,12 +78,8 @@ function pushRemovals(root, { remote, tip, paths, message }) {
   } finally { rmSync(index, { force: true }); }
 }
 
-export async function main() {
-  const root = process.env.CLAUDINITE_REPO_ROOT || process.cwd();
-  const repo = process.env.CLAUDINITE_REPO || process.env.GITHUB_REPOSITORY;
-  const token = process.env.GITHUB_TOKEN;
-  if (!repo) throw new Error('CLAUDINITE_REPO / GITHUB_REPOSITORY is not set (owner/repo)');
-  if (!token) throw new Error('GITHUB_TOKEN is not set — the prune cannot read or write the logs branch');
+export async function worker({ root, repo, token, log: runLog }) {
+  log = runLog;
   const remote = `https://x-access-token:${token}@github.com/${repo}.git`;
 
   const declared = readRetentionDays(root);
@@ -129,9 +125,4 @@ export async function main() {
     log(`pruned ${plan.delete.length} of ${plan.logCount} capture(s), past ${retentionDays}d`);
     return;
   }
-}
-
-// Run only when invoked directly (the scheduler's `node worker.mjs`), never on import.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`logs-prune failed: ${e.message}`); process.exit(1); });
 }

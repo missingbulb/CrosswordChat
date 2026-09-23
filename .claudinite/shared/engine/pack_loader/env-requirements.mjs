@@ -3,8 +3,7 @@
 // cloud session needs but the base image doesn't ship, via an optional `env`
 // field on its pack.mjs. Driven by the repo's ACTIVE packs and the per-pack
 // parameters it supplies in .claudinite-settings.json (each pack entry's
-// `config`; loadConfig folds the legacy top-level "packConfig" into the same
-// view):
+// `config`, which loadConfig presents as the `packConfig` view):
 //
 //   node env.mjs install   Run every active pack's `setup` in the checkout. The
 //                          one generic environment-setup script — the web pack's,
@@ -128,6 +127,6 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
     await plan(projectRoot);
   } else {
     process.stderr.write('usage: env.mjs <install|check|plan>\n');
-    process.exit(2);
+    process.exitCode = 2;
   }
 }

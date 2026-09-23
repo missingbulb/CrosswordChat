@@ -3,8 +3,7 @@ import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { parseEntries, sessionTranscriptPaths } from './session-transcript.mjs';
 import { SHARED_SUBDIR, packEntryId } from '../../pack_loader/pack-registry.mjs';
-import { canonicalPackVersions } from '../../pack_loader/renamed-packs.mjs';
-import { SETTINGS_FILE, LEGACY_SETTINGS_FILE, settingsPath } from '../../settings-file.mjs';
+import { SETTINGS_FILE, settingsPath } from '../../settings-file.mjs';
 import { isVersion } from '../../version.mjs';
 
 function sh(root, cmd, args, { allowFail = false, input = undefined, timeout = undefined } = {}) {
@@ -157,12 +156,11 @@ function vendoredSet(root, files) {
 
 // The complete set of top-level settings the settings file may carry. A key
 // outside this set is a typo or a stale name — a settings error as real as invalid
-// JSON, caught at load so it can't silently change nothing. `packConfig` is the
-// legacy home of per-pack parameters — still honored while the fleet migrates to
-// pack-entry `config` (the converge folds it in), no longer documented. The
-// `pack-entry-config` baseline migration (engine/migrations/) documents the fold; the
-// key and the overlay below come out on #1640's window, after which a straggler gets
-// the unknown-setting error.
+// JSON, caught at load so it can't silently change nothing. Per-pack parameters
+// live on that pack's own `packs` entry as `config`; the top-level `packConfig` key
+// they came from was folded by the `pack-entry-config` baseline migration
+// (engine/migrations/) and stopped being read on #1640's window, so a straggler now
+// gets that unknown-setting error.
 // `engineVersion` is the engine version this repo's mount holds, written by the
 // update flows; a pack's installed version sits on that pack's own entry. Both were
 // a nested `claudinite` block until #1252, alongside an `updated` datetime and a
@@ -185,25 +183,20 @@ function vendoredSet(root, files) {
 // a parameter of the pack that owns that mechanism, declared on that pack's own entry,
 // and the engine neither validates it nor normalizes it. A repo declaring no scheduler
 // pack has none for the word to mean anything about.
-// `claudinite` and `maintenance` are the two retired blocks, tolerated on read so a
-// member that has not yet run the #1252 record still loads. LEGACY_CONFIG_KEYS is
-// what Phase 3 deletes.
-export const CONFIG_KEYS = ['packs', 'rules', 'accept', 'sharedConstants', 'packConfig',
+// The retired `claudinite` and `maintenance` blocks are no longer read (#1640), and
+// neither is the top-level `packConfig`: a member still carrying one now collects the
+// unknown-setting error below, which is the settings-validity gate doing the
+// enforcement the tolerance was standing in for.
+export const CONFIG_KEYS = ['packs', 'rules', 'accept', 'sharedConstants',
   'engineVersion', 'dailyClaudiniteUpdatesRequirePrReview', 'taskScheduler'];
 
-// Keys accepted on the way in and written by nothing. The first two are the retired
-// BLOCKS, whose content is folded into the current shape by the load below so nothing
-// downstream sees either name. `dormant` is here for a different reason: it was never
-// the engine's to fold, and its reader lives in the pack that owns the scheduler. It is
+// Keys accepted on the way in and written by nothing. `dormant` was never the
+// engine's to fold, and its reader lives in the pack that owns the scheduler. It is
 // listed only so a member still declaring it at the top level collects no
 // unknown-setting error while the migration record converges the fleet onto the pack
-// entry — which is why it retires on its own issue rather than with the blocks.
-// @legacy-tolerance advisory:legacy-shape-in-use retire:#1640
-export const LEGACY_CONFIG_KEYS = [
-  'claudinite', 'maintenance',
-  // @legacy-tolerance advisory:legacy-shape-in-use retire:#1846
-  'dormant',
-];
+// entry.
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#1846
+export const LEGACY_CONFIG_KEYS = ['dormant'];
 const KNOWN_CONFIG_KEYS = [...CONFIG_KEYS, ...LEGACY_CONFIG_KEYS];
 
 // The predicate this module used to own, kept ONLY for the pack-lane window. The engine
@@ -224,7 +217,7 @@ const KNOWN_CONFIG_KEYS = [...CONFIG_KEYS, ...LEGACY_CONFIG_KEYS];
 export const isDormant = (config) => config?.dormant === true;
 
 // The keys a `schedule` object may carry.
-const SCHEDULE_KEYS = ['dailyHour', 'weeklyDay', 'monthlyDay', 'dispatch', 'agenticTaskInvocationEndpoints', 'endpoints', 'disabledTasks'];
+const SCHEDULE_KEYS = ['dailyHour', 'weeklyDay', 'monthlyDay', 'dispatch', 'agenticTaskInvocationEndpoints', 'disabledTasks'];
 
 // The per-repo scheduling anchor, retired (#1995). A cadence now measures whole UTC
 // periods, and the scheduler workflow's own cron hours are derived from the repo name
@@ -238,10 +231,14 @@ export const RETIRED_SCHEDULE_KEYS = ['dailyHour', 'weeklyDay', 'monthlyDay'];
 
 // What the endpoint map is called. `endpoints` said nothing about WHICH endpoints —
 // a scheduler has several kinds it could mean — where these are exactly one thing:
-// the routine URLs a task's agentic phase is invoked through (#1252). The old
-// spelling is read while members carry it and written by nothing.
+// the routine URLs a task's agentic phase is invoked through (#1252).
 export const ENDPOINTS_KEY = 'agenticTaskInvocationEndpoints';
-// @legacy-tolerance advisory:legacy-shape-in-use retire:#1640
+
+// The retired spelling, no longer read anywhere (#1640). It stays exported because a
+// fielded pack version imports it by name, and an engine that reaches a member ahead
+// of that pack must not fault it at link time; it comes out with the other lane
+// shims (#1911).
+// @legacy-tolerance advisory:none retire:#1911
 export const LEGACY_ENDPOINTS_KEY = 'endpoints';
 
 // `taskScheduler.dispatch` chose between the slot scheduler and the work-item
@@ -278,17 +275,16 @@ export const PACK_ENTRY_KEYS = ['id', 'version', 'config', 'answers', 'rules', '
 // back to empty so the rest of a sweep still runs, with the error reported.
 //
 // The returned shape is NORMALIZED: `packs` is plain BARE ids (a local pack's
-// namespaced `local_packs/<id>` token resolves through packEntryId, so every
+// namespaced `local/<id>` token resolves through packEntryId, so every
 // downstream lookup — packEntries, the packConfig view — keys by the pack's
 // own id whichever form the file used), `rules` and `accept` are the top-level
 // and per-entry settings merged (an entry-sourced acceptance carries
 // `pack: <id>` as provenance; conflicting severity overrides are a settings
-// error), and `packConfig` is the per-pack parameter view — each entry's
-// `config`, overlaid on the legacy top-level key. Checks and env machinery
+// error), and `packConfig` is the per-pack parameter view, built from each
+// entry's `config`. Checks and env machinery
 // read this one shape regardless of which form the file used.
 export function loadConfig(root) {
   const path = settingsPath(root);
-  const name = path.endsWith(LEGACY_SETTINGS_FILE) ? LEGACY_SETTINGS_FILE : SETTINGS_FILE;
   const empty = { packs: [], packEntries: [], rules: {}, accept: [], sharedConstants: [], packConfig: {}, taskScheduler: null, engineVersion: null, packVersions: {}, dailyClaudiniteUpdatesRequirePrReview: false, raw: null, errors: [] };
   if (!existsSync(path)) return empty;
 
@@ -296,10 +292,10 @@ export function loadConfig(root) {
   try {
     raw = JSON.parse(readFileSync(path, 'utf8'));
   } catch (e) {
-    return { ...empty, errors: [{ what: `${name} is not valid JSON: ${e.message}`, fix: 'fix the JSON syntax' }] };
+    return { ...empty, errors: [{ what: `${SETTINGS_FILE} is not valid JSON: ${e.message}`, fix: 'fix the JSON syntax' }] };
   }
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { ...empty, errors: [{ what: `${name} must be a JSON object`, fix: 'wrap the settings in an object: { "packs": [ ... ] }' }] };
+    return { ...empty, errors: [{ what: `${SETTINGS_FILE} must be a JSON object`, fix: 'wrap the settings in an object: { "packs": [ ... ] }' }] };
   }
 
   const errors = [];
@@ -397,9 +393,9 @@ export function loadConfig(root) {
   }
 
   // --- packConfig view: per-pack parameters — e.g. the dirs a repo's
-  // package.json lives in for the node pack's env install. Entry `config` is
-  // the home; the legacy top-level key stays readable underneath it.
-  const packConfig = raw.packConfig && typeof raw.packConfig === 'object' && !Array.isArray(raw.packConfig) ? { ...raw.packConfig } : {};
+  // package.json lives in for the node pack's env install. A derived view keyed by
+  // pack id; each entry's own `config` is the one place it is declared.
+  const packConfig = {};
   for (const entry of packEntries) {
     if (entry.config !== undefined) packConfig[entry.id] = entry.config;
   }
@@ -435,7 +431,7 @@ export function loadConfig(root) {
       }
 
       const { dispatch } = raw.taskScheduler;
-      const endpoints = raw.taskScheduler[ENDPOINTS_KEY] ?? raw.taskScheduler[LEGACY_ENDPOINTS_KEY];
+      const endpoints = raw.taskScheduler[ENDPOINTS_KEY];
       if (dispatch !== undefined && !DISPATCH_MODES.includes(dispatch)) {
         errors.push({
           what: `"taskScheduler.dispatch" must be one of ${DISPATCH_MODES.join(', ')}, got ${JSON.stringify(dispatch)}`,
@@ -463,11 +459,9 @@ export function loadConfig(root) {
   }
 
   // --- the installed mount: the engine version this repo holds, and the version of
-  // each pack it has installed. The current home is the top-level `engineVersion`
-  // and each pack entry's own `version`; the retired `claudinite` block is read
-  // underneath for a member the #1252 record has not reached, and a pack renamed
-  // since that block was written still keys its version under the old spelling, so
-  // the legacy map is canonicalized before anything compares it.
+  // each pack it has installed - the top-level `engineVersion` and each pack entry's
+  // own `version`. The retired `claudinite` block that held both was read underneath
+  // until #1640; a member still carrying it now reads as having no mount.
   let engineVersion = null;
   if (raw.engineVersion !== undefined) {
     if (isVersion(raw.engineVersion)) engineVersion = raw.engineVersion;
@@ -477,15 +471,9 @@ export function loadConfig(root) {
         fix: 'leave it to the update flows, which write the version they installed',
       });
     }
-  } else if (isVersion(raw.claudinite?.engineVersion)) {
-    engineVersion = raw.claudinite.engineVersion;
   }
 
   const packVersions = {};
-  const legacyVersions = raw.claudinite?.packVersions;
-  if (legacyVersions && typeof legacyVersions === 'object' && !Array.isArray(legacyVersions)) {
-    Object.assign(packVersions, canonicalPackVersions(legacyVersions));
-  }
   for (const entry of packEntries) {
     if (entry.version !== undefined) packVersions[entry.id] = entry.version;
   }
@@ -494,8 +482,7 @@ export function loadConfig(root) {
   // anything else present is a typo the run must not read as "yes" or silently as
   // "no" — a wrong answer here is a PR merged unreviewed on a repo that asked for
   // review, or a repo's daily update stalled forever waiting for a human nobody
-  // told. The retired `maintenance.delivery` says the same thing the old way, and
-  // an unrecognised value THERE is equally an error rather than a default.
+  // told.
   let requirePrReview = false;
   if (raw.dailyClaudiniteUpdatesRequirePrReview !== undefined) {
     if (typeof raw.dailyClaudiniteUpdatesRequirePrReview === 'boolean') {
@@ -504,15 +491,6 @@ export function loadConfig(root) {
       errors.push({
         what: `"dailyClaudiniteUpdatesRequirePrReview" must be true or false, got ${JSON.stringify(raw.dailyClaudiniteUpdatesRequirePrReview)}`,
         fix: 'set it to true to leave this repo\'s update PR for a human, or remove the key',
-      });
-    }
-  } else if (raw.maintenance?.delivery !== undefined) {
-    const legacy = String(raw.maintenance.delivery).trim();
-    if (['review', 'pr'].includes(legacy)) requirePrReview = true;
-    else if (!['auto-merge', 'auto', 'push', ''].includes(legacy)) {
-      errors.push({
-        what: `the retired "maintenance.delivery" holds ${JSON.stringify(raw.maintenance.delivery)}, which is neither auto-merge nor review`,
-        fix: 'remove the "maintenance" block — set "dailyClaudiniteUpdatesRequirePrReview": true if this repo\'s update PR must wait for a human',
       });
     }
   }
@@ -525,11 +503,8 @@ export function loadConfig(root) {
     sharedConstants: Array.isArray(raw.sharedConstants) ? raw.sharedConstants : [],
     packConfig,
     taskScheduler,
-    // The installed mount, normalized from wherever this member happens to spell
-    // it: the top-level `engineVersion` and each entry's own `version`, falling
-    // back to the retired `claudinite` block for a member that has not run the
-    // #1252 record yet. Downstream reads ONE shape and never learns there were
-    // two — and omitting a declared key from this returned shape is the worst
+    // The installed mount: the top-level `engineVersion` and each entry's own
+    // `version`. Omitting a declared key from this returned shape is the worst
     // kind of bug, legal to write and impossible to read: it is what made the
     // stamp invisible to the scheduler and silently killed baselining fleet-wide,
     // every repo self-skipping as "no vendored mount" while its runs went green.
@@ -539,8 +514,7 @@ export function loadConfig(root) {
     // The harsh override, normalized to the boolean every caller asks for and named
     // exactly as the file names it — one spelling, so nothing has to learn that the
     // key and the field it loads into are different words. Absent is the normal
-    // shape and means the update PR lands on its own; the retired
-    // `maintenance.delivery: review` says the same thing the old way.
+    // shape and means the update PR lands on its own.
     dailyClaudiniteUpdatesRequirePrReview: requirePrReview,
     // The declaration exactly as the member wrote it. The engine normalizes what the
     // engine OWNS; a setting belonging to a pack is that pack's to read, and its

@@ -18,7 +18,7 @@
 // the prompt says which issue and which nonce, and the session validates both in
 // code before acting (PRINCIPLES.md).
 
-import { ENDPOINTS_KEY, LEGACY_ENDPOINTS_KEY } from '../../../../engine/checks/helpers/repo-context.mjs';
+import { ENDPOINTS_KEY } from '../../../../engine/checks/helpers/repo-context.mjs';
 import { secretValue } from './secrets-bag.mjs';
 
 export const DEFAULT_ENDPOINT = 'default';
@@ -64,10 +64,7 @@ export const DEFAULT_HEADERS = Object.freeze({
 // where the operator reads it, never a crash.
 export function resolveEndpoint(config, task) {
   const name = task?.decl?.invocation_endpoint ?? DEFAULT_ENDPOINT;
-  // Either spelling: `endpoints` was renamed to say WHICH endpoints these are
-  // (#1252), and a member writes its own settings, so the old key stays live until
-  // that member's own converge rewrites it.
-  const endpoints = config?.taskScheduler?.[ENDPOINTS_KEY] ?? config?.taskScheduler?.[LEGACY_ENDPOINTS_KEY] ?? {};
+  const endpoints = config?.taskScheduler?.[ENDPOINTS_KEY] ?? {};
   const entry = endpoints[name];
   if (!entry) {
     return { name, error: `this repo's settings declare no invocation endpoint "${name}" (taskScheduler.${ENDPOINTS_KEY})` };

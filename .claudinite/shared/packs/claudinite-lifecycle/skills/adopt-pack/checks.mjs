@@ -1,6 +1,6 @@
 import { finding } from '../../../../engine/checks/helpers/findings.mjs';
 import { interviewState } from '../adopt-claudinite/interview.mjs';
-import { SETTINGS_FILE, SETTINGS_FILES } from '../../../../engine/settings-file.mjs';
+import { SETTINGS_FILE } from '../../../../engine/settings-file.mjs';
 
 // The adoption-interview's ENFORCING half, sibling to adopt-claudinite's stale
 // advisory. Pending answers are a mild SessionStart note everywhere EXCEPT the
@@ -23,11 +23,7 @@ const rule = {
   why: 'a pack that asks the project for its intent is a no-op until answered, and the adding branch is where the owner is present to answer — so that is where the answer is required',
 
   run(work) {
-    // Either settings-file name (#1252): a member renames its own file on the
-    // converge that carries the record, and this check runs on the branch that
-    // ADDS a pack — which can be either side of that.
-    const pairs = SETTINGS_FILES.map((f) => work.jsonPair(f)).find((p) => p.head);
-    const { head, base } = pairs ?? {};
+    const { head, base } = work.jsonPair(SETTINGS_FILE);
     if (!head) return [];
     const baseIds = new Set(idsOf(base));
     const added = new Set(idsOf(head).filter((id) => !baseIds.has(id)));

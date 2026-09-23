@@ -14,14 +14,11 @@
 // the PR taxonomy (PRINCIPLES.md) and are not judged here — the caller passes only
 // what the task did to PULL REQUESTS.
 
-import { LEGACY_OUTCOMES, canonicalOutcome, opensPullRequest } from '../contract/task-contract.mjs';
+import { canonicalOutcome, opensPullRequest } from '../contract/task-contract.mjs';
 import { normalizePolicy } from '../contract/merge-policy.mjs';
 
 // Verify what a task actually did against its declared ceiling.
-//   outcome      — the declared outcome (any of `OUTCOMES`; the retired `none`,
-//                  `pr`, `open-pr` and `merged-pr` are judged as what they
-//                  normalize to, so a fielded caller passing a raw declaration
-//                  stays correct)
+//   outcome      - the declared outcome, one of `OUTCOMES`
 //   automerge — the declared merge policy; absent reads as 'nothing', and an
 //                  unparsable one the same — a permission that cannot be read
 //                  was never granted
@@ -29,9 +26,8 @@ import { normalizePolicy } from '../contract/merge-policy.mjs';
 //   mergedPr     — did the run merge (or arm auto-merge on) a pull request?
 // Returns { ok, violation } — violation is null when within the ceiling.
 export function verifyOutcome({ outcome, automerge, openedPr = false, mergedPr = false }) {
-  const legacyPolicy = LEGACY_OUTCOMES[outcome];
   const ceiling = canonicalOutcome(outcome);
-  const policy = automerge ?? legacyPolicy ?? 'nothing';
+  const policy = automerge ?? 'nothing';
   if (!ceiling) {
     return { ok: false, violation: `unknown outcome ceiling "${outcome}"` };
   }

@@ -24,7 +24,6 @@
 // It ends with a HEALTH REVIEW: one line per open dispatch state, so the run
 // log answers "how is the task machinery doing" at a glance.
 
-import { pathToFileURL } from 'node:url';
 import {
   staleDispatchIssues, staleEscalationComment, staleClaimedDispatchIssues, staleClaimComment,
   claimedDispatchIssues,
@@ -32,12 +31,12 @@ import {
   SCHEDULER_LABELS,
 } from '../../src/session/dispatch.mjs';
 import { lastLivenessAt } from '../../src/items/heartbeat.mjs';
-import { makeGh } from '../../src/world/github.mjs';
 import { ensureLabels } from '../../src/world/github.mjs';
 import { searchIssues, comment, addLabel, removeLabel, listComments } from '../../src/world/github.mjs';
 
-const item = process.env.CLAUDINITE_ITEM || '';
-const log = (s) => console.log(`task-janitor${item ? ` [#${item}]` : ''}: ${s}`);
+// The run's own logger, under the task's name and its item. Module-level because the
+// helpers below log too; `worker` takes the one the runner built.
+let log = console.log;
 
 // Every OPEN dispatch issue in the repo, with the labels / age / comment count
 // the rules read. Repo-wide and open-only — the scheduler's own per-family
@@ -119,24 +118,16 @@ export async function sweep(gh, repo, now) {
 // find nothing in one of them and a janitor that ran the wrong one would find
 // nothing at all — and report a clean bill of health either way. One repo, one
 // mechanism, one sweep.
-export async function main() {
-  const repo = process.env.CLAUDINITE_REPO || process.env.GITHUB_REPOSITORY;
-  if (!repo) throw new Error('CLAUDINITE_REPO / GITHUB_REPOSITORY is not set (owner/repo)');
-  if (!process.env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN is not set — the janitor cannot read or write issues');
-  const root = process.env.CLAUDINITE_REPO_ROOT || process.cwd();
+export async function worker({ root, repo, gh, log: runLog }) {
+  log = runLog;
   const { loadConfig } = await import('../../../../engine/checks/helpers/repo-context.mjs');
   const config = loadConfig(root);
   const { sweepQueue } = await import('./queue-sweep.mjs');
   const { discoverTasks } = await import('../../src/contract/discover.mjs');
   const { tasks } = await discoverTasks(root, config);
-  await sweepQueue(makeGh(), repo, new Date(), { tasks, log });
+  await sweepQueue(gh, repo, new Date(), { tasks, log });
   // The slot dispatch-issue sweep still runs BESIDE the queue's: the slot scheduler
   // is retired (#974) but the `[claudinite-task]` issues its last runs filed are
   // still open in members, and nothing else closes them out.
-  await sweep(makeGh(), repo, new Date());
-}
-
-// Run only when invoked directly (code-work's `node worker.mjs`), never on import.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((e) => { console.error(`task-janitor failed: ${e.message}`); process.exit(1); });
+  await sweep(gh, repo, new Date());
 }

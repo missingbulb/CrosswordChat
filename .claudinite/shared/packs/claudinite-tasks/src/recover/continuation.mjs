@@ -65,5 +65,5 @@ export async function runExecutorContinuation() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runExecutorContinuation().catch((e) => { console.error(e.message ?? e); process.exit(1); });
+  runExecutorContinuation().catch((e) => { console.error(e.message ?? e); process.exitCode = 1; });
 }

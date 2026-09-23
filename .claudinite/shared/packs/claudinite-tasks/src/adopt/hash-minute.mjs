@@ -85,7 +85,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const fullName = process.argv[2];
   if (!fullName) {
     process.stderr.write('usage: node hash-minute.mjs <owner/repo>\n');
-    process.exit(2);
+    process.exitCode = 2;
+  } else {
+    process.stdout.write(`${hashedMinute(fullName)}\n`);
   }
-  process.stdout.write(`${hashedMinute(fullName)}\n`);
 }

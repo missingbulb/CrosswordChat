@@ -82,5 +82,5 @@ export async function runWorkflowFailureReport() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runWorkflowFailureReport().catch((e) => { console.error(e); process.exit(1); });
+  runWorkflowFailureReport().catch((e) => { console.error(e); process.exitCode = 1; });
 }

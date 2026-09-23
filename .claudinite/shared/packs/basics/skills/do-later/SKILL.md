@@ -1,6 +1,6 @@
 ---
 name: do-later
-description: File a change to be made AFTER the work in flight — a well-defined issue, marked for the queue and blocked behind the current PR/issue and behind the previous deferral, so repeated asks chain. Use when the owner says "/do-later …", "do this after this lands", or otherwise defers a change instead of derailing the session.
+description: File a change to be made AFTER the work in flight — a well-defined issue, marked `task:origin:ad-hoc` and blocked behind the current PR/issue and behind the previous deferral, so repeated asks chain. Use when the owner says "/do-later …", "do this after this lands", or otherwise defers a change instead of derailing the session.
 metadata:
   body: workflow
   usage:

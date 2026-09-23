@@ -4,6 +4,6 @@
   "description": "The queue's coded verification lane: runs the declarative probes a verification issue carries against their public URLs, where egress exists, and judges the result as code.",
   "trigger": "request",
   "expected_outcome": "no_code_changes",
-  "code_work": "node worker.mjs",
+  "code_worker_mjs": "worker.mjs",
   "code_work_timeout": 600
 }

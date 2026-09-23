@@ -164,7 +164,7 @@ enumerated. Expect a form check to fire on something that breaks the form while 
 that's the rule as written doing its job, not a reason to re-add intent-guessing.
 
 When even a scoped parser can't make detection confident, **leave the prose and log the
-candidate** to a tagged conversion-backlog issue rather than shipping a shaky check.
+candidate** to an issue marked `task:origin:ad-hoc` rather than shipping a shaky check.
 
 ## Coming out: the deletion test
 

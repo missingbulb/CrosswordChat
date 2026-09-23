@@ -1,9 +1,9 @@
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
 import { stripComments } from '../../../engine/checks/helpers/code-scanning.mjs';
-import { ACCEPTED_FREQUENCIES, cadenceTermFor, cadenceOf } from '../src/contract/calendar.mjs';
+import { FREQUENCIES, CADENCES, scheduleTermFor, cadenceTermFor, cadenceOf } from '../src/contract/calendar.mjs';
 import { MODEL_FAMILIES } from '../src/contract/model-map.mjs';
 import {
-  OUTCOMES, LEGACY_OUTCOMES, LEGACY_CEILINGS, OUTCOME_NO_PR, DEFAULT_AGENT_MODEL, descriptionProblem, normalizeTaskDeclaration,
+  OUTCOMES, OUTCOME_NO_PR, DEFAULT_AGENT_MODEL, descriptionProblem, normalizeTaskDeclaration,
   TRIGGERS, TRIGGER_SCHEDULE, TRIGGER_REQUEST,
 } from '../src/contract/task-contract.mjs';
 import { validatePreconditions, termsMap, preconditionNeedsItem } from '../src/contract/precondition-policy.mjs';
@@ -77,17 +77,18 @@ const rule = {
         if (v === null) flag(`declares no "${key}"`, `add "${key}": one of ${legal.join(', ')}`);
         else if (!legal.includes(v)) flag(`"${key}" is "${v}", not a legal value`, `use one of: ${legal.join(', ')}`);
       };
-      // `frequency` is retired (docs/PRINCIPLES.md): the cadence is a condition
-      // in `preconditions`, and the door reads the field as exactly that term. ADVISORY
-      // for the same reason as every rename below — the file keeps working, and the
-      // nightly update rewrites a member's own — so what blocks is only a declaration
-      // that states no "when" at all.
-      const legacyFrequency = str('frequency');
+      // `frequency` is retired (docs/PRINCIPLES.md): the cadence is a condition in
+      // `preconditions`, and nothing reads the field any more. BLOCKING, unlike the
+      // renames below, because the runtime contract rejects it too - a declaration
+      // carrying it no longer runs, so saying so at author time is the whole point.
+      // Flagged by NAME rather than left unrecognised, so its author is told the term
+      // to write instead of reading as a task that simply forgot its cadence.
       if (decl.has('frequency')) {
-        const term = ACCEPTED_FREQUENCIES.includes(legacyFrequency) ? cadenceTermFor(legacyFrequency) : 'due:<daily|weekly|monthly>';
-        advise('declares the retired field "frequency"', term === null
-          ? 'drop the field, and a "none" beside it: "manual" meant no schedule, which a declaration says by stating no "preconditions" at all'
-          : `write it as the first condition — "preconditions": [${JSON.stringify(term)}, …] — and drop a "none" beside it; the field reads as exactly that today`);
+        const declared = str('frequency');
+        const term = FREQUENCIES.includes(declared) ? cadenceTermFor(declared) : scheduleTermFor(`<${CADENCES.join('|')}>`);
+        flag('declares "frequency", which is retired', term === null
+          ? 'drop the field, and a "none" beside it, and write "trigger": "request" - "manual" meant no schedule at all'
+          : `write the cadence as a condition - "preconditions": [${JSON.stringify(term)}, …] - with "trigger": "schedule" beside it, and drop a "none"`);
       }
       // `trigger` says whether the scheduler asks this task at every tick, and is
       // REQUIRED: nothing derives it from the shape of the conditions any more, so a
@@ -129,26 +130,15 @@ const rule = {
       }
       const model = declaredModel ?? DEFAULT_AGENT_MODEL;
 
-      // expected_outcome takes the ceiling/policy split, with the retired
-      // one-word ceilings an ADVISORY rename like the code-work names below:
-      // the runtime normalizes them at the door forever, so a member's vendor
-      // refresh must not turn its CI red over a declaration nobody edited.
+      // expected_outcome takes the ceiling/policy split.
       const outcome = str('expected_outcome');
       const hasMayAutomerge = decl.has('automerge');
       if (outcome === null) {
         flag('declares no "expected_outcome"', `add "expected_outcome": one of ${OUTCOMES.join(', ')}`);
-      } else if (LEGACY_OUTCOMES[outcome] !== undefined) {
-        advise(`declares the legacy outcome ceiling "${outcome}"`,
-          `write the pair it normalizes to: "expected_outcome": "fresh_pr", "automerge": "${LEGACY_OUTCOMES[outcome]}" — and consider a narrower policy than "${LEGACY_OUTCOMES[outcome]}" (a list of diff classes, e.g. ["comment-only-changes"])`);
-      } else if (LEGACY_CEILINGS[outcome] !== undefined) {
-        advise(`declares the legacy outcome ceiling "${outcome}"`,
-          `write the word it became: "expected_outcome": "${LEGACY_CEILINGS[outcome]}" — the same behaviour, in the vocabulary that also offers amend_existing_or_create_new_pr and supersede_existing_pr`);
       } else if (!OUTCOMES.includes(outcome)) {
         flag(`"expected_outcome" is "${outcome}", not a legal value`, `use one of: ${OUTCOMES.join(', ')}`);
       }
-      // Judged on the word the door normalizes to, so the retired `none` gets the
-      // same verdict as today's spelling beside its rename advisory.
-      if (outcome !== null && (LEGACY_CEILINGS[outcome] ?? outcome) === OUTCOME_NO_PR && hasMayAutomerge) {
+      if (outcome === OUTCOME_NO_PR && hasMayAutomerge) {
         flag(`a "${OUTCOME_NO_PR}" task declares "automerge"`, 'drop it — a task that opens no pull request has nothing to merge; or set expected_outcome: "fresh_pr"');
       }
 
@@ -178,80 +168,51 @@ const rule = {
         flag('declares "precondition_signals", which is retired', 'drop it — the signal union is derived from the conditions, each of which names what it reads');
       }
       // What must hold for a run, and OPTIONAL: a declaration stating none requires
-      // nothing, and every occurrence of it runs. A retired `frequency` reads exactly
-      // as the door reads it, cadence term first and a `none` beside it dropped — and
-      // the expression is judged term by term.
-      if (decl.has('preconditions') || decl.has('frequency')) {
+      // nothing, and every occurrence of it runs. The expression is judged term by term.
+      if (decl.has('preconditions')) {
         // Deliberately strict: a declaration whose trigger is computed cannot be
         // audited by anyone reading it, which is the whole reason the field is data.
-        const stated = decl.has('preconditions') ? decl.list('preconditions') : [];
+        const stated = decl.list('preconditions');
         if (stated === null) {
           flag('"preconditions" is not a literal list of condition strings', 'write it as a literal, e.g. "preconditions": ["due:daily", "substantive-change"] — a computed expression is unreadable to this check and to the next person');
         } else {
-          const expression = normalizeTaskDeclaration({ preconditions: stated, ...(decl.has('frequency') ? { frequency: legacyFrequency } : {}) }).preconditions;
+          const expression = normalizeTaskDeclaration({ preconditions: stated }).preconditions;
           for (const problem of validatePreconditions(expression, siblingTerms(ctx, file))) flag(problem.what, problem.fix);
         }
       }
 
-      // The code-work/timeout guards (docs/PRINCIPLES.md). TWO generations of
-      // legacy field names still satisfy the contract — the loader normalizes both —
-      // but each earns its own rename finding so the fleet converges on the
-      // canonical names.
-      const LEGACY_CODE_WORK = [
-        { field: 'agent_preprocessing', timeout: 'agent_preprocessing_timeout' },
-        { field: 'prework', timeout: 'prework_timeout' },
-      ];
-      const legacyDeclared = LEGACY_CODE_WORK.filter(({ field }) => str(field) !== null);
-      const hasCodeWork = str('code_work') !== null || legacyDeclared.length > 0;
-      for (const { field, timeout } of legacyDeclared) {
-        // ADVISORY, deliberately, on a blocking rule: the legacy names still
-        // satisfy the runtime contract (normalized at load), and a member's
-        // vendor refresh must not turn its CI red over files nothing has renamed
-        // yet. This finding IS the durable driver of the rename — it names the
-        // exact edit and does not age out, which is why neither rename ships a
-        // migration note.
-        advise(`declares code_work under the legacy name "${field}"`,
-          `rename "${field}" → "code_work" and "${timeout}" → "code_work_timeout" (the two phases of task execution are code-work, then agentic-work — neither is named for the other)`);
-      }
-      // The ordering field's rename. ADVISORY for the same reason as the code-work rename above:
-      // the runtime normalizes it at the door, so a member's own task file keeps working and its
-      // CI must not go red over a declaration nobody has edited. Worth making because the bare
-      // preposition invited reading the field as a time — it is not one; it names task ids, and
-      // what it steers is when the item is scheduled onto an executor.
-      // The secrets field's rename, advisory for the same reason: the door normalizes
-      // it, and only the name changed — the secrets are the code-work phase's.
-      if (decl.has('required_secrets')) {
-        advise('declares its secrets under the legacy name "required_secrets"',
-          'rename "required_secrets" to "code_work_required_secrets" — the secrets are what the code-work phase, the one that runs Action-side, is handed');
-      }
-      if (decl.has('after')) {
-        advise('declares its ordering under the legacy name "after"',
-          'rename "after" to "schedule_after" (it names task ids, not a time — what it steers is when this item is scheduled onto an executor)');
-      }
-      // `session_scope` lost its last reader with the slot scheduler (#974): the
-      // queue routes a hand-off by `invocation_endpoint`, and nothing anywhere
-      // asks a task what its scope is. ADVISORY, like the code-work rename above and
-      // for the same reason — the field still VALIDATES, so a member's vendor
-      // refresh must not turn its CI red over a declaration nobody has edited yet;
-      // this only keeps the dead field visible until it is dropped.
-      if (str('session_scope') !== null) {
-        advise('declares "session_scope", which nothing reads',
-          'drop it — reach is a property of which endpoint the hand-off calls, so a task needing wider access declares "invocation_endpoint": <a key in the repo\'s taskScheduler.agenticTaskInvocationEndpoints> instead');
-      }
+      // The code-work/timeout guards (docs/PRINCIPLES.md). Either form of the work
+      // step: the runtime contract reads both through `declaresCodeWork`, and a check
+      // watching one of two structurally-identical surfaces reads as strictness on
+      // the other.
+      const hasCodeWork = str('code_work') !== null || str('code_worker_mjs') !== null;
       // No default for the bound: a running agent always has one.
       if (model !== 'none' && !hasNum('agent_execution_timeout')) {
         flag('an agentic task (agent_model !== "none") declares no numeric "agent_execution_timeout"', 'add "agent_execution_timeout": seconds bounding the agentic run');
       }
       if (model === 'none' && !hasCodeWork) {
-        flag('an agentless task (agent_model: "none") declares no "code_work"', 'add "code_work" (a none task does its work in that subprocess) — or give the task an agent_model');
+        flag('an agentless task (agent_model: "none") declares no work step', 'add "code_worker_mjs" (a none task does its work in that subprocess) - or give the task an agent_model');
+      }
+      if (str('code_work') !== null && str('code_worker_mjs') !== null) {
+        flag('both "code_work" and "code_worker_mjs" are declared', 'keep one - "code_worker_mjs" for a module the runner wraps, "code_work" for a command it only spawns');
+      }
+      const workerModule = str('code_worker_mjs');
+      if (workerModule !== null) {
+        if (/\s/.test(workerModule)) {
+          flag('"code_worker_mjs" is a command rather than a file name', 'name the module alone, e.g. "worker.mjs" - the runner supplies the node invocation');
+        } else if (!workerModule.endsWith('.mjs')) {
+          flag('"code_worker_mjs" does not name a .mjs module', 'the runner imports it and calls its `worker` export, so it is an ES module beside task.json');
+        } else if (/(^|\s)\//.test(workerModule) || workerModule.includes('..')) {
+          flag('"code_worker_mjs" reaches outside the task directory (absolute path or "..")', 'name a sibling module only, e.g. "worker.mjs"');
+        }
       }
       if (hasCodeWork) {
-        const prep = LEGACY_CODE_WORK.reduce((found, { field }) => found ?? str(field), str('code_work'));
+        const prep = str('code_work');
         if (prep && (/(^|\s)\//.test(prep) || prep.includes('..'))) {
           flag('"code_work" reaches outside the task directory (absolute path or "..")', 'reference a sibling script only, e.g. "node prepare.mjs"');
         }
-        if (!hasNum('code_work_timeout', ...LEGACY_CODE_WORK.map(({ timeout }) => timeout))) {
-          flag('"code_work" is set but declares no numeric "code_work_timeout"', 'add "code_work_timeout": seconds after which the subprocess is killed');
+        if (!hasNum('code_work_timeout')) {
+          flag('a work step is declared but no numeric "code_work_timeout" is', 'add "code_work_timeout": seconds after which the subprocess is killed');
         }
       }
     }

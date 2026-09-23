@@ -1,6 +1,6 @@
 ---
 name: backfilling-provenance
-description: Filling a pack's empty provenance files from its history - each entry derived from the adding commit, its pull request and the version log before the rule is re-read, every commit that touched the pack weighed whether or not a draft covers it, and the README and manifest trimmed to use in the same change. Use when a pack under packs/ or .claudinite/local/packs/ carries empty provenance files, or when asked to backfill or write a pack's provenance.
+description: Filling a pack's empty provenance files from its history. Use when a pack under packs/ or .claudinite/local/packs/ carries empty provenance files, or when asked to backfill or write a pack's provenance.
 metadata:
   body: workflow
   usage:
@@ -36,14 +36,18 @@ so the sections it prints without a draft under them are the run's work, not its
    where the brief's derivation looks wrong. A shallow clone reads as no history: unshallow
    before trusting an empty brief.
 
-   Three things the brief hands over rather than answering, each printed where it arises.
+   Four things the brief hands over rather than answering, each printed where it arises.
    **The issues a commit references** are listed beside the defaults fence and never written
    into `Landed`: the trailer's keyword is the branch author's and the pull request body's is
    usually a different one, `Closes` being what fills GitHub's Development panel where `Refs`
    links nothing there - so read the body and write that keyword. **An element older than the
-   carrier it sits in** gets its own section: the birth is drafted at the earlier carrier the
-   pickaxe found and the later commit re-read as the move or conversion it is, which is a
+   carrier it sits in** gets its own section: the birth is drafted at the earlier carrier that
+   held its text and the later commit re-read as the move or conversion it is, which is a
    derivation to verify against the old path (`git show <sha>:<old path>`), not to trust.
+   **A birth the search could not go behind** gets another: the element's text is nowhere
+   earlier, but a listing named it before its carrier did or the birth commit took text out
+   of another carrier - so the drafted birth is an assumption, and an element reworded on its
+   way across is exactly what no text search can follow. Read the evidence named beside each.
    **A pack that has moved** says so under the header, and its inventory covers every path it
    has lived at, so rows naming a file in full are from before the move.
 3. **Work the commit inventory before the drafts.** The drafts cover what a carrier's own

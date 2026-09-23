@@ -2,11 +2,11 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60922.3"
+      "version": "60923.1"
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60922.5"
+      "version": "60923.1"
     },
     {
       "id": "git-github",
@@ -14,7 +14,7 @@
     },
     {
       "id": "chrome-extension",
-      "version": "60922.2"
+      "version": "60922.4"
     },
     {
       "id": "node",
@@ -33,12 +33,12 @@
     },
     {
       "id": "claudinite-growth",
-      "version": "60922.4"
+      "version": "60923.2"
     },
     "local/crossword-chat",
     {
       "id": "claude-code-web-users-support",
-      "version": "60921.2",
+      "version": "60922.2",
       "config": {
         "repo": "missingbulb/Shepherd"
       },
@@ -48,7 +48,7 @@
     },
     {
       "id": "claudinite-tasks",
-      "version": "60922.4"
+      "version": "60923.1"
     },
     {
       "id": "web-speech",

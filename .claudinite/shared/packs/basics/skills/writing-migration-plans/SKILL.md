@@ -1,6 +1,6 @@
 ---
 name: writing-migration-plans
-description: Where a plan and a design live, and how to order a plan's phases so nothing stalls mid-run — the plan is a tracking issue (never a plan document in the repo), the design doc carries only the end state with rationale and alternatives; front-load the out-of-band setup, write ALL the code including the cleanup and take one approval for the stack, get the owner's approval of the plan itself — a line per step, the dependency graph, each link's automerge policy — before filing any of its issues, then chain every execution step to the verification of the one before it as a queued continuation, size the links (how many PRs, what each one's diff is predicted to touch and the automerge policy that prediction becomes) and write the chain to survive a policy park, a red CI or a PR closed unmerged, and keep the tracking issue append-only while implementing. Use BEFORE writing any DESIGN.md, migration plan, phased implementation plan, rollout or cutover plan — including the moment you are about to create a docs/<initiative>/ file — when asked to run a plan as a chain of ad-hoc tasks, and when working through a plan's tracking issue.
+description: How a plan's phases are ordered so nothing stalls mid-run. Use BEFORE writing any DESIGN.md, migration plan, phased implementation plan, rollout or cutover plan (including the moment you are about to create a docs/<initiative>/ file), when asked to run a plan as a chain of ad-hoc tasks, and when working through a plan's tracking issue.
 metadata:
   body: workflow
   usage:
@@ -174,7 +174,7 @@ below sets out.
 
 Everything after the approval is a run that arms the next run. The mechanism is the queue's own
 ad-hoc lane — the one `/do-later` and `verify-in-production` file into — and nothing here adds
-machinery beside it: an ordinary issue, marked for the queue, carrying its own brief.
+machinery beside it: an ordinary issue, marked `task:origin:ad-hoc`, carrying its own brief.
 
 **File the whole chain once the plan is approved** (above), not as each step falls due. One issue per
 execution step, each naming the previous in `Blocked-by:`, so the queue does the waiting: a

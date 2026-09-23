@@ -18,7 +18,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { hashedCron, isSchedulerCron } from './hash-minute.mjs';
-import { loadConfig, ENDPOINTS_KEY, LEGACY_ENDPOINTS_KEY } from '../../../../engine/checks/helpers/repo-context.mjs';
+import { loadConfig, ENDPOINTS_KEY } from '../../../../engine/checks/helpers/repo-context.mjs';
 import { actionsEnv, repoRoot } from '../world/actions.mjs';
 
 export const SCHEDULER_WORKFLOW = '.github/workflows/claudinite-scheduler.yml';
@@ -32,7 +32,7 @@ export const EXECUTOR_WORKFLOW = '.github/workflows/claudinite-executor.yml';
 // exactly as a `code_work_required_secrets` entry. The executor reads it only at the
 // moment of the invocation call; nothing else in a task's life ever sees it.
 export function endpointTokenSecrets(config) {
-  return Object.values(config?.taskScheduler?.[ENDPOINTS_KEY] ?? config?.taskScheduler?.[LEGACY_ENDPOINTS_KEY] ?? {})
+  return Object.values(config?.taskScheduler?.[ENDPOINTS_KEY] ?? {})
     .map((e) => e?.tokenSecret).filter((n) => typeof n === 'string' && n);
 }
 
@@ -160,11 +160,11 @@ export function stubsDir(root) {
 export async function runConvergeWorkflows() {
   const argv = process.argv.slice(2);
   const fullName = argv.find((a) => !a.startsWith('--')) || actionsEnv().GITHUB_REPOSITORY || actionsEnv().CLAUDINITE_REPO;
-  if (!fullName) { console.error('converge-workflows: need owner/repo (argv or GITHUB_REPOSITORY)'); process.exit(1); }
+  if (!fullName) { console.error('converge-workflows: need owner/repo (argv or GITHUB_REPOSITORY)'); process.exitCode = 1; return; }
   const root = actionsEnv().CLAUDINITE_REPO_ROOT || repoRoot();
   const stubs = stubsDir(root);
   const stubPath = join(stubs, 'claudinite-scheduler.yml');
-  if (!existsSync(stubPath)) { console.error(`converge-workflows: vendored stub not found at ${stubPath}`); process.exit(1); }
+  if (!existsSync(stubPath)) { console.error(`converge-workflows: vendored stub not found at ${stubPath}`); process.exitCode = 1; return; }
   const executorPath = join(stubs, 'claudinite-executor.yml');
   const config = loadConfig(root);
   const { changed } = convergeWorkflows(root, fullName, {

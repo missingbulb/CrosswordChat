@@ -18,6 +18,7 @@
 //    one place that can tell "unset" from "empty", and the item converges to
 //    triage naming exactly which one is missing.
 
+import { fileURLToPath } from 'node:url';
 import { runCodeWork, codeWorkFailure, agentRequestPath, clearAgentRequest, agentRequested, readAgentRequest, readTriageMarker, readRequeueMarker } from './code-work.mjs';
 import { SECRETS_BAG_ENV, secretsBag, secretValue, secretsFor } from '../world/secrets-bag.mjs';
 import { VARS_BAG_ENV, varsEnv } from '../world/vars-bag.mjs';
@@ -82,6 +83,21 @@ export const CODE_WORK_ENV_VARS = Object.freeze(
   Object.keys(codeWorkEnv({ task: { pack: '', id: '' }, item: { number: 0 }, requestPath: '' })),
 );
 
+// The command this phase actually spawns. A `code_work` declaration IS the command;
+// a `code_worker_mjs` one names a module, and the command is the runner's own entry
+// point around it - which is the whole point of the field: the wrapping is ours to
+// write once rather than every worker's to re-implement (worker-entry.mjs).
+//
+// The entry point is addressed absolutely because the subprocess runs with the TASK
+// directory as cwd, and it is resolved from this module's own URL so the path holds
+// wherever the pack is mounted. Both parts are quoted: the command goes through a
+// shell, and a checkout path can carry a space.
+export function codeWorkCommand(decl) {
+  if (decl.code_worker_mjs === undefined) return decl.code_work;
+  const entry = fileURLToPath(new URL('./worker-entry.mjs', import.meta.url));
+  return `node "${entry}" "${decl.code_worker_mjs}"`;
+}
+
 export function codeWorkRunner({ root, repo, defaultBranch, env = actionsEnv() }) {
   return async function runFor(task, { item, context = [], target = null }) {
     const missing = missingSecrets(task.decl.code_work_required_secrets ?? [], env);
@@ -91,7 +107,7 @@ export function codeWorkRunner({ root, repo, defaultBranch, env = actionsEnv() }
     clearAgentRequest(requestPath);
 
     console.log(`::group::code_work ${task.pack}/${task.id} [#${item.number}]`);
-    const result = await runCodeWork(task.decl.code_work, {
+    const result = await runCodeWork(codeWorkCommand(task.decl), {
       taskDir: task.taskDir,
       env: { ...taskEnv(task.decl.code_work_required_secrets ?? [], env), ...codeWorkEnv({ root, repo, defaultBranch, task, item, context, requestPath, target }) },
       timeoutSeconds: task.decl.code_work_timeout,

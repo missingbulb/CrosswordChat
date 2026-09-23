@@ -128,6 +128,6 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
     });
   } else {
     process.stderr.write('usage: interview.mjs check\n');
-    process.exit(2);
+    process.exitCode = 2;
   }
 }

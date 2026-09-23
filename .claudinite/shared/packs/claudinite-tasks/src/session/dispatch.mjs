@@ -17,20 +17,26 @@ import { NEEDS_HUMAN } from '../../public/task-constants.mjs';
 // converges to (PRINCIPLES.md lifecycle). Kept here as the shared source for the
 // scheduler side; the executor reuses these plus `agent-running`.
 export const READY_LABEL = 'ready-for-agent';
-// A fleet-scoped task (session_scope: 'fleet') dispatches to a DISTINCT ready
-// label so a separate, broader-scoped executor routine runs it — keeping the
-// fleet-wide session grant off every ordinary project's self executor (the
-// per-project-scheduling fleet/self split). Only tasks that reach other repos use
-// this; today just growth-promote.
+// Fleet-scoped work dispatches to a DISTINCT ready label so a separate,
+// broader-scoped executor routine runs it - keeping the fleet-wide session grant
+// off every ordinary project's self executor (the per-project-scheduling fleet/self
+// split).
 export const READY_FLEET_LABEL = 'ready-for-agent-fleet';
 export const AGENT_RUNNING_LABEL = 'agent-running';
 export { NEEDS_HUMAN };
 export const WORKFLOW_FAILURE_LABEL = 'workflow-failure';
 
-// The ready label a task's dispatch is filed under, from its declared
-// session_scope ('self' default → READY_LABEL; 'fleet' → READY_FLEET_LABEL). The
-// one place this mapping lives, so the scheduler (which files) and any reader stay
-// in sync.
+// WHICH EXECUTOR ROUTINE a session is. Not a property of a task - nothing asks a
+// task what its reach is (a task needing more than its own repo names an
+// `invocation_endpoint`) - but of the routine that is running: an ordinary
+// project's executor is `self`, the broader-scoped fleet routine is `fleet`, and
+// each picks up only what is filed under its own ready label.
+export const EXECUTOR_SCOPES = ['self', 'fleet'];
+
+// The ready label a dispatch is filed under, from the scope of the executor meant
+// to run it ('self' default → READY_LABEL; 'fleet' → READY_FLEET_LABEL). The one
+// place this mapping lives, so the scheduler (which files) and any reader stay in
+// sync.
 export const readyLabelForScope = (scope) => (scope === 'fleet' ? READY_FLEET_LABEL : READY_LABEL);
 
 // The full label set the scheduler + executor drive, each with the colour and

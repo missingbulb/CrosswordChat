@@ -23,6 +23,12 @@ export const actionsEnv = () => process.env;
 // the tree they read tasks and config from.
 export const repoRoot = () => process.cwd();
 
+// The same reading under the name it has inside a code-work subprocess, which the
+// runner starts with the TASK directory as its cwd. A second name rather than a
+// second reader: the two callers mean different trees, and `repoRoot()` in the one
+// that means a task directory reads as a bug wherever it is quoted.
+export const taskDir = () => process.cwd();
+
 // The two workflow files, by name — vocabulary, so they are defined with the rest of it.
 export { SCHEDULER_WORKFLOW_FILE, EXECUTOR_WORKFLOW_FILE };
 

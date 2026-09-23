@@ -1,6 +1,6 @@
 ---
 name: learning-a-technology
-description: Teach a repo a new technology for a job of its own — research it against the vendor's live documentation, capture what is portable as a technology skill with declared checks, and wire the project's use of it as a task in its structural local pack. Use when asked to make a repo do something with a technology nobody there has used yet (host it on X, send through Y, publish to Z), or to "research how to do this correctly" and "create a skill" for it.
+description: Teach a repo a new technology for a job of its own. Use when asked to make a repo do something with a technology nobody there has used yet (host it on X, send through Y, publish to Z), or to "research how to do this correctly" and "create a skill" for it.
 metadata:
   body: workflow
   usage:

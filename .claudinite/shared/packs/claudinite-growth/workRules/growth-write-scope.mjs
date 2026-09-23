@@ -72,14 +72,15 @@ export function runCli(root = process.cwd()) {
     // refusing here would fail every history-less checkout on an ordinary one;
     // the Stop-hook run still covers the session side.
     console.log('growth-write-scope: no merge-base with the base branch — nothing to scope.');
-    process.exit(0);
+    return;
   }
   const findings = runRule(rule, ctx);
   if (findings.length) {
     console.error(`growth-write-scope: FAIL — a growth run may write only under ${LOCAL_ROOT}, but this branch also touches ${findings.length} path(s):`);
     for (const f of findings) console.error(`  - ${f.file}`);
     console.error('\nA growth run improves the repo\'s own packs, never the canon or the project\'s code — keep the whole write surface inside the local packs.');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   console.log('growth-write-scope: OK — not a growth run, or every touched path is under the local packs.');
 }

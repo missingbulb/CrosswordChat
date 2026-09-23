@@ -77,6 +77,18 @@ email), `Model`, `Mechanism` (the carrier and its trigger, and why - required on
 the entry is the decision. A candidate turned down goes on `_declined.md` the same way, kind
 `declined`, with `Source`, `Reason` and `Actor`.
 
+**Size the entry to the decision, never to the work.** Most are three to five lines. Each
+field is the shortest answer that is still an answer, and one clause is usually the whole of
+one - `Reason: the folder never existed.` Where a required `Mechanism` keeps the carrier it
+already had, the new value is the whole of it - `a regex` - and the why-clause is owed only
+where the choice of carrier was itself the decision. The diff, the commit message and the
+pull request already hold what changed, how it was proved and what it cost; an entry
+retelling any of them writes the record twice and buries the line a review came for. Length
+is earned only by a decision that was weighed - an alternative turned down, a constraint that
+forced the shape - so a corrected path, a repointed pattern or a renamed field gets one line,
+and a change nobody deliberated over gets `Reason` alone. Cut a field rather than pad it, and
+cut one that repeats another field or the entry's own title.
+
 A file is meant to grow: a wrong entry is answered by a later one, never by editing the one
 that was wrong. The check advises against a line lost or altered and refuses nothing.
 

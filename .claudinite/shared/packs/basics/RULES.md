@@ -146,9 +146,8 @@
 
 
 - **Polling with an `until` loop** — write a condition that names the state awaited (a file's
-  arrival, a run's status): one already true on its first check is a blind sleep wearing a loop,
-  as a bare `wait` in a later Bash call is — each call is a fresh shell, which is what
-  `bare-wait-in-fresh-shell` refuses. (polling-until-loop)
+  arrival, a run's status); one already true on its first check is a blind sleep wearing a loop.
+  (polling-until-loop)
 
 - **Handing the owner a command block to paste into their terminal** — carry no trailing
   `# comment` on any line: interactive zsh treats `#` as a comment only under
