@@ -1,10 +1,59 @@
 {
   "usage-findings": {
-    "value": 0,
-    "previous": null,
-    "note": "2026-08-25 to 2026-09-21"
+    "value": 8,
+    "previous": 0,
+    "note": "2026-08-26 to 2026-09-22"
   },
   "usage-newest": {
-    "rows": []
+    "rows": [
+      {
+        "subject": "changing-pack-elements",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-23"
+      },
+      {
+        "subject": "committing",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-23"
+      },
+      {
+        "subject": "fetching-from-the-web",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-23"
+      },
+      {
+        "subject": "merge-to-main",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-23"
+      },
+      {
+        "subject": "searching-for-a-tool",
+        "rule": "skill-forced-only-small",
+        "cause": "known",
+        "since": "2026-09-23"
+      },
+      {
+        "subject": "searching-for-a-tool",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-23"
+      },
+      {
+        "subject": "writing-repo-scanning-checks",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-23"
+      },
+      {
+        "subject": "writing-tests",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-23"
+      }
+    ]
   }
 }
