@@ -1,5 +1,5 @@
 // The one vendored place that computes a repo's stable scheduler cron MINUTE
-// (docs/PRINCIPLES.md). The per-repo scheduler workflow runs hourly
+// (docs/PRINCIPLES.md). The per-repo scheduler workflow runs on its own cron
 // on a repo-hashed minute constrained to :10–:50 — spreading the fleet across the
 // band, dodging GitHub's :00 stampede, and staying clear of the hour boundary the
 // anchor arithmetic works from.

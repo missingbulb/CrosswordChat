@@ -5,7 +5,7 @@
 // It is a TASK rather than a special item shape because that is what keeps the
 // request mode from being a second mechanism — the item's first body line is a task
 // path validated in code like every other, the same-title mutex serializes twin
-// requests, the janitor's leashes cover it, `verify-outcome` polices its ceiling and
+// requests, the repair phase's leashes cover it, `verify-outcome` polices its ceiling and
 // `record-exec` counts it. What follows from it being engine-owned rather than
 // pack-owned is exactly two things, and they live here: task discovery gains this
 // root beside the pack scan, and the validated task-path shape gains its form.

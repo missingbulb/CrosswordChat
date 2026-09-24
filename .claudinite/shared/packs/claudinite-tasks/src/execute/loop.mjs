@@ -60,7 +60,7 @@ export const claimComment = ({ executor, runUrl, at }) =>
 //    outrank every future live claimant — the item then livelocks through reclaim
 //    cycles forever. The reclaim / revert / re-queue comment is the boundary.
 //  - THE LABEL SWAP IS NOT THE ARBITER, so a torn swap can never mint a second
-//    owner; it can only leave an item with no state label, which the janitor
+//    owner; it can only leave an item with no state label, which the repair phase
 //    repairs.
 export function claimWinner(comments = []) {
   const sorted = [...comments].sort((a, b) => a.id - b.id);
@@ -594,11 +594,11 @@ async function handOff({ api, gh, repo, item, task, id, context, result, target 
   // alive. So the item STAYS with the agent and says the outcome is unknown —
   // whichever way it went is then settled by a rule that already exists: a session
   // that started converges the item, and one that never did leaves the item silent
-  // until the janitor's agent leash sweeps it to triage.
+  // until the repair phase's agent leash sweeps it to triage.
   await api.comment(gh, repo, item.number,
     `The agent invocation got no answer: ${invocation.error}\n\n`
     + 'The session may or may not have started, so nothing here re-tries it — a second call could put two sessions on this item. '
-    + 'If a session did start it will converge this item; if it did not, the janitor\'s agent leash parks it for a human within a few hours.');
+    + 'If a session did start it will converge this item; if it did not, the repair phase\'s agent leash parks it for a human within a few hours.');
   log(`! #${item.number} ${id}: invocation unanswered — left with the agent, leash decides — ${invocation.error}`);
   endHandOff();
   return 'unknown';
@@ -677,7 +677,7 @@ async function converge(cost, api, gh, repo, item, from, park, claim, body, stat
 
 // A close writes only to the item it holds (docs/PRINCIPLES.md; #1373 reversed
 // an earlier attempt): a dependent this close may make due is released solely by the
-// scheduler run's own readiness job, on its next hourly pass, never here.
+// scheduler run's own readiness job, on its next pass, never here.
 async function close(cost, api, gh, repo, item, from, outcome, stateReason, body, status) {
   return timed(cost, 'converge', async () => {
     await api.comment(gh, repo, item.number, body + recordFor(item, status, cost));

@@ -121,7 +121,7 @@ export const removeLabel = (gh, repo, number, name) =>
 // The swap every state transition makes. Remove-then-add, and NOT atomic —
 // GitHub has no atomic label swap. That is safe because labels are visibility and
 // the pick filter, never the arbiter (the claim comments are); what a torn swap
-// CAN leave is an open item wearing no state label at all, which the janitor
+// CAN leave is an open item wearing no state label at all, which the repair phase
 // repairs (docs/PRINCIPLES.md).
 export async function swapLabel(gh, repo, number, from, to) {
   await removeLabel(gh, repo, number, from);

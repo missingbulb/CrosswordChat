@@ -165,7 +165,7 @@ export const RUN_WORKFLOWS = Object.freeze(['scheduler', 'executor']);
 // token like the outcome words above, constrained to the line format's `[a-z-]+`
 // charset — `code-work` is the same token the task-run vocabulary already spells.
 export const RUN_PHASES = Object.freeze({
-  scheduler: Object.freeze(['list', 'ask', 'drain']),
+  scheduler: Object.freeze(['list', 'ask', 'repair', 'drain']),
   executor: Object.freeze(['pick', 'claim', 'code-work', 'hand-off', 'converge']),
 });
 

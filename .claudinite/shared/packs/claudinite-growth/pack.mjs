@@ -11,7 +11,7 @@
 //
 // Every task here writes `.claudinite/local/packs/` and nothing else.
 export default {
-  version: '60923.2',
+  version: '60924.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'authoring Claudinite content here — lesson extraction, dedup, revalidation, conversation logs, skill-usage folding, the task contract',

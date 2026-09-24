@@ -80,7 +80,7 @@
 //                        MISCONFIGURED ROUTINE (a fleet routine whose prompt lost
 //                        the word `fleet`, most often), not a dispatch to adopt.
 //                        Stop — change nothing, comment nothing — but stop LOUDLY:
-//                        nothing on GitHub records this, the janitor re-arms the
+//                        nothing on GitHub records this, and the next run files the
 //                        dispatch, and it declines forever until a human reads it.
 //   2  usage           — bad invocation (an unknown scope argument, an unreadable
 //                        `--issue-body-file`).
@@ -96,8 +96,8 @@
 // prevent, reached from the other direction: one scheduler run files every due
 // dispatch seconds apart, so every session that cannot name its own trigger builds
 // the SAME work list and races over it. A session that does not know its issue
-// must run nothing — the daily task-janitor re-arms an unrun dispatch,
-// so stopping costs a delay while guessing costs duplicated work.
+// must run nothing - the next scheduler run files the occurrence again if the work
+// is still owed, so stopping costs a delay while guessing costs duplicated work.
 //
 // Usage: `node <engine>/scheduler/resolve-dispatch.mjs [self|fleet]`
 //                `[--issue-json <path> | --issue-body-file <path> --issue-labels <csv>]`
@@ -303,7 +303,7 @@ export async function resolveDispatch(argv = process.argv.slice(2), env = action
   const { trigger, error: triggerError } = resolveTrigger(env);
   if (triggerError) {
     return done(EXIT.noTrigger, { dispatch: 'no-trigger', scope, reason: triggerError },
-      `${triggerError}. No trigger source names an issue, so this session cannot know which dispatch it was started for. STOP: run nothing, change nothing, comment nothing, end the session. There is NO fallback — never pick an issue by listing ${readyLabelForScope(scope)}; every dispatch in that list already has its own session, and the task-janitor re-arms an unrun one on its next daily run.`);
+      `${triggerError}. No trigger source names an issue, so this session cannot know which dispatch it was started for. STOP: run nothing, change nothing, comment nothing, end the session. There is NO fallback - never pick an issue by listing ${readyLabelForScope(scope)}; every dispatch in that list already has its own session, and the next scheduler run files the occurrence again if the work is still owed.`);
   }
 
   let { label, number, body } = trigger;

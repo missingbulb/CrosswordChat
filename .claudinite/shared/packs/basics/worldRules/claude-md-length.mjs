@@ -11,7 +11,17 @@
 // ending rather than continuing.
 import { dirname, join, normalize } from 'node:path';
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
-import { countWords, estimateTokens } from '../../../engine/pack_loader/token-estimate.mjs';
+import * as tokenEstimate from '../../../engine/pack_loader/token-estimate.mjs';
+
+// A NAMESPACE import, because the engine and the pack lanes deliver separately: a named
+// import of `countChars` would be a link-time fault on any member whose engine predates
+// the estimator's move from words to characters (#2285), and a faulting pack is what an
+// engine update's self-test gate refuses to land over. The counter and the estimator are
+// a matched pair on either engine, so whichever one answers, the figure is consistent
+// with itself: an older engine reads this tree smaller, which is what it always did.
+const countText = typeof tokenEstimate.countChars === 'function'
+  ? tokenEstimate.countChars
+  : tokenEstimate.countWords;
 
 // Only the root file: the harness loads that one, and a CLAUDE.md under a fixture or
 // an example directory costs a session nothing.
@@ -25,7 +35,12 @@ const IMPORT = /^@(\S+)\s*$/;
 // past what a session can carry alongside the work, not to demand the corpus shrink
 // today. A repo whose packs legitimately cost more than this says so by raising it
 // here, in one place, deliberately.
-const BUDGET_TOKENS = 20000;
+//
+// The number restates the ceiling this check has always held, in the corrected unit:
+// the estimator counted words until #2285 and read this corpus about 17% smaller than
+// it is, so the same tree that used to reach 20,000 reaches roughly 23,400 now. The
+// headroom the ceiling was set with is what carries over, not the digits.
+const BUDGET_TOKENS = 24000;
 
 // The tree under the root file, each file counted once. A cycle is ordinary rather
 // than exceptional (two rule files that point at each other still load once each),
@@ -33,7 +48,7 @@ const BUDGET_TOKENS = 20000;
 function importedTree(ctx, entry) {
   const seen = new Set();
   const queue = [entry];
-  let words = 0;
+  let chars = 0;
   while (queue.length) {
     const path = queue.shift();
     if (seen.has(path)) continue;
@@ -42,13 +57,13 @@ function importedTree(ctx, entry) {
     // An import resolving to nothing is not this check's finding to make: it costs a
     // session no tokens, which is the only question being asked here.
     if (text === null) continue;
-    words += countWords(text);
+    chars += countText(text);
     for (const line of text.split('\n')) {
       const m = IMPORT.exec(line);
       if (m) queue.push(normalize(join(dirname(path), m[1])));
     }
   }
-  return words;
+  return chars;
 }
 
 const rule = {
@@ -59,7 +74,7 @@ const rule = {
 
   run(ctx) {
     if (!ctx.files.includes(ROOT)) return [];
-    const tokens = estimateTokens(importedTree(ctx, ROOT));
+    const tokens = tokenEstimate.estimateTokens(importedTree(ctx, ROOT));
     if (tokens <= BUDGET_TOKENS) return [];
     return [finding(rule, {
       file: ROOT,

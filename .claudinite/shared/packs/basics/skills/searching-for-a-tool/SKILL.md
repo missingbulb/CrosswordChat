@@ -15,11 +15,11 @@ metadata:
 
 - **A search that finds nothing** is evidence about your query, not about the environment: vary
   the query before concluding a capability is absent, and try the tool before telling the owner a
-  step is theirs. (search-finds-nothing)
+  step is theirs.
 - **`select:` takes a short name as readily as a qualified one** — `select:get_teams` and
   `select:mcp__github__get_teams` both return the tool, and a comma-separated list loads several at
-  once. Qualify a name two servers could both carry. (select-takes-short)
+  once. Qualify a name two servers could both carry.
 - **A bare short name is a keyword query, and resolves too** — `get_teams` on its own returns the
-  tool, ranked above the looser matches beneath it. (bare-short-name)
+  tool, ranked above the looser matches beneath it.
 - **A server whose whole roster the deferred-tools listing already names** is the one exception: one
-  miss there is the answer, so read the roster rather than rephrase the query. (server-whole-roster)
+  miss there is the answer, so read the roster rather than rephrase the query.

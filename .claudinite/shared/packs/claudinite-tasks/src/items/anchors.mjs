@@ -14,9 +14,9 @@ const HOUR_MS = 3600e3;
 const DAY_MS = 24 * HOUR_MS;
 
 // One period of a cadence word (`daily`, `weekly`, `monthly`, `manual` having
-// none), in ms - the unit the janitor's stale-ready rule counts in
+// none), in ms - the unit the repair phase's stale-ready rule counts in
 // (PRINCIPLES.md) and the coarse step `nextAnchor` walks. An unrecognised word
-// reads as a day: this feeds the janitor's stale-ready bound and the
+// reads as a day: this feeds the repair phase's stale-ready bound and the
 // precondition's signal window, so anything shorter parks a member's task
 // needs-human on every sweep (PRINCIPLES.md).
 export function periodMs(frequency) {

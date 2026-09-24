@@ -80,7 +80,7 @@ export async function wakeItem(gh, repo, number, { urgent = false } = {}) {
   await api.comment(gh, repo, number, `${EPISODE_MARKER}\nWoken by hand — cleared \`Not-before\` and returned this item to the queue.`);
   // Every status the item wears goes, in every spelling — a wake takes the item
   // back from whatever held it, and a park half-cleared (the state gone, its kind
-  // still standing) is the torn shape the janitor would have to repair.
+  // still standing) is the torn shape the repair phase would have to repair.
   for (const status of statusesOn(issue)) await clearStatus(api, gh, repo, issue, status);
   await api.addLabel(gh, repo, number, STATUS_READY);
   if (urgent) await api.addLabel(gh, repo, number, URGENT);

@@ -2,11 +2,11 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60923.1"
+      "version": "60924.1"
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60923.1"
+      "version": "60924.1"
     },
     {
       "id": "git-github",
@@ -33,7 +33,7 @@
     },
     {
       "id": "claudinite-growth",
-      "version": "60923.2"
+      "version": "60924.1"
     },
     "local/crossword-chat",
     {
@@ -48,7 +48,7 @@
     },
     {
       "id": "claudinite-tasks",
-      "version": "60923.1"
+      "version": "60923.3"
     },
     {
       "id": "web-speech",
