@@ -1,10 +1,6 @@
-// crossword-chat — this repo's own instances of rules the canon states in
-// general. The judgment lives in the canon packs this repo declares (`host-page`
-// for guesting in nytimes.com's app, `web-speech` for the voice surfaces); what
-// is here is only what is true of CrosswordChat and of no other repo: the token
-// the arch test enforces, the host behaviours measured against this puzzle, and
-// the files and REQ ids a session has to be pointed at. Declared by hand as
-// `local/crossword-chat` in .claudinite-settings.json.
+// crossword-chat - this repo's own instances of rules the canon states in
+// general: the adapter paths, the host behaviours measured on nytimes.com, and
+// the files and REQ ids a session has to be pointed at.
 export default {
   id: 'crossword-chat',
   ruleRoutingGuidance: {
