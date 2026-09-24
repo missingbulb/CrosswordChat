@@ -15,7 +15,7 @@ metadata:
   hand-edit it; change the generator. Never resolve its merge conflict by hand: clear the
   markers with either side, re-run the generator against the merged inputs, and commit that
   output. Consider automating the clear with a `merge=ours` `.gitattributes` entry, and
-  `git rerere` for a conflict that recurs. (working-file-test)
+  `git rerere` for a conflict that recurs.
 
 - **A generator whose OWN set of outputs grows on its own** — one baseline per auto-discovered
   category (a new test "kind", a new fixture), rather than a fixed, named list — needs its
@@ -23,4 +23,4 @@ metadata:
   `.gitattributes` rather than one entry per file. A per-file allowlist silently stops covering
   the moment a new category starts committing its own baselines, and the gap surfaces as a
   binary merge conflict git cannot 3-way-merge at all — at the worst possible moment, mid-merge,
-  for a category nobody remembered to wire up. (generator-whose-own)
+  for a category nobody remembered to wire up.

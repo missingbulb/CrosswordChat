@@ -65,7 +65,7 @@
         "skillLoads": 5
       },
       "when": "skillBlocks / skillLoads >= 0.9",
-      "and": "tokens <= 300",
+      "and": "tokens <= 330",
       "cause": "known",
       "causes": [
         "the guard does the loading and the description never triggers a voluntary load - the one cause; the question is only whether the lines are worth a block"

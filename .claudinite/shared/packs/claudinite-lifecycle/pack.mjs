@@ -13,7 +13,7 @@
 // exist. Both run outside any check, because activation reads the literal
 // declaration.
 export default {
-  version: '60923.1',
+  version: '60924.1',
   minEngineVersion: '60822.1',
   ruleRoutingGuidance: {
     belongs: 'using Claudinite itself — the vendored mount, the pack declaration, bootstrapping, adopting packs, the self-refresh update',

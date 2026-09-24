@@ -34,11 +34,11 @@ import { fileURLToPath } from 'node:url';
 import { settingsPath } from '../settings-file.mjs';
 
 import { spawnSync } from 'node:child_process';
-import { countWords, estimateTokens } from './token-estimate.mjs';
+import { countChars, estimateTokens } from './token-estimate.mjs';
 
 // The prose is reported in TOKENS because that is the unit of the cost it
-// imposes — a context window, not a disk. The estimate goes through WORDS at the
-// ratio token-estimate.mjs states. Rounded to the hundred and shown in thousands
+// imposes: a context window, not a disk. The estimate goes through CHARACTERS at
+// the ratio token-estimate.mjs states. Rounded to the hundred and shown in thousands
 // (`14.3k`), because a session summary is a sense of scale, not an accounting.
 const TOKEN_ROUNDING = 100;
 const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
@@ -82,18 +82,18 @@ try {
   // off the pack's directory, trimmed the way the injector trims it. The routing
   // table and the directory pointer are the injector's framing rather than a
   // pack's rules, so they are not counted here.
-  const wordsByPack = new Map();
+  const charsByPack = new Map();
   for (const pack of active) {
     if (!pack.prose) continue;
     const prosePath = join(pack.dir, pack.prose);
     if (!existsSync(prosePath)) continue;
     try {
-      const words = countWords(readFileSync(prosePath, 'utf8'));
-      wordsByPack.set(pack.id, (wordsByPack.get(pack.id) ?? 0) + words);
+      const chars = countChars(readFileSync(prosePath, 'utf8'));
+      charsByPack.set(pack.id, (charsByPack.get(pack.id) ?? 0) + chars);
     } catch { /* an unreadable file counts as none */ }
   }
-  const proseWords = [...wordsByPack.values()].reduce((n, w) => n + w, 0);
-  const tokens = estimateTokens(proseWords, TOKEN_ROUNDING);
+  const proseChars = [...charsByPack.values()].reduce((n, c) => n + c, 0);
+  const tokens = estimateTokens(proseChars, TOKEN_ROUNDING);
 
   // What the active packs arm, split by WHEN it judges: a GUARD is a `scope: "action"`
   // declaration (`guardToolCalls`), judged per tool call by the PreToolUse hook; every

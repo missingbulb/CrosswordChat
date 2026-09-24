@@ -20,7 +20,7 @@
 // the successful outcome, on stdout, exit 0. That is not a fallback: it is the only
 // path, and it must never read as a failure. A REST executor lived here once and did
 // (#1491) — a session met its `console.error` before it met the path written for it,
-// reported that it could not converge, and left the item to the janitor's 3h leash,
+// reported that it could not converge, and left the item to the repair phase's 3h leash,
 // which parks a finished run as a human decision. Five sampled items across five
 // repos were exactly that.
 //
@@ -172,7 +172,7 @@ export function convergeOps(item, plan) {
   ops.push({ kind: 'addLabel', issue: item.number, name: spec.label });
 
   // THE PARK'S END CONDITION (#1468). The comment above already tells a person to
-  // merge or close the pull request; this says the same thing where the janitor can
+  // merge or close the pull request; this says the same thing where the repair phase can
   // read it, so the item ends when that happens instead of waiting for someone to
   // notice it already did. Every park that names one gets it, not only `approval`.
   if (!spec.closes && plan.pr) {

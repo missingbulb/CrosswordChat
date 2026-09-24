@@ -1,9 +1,9 @@
-// The janitor's queue rules (docs/PRINCIPLES.md) — the recovery that needs
-// judgment or a longer horizon than the scheduler run's hourly label mechanics. Each rule is
+// The queue's repair rules (docs/PRINCIPLES.md) — the recovery that needs
+// judgment or a longer horizon than the run's own deterministic label mechanics. Each rule is
 // pure, returning the items it claims plus the comment it would post; the
-// janitor task's worker is the only I/O shell over them.
+// scheduler run is the only I/O shell over them.
 //
-// THE JANITOR IS A FALLBACK (owner, 2026-09-06). Every rule below repairs something
+// REPAIR IS A FALLBACK (owner, 2026-09-06). Every rule below repairs something
 // that already went wrong — a label swap that tore, a session that died, a park
 // nobody answered, a terminal nobody closed — and the healthy flow of a task never
 // passes through here: an item the machinery handled correctly is settled by
@@ -15,11 +15,10 @@
 // label and all: a person ending a park by closing its issue is an answer, not a
 // state to repair, and nothing here reopens, re-labels or re-nags one.
 //
-// What is NOT here: the executing-leash reclaim, which rides the scheduler run (a
-// deterministic label rule, serialized and hourly, recovering a dead executor's
-// item in ~2h instead of ~25h). That amends the single-recovery-site split in
-// siting, not in principle — recovery still happens once, in one place per rule,
-// in code, and never as a sweep inside a session that is executing something.
+// What is NOT here: the executing-leash reclaim, which is a deterministic label
+// rule the run applies directly. Recovery still happens once, in one place per
+// rule, in code, and never as a sweep inside a session that is executing
+// something.
 
 import { taskPeriodMs } from '../items/anchors.mjs';
 import { isScheduledTask } from '../contract/task-contract.mjs';
@@ -108,6 +107,14 @@ export const deadAgentComment = (item, sessionNote = null, { wedged = false } = 
 // untouched, so the item still proceeds by itself the moment its blockers resolve,
 // and a human who decides it is dead closes it by hand.
 //
+// THE BOUND IS IDLENESS, NEVER AGE (owner, 2026-09-22). Measured from `created_at`
+// the rule had no terminating condition: once an item crossed two days it matched
+// on every pass for the rest of its life, and the sweep carried no once-only guard,
+// so a chain link waiting on a long review collected one comment per run forever.
+// Measured from the item's own last activity, the comment this rule posts resets
+// the clock it is read from, which makes the comment its own guard: the next one is
+// two idle days away, and a person or a run touching the item pushes it further out.
+//
 // Sleeping items (a future `Not-before`, blockers closed) never match: waiting for
 // a time is the mechanism working.
 export function stuckBlockedItems(open = [], now, { stateOf = () => null, boundMs = STUCK_BLOCKED_MS } = {}) {
@@ -116,7 +123,7 @@ export function stuckBlockedItems(open = [], now, { stateOf = () => null, boundM
     const { blockedBy } = parseWorkItemBody(i.body);
     if (!blockedBy.length) return false;
     if (blockedBy.every((n) => stateOf(n) === 'closed')) return false;
-    return ms(now) - ms(i.created_at) >= boundMs;
+    return idle(i, now) >= boundMs;
   });
 }
 
@@ -352,3 +359,24 @@ export const scheduledForTasks = (tasks = []) => {
   const byId = new Map(tasks.map((t) => [`${t.pack}/${t.id}`, t]));
   return (id) => (byId.has(id) ? isScheduledTask(byId.get(id).decl) : null);
 };
+
+// The closed half of the queue, indexed for rule E: the task's newest run that
+// converged clean AFTER a given moment, or null. Built from the items the run has
+// already listed, so it costs no read of its own.
+export function doneRunLookup(done = []) {
+  const byTask = new Map();
+  for (const d of done) {
+    const p = parseWorkItemTitle(d.title) ?? taskIdFromPath(parseWorkItemBody(d.body).taskPath);
+    if (!p) continue;
+    const id = `${p.pack}/${p.task}`;
+    if (!byTask.has(id)) byTask.set(id, []);
+    byTask.get(id).push(d);
+  }
+  return (id, since) => {
+    const at = new Date(since).getTime();
+    const runs = (byTask.get(id) ?? [])
+      .filter((d) => new Date(d.closed_at ?? d.updated_at).getTime() > at)
+      .sort((a, b) => new Date(a.closed_at ?? a.updated_at) - new Date(b.closed_at ?? b.updated_at));
+    return runs.at(-1) ?? null;
+  };
+}

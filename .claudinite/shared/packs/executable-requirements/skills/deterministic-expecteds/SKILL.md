@@ -17,16 +17,16 @@ metadata:
 A rendered expected is only owner-ownable if it is byte-stable forever:
 
 - **Pin the clock.** One shared reference time (`REFERENCE_NOW`) threaded to everything that
-  formats or compares dates; fixture data is authored relative to it. Never wall-clock. (pin-clock)
+  formats or compares dates; fixture data is authored relative to it. Never wall-clock.
 - **Fake every nondeterministic input**: network (map tiles, avatars — deterministic generated
   substitutes), randomness, platform sensors, locale (pin it; date copy is locale-sensitive),
-  viewport (one fixed logical size and pixel ratio). (fake-nondeterministic-input)
+  viewport (one fixed logical size and pixel ratio).
 - **Load real fonts** in the render harness — test environments default to a glyph-less stub that
   renders text as boxes. Load the product's bundled families plus the
   icon font; watch for styles that don't inherit the family (button text styles are the classic
-  leak) — pin the family there explicitly. (load-real-fonts)
+  leak) — pin the family there explicitly.
 - **Never wait for "settled".** Indeterminate spinners animate forever; use fixed-duration pumps
-  so an in-flight state is a capturable, deterministic frame. (wait-settled)
+  so an in-flight state is a capturable, deterministic frame.
 
 ## Rendering recipes per stack
 
@@ -34,12 +34,11 @@ A rendered expected is only owner-ownable if it is byte-stable forever:
   `render()` in a jsdom document seeded from the real HTML, fold the real CSS on as inline styles,
   rasterize with satori + resvg, compare with pixelmatch at **zero tolerated diff ratio**. No real
   browser: deterministic and dependency-light, at a documented fidelity tradeoff.
-  (browser-extension-dom)
 - **Flutter**: widget-test golden files are the native equivalent — pump the real app shell
   against the fake world and `matchesGoldenFile`; `--update-goldens` is the refresh lane. Load
   fonts from the FontManifest (icons included). The fake world (scripted location/auth/backend
   that also *records* what the UI asked) is the product's own testing library so the requirements
-  package and unit tests share it. (flutter-rule)
+  package and unit tests share it.
 - Whatever the stack: the comparison is **pixel-exact**. A tolerance is a standing invitation for
   unreviewed drift; if a platform renders unstably, fix the determinism (fonts, clock, fakes), not
-  the threshold. (whatever-stack)
+  the threshold.

@@ -26,19 +26,24 @@
 import { pathToFileURL } from 'node:url';
 import { isSuspended, suspendedNotice } from '../world/hold.mjs';
 import { EXECUTING_LEASH_MS } from '../../public/task-constants.mjs';
-import { swapStatus } from '../items/apply-status.mjs';
+import { swapStatus, clearStatus } from '../items/apply-status.mjs';
 import { isReleasable } from './readiness.mjs';
+import { planRepair } from './repair.mjs';
 import { isQueueItem } from '../items/read.mjs';
 import { pickOrder } from '../items/pick-order.mjs';
-import { lastLivenessAt } from '../items/heartbeat.mjs';
+import { lastLivenessAt, lastProgressAt } from '../items/heartbeat.mjs';
+import {
+  doneRunLookup, deadAgentComment, statelessItems, abandonedParkItems,
+  unclosedTerminalItems, scheduledForTasks,
+} from './repair-rules.mjs';
 import { startRunCost } from '../items/run-record.mjs';
 import {
   WORK_PREFIX, STATUS_BLOCKED, STATUS_READY, STATUS_REJECTED, STATUS_NEEDS_HUMAN_DECISION, LIVE_STATUSES, 
-  STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT, QUEUE_LABELS, EPISODE_MARKER,
+  STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT, STATUS_DONE, QUEUE_LABELS, EPISODE_MARKER, HANDOFF_MARKER,
   ORIGIN_AD_HOC, ORIGIN_PLANNED, ORIGIN_LABELS, REQUEST_LABEL,
 } from '../../public/task-constants.mjs';
 import {
-  isStatus, statusOf, workItemTitle, parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
+  isStatus, statusOf, isParked, workItemTitle, parseWorkItemTitle, parseWorkItemBody, taskIdFromPath,
   workItemBody, labelNames, hasLabel, parseRequestFields, parseBlockedBy, withMachineBlock,
 } from '../../public/work-item-grammar.mjs';
 import { REQUEST_TASK_ID } from '../contract/built-in-tasks.mjs';
@@ -49,9 +54,8 @@ import { actionsEnv, repoRoot, setStepOutput } from '../world/actions.mjs';
 import { now as clockNow } from '../world/clock.mjs';
 import { listIssuesByQuery, collaboratorPermission, getIssue, setIssueBody } from '../world/github.mjs';
 
-// The scheduler run owns the executing-leash reclaim because it is deterministic and
-// hourly, which recovers a dead executor's item in ~2h rather than the janitor's
-// ~25h (PRINCIPLES.md, owner decision 6).
+// The scheduler run owns the executing-leash reclaim: it is deterministic label
+// mechanics, and it rides the same pass as every other repair (repair.mjs).
 export { EXECUTING_LEASH_MS };
 
 const ms = (t) => (t == null ? null : new Date(t).getTime());
@@ -85,6 +89,7 @@ const ms = (t) => (t == null ? null : new Date(t).getTime());
 export async function planSchedulerRun({
   tasks, items = [], requests = [], now, schedule, executingLeashMs = EXECUTING_LEASH_MS,
   stateOf = () => null, evaluate = null,
+  progressAt = () => null, resolutionOf = () => null, doneAfter = () => null,
 }) {
   const nowMs = ms(now);
   const ops = [];
@@ -97,6 +102,18 @@ export async function planSchedulerRun({
   // that files no item at all.
   const disabled = new Set(schedule?.disabledTasks ?? []);
   const closedByThisRun = new Set();
+
+  // ---- the repair phase, FIRST (repair.mjs) --------------------------------
+  // Recovery runs before anything else this run does, because what it frees is
+  // what the jobs below read: a park it closes releases the task's lane for job 1,
+  // and an item it returns to the queue is counted by the drain gate that ends the
+  // run. Its threaded effects are applied to `items` in place, so every job after
+  // this line - and every cadence term the ask evaluates - judges this run's world
+  // rather than the listing it started from.
+  const repair = planRepair({ items, tasks, now, progressAt, resolutionOf, doneAfter,
+    isRequest: (n) => requests.some((r) => r.number === n), stateOf });
+  ops.push(...repair.ops);
+  for (const n of repair.closed) closedByThisRun.add(n);
 
   // ---- the orphan reap ----------------------------------------------------
   // A blocked standing item whose `<pack>/<task>` is not declared at HEAD can
@@ -282,7 +299,7 @@ export async function planSchedulerRun({
     const silentFor = nowMs - lastSign;
     if (silentFor < executingLeashMs) continue;
     // WHICH TASK, on a marked issue: its title is the person's own, so the id comes
-    // from the worker path its machine block names — the same fallback the janitor's
+    // from the worker path its machine block names - the same fallback the repair phase's
     // rules use. Without it every ad-hoc item reads as an unknown task and re-queues,
     // and `implement-request`, the one task that declares `needs-human`, is exactly
     // the task every ad-hoc item runs.
@@ -304,6 +321,66 @@ export async function planSchedulerRun({
   }
 
   return { ops, asked };
+}
+
+export const REPAIR_KINDS = ['escalate', 'retire', 'close-terminal', 'note'];
+
+// The hand-off comment names the session, so a dead-agent escalation can say WHICH
+// one died rather than merely that one did. Absent (a torn hand-off), it says less
+// rather than asserting something it does not know.
+const sessionNote = (comments = []) => {
+  const handoff = comments.filter((c) => (c.body ?? '').includes(HANDOFF_MARKER)).at(-1);
+  const nonce = handoff?.body?.match(/nonce `([^`]+)`/)?.[1];
+  return nonce ? `invocation nonce ${nonce}` : null;
+};
+
+// CONFIRM BEFORE ACTING, for the three rules whose premise is a TRANSIENT rather
+// than a clock: a swap in flight is indistinguishable from one that tore, and a
+// person part-way through diagnosing a fault has answered the bound that was
+// waiting for them. `items` is a snapshot taken seconds earlier, so each of these
+// re-reads its own issue and re-runs its own pure predicate before writing; a
+// verdict that no longer holds is dropped, not softened (#1104).
+const stillHolds = (op, fresh, { now, tasks }) => {
+  if (!fresh || fresh.state !== 'open') return false;
+  if (op.confirm === 'stateless') return statelessItems([fresh]).length > 0;
+  if (op.confirm === 'abandoned') {
+    return abandonedParkItems([fresh], now, { scheduledFor: scheduledForTasks(tasks) }).length > 0;
+  }
+  if (op.confirm === 'unclosed') return unclosedTerminalItems([fresh], now).length > 0;
+  return true;
+};
+
+// Apply one repair op. Returns whether it was written, so the caller can tell a
+// dropped verdict from a landed one in its own log.
+export async function applyRepairOp({ gh, repo, op, now, tasks, agentComments, api, log, problems = [] }) {
+  const { comment, addLabel, removeLabel, closeIssue } = api;
+  if (op.confirm) {
+    const { readIssue } = await import('../world/github.mjs');
+    if (!stillHolds(op, await readIssue(gh, repo, op.issue), { now, tasks })) {
+      log(`- #${op.issue} settled between this run's read and its write - left alone`);
+      return false;
+    }
+  }
+  const body = op.body ?? (op.note === 'dead-agent'
+    ? deadAgentComment({ number: op.issue }, sessionNote(agentComments?.get(op.issue) ?? []), { wedged: op.wedged })
+    : null);
+  if (body) await comment(gh, repo, op.issue, body);
+  // Every spelling of the status being left goes: the item may have been filed by an
+  // engine older than this one, and a swap that named one spelling would leave the
+  // other standing (`apply-status`). What replaces it is ONE label.
+  if (op.from) await clearStatus({ removeLabel }, gh, repo, { number: op.issue }, op.from);
+  if (op.to) await addLabel(gh, repo, op.issue, op.to);
+  if (op.close) await closeIssue(gh, repo, op.issue, op.close);
+  if (op.clearInReview) {
+    const res = await removeLabel(gh, repo, op.clearInReview.issue, op.clearInReview.label);
+    if (res && res.status && res.status >= 400 && res.status !== 404) {
+      problems.push(`could not clear ${op.clearInReview.label} on #${op.clearInReview.issue} (${res.status})`);
+    }
+  }
+  log(op.kind === 'note'
+    ? `- noted #${op.issue} (${op.rule})`
+    : `- repaired #${op.issue} (${op.rule})${op.to ? ` -> ${op.to}` : ''}${op.close ? ` - closed ${op.close}` : ''}`);
+  return true;
 }
 
 // --- the forced wake (PRINCIPLES.md) ----------------------------------------------
@@ -410,12 +487,12 @@ const IN_FLIGHT = [STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT];
 // that class — and job 2 is the ONLY site that releases a blocked item, so an
 // ad-hoc item born blocked on a `Not-before:` sat sleeping past its instant with
 // nothing left to wake it (#1267, #1349, #1351, #1396). The executor and the
-// janitor already read the queue through this predicate; this list was the one that
+// repair rules already read the queue through this predicate; this list was the one that
 // did not.
-export async function listWorkItems(gh, repo, { since = null } = {}) {
+export async function listWorkItems(gh, repo, { since = null, state = 'all' } = {}) {
   const out = [];
   for (let page = 1; ; page += 1) {
-    const q = `state=all&sort=created&direction=desc&per_page=100&page=${page}`
+    const q = `state=${state}&sort=created&direction=desc&per_page=100&page=${page}`
       + (since ? `&since=${encodeURIComponent(since)}` : '');
     const { status, json } = await listIssuesByQuery(gh, repo, q);
     // A page that could not be read is not the end of the list. Breaking on it
@@ -562,7 +639,18 @@ export async function schedulerRun({
   // cadence term looks; older history can never change a verdict.
   const since = new Date(new Date(now).getTime() - RUN_HORIZON_DAYS * 86400e3).toISOString();
   const endList = phase('list');
-  const items = await listWorkItems(gh, repo, { since });
+  // TWO LISTINGS, and the split is load-bearing. `since` filters on UPDATED time,
+  // so a single horizoned listing cannot see an item nobody has touched since the
+  // horizon - a blocked item sleeping on a far `Not-before`, a claim that went
+  // silent and stayed silent. The OPEN half is therefore listed whole, however old
+  // its youngest write, and the horizon is applied only to the CLOSED half, where
+  // it is the run-history window the cadence terms actually read. The open half is
+  // bounded by the open queue, which is small on every repo; the horizon is what
+  // keeps the closed half from paging through the repository's whole history.
+  const items = [
+    ...await listWorkItems(gh, repo, { state: 'open' }),
+    ...await listWorkItems(gh, repo, { state: 'closed', since }),
+  ];
   const requests = await listMarkedIssues(gh, repo);
 
   const known = new Map(items.map((i) => [i.number, i.state]));
@@ -577,6 +665,33 @@ export async function schedulerRun({
     if (item.state !== 'open' || !isStatus(item, STATUS_RUNNING_EXECUTOR)) continue;
     item.livenessAt = lastLivenessAt(await listComments(gh, repo, item.number));
   }
+
+  // THE REPAIR PHASE'S OWN READS, and the only two the merge added. Both are
+  // bounded by a handful of items in one state rather than by the queue: a comment
+  // read per item holding an AGENT - the leash measures the holder's own progress,
+  // which only its comments carry - and one issue read per park naming an
+  // `Ends-when:` target, of which there are as many as there are approval parks.
+  // Everything else the repair rules need is already in the two listings above.
+  const agentComments = new Map();
+  for (const item of items) {
+    if (item.state !== 'open' || !isStatus(item, STATUS_RUNNING_AGENT)) continue;
+    agentComments.set(item.number, await listComments(gh, repo, item.number));
+  }
+  const resolutions = new Map();
+  for (const item of items) {
+    if (item.state !== 'open' || !isParked(item)) continue;
+    const { endsWhen } = parseWorkItemBody(item.body);
+    if (endsWhen == null || resolutions.has(endsWhen)) continue;
+    // MERGED-NESS, not just state: the issues endpoint carries `pull_request.merged_at`
+    // for a pull request, and it is what separates "the work landed" from "it was
+    // abandoned". An unreadable target answers null, so the park stands rather than
+    // ending on a read that failed.
+    const res = await getIssue(gh, repo, endsWhen);
+    const target = res.status === 200 ? res.json : null;
+    resolutions.set(endsWhen, target?.state !== 'closed' ? null
+      : (target.pull_request?.merged_at ? 'merged' : 'closed'));
+  }
+  const doneAfter = doneRunLookup(items.filter((i) => i.state === 'closed' && isStatus(i, STATUS_DONE)));
   endList();
 
   // THE ASK (PRINCIPLES.md), in two passes. The task's run-history terms — its
@@ -631,10 +746,35 @@ export async function schedulerRun({
   const { ops, asked } = await planSchedulerRun({
     tasks, items, requests, now, schedule: config.taskScheduler, stateOf: (n) => known.get(n) ?? null,
     evaluate,
+    progressAt: (item) => lastProgressAt(agentComments.get(item.number) ?? []),
+    resolutionOf: (n) => resolutions.get(n) ?? null,
+    doneAfter,
   });
   endAsk();
   // The whole record of an ask is this line — a decline writes nothing durable.
   for (const a of asked) log(`- asked ${a.task}: ${a.verdict}${a.reason ? ` — ${a.reason}` : ''}`);
+
+  // ---- the repair phase's writes, before anything else this run applies -----
+  // Timed on its own so the usage fold can answer what recovery costs a tick: the
+  // planning above is pure and instant, and every millisecond here is a write or a
+  // confirming read. A quiet queue emits no repair op at all and pays nothing.
+  const endRepair = phase('repair');
+  const repairOps = ops.filter((o) => REPAIR_KINDS.includes(o.kind));
+  if (repairOps.length) {
+    // Applying a label 422s when it does not exist, so guarantee them first - but
+    // only where this run actually writes one: a pass whose whole output is a
+    // comment pays nothing for the labels it never touches.
+    if (repairOps.some((o) => o.to)) await ensureLabels(gh, repo, QUEUE_LABELS);
+    let repaired = 0;
+    for (const op of repairOps) {
+      if (await applyRepairOp({
+        gh, repo, op, now, tasks, agentComments, log, problems,
+        api: { comment, addLabel, removeLabel, closeIssue },
+      })) repaired += 1;
+    }
+    log(`- repair: ${repaired} of ${repairOps.length} verdict(s) written`);
+  }
+  endRepair();
 
   const endDrain = phase('drain');
   if (ops.some((o) => o.kind === 'create' || o.kind === 'adopt')) await ensureLabels(gh, repo, QUEUE_LABELS);
@@ -656,6 +796,7 @@ export async function schedulerRun({
   const minted = [];
 
   for (const op of ops) {
+    if (REPAIR_KINDS.includes(op.kind)) continue; // applied above, in their own phase
     if (op.kind === 'create') {
       const res = await createIssue(gh, repo, { title: op.title, body: op.body, labels: op.labels });
       if (res.number) {

@@ -284,7 +284,7 @@ export function staleEscalationComment(issue) {
 // label, add it back — which emits a new event.
 //
 // This is the recovery that used to live in the executor's drain sweep, then in
-// the scheduler's hourly pass, and now runs from the daily task-janitor task —
+// the scheduler's own pass, where it runs again as the repair phase -
 // still deterministic code, still decided by the pure rules here. The sweep had EVERY triggered session also process every
 // OTHER armed issue, so one scheduler run filing N dispatches produced N sessions
 // each racing over the same N issues, and the claim swap could not stop it (every
@@ -312,13 +312,17 @@ export function readyLabelOn(issue) {
 //   - past `graceMs` (default 20m), comfortably beyond session spin-up, so a
 //     session already on its way is never handed a rival.
 // A stale issue is never re-armed: it is on its way to `needs-human`, and re-arming
-// one would loop forever. That backstop is also what bounds this — an executor that
-// stays down is re-armed each janitor run until ~2 periods, then converges to triage.
+// one would loop forever.
+//
+// NOTHING CALLS THIS ANY MORE. The slot scheduler it belonged to is retired (#974)
+// and the sweep that ran these rules went with the janitor task. They are kept pure
+// and tested as the shape a legacy-cleanup rule takes, for the home named in
+// `../schedule/repair.mjs`; a caller would read the items that pass already holds.
 // Dispatch issues left claimed by a session that died mid-run: `agent-running`
 // with no activity for `idleMs` (~3h). Converging these used to be the executor's
 // own step 6, which meant every concurrently-triggered session swept them and
 // commented on the same issue — the duplicate-work bug in miniature. It is code
-// here (run by the janitor) for the same reason the re-arm is.
+// here, beside the re-arm and uncalled for the same reason.
 //
 // Scoped to `[claudinite-task]` dispatch issues deliberately (the title parse is
 // what enforces it): a task may put `agent-running` on an issue IT owns — a
@@ -344,7 +348,7 @@ export function staleClaimedDispatchIssues(openIssues = [], now, { idleMs = 3 * 
   });
 }
 
-// The claims a janitor run must read comments for before it can judge them —
+// The claims a sweep must read comments for before it can judge them -
 // `livenessAt`'s scope. Every open dispatch claim, so a candidate set narrowed by
 // the very clock the rule stopped trusting cannot narrow it wrongly; the count is
 // the health line's `running`, a handful.

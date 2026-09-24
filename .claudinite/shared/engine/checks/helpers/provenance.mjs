@@ -829,6 +829,33 @@ export function reduceFile(text, opts) {
   return String(text ?? '').split('\n').map((l) => (l.startsWith('## ') ? l : reduceText(l, opts))).join('\n');
 }
 
+// --- in transit to a member -----------------------------------------------------------
+
+// A member mounts a pack without its provenance/ folder, so every marker in the prose
+// it receives names a file it does not have, and costs each of its sessions tokens for
+// nothing. The vendor writers carry prose across through these two: the marker ending a
+// rule of a RULES.md, or a bullet of a guidelines skill, is dropped - exactly the
+// carriers `packCarriers` reads, so a parenthetical that is not a marker stays - and a
+// line that held only the marker goes with it. The canon's own files keep theirs.
+export const unmarkedProse = (text) => dropMarkersAt(text, ruleBlocks(text).filter((b) => b.slug).map((b) => b.lastLine));
+
+export function unmarkedSkill(text) {
+  const shape = skillShape(text);
+  if (shape.body !== 'guidelines') return String(text ?? '');
+  return dropMarkersAt(text, shape.bullets.filter((b) => b.slug).map((b) => shape.bodyOffset + b.lastLine));
+}
+
+function dropMarkersAt(text, at) {
+  const lines = String(text ?? '').split('\n');
+  const gone = new Set();
+  for (const i of at) {
+    const kept = lines[i].replace(MARKER_AT_END, '');
+    if (kept.trim()) lines[i] = kept;
+    else gone.add(i);
+  }
+  return lines.filter((_, i) => !gone.has(i)).join('\n');
+}
+
 // --- io over a checkout --------------------------------------------------------------
 
 // The io over a real checkout: the same capability names the migration registry's

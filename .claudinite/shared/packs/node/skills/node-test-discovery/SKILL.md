@@ -22,4 +22,4 @@ metadata:
   Naming a path is not enough — the argument must **resolve to files that exist**: a typo'd
   glob, a moved fixture or a renamed directory produces the identical zero-test green, so the
   property to assert is that every path a `node --test` invocation names still matches something
-  in the tree. (node-test-skips)
+  in the tree.

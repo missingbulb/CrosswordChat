@@ -41,7 +41,7 @@ export async function listOpenWorkItems(gh, repo) {
 }
 
 // Every work item that converged DONE, newest first — the closed half of the queue,
-// and the only evidence the superseded-park rule (janitor rule E) runs on.
+// and the only evidence the superseded-park rule (repair rule E) runs on.
 //
 // BOUNDED, unlike the open list: a long-lived repo's closed set is thousands of
 // issues and the rule only ever asks "did this task run clean since <park>". Two

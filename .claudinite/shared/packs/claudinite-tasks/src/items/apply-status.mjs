@@ -6,7 +6,7 @@
 // its converges, so an item filed as `task:ready` is picked up by an engine that
 // writes `task:status:waiting-for-executor`, and a swap that named one spelling
 // would leave the other standing — an item wearing two live statuses, which is the
-// torn state the janitor exists to repair.
+// torn state the repair phase exists to repair.
 //
 // Writes stay granular (add and remove named labels, never a set-write): with
 // several executors and a scheduler run moving labels at once, a set-write from a

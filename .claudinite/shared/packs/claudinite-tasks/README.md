@@ -23,16 +23,16 @@ and `tasks-world-edges-live-in-world` checks are what hold the shape.
 | `src/items/` | the work item as DATA, over the vocabulary and grammar `public/` defines: the queue listings, the run record, the pick order over the open queue, the heartbeat |
 | `src/world/` | the only outward edges, each a named port — `github.mjs` (every REST path this pack calls, as a named operation), `actions.mjs` (the runner's environment) with `hold.mjs` and the three env bags beside it, `sessions.mjs` (the routine fire that starts an agent), `git.mjs`, `processes.mjs`, `clock.mjs` |
 | `src/signals/` | the collectors a precondition is handed, read through the ports and described in the contract's terms |
-| `src/schedule/` | the tick: which declared tasks have a window open, and the items filed for them |
+| `src/schedule/` | the tick: the repair phase that runs first, then which declared tasks have a window open and the items filed for them |
 | `src/execute/` | the executor: claiming a ready item, running its code-work, handing it to an agent session |
 | `src/session/` | what runs INSIDE a work-item session: converging the item, verifying its outcome, the exec record, dispatch resolution, and the automerge verdict as a command |
 | `src/deliver/` | turning a run's output into a landed pull request or a regenerated file |
-| `src/recover/` | repair: the janitor's rules, workflow-failure escalation, the dead-run continuation |
+| `src/recover/` | repair: the queue's repair rules, workflow-failure escalation, the dead-run continuation |
 | `src/adopt/` | what an adopting repo receives: the workflows converged from the stubs, the per-repo cron minute |
 | `queue/` | `tasks/implement-request/`, the engine's own built-in task; the spec is `public/implement-request.md` |
 | `stubs/` | the two workflow files an adopting repo receives |
 | `public/` | **everything outside this pack may reference** — the vocabulary and grammar `src/` builds on, the import surface, and the documents a routine reads. See below |
-| `tasks/` | this pack's own tasks: `task-janitor` (the queue's sweeps), `usage-fold` (it folds this mechanism's run records and outcome labels), `tasks-usage-fold` (what the machinery itself cost — runs, billed minutes, API calls, outcomes, parks, latencies) and `verify-production` (coded production validations — URL probes judged as code-work) |
+| `tasks/` | this pack's own tasks: `usage-fold` (it folds this mechanism's run records and outcome labels), `tasks-usage-fold` (what the machinery itself cost - runs, billed minutes, API calls, outcomes, parks, latencies) and `verify-production` (coded production validations - URL probes judged as code-work) |
 | `worldRules/` | the task-declaration checks |
 | `workRules/` | the armed-auto-merge gate (`automerge-policy-scope`) |
 | `declared-checks.json` | `tasks-pack-read-through-its-surface` — the guard over this pack's published surface, which runs wherever the pack is declared |
