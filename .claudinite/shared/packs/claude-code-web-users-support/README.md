@@ -25,7 +25,9 @@ per person.
 `.claudinite/temp/packs/current_user/`, the engine's session pack root, where the same loader that
 reads the canon and the repo's own packs picks it up: its rules ride the memory channel through the
 rules index, its skills are mounted, its checks run. So a person is not limited to stating
-preferences - anything a pack can carry, they can carry.
+preferences - anything a pack can carry, they can carry. The step also writes
+`.claudinite/temp/.gitignore`, so what it copies never shows up as a change to commit, whatever
+the repo's own `.gitignore` says.
 
 The copy runs only in an **attended** session: a routine fired under a person's account carries
 their identity but not their presence, and the harness's attended flag is what the step reads. Every

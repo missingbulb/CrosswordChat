@@ -29,7 +29,9 @@ export const SUSPEND_ALL_VAR = 'CLAUDINITE_TASKS_SUSPEND_ALL';
 
 // Read from the vars bag where the job carries one (the executor), else from the
 // named env copy: the scheduler workflow carries no bag, and stamps this one
-// variable by name because it is the one variable the scheduler needs.
+// variable by name because it is the one variable the scheduler needs. A member
+// executor that never received the bag still carries the named copy, and is served
+// by the same fallback.
 const suspendValue = (env) => varsBag(env)?.[SUSPEND_ALL_VAR] ?? env[SUSPEND_ALL_VAR];
 
 // Deliberately narrow: a variable somebody set to `false` or `0` to mean "off"
