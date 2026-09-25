@@ -38,7 +38,7 @@
     "local/crossword-chat",
     {
       "id": "claude-code-web-users-support",
-      "version": "60922.2",
+      "version": "60924.1",
       "config": {
         "repo": "missingbulb/Shepherd"
       },

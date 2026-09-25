@@ -89,9 +89,12 @@ export function passesSecret(workflowText, name) {
   return new RegExp(`^[ \\t]*${name}:[ \\t]*\\$\\{\\{[ \\t]*secrets\\.${name}[ \\t]*\\}\\}[ \\t]*$`, 'm').test(workflowText);
 }
 
+// A name the stub already passes on a static line is not stamped again: Actions
+// refuses a workflow whose env names one key twice.
 export function withDeclaredSecrets(stubText, names = []) {
-  if (!names.length) return stubText;
-  const lines = names.map(secretEnvLine).join('\n');
+  const stamped = names.filter((name) => !passesSecret(stubText, name));
+  if (!stamped.length) return stubText;
+  const lines = stamped.map(secretEnvLine).join('\n');
   return SECRETS_MARKER.test(stubText)
     ? stubText.replace(SECRETS_MARKER, (m) => `${m}\n${lines}`)
     : stubText;

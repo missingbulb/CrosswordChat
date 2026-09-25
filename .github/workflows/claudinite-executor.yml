@@ -42,7 +42,6 @@ jobs:
       - name: Pick up and execute ready work
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          CLAUDINITE_TASKS_SUSPEND_ALL: ${{ vars.CLAUDINITE_TASKS_SUSPEND_ALL }}
           # Every repository VARIABLE, as one static line (#1492). Unlike the secrets
           # below this never changes: `vars` is the context GitHub's own docs define as
           # non-sensitive and render unmasked in logs, so serialising it is not the
