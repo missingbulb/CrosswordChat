@@ -38,7 +38,7 @@ const BUBBLES_ANY = /\bbubbles\s*:/;
 
 const rule = {
   id: 'synthetic-input-events-bubble',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A dispatched user-input event sets bubbles: true',
   doc: 'packs/host-page/RULES.md',
   why: 'bubbles defaults to false on every event constructor, and a host page handles input by delegation near its own root — a non-bubbling synthetic event never reaches the handler, silently, and reads as "the app ignores untrusted events"',

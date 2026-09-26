@@ -6,7 +6,7 @@
   "preconditions": [
     "schedule:at-most-weekly",
     "substantive-change",
-    "commits-outside:.claudinite/"
+    "commits-outside:.claudinite/shared/"
   ],
   "expected_outcome": "amend_existing_or_create_new_pr",
   "automerge": [

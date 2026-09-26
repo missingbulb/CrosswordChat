@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The skills index: `.claudinite/claudinite-skills.GENERATED.md`, one readable table
+// The skills index: `.claudinite/flat/claudinite-skills.GENERATED.md`, one readable table
 // of every skill the repo's active packs bundle — canon and local alike — with what
 // makes each one load: its description (the text the harness matches a session's
 // activity against) and, for a path-scoped skill, the `force-load-on-file-edits-paths`
@@ -19,8 +19,9 @@ import { pathToFileURL } from 'node:url';
 import { loadPacks, isActive, bundledSkillSources } from './pack-registry.mjs';
 import { skillMetadata } from './skill-frontmatter.mjs';
 import { settingsPath } from '../settings-file.mjs';
+import { FLAT_DIR } from './flat-dir.mjs';
 
-export const SKILLS_INDEX_FILE = join('.claudinite', 'claudinite-skills.GENERATED.md');
+export const SKILLS_INDEX_FILE = join(FLAT_DIR, 'claudinite-skills.GENERATED.md');
 
 function declaredPacks(projectRoot) {
   const configPath = settingsPath(projectRoot);
@@ -54,7 +55,7 @@ export function renderSkillsIndex(rows) {
   const scoped = rows.filter((r) => r.paths.length).sort((a, b) => a.skill.localeCompare(b.skill));
   const rest = rows.filter((r) => !r.paths.length).sort((a, b) => a.skill.localeCompare(b.skill));
   const lines = [
-    '<!-- GENERATED — do not hand-edit; every converge rewrites it. Edit a skill\'s SKILL.md frontmatter. -->',
+    '<!-- GENERATED — do not hand-edit; every update rewrites it. Edit a skill\'s SKILL.md frontmatter. -->',
     '# Skills mounted here, and what loads each one',
     '',
     'A skill loads when the session\'s activity matches its description. A skill that names files',
@@ -81,7 +82,7 @@ export async function skillsIndexRows(projectRoot) {
     const packs = await loadPacks({ localRoot: projectRoot });
     return skillRows(packs.filter((pack) => isActive(pack, { packs: declaredPacks(projectRoot) })));
   } catch {
-    return []; // fail soft — a broken loader must never block a converge
+    return []; // fail soft — a broken loader must never block an update
   }
 }
 

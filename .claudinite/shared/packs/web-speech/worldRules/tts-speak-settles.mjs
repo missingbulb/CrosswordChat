@@ -39,7 +39,7 @@ const UTTERANCE = /\bSpeechSynthesisUtterance\b/;
 
 const rule = {
   id: 'tts-speak-settles',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A TTS completion handler settles on every terminal outcome, not just "end"',
   doc: 'packs/web-speech/RULES.md',
   why: 'a speak promise settles only from the outcome its handler recognises, so one that ignores interrupted/cancelled/error leaves every awaiting caller pending forever — with nothing thrown and nothing logged',

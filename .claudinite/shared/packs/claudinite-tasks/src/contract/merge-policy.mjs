@@ -30,7 +30,7 @@
 //
 // POLICY SEMANTICS, in evaluation order:
 //   - `'nothing'`  — never mergeable. `'anything'` — mergeable (the repo's own
-//     delivery settings still apply downstream, land-pr.mjs).
+//     delivery settings still apply downstream).
 //   - a LIST mixes allow terms and `reject:<name>` terms. A reject matching any
 //     changed file vetoes the whole diff; otherwise every changed file must be
 //     covered by some allow term (first listed match wins), and every matched
@@ -44,10 +44,9 @@
 //     with. Only the plain `'anything'` (the trusted lane: the vendored-mount
 //     converge) can land such a change.
 //
-// Two judging surfaces read one resolution path: the landing lane's CLI below
-// (what the worker doc tells a run to execute before it may merge), and the
-// `automerge-policy-scope` work check beside this file, which re-evaluates the
-// same verdict over a branch that stamped the arming trailer.
+// Two judging surfaces read one resolution path: the landing lane's CLI, which a
+// run executes before it may merge, and the `automerge-policy-scope` work check,
+// which re-evaluates the same verdict over a branch that stamped the arming trailer.
 
 import path from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
@@ -68,7 +67,7 @@ export const POLICY_ANYTHING = 'anything';
 export { AUTOMERGE_TRAILER };
 export const AUTOMERGE_TRAILER_RE = /^Claudinite-Automerge-Policy:[ \t]*(\S+)[ \t]*$/m;
 
-// --- path classification (shared with narrow-diff.mjs, which re-exports it) ---
+// --- path classification -----------------------------------------------------
 
 const DOC_EXTENSIONS = new Set(['.md', '.markdown', '.txt', '.rst']);
 
@@ -208,10 +207,9 @@ export const BUILTIN_MERGE_RULES = new Map([
 ]);
 
 // Composites expand into their member allow terms — `narrow-diff` is the queue's
-// historical `Merge: if-narrow` shape. Slightly stricter than the retired
-// narrowVerdict on purpose: a DELETED doc is no longer silently allowed
-// (deciding a document should not exist is a reviewed change — the
-// improve-comments-scope lesson), which fails toward a parked PR, never a merge.
+// `Merge: if-narrow` shape. Stricter than narrowVerdict on purpose: a DELETED doc
+// is not covered (deciding a document should not exist is a reviewed change),
+// which fails toward a parked PR, never a merge.
 export const COMPOSITE_POLICIES = new Map([
   ['narrow-diff', ['doc-changes', 'test-changes', 'comment-only-changes', 'single-folder-code-changes']],
 ]);
@@ -269,9 +267,8 @@ const DECLARED_KEYS = ['name', 'pathMatching', 'excludePathMatching', 'changeKin
 const CHANGE_KINDS = ['added', 'modified', 'deleted'];
 const EDIT_SHAPES = ['any', 'removals-only', 'comment-only'];
 
-// Regex-as-string in the `/body/flags` form declared-checks.json already uses —
-// the same inline parse pattern-rules.mjs applies (this module cannot import the
-// checks engine's private compiler, so the six lines live here and point there).
+// Regex-as-string in the `/body/flags` form declared checks already use. The
+// checks engine's compiler is private, so the same parse is repeated here.
 function compileRegex(raw, where) {
   const m = /^\/(.*)\/([a-z]*)$/s.exec(String(raw));
   if (!m) throw new Error(`${where}: ${JSON.stringify(raw)} is not a /pattern/ regex string`);
@@ -533,9 +530,3 @@ export function policyVerdict({ policy, entries, declaredRules = new Map(), rule
     ? refuse(problems, files)
     : { mergeable: true, why: `every changed file is covered (${[...coveredBy.keys()].join(', ')})`, files, problems: [] };
 }
-
-// --- the diff against a base ref (shared with narrow-diff.mjs) ----------------
-
-// `stderr: ignore` because the ONE expected failure here — `git show` on a path
-// that does not exist at that ref — is how an added or deleted file answers, and
-// letting git narrate it once per such file buries the verdict the caller reads.

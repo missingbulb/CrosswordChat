@@ -1,5 +1,5 @@
-// The work item's grammar — the queue's one durable object (docs/PRINCIPLES.md),
-// as the parse and serialize over its vocabulary (`task-constants.mjs`). An issue
+// The work item's grammar - the queue's one durable object - as the parse and
+// serialize over its vocabulary. An issue
 // titled `[claudinite-work] <pack>/<task> [qualifier]`, whose labels are its state,
 // whose body's first line is the task path, and whose optional body fields
 // (`Not-before`, `Blocked-by`, and a request's `Request` / `Model`) are the only
@@ -7,17 +7,11 @@
 //
 // PURE, and deliberately the whole schema: everything else — anchors, guards,
 // yields, leashes, verdicts — is computed fresh at every scheduler run and pick from the
-// engine and the declarations at HEAD (PRINCIPLES.md). The label-and-field vocabulary
+// engine and the declarations at HEAD. The label-and-field vocabulary
 // is therefore the compatibility surface across engine versions, and this file is the
 // one definition of how it is read and written: `src/` imports it from here, as does
 // every other pack — the dashboard loads it unbundled in a browser, which is why
 // nothing here reaches a Node built-in.
-//
-// Parse/serialize of those fields lives here and nowhere else (PRINCIPLES.md).
-//
-// Two imports, both frozen data: the vocabulary this grammar is over, and the
-// pack-rename map, which the title parse needs to keep reading titles written before
-// a rename (see parseWorkItemTitle).
 import { canonicalPackId } from '../../../engine/pack_loader/renamed-packs.mjs';
 import {
   WORK_PREFIX, PARK_PREFIX, STATUS_BLOCKED, STATUS_READY, STATUS_RUNNING_EXECUTOR,
@@ -45,7 +39,7 @@ import {
 // rather than quietly joining the mechanical lane.
 export const isBlockingPark = (item) => statusOf(item) === STATUS_NEEDS_HUMAN_FAILURE;
 
-// --- the decode (PRINCIPLES.md, "legacy spellings — written never, read forever") --
+// --- the decode: legacy spellings are written never, read forever ---------------
 // Labels are STORED DATA: open items filed by a fielded engine wear its spellings,
 // closed items keep theirs forever, and members converge on their own schedules. So
 // every reader here goes through one pass that maps every spelling ever written
@@ -161,8 +155,7 @@ export const hasLabel = (issue, name) => labelNames(issue).includes(name);
 
 // Title. The optional qualifier exists ONLY for deliberately concurrent items —
 // a fan-out naming its target — and it is part of the identity the same-title
-// mutex reads (PRINCIPLES.md). Nothing ever encodes a date here: that was the slot
-// grammar, and the issue number is the identity (PRINCIPLES.md).
+// mutex reads. Nothing encodes a date here: the issue number is the identity.
 export const workItemTitle = ({ pack, task, qualifier = null }) =>
   `${WORK_PREFIX} ${pack}/${task}${qualifier ? ` ${qualifier}` : ''}`;
 
@@ -182,7 +175,7 @@ export function parseWorkItemTitle(title) {
 export const isWorkItemTitle = (title) => parseWorkItemTitle(title) !== null;
 
 // The `<pack>/<task>` id a WORKER PATH names — the identity half a marked issue's
-// title cannot carry (PRINCIPLES.md), read off the path its machine block names. Two
+// title cannot carry, read off the path its machine block names. Two
 // shapes, because tasks have two homes: the `tasks/` slot a declared pack contributes,
 // and the queue's own built-in root. The `.claudinite/shared/` prefix is optional in
 // both — a member's mount is there and the canon runs its own tree.
@@ -212,7 +205,7 @@ export function taskIdFromPath(path) {
   return builtIn ? { pack: 'engine', task: builtIn[1] } : null;
 }
 
-// STANDING OR AD-HOC, DERIVED (PRINCIPLES.md). A task's standing item is the one
+// STANDING OR AD-HOC, DERIVED. A task's standing item is the one
 // the scheduler files when the task says yes: its title names the task and nothing
 // else, and the task it names is on the schedule. Everything else is ad-hoc — an
 // unscheduled task's item (the scheduler never asks it) and every qualified item
@@ -224,7 +217,7 @@ export function taskIdFromPath(path) {
 // believed, the structure says what the item IS, and the guards that consume this
 // (the live-item guard, the dedupe, the `after` yield) are only sound on the
 // second. `scheduled` is whether the task the title names is asked by the
-// scheduler (`isScheduledTask` in task-contract.mjs) — null when the repo no
+// scheduler (`isScheduledTask`) - null when the repo no
 // longer carries it, which is ad-hoc by the same rule.
 export function isStandingItem(item, scheduled) {
   const parsed = parseWorkItemTitle(item?.title ?? item);
@@ -238,10 +231,10 @@ export function isStandingItem(item, scheduled) {
 // ignoring the ask. A policy of `nothing` is the default already, so it reads
 // as absent.
 //
-// The grammar mirrors merge-policy.mjs's normalizePolicy — the semantic
+// The grammar mirrors the policy engine's normalizePolicy - the semantic
 // authority — and cannot import it: this module is deliberately pure (see the
-// header), so the drift guard is the test that runs a value matrix through both
-// sides (test/queue/request-mode.test.mjs).
+// header), so the drift guard is a test that runs a value matrix through both
+// sides.
 const RULE_NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PATH_SEGMENT = /^[A-Za-z0-9._-]+$/;
 const policyName = (name) => {
@@ -345,7 +338,7 @@ export function workItemBody({
 
 // The `Blocked-by` numbers a body names, from a work item's body or from an
 // ORDINARY issue's — a request marked for implementation states what it waits on in
-// the same field spelling, and adoption carries it onto the item it births (PRINCIPLES.md).
+// the same field spelling, and adoption carries it onto the item it births.
 export function parseBlockedBy(body) {
   const bb = BLOCKED_BY_RE.exec(String(body ?? ''))?.[1] ?? '';
   return [...bb.matchAll(/#(\d+)/g)].map((m) => Number(m[1]));
@@ -362,7 +355,7 @@ export function parseWorkItemBody(body) {
   const request = REQUEST_RE.exec(text) ? Number(REQUEST_RE.exec(text)[1]) : null;
   // An unrecognised family reads as absent rather than as itself: the item's model
   // is behaviour-defining, so the only values that leave this parser are ones the
-  // engine can actually dispatch at (PRINCIPLES.md).
+  // engine can actually dispatch at.
   const askedModel = MODEL_RE.exec(text)?.[1] ?? null;
   const model = REQUEST_MODELS.includes(askedModel) ? askedModel : null;
   // Same fencing as the model: an authorization that does not read as a policy
@@ -380,7 +373,7 @@ export function parseWorkItemBody(body) {
   return { taskPath, notBefore: nb, blockedBy, request, model, merge, endsWhen, targetBranch, targetPr, supersedes, woken };
 }
 
-// THE ITEM'S OWN FACTS, as a precondition term sees them (docs/PRINCIPLES.md): the
+// THE ITEM'S OWN FACTS, as a precondition term sees them: the
 // body's fields plus the two the terms read that are not fields — the issue number,
 // and whether somebody created or woke this item. `woken` is everything that is
 // NOT the scheduler's own ask: an item stamped by a lever, one born ad-hoc (a
@@ -400,13 +393,12 @@ export function itemFacts(item) {
   };
 }
 
-// WHAT A MARKED ISSUE ASKS FOR (docs/PRINCIPLES.md) — read from the
+// WHAT A MARKED ISSUE ASKS FOR - read from the
 // person's own text at every adoption, so each ask names its parameters afresh and
 // nothing stale outranks a new one.
 //
 // Whoever files the issue puts these on its FIRST LINES, as one block ahead of the
-// prose — `basics/skills/do-later/SKILL.md` is where that placement is prescribed and
-// argued. The parser does not care where they sit; a person editing the issue, and a
+// prose - the do-later skill is where that placement is prescribed and argued. The parser does not care where they sit; a person editing the issue, and a
 // retry rewriting `Not-before`, do.
 //
 // `gated` is whether the issue's AUTHOR holds push access. A body is editable by
@@ -575,13 +567,11 @@ function stampTarget(body, target) {
 // Set a section of an item body (the Context, code-work's Delivered, the agent's Why)
 // — replacing one of the same heading if it is already there, appending otherwise.
 //
-// REPLACING IS THE WHOLE POINT, and appending was a live bug (#879). Every standing
-// item is born carrying a `### Context`, and the hand-off writes Context again — so
-// an append leaves TWO sections of that name, while the session is told to read "the
-// issue's Context section", singular. The one it reads first is then the scheduler run's birth
-// note and the binding scope is in the other, which fails silently whichever section
-// the agent picks. It also grows: an item re-queued through hand-off twice carried a
-// third.
+// REPLACING IS THE WHOLE POINT (#879). Every standing item is born carrying a
+// `### Context`, and the hand-off writes Context again - so an append would leave TWO
+// sections of that name, while the session is told to read "the issue's Context
+// section", singular: the one it reads first would be the scheduler run's birth note,
+// the binding scope in the other, and every further hand-off would add one more.
 //
 // A section runs to the next `### ` heading or to the end of the body, so a replaced
 // section keeps its position rather than migrating to the bottom — the body stays in
@@ -599,8 +589,7 @@ export function withSection(body, heading, lines) {
   return `${[...existing.slice(0, at), ...section, ...tail].join('\n')}\n`;
 }
 
-// IS THIS ISSUE AN ITEM? Two shapes, and the second is what the one-issue request
-// model added (PRINCIPLES.md): a filed `[claudinite-work]` issue, or an ordinary
+// IS THIS ISSUE AN ITEM? Two shapes: a filed `[claudinite-work]` issue, or an ordinary
 // issue somebody marked `task:origin:ad-hoc` that has been ADOPTED — the mark alone
 // is a request awaiting adoption, not yet an item, and reading it as one would have
 // the janitor's stateless-repair rule park the person's issue for having no status.
@@ -611,10 +600,7 @@ export function withSection(body, heading, lines) {
 // item whose requester removed it drops out of every read of the queue at once —
 // the executor never picks it, the precondition never gets to see the withdrawal
 // and decline it, and the janitor's rules cannot sweep what they cannot list, so
-// the item sits `waiting-for-executor` forever with nothing left to move it. Same
-// shape as `converge-item`'s refusal (missingbulb/Shepherd#360): a membership test
-// gated on the single artifact it exists to validate refuses exactly the items
-// that artifact went missing from.
+// the item sits `waiting-for-executor` forever with nothing left to move it.
 //
 // It lives with the vocabulary rather than with the listing that applies it because
 // the dashboard asks it in a BROWSER, where the listing's GitHub port does not load.

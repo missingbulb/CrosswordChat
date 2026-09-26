@@ -8,7 +8,7 @@
 //
 // TWO FAMILIES, ONE OF THEM HISTORICAL. `claudinite-task-run` was the SLOT
 // scheduler's own line, one per due task per run; the slot scheduler is retired
-// (#974) and nothing writes that line any more. The parser stays, and only the
+// and nothing writes that line any more. The parser stays, and only the
 // parser: Actions logs from before the retirement are still inside their retention
 // window, and the usage fold still counts them. Nothing new should be taught this
 // shape — `claudinite-task-exec` below is the live record.
@@ -81,12 +81,10 @@ export function parseTaskRuns(text) {
 
 // --- executor-side execution records ------------------------------------------
 // The historical records above say what the retired slot scheduler DID with a due
-// task; these record what an EXECUTOR SESSION did with the work it ran. Printed by executor-side code
-// (resolve-dispatch on a terminal verdict, record-exec.mjs at convergence), they
-// land in the session transcript, ride to the conversation-logs branch with the
-// executor's capture step, and the usage fold counts them deterministically —
-// the "task statuses out of the conversation logs" half of the census (owner,
-// 2026-08-06). Same single-home rule: renderer and parser sit here together.
+// task; these record what an EXECUTOR SESSION did with the work it ran. They land
+// in the session transcript, ride to the conversation-logs branch with the
+// executor's capture step, and the usage fold counts them deterministically.
+// Same single-home rule: renderer and parser sit here together.
 
 export const TASK_EXEC_STATUSES = Object.freeze([
   // The dispatch ran to completion within its ceiling; the issue was closed.
@@ -137,8 +135,7 @@ export function parseTaskExecs(text) {
 // The two records above say what happened to a task; this says what the RUN that
 // carried it spent — the API calls it made and the wall milliseconds each of its
 // phases took. Together with the billed minutes read off the jobs listing, that is
-// the whole cost side of the machinery's own usage file
-// (packs/claudinite-tasks/tasks/tasks-usage-fold/README.md).
+// the whole cost side of the machinery's own usage file.
 //
 // WHERE IT IS READ FROM, and why the shape carries the run id. A scheduler tick
 // owns no work item, so its record is only ever in the job log; an executor run
@@ -231,9 +228,8 @@ export function parseRunCosts(text) {
 // loop passes through pick, claim and converge once per item and the record is the
 // run's, not the item's.
 //
-// The clock comes through the world's port for the same reason every other reading
-// of it does; `apiCalls` is a reader the caller supplies rather than an import,
-// which keeps the REST paths out of this module. A caller that has no counter to
+// `apiCalls` is a reader the caller supplies rather than an import, which keeps the
+// REST paths out of this module. A caller that has no counter to
 // offer leaves the field unread, and the record then carries no `calls=`.
 export function startRunCost({ workflow, runId = null, apiCalls = () => null, now = nowMs }) {
   const phaseMs = {};

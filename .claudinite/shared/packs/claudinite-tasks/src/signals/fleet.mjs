@@ -1,28 +1,24 @@
-// The `fleet` signal reader (docs/PRINCIPLES.md) — the members
+// The `fleet` signal reader - the members
 // aggregate the CANON repo's fleet-scoped tasks (growth-promote,
 // growth-discover-packs) decide from. A consumer cannot
 // declare `fleet`; only the canon repo's scheduler builds it, over the fleet PAT
 // (`FLEET_GITHUB_TOKEN` — the census's existing credential, the one token that
 // can enumerate every repo the owner owns; the Action's default GITHUB_TOKEN sees
-// only this repo). queue/signals.mjs invokes this ONLY when the picked task declares `fleet`, so
-// an ordinary night pays nothing for the fleet enumeration.
+// only this repo). The collector invokes this ONLY when the picked task declares
+// `fleet`, so an ordinary night pays nothing for the fleet enumeration.
 //
 // Pure over an injected `fleetGh` (the same `gh(path) -> { status, json }` shape
 // the other collectors take), so the whole reader tests against a fake `gh` with
-// no live GitHub — exactly like signals/index.mjs. The one place the real
+// no live GitHub. The one place the real
 // FLEET_GITHUB_TOKEN is read is `makeFleetGh`, at the I/O edge.
 //
-// This deliberately ports the retired central planner's per-member probes (the
-// `fleetMembers` bundle the old central planner stamped on the home repo) into
-// the per-repo scheduler, adapted for the `local/packs` rename (both roots
-// accepted through the migration) and carrying each member's provenance stamp so
-// the retire guard can read per-repo apply evidence.
+// Each member carries its provenance stamp so the retire guard can read per-repo
+// apply evidence.
 
 import { makeGh } from '../world/github.mjs';
 import { packEntryId } from '../../../../engine/pack_loader/pack-registry.mjs';
-// Local-pack roots, canonical first — a window commit touching either is a local
-// -pack change (promote's trigger). Both are live until the Phase 4 cleanup drops
-// the legacy dual root. One definition, shared with the per-repo probes.
+// A window commit touching the local-pack root is a local-pack change (promote's
+// trigger). One definition, shared with the per-repo probes.
 import { LOCAL_PACK_ROOT } from '../world/git.mjs';
 import { SETTINGS_FILE } from '../../../../engine/settings-file.mjs';
 // The one definition of dormancy, shared with every other fleet reader: a second
@@ -95,8 +91,8 @@ async function localPacksChangedInWindow(gh, fullName, defaultBranch, sinceIso) 
 // Build one member's record from its declaration plus the local-pack window scan.
 // `sinceIso` bounds the window. Whether the member HAS local packs is not probed:
 // adoption seeds `.claudinite/local/packs/<repo>/` and the nightly deliberately
-// never re-seeds or removes it, so the answer was yes for every member and the
-// probe was one contents read per member per collection. An undeclared repo is
+// never re-seeds or removes it, so the answer is yes for every member and the
+// probe would cost one contents read per member per collection. An undeclared repo is
 // still skipped — it is not a member anything plans for.
 async function buildMember(gh, repo, sinceIso) {
   const fullName = repo.full_name;

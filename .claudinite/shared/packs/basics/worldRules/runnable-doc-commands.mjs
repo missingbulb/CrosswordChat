@@ -40,7 +40,7 @@ const PACK_DOCS_DIR = /^(\.claudinite\/local\/)?packs\/[^/]+\/docs\//;
 
 const rule = {
   id: 'runnable-doc-commands',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'Every `node <path>` a pack doc tells an agent to run names a file this repo carries',
   doc: 'packs/basics/README.md',
   why: 'a command in prose is opened only when an agent runs it, so a path left behind by a move goes on instructing every session that follows the doc, with nothing red anywhere',

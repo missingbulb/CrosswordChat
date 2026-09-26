@@ -1,4 +1,4 @@
-// The signal collectors (docs/PRINCIPLES.md). Each reads a
+// The signal collectors. Each reads a
 // bounded, cheap slice of the repo's GitHub state (or local disk) for one signal
 // name; `collectSignals` gathers only the union the PICKED task declared, so an
 // frequent task never pays for a rarer one's signals. Every collector takes the
@@ -7,7 +7,7 @@
 // Pure over the injected `gh` reader and a `ctx` of already-resolved facts, so
 // the whole layer tests against a fake `gh` with no live GitHub. The ctx facts a
 // collector cannot fetch for itself (manifest version, local-pack presence,
-// retention) are read off the checkout by signals/context.mjs — see signals/local.mjs.
+// retention) are read off the checkout by the caller.
 
 import { SHARED_SUBDIR } from '../../../../engine/pack_loader/pack-registry.mjs';
 import { LOCAL_PACK_ROOT } from '../world/git.mjs';
@@ -23,14 +23,14 @@ import { taskFromMessage } from '../../public/work-item-grammar.mjs';
 import { isSubstantiveCommit, HOUSEKEEPING } from './substantive-commit.mjs';
 import { readCommit, latestRelease, readBranch, readTree, getIssue, collaboratorPermission, listIssuesByQuery } from '../world/github.mjs';
 
-// How far back the run history reads (docs/PRINCIPLES.md): the longest any
+// How far back the run history reads: the longest any
 // cadence term looks, a month, plus slack. A run older than this is not in the
 // record — a task then reads as not having run in that long, which is the honest
 // state-free answer. The scheduler's own queue read is bounded by the same figure.
 export const RUN_HORIZON_DAYS = 40;
 
 // What counts as genuine project work, and what is the machinery moving, is
-// substantive-commit.mjs's test — shared with the readers outside this pack that must
+// `isSubstantiveCommit`'s test - shared with the readers outside this pack that must
 // classify a member's commits the same way. Here the file list is always resolved, so
 // its corpus-only exclusion applies in full.
 
@@ -38,9 +38,9 @@ export const RUN_HORIZON_DAYS = 40;
 // `2026-07-19T0940Z--pr-1583--<session>.jsonl` (or `--issue-123--`) — minute precision, optionally
 // `-<k>` suffixed on a same-minute collision. Anything else on the logs branch
 // (its README) is not a log and has no age. The writer of that name is the
-// capture step in the pack that owns the branch, which core deliberately does not
-// import (engine/ depends on no pack, per the barrier); the drift guard in
-// packs/claudinite-tasks/test/signals.test.mjs pins this parse to that writer, so
+// capture step in the pack that owns the branch, which this pack deliberately does
+// not import (packs stay independent); a drift guard in this pack's tests pins this
+// parse to that writer, so
 // changing one without the other fails loudly rather than silently retiring the
 // prune trigger.
 const LOG_STAMP = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})Z(?:-\d+)?--(?:pr|issue)-\d+--.+\.jsonl$/;
@@ -84,15 +84,16 @@ async function pagedWindow(gh, path, inWindow) {
   return out;
 }
 
-// A merged PR is mineable unless it is bot work or one of Claudinite's own
+// `isMinablePr`: a merged PR is mineable unless it is bot work or one of Claudinite's own
 // automated writes — the same author/message exclusions `isSubstantiveCommit` and the
 // `issues` collector apply, kept together on purpose. It does NOT carry the
 // corpus-only exclusion: the PR listing has no file list, and resolving one per
 // PR would cost a read per PR across the whole window. It does not need to —
 // a corpus-only PR's merge commit is already non-substantive, so no task with a
-// `commits`-gated precondition ever reaches this listing on its account. The housekeeping regex already covers
-// the growth tasks' own `Claudinite growth: …` PRs and the scheduler's
-// `[claudinite-task]` titles, so the self-trigger guards survive the widening.
+// `commits`-gated precondition ever reaches this listing on its account. The
+// housekeeping regex already covers the growth tasks' own `Claudinite growth: …` PRs
+// and the scheduler's `[claudinite-task]` titles, so the self-trigger guards hold here.
+//
 // How far the per-open-PR file read pages before it stops (100 files a page).
 const PR_FILE_PAGES = 3;
 
@@ -159,8 +160,7 @@ const COLLECTORS = {
 
     // PRs MERGED during the window, in a field of their OWN. A merged PR carries
     // the review discussion and the "what changed and why" — usually the richest
-    // lesson material in a window — and `state=open` alone made it unreachable to
-    // any task bound to this signal. It is deliberately NOT folded into `open` or
+    // lesson material in a window. It is deliberately NOT folded into `open` or
     // `touched`: those two are other tasks' target sets, and widening them here
     // would silently widen what those tasks do.
     // The same exclusions the `commits` and `issues` collectors apply hold here, so
@@ -174,7 +174,7 @@ const COLLECTORS = {
 
     // WHICH OF THE WINDOW'S PRs A SCHEDULED TASK WROTE, read structurally rather
     // than off its title: one commit read per PR that moved in the window, for its
-    // head's `Claudinite-Task:` trailer (task-trailer.mjs). This is what makes the
+    // head's `Claudinite-Task:` trailer. This is what makes the
     // silence gate hold for a task added tomorrow — a title regex has to learn
     // each new task's name, and only ever learns it after that task re-armed a
     // neighbour with its own output.
@@ -233,7 +233,7 @@ const COLLECTORS = {
     const since = new Date(ctx.sinceIso);
     // Exclude PRs (the issues endpoint returns both) and the scheduler's own
     // work items, its schedule board, and standing trackers — invisible to
-    // signals (PRINCIPLES.md). The board especially: every rewrite would land in
+    // signals. The board especially: every rewrite would land in
     // `issues.touched` and wake an issue-gated task on the queue's own churn (F8).
     const real = open.filter((i) => !i.pull_request
       && !/^\[claudinite-(task|work|schedule)\]/.test(i.title ?? '')
@@ -247,8 +247,8 @@ const COLLECTORS = {
   // Every open branch, each with the date of its tip commit — so a precondition
   // can tell a branch that MOVED in the window from the standing pile that did
   // not. `touched` is the same field name, with the same meaning, the `prs` and
-  // `issues` collectors carry; without it the branch dimension had no notion of
-  // newness at all and every gate over it degenerated to "a branch exists".
+  // `issues` collectors carry; without it every gate over the branch dimension
+  // degenerates to "a branch exists".
   //
   // The tip date costs one commit read per DISTINCT tip sha (branches sharing a
   // tip share the read) because the branch listing carries no date of its own —
@@ -281,8 +281,7 @@ const COLLECTORS = {
     return { latestTag, manifestVersion: ctx.manifestVersion ?? null, shipsPipeline: ctx.shipsReleasePipeline ?? null };
   },
 
-  // Whether the repo carries local packs, and whether a window commit touched
-  // one (under either local root during the rename window).
+  // Whether a window commit touched the repo's local packs.
   // Whether the repo HAS local packs is not a question: adoption seeds
   // `.claudinite/local/packs/<repo>/` and the nightly deliberately never re-seeds
   // or removes it, so movement is the only thing left to report.
@@ -293,7 +292,7 @@ const COLLECTORS = {
   },
 
   // Which DECLARED packs' vendored files changed in the window — the local echo
-  // of "canon changed" (replaces the cross-repo relevantCanonChanged).
+  // of "canon changed".
   async sharedMount(gh, ctx) {
     const commits = ctx.commits ?? await readWindowCommits(gh, ctx.repo, ctx.defaultBranch, ctx.sinceIso);
     const declared = new Set(ctx.activePacks ?? []);
@@ -354,9 +353,9 @@ const COLLECTORS = {
   // version, the installed pack versions, and whether any `.claudinite/shared/**`
   // file was touched by a commit in the window.
   //
-  // `convergedInWindow` is what replaced the stamp's age (#1252). The age came off a
-  // datetime that recorded the last FULL re-vendor rather than the last converge, so
-  // it read months stale on a member converging nightly — and newness taken from the
+  // `convergedInWindow`, not the stamp's age (#1252): the stamp's datetime records
+  // the last FULL re-vendor rather than the last converge, so it reads months stale
+  // on a member converging nightly - and newness taken from the
   // objects' OWN movement in the window is where every other precondition here gets
   // it. `present` is the mount's existence, which the versions answer directly: an
   // engine that stamps always stamps.
@@ -372,10 +371,7 @@ const COLLECTORS = {
     };
   },
 
-  // Fleet aggregate — canon-only, over the fleet PAT (PRINCIPLES.md). A consumer
-  // cannot declare it; the collector returns null unless the caller supplied a
-  // fleet reader (wired on the canon and fleet-enforcer repos in Phase 2).
-  // THE REQUEST READ (docs/PRINCIPLES.md). Unlike every collector beside
+  // THE REQUEST READ. Unlike every collector beside
   // it, this one reads a single named object rather than a window: the issue THIS
   // item was created for, off `ctx.item.request`. That is what the precondition's
   // third argument buys — a verdict about one issue, which no window of repo
@@ -447,7 +443,7 @@ const COLLECTORS = {
     };
   },
 
-  // THE RUN HISTORY (docs/PRINCIPLES.md): this task's own unqualified work
+  // THE RUN HISTORY: this task's own unqualified work
   // items over the horizon, newest first, the item under evaluation excluded — what
   // the cadence terms and the since-last-run window read. Off `ctx.items` where the
   // caller already holds the queue (the scheduler run fetched it, so the whole
@@ -511,6 +507,8 @@ const COLLECTORS = {
     };
   },
 
+  // Fleet aggregate - canon-only, over the fleet PAT. A consumer cannot declare
+  // it; the collector returns null unless the caller supplied a fleet reader.
   async fleet(gh, ctx) {
     return ctx.fleet ?? null;
   },

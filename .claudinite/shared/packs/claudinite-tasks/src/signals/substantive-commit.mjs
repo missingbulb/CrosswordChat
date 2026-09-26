@@ -5,7 +5,7 @@
 // "meaningful" would mark a member sleepy on the very commits its own scheduler counts
 // as movement.
 //
-// Import-light and free of `node:` on purpose, like dormancy.mjs: the dashboard reads
+// Import-light and free of `node:` on purpose: the dashboard reads
 // this in the browser through the pack's published public/.
 
 import { taskFromMessage } from '../../public/work-item-grammar.mjs';

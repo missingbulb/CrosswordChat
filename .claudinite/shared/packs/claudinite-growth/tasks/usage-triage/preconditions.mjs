@@ -17,14 +17,20 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const REVIEW_PATH = '.claudinite/local/usage-review.GENERATED.json';
+export const REVIEW_PATH = '.claudinite/usage/element-review-findings.json';
+// Where the review wrote it before `.claudinite/usage/`, read until the review has moved it.
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#2323
+export const LEGACY_REVIEW_PATH = '.claudinite/local/usage-review.GENERATED.json';
 export const ACTIONABLE = ['known', 'probable'];
 
 export function lastingFindings(root) {
-  try {
-    const file = JSON.parse(readFileSync(join(root, REVIEW_PATH), 'utf8'));
-    return (file.findings ?? []).filter((f) => f.lasting && ACTIONABLE.includes(f.cause));
-  } catch { return []; }
+  for (const path of [REVIEW_PATH, LEGACY_REVIEW_PATH]) {
+    try {
+      const file = JSON.parse(readFileSync(join(root, path), 'utf8'));
+      return (file.findings ?? []).filter((f) => f.lasting && ACTIONABLE.includes(f.cause));
+    } catch { /* not at this path */ }
+  }
+  return [];
 }
 
 export const terms = {

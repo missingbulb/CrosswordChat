@@ -7,8 +7,8 @@
 // (each pack carries its own resolved `dir`).
 //
 // Frequency filtering is deliberately NOT done here — discover returns every
-// active, well-formed task; the scheduler run intersects them with the current anchors
-// (queue/anchors.mjs). Keeping the two apart keeps each pure and separately
+// active, well-formed task; the scheduler run intersects them with the current anchors.
+// Keeping the two apart keeps each pure and separately
 // testable. A task whose declaration fails to load or violates the declaration
 // contract is dropped into `errors` (fail-soft, per-task), never sinking the
 // scan.
@@ -22,7 +22,7 @@ import { loadTaskTerms } from './task-terms.mjs';
 import { BUILT_IN_PACK, builtInTasksRoot } from './built-in-tasks.mjs';
 
 // The declaration file of every task an ACTIVE pack contributes, plus the engine's
-// own built-in root (built-in-tasks.mjs). Sync — locating a declaration only reads
+// own built-in root. Sync - locating a declaration only reads
 // directories; loading one is what needs `await` — so a check can make the same walk
 // discovery makes rather than a second opinion of which declarations a repo has.
 // Fail-soft in the same two places discovery is: an unreadable tasks/ and a folder

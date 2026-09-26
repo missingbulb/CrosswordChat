@@ -1,18 +1,16 @@
 // The executor's entry gate: identify the ONE dispatch this session was started
-// for, and validate it in code BEFORE any model judgment (per-project-scheduling
-// PRINCIPLES.md). This is the CLI shell `validate-dispatch.mjs` was written to be
-// driven by — it wires that pure core's `exists` / `isPackDeclared` / `loadTask`
-// capabilities to this checkout and hands it the issue body.
+// for, and validate it in code BEFORE any model judgment. This is the CLI shell
+// around the pure validation core: it wires the core's `exists` / `isPackDeclared` /
+// `loadTask` capabilities to this checkout and hands it the issue body.
 //
 // IT DOES NOT CLAIM. The claim protocol (read labels → swap ready → agent-running
 // → post a claim comment → re-read, earliest claim wins) needs GitHub WRITES,
 // which the executor session can only make through its MCP tools, so it stays
-// agent-driven prose in public/instructions.md. This shell only decides "is there a dispatch
-// here, is it mine, and is it legal".
+// agent-driven prose. This shell only decides "is there a dispatch here, is it mine,
+// and is it legal".
 //
 // TWO TRIGGER SOURCES, because the same `issues.labeled` webhook reaches an
-// executor session by two different transports and only one of them was ever
-// read here:
+// executor session by two different transports:
 //
 //   1. GITHUB ACTIONS writes the whole webhook payload to disk at
 //      `$GITHUB_EVENT_PATH` — `action`, `label.name` and the entire `issue`
@@ -32,10 +30,8 @@
 //      caught in code. (`--issue-body-file` + `--issue-labels` remain as the
 //      manual fallback should the fetch's response shape ever surprise.)
 //
-// Reading only source 1 is what made every CCR-run executor session miss its own
-// trigger and select an issue by listing instead — the duplicate-execution bug
-// re-entered through the front door. Observed live 2026-07-28: two sessions each
-// selected dispatch #772 and claimed it one second apart.
+// Reading only source 1 leaves every CCR-run executor session unable to name its own
+// trigger - the duplicate-execution bug re-entering through the front door.
 //
 // ZERO NETWORK, BY CONSTRUCTION — still. The executor session is MCP-only and
 // carries no repo credential of its own, so anything reaching the GitHub REST API
@@ -46,7 +42,7 @@
 // THE VERDICT IS THE INTERFACE; THE EXIT CODE IS ONLY "did the routine break".
 // The executor branches on the printed `dispatch:` field, which every decided
 // verdict carries. The exit code answers a narrower question, and answers it the
-// way every other command does (owner, 2026-08-14): ZERO WHEN THE ROUTINE GOES
+// way every other command does: ZERO WHEN THE ROUTINE GOES
 // ON — including when going on means stopping on purpose — and NON-ZERO ONLY
 // WHEN IT STOPS UNEXPECTEDLY. A verdict this shell was written to reach is not a
 // failure, and a harness that paints exit 11 red teaches both the reader and the
@@ -64,7 +60,7 @@
 //                 It never runs. Prescribed work, so: zero.
 //   task-gone   — a well-formed dispatch naming a task this repo no longer
 //                 carries (file removed, pack undeclared). CLOSE the issue
-//                 with the printed reason (owner, 2026-08-06) — an obsolete
+//                 with the printed reason - an obsolete
 //                 dispatch is not a human's problem. It never runs.
 //   not-mine    — the trigger label is no ready label at all, or the issue no
 //                 longer carries one (a dispatch another session has already
@@ -90,17 +86,16 @@
 // exits 0 under its own `dispatch:` name, and no live code carries a changed
 // meaning for a reader who remembers the old table.
 //
-// THERE IS NO FALLBACK, BY DESIGN. Exit 12 used to send the executor off to list
-// the open dispatches and take the oldest. That is precisely the
-// N-sessions-racing-over-N-issues failure the one-session-one-issue rule exists to
-// prevent, reached from the other direction: one scheduler run files every due
+// THERE IS NO FALLBACK, BY DESIGN. Listing the open dispatches and taking the
+// oldest is precisely the N-sessions-racing-over-N-issues failure the
+// one-session-one-issue rule exists to prevent, reached from the other direction: one scheduler run files every due
 // dispatch seconds apart, so every session that cannot name its own trigger builds
 // the SAME work list and races over it. A session that does not know its issue
 // must run nothing - the next scheduler run files the occurrence again if the work
 // is still owed, so stopping costs a delay while guessing costs duplicated work.
 //
-// Usage: `node <engine>/scheduler/resolve-dispatch.mjs [self|fleet]`
-//                `[--issue-json <path> | --issue-body-file <path> --issue-labels <csv>]`
+// Usage: `node <this file> [self|fleet]`
+//        `[--issue-json <path> | --issue-body-file <path> --issue-labels <csv>]`
 // The positional argument is THIS SESSION's scope — which of the two executor
 // routines is running. It defaults to `self`, which is every ordinary project's
 // executor; the FLEET routine must pass `fleet` explicitly, and a fleet payload
@@ -369,12 +364,12 @@ export async function resolveDispatch(argv = process.argv.slice(2), env = action
 
   // The checkout the dispatch's task path must resolve in. `exists` reads the
   // working tree; in an executor session that IS HEAD (a fresh checkout, nothing
-  // written yet), which is what validate-dispatch means by "exists at HEAD".
+  // written yet), which is what the validation core means by "exists at HEAD".
   const root = env.CLAUDINITE_REPO_ROOT || repoRootFrom(import.meta.url);
   const { loadConfig } = await import('../../../../engine/checks/helpers/repo-context.mjs');
   const declared = new Set(loadConfig(root).packs);
 
-  // `loadTask` is SYNCHRONOUS by design — it keeps validate-dispatch's core pure
+  // `loadTask` is SYNCHRONOUS by design - it keeps the validation core pure
   // and sync-testable — but importing an .mjs is not, so the shell prefetches the
   // module here and the capability just replays the result (or rethrows the parse
   // failure, which is exactly what the core wants to report).
@@ -459,8 +454,6 @@ export function emitResult({ code, fields, advice }) {
   return code;
 }
 
-// Run only when invoked directly (the executor's `node resolve-dispatch.mjs`),
-// never on import — the exported helpers above are unit-testable without it.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   resolveDispatch()
     .then((result) => { process.exitCode = emitResult(result); })

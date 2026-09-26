@@ -1,6 +1,6 @@
 ---
 name: writing-tasks
-description: The contract a Claudinite task is written to — the declaration's fields, the code-work and agentic phases, the precondition as the only decision point, ordering, and how a work item converges. Use when writing or changing a tasks/<name>/task.json or its worker, or when a task-declaration check fires.
+description: The contract a Claudinite task is written to. Use when writing or changing a tasks/<name>/task.json or its worker, or when a task-declaration check fires.
 metadata:
   body: workflow
   usage:
@@ -46,7 +46,7 @@ Three responsibilities, strictly separated (owner, 2026-08-06):
 
 The engine is vendored under `.claudinite/shared/packs/claudinite-tasks/`; the basics
 pack owns the conformance guards for the surfaces a repo authors around it —
-scheduling is baseline Claudinite discipline, present wherever basics is
+scheduling is core Claudinite discipline, present wherever basics is
 declared (everywhere), not an opt-in feature.
 
 There is no watermark, no per-run state and no calendar: an occurrence exists
@@ -59,8 +59,8 @@ outage self-heals by looking at the queue rather than by replaying a ledger.
   `claudinite-scheduler.yml` carries a single cron: two ticks a day, twelve
   hours apart, every task asked at both, on a repo-hashed minute constrained to
   **:10-:50** and a repo-hashed hour (written once when the file is scaffolded,
-  and preserved by every converge after: `packs/claudinite-tasks/src/adopt/hash-minute.mjs`, a pure function of the repo full name that
-  bootstrap stamps in and baselining re-derives), a `concurrency` group, a
+  and preserved by every update after: `packs/claudinite-tasks/src/adopt/hash-minute.mjs`, a pure function of the repo full name that
+  bootstrap stamps in and the update re-derives), a `concurrency` group, a
   `workflow_dispatch` trigger (whose one `wake` input is how a task is forced,
   here or from another repo), and a call into the vendored scheduler run — no logic of its own
   (schema and behaviour changes ride the vendor refresh, not workflow edits). It

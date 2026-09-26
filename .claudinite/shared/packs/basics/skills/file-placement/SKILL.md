@@ -1,6 +1,6 @@
 ---
 name: file-placement
-description: Where a file should live — the reference-distance metric, the high-reach code smell, and the mandated-location, test-location and plugin-contract exemptions. Use before placing, moving, or renaming a file, or when reviewing where one lives.
+description: Where a file should live: the reference-distance metric and its exemptions. Use before placing, moving or renaming a file, or when reviewing where one lives.
 metadata:
   body: guidelines
   usage:

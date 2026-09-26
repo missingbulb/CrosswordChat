@@ -1,6 +1,6 @@
 ---
 name: backfilling-provenance
-description: Filling a pack's empty provenance files from its history. Use when a pack under packs/ or .claudinite/local/packs/ carries empty provenance files, or when asked to backfill or write a pack's provenance.
+description: Filling a pack's empty provenance files from its history. Use when a pack carries empty provenance files, or when asked to backfill a pack's provenance.
 metadata:
   body: workflow
   usage:
@@ -23,8 +23,9 @@ so the sections it prints without a draft under them are the run's work, not its
    nothing holds the run until the Stop hook, with every file already written.
 1. **Take one pack** and list what is owed: `node packs/claudinite-growth/provenance.mjs
    check <pack>` prints what each file is named by, which are empty, which hold only the
-   conversion's entry and so owe history too, and how many candidates `_declined.md` already
-   holds. The listing is the whole pass: nothing owed is left off it (in a member the tool is
+   conversion's entry - owing history where git shows the element earlier or its derived
+   birth is an assumption, settled where git dates the birth on that entry's own day - and
+   how many candidates `_declined.md` already holds. The listing is the whole pass: nothing owed is left off it (in a member the tool is
    `.claudinite/shared/packs/claudinite-growth/provenance.mjs`).
 2. **Write the brief**, source-first: `provenance.mjs brief <pack> > brief.md` (an element
    list after the pack narrows it to those files) reads every empty file's history out of
@@ -48,6 +49,10 @@ so the sections it prints without a draft under them are the run's work, not its
    earlier, but a listing named it before its carrier did or the birth commit took text out
    of another carrier - so the drafted birth is an assumption, and an element reworded on its
    way across is exactly what no text search can follow. Read the evidence named beside each.
+   **A rule reworded in place** - a whole file rewritten, every slug, trigger and text new
+   at once - is followed by its own words into the older passage holding most of them, and
+   listed with that share: verify the passage is this rule and not a neighbour it shared a
+   paragraph with, and restore the born to the rewrite where it is not.
    **A pack that has moved** says so under the header, and its inventory covers every path it
    has lived at, so rows naming a file in full are from before the move.
 3. **Work the commit inventory before the drafts.** The drafts cover what a carrier's own
@@ -59,7 +64,8 @@ so the sections it prints without a draft under them are the run's work, not its
    A row marked **sweep** is kept out of the drafts because a sweep usually re-wraps what it
    touches, but where its diff shows it *deciding* something about one element, that element
    owes the entry: touching twelve packs is not deciding nothing here. Read the version rows
-   with them, the claimed ones and the *version rows no commit here claims* section alike -
+   with them, the *version rows* section the inventory's numbers point into and the *version
+   rows no commit here claims* section alike -
    a row is the maintainer's own words for the decision a version was cut for, and often the
    only place a move is described as a decision at all.
 4. **Derive the entries from that evidence before re-reading the rule**, then diff against
@@ -71,8 +77,10 @@ so the sections it prints without a draft under them are the run's work, not its
    conversion filled from `references.md` is written the same way, its converted entry read as
    evidence: the `Reason` and `Retire when` move by hand onto the entries they actually
    evidence. The placeholder `born` itself is the tool's to resolve - `apply --backfill`
-   drops it where the derived birth is earlier and keeps it where its date *is* the birth -
-   so read each such file's own evidence rather than truncating them as a class.
+   drops it wherever the batch brings a born dated on or before it, and keeps it where the
+   batch brings none - so read each such file's own evidence rather than truncating them as
+   a class. A birth the listing calls unverified is settled only by a born the run checked
+   against the old carrier, even on the placeholder's own day.
 5. **Write only what the evidence carries.** A field with nothing behind it is omitted,
    never filled with a placeholder or a plausible guess: a fabricated rationale lets a
    future review reaffirm a rule on false grounds, which is worse than no rationale. An

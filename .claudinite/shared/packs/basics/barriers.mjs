@@ -16,7 +16,7 @@ export const DEFAULT_DOC = 'packs/basics/barriers.md';
 // manifest:
 //
 //   contributes: { barriers: [{ id, edges, description?, why?, doc?,
-//                               severity?, crossingRemedy?, crossingExcuse?,
+//                               on_fail?, crossingRemedy?, crossingExcuse?,
 //                               gateDir? }] }
 //
 // The runner's generic seam hands this pack the ACTIVE pack list
@@ -26,12 +26,12 @@ export const DEFAULT_DOC = 'packs/basics/barriers.md';
 // they addressed the formerly code-composed rule. `gateDir` is the one
 // declarative gate a contribution may carry: the rule stays inert until that
 // directory exists in the repo under test (the vendored-mount gate the
-// baseline's isolation barrier rides).
-function contributedRule({ id, edges, severity = 'blocking', doc = DEFAULT_DOC, description, why, crossingRemedy, crossingExcuse, gateDir }) {
+// basics isolation barrier rides).
+function contributedRule({ id, edges, on_fail = 'block', doc = DEFAULT_DOC, description, why, crossingRemedy, crossingExcuse, gateDir }) {
   const norm = normalizeEdges(edges);
   const rule = {
     id,
-    severity,
+    on_fail,
     doc,
     description: description || 'Files under a guarded folder must not reference a barred folder',
     why: why || 'a folder barrier encodes an architectural boundary; a crossing reference erodes it silently',
@@ -60,7 +60,7 @@ function contributedRule({ id, edges, severity = 'blocking', doc = DEFAULT_DOC, 
 function faultRule(file, what) {
   const rule = {
     id: 'barrier',
-    severity: 'blocking',
+    on_fail: 'block',
     doc: DEFAULT_DOC,
     description: 'A contributed barrier must be well-formed',
     why: 'a malformed barrier contribution silently enforces nothing',

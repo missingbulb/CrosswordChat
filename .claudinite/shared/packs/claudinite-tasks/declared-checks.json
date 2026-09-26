@@ -1,7 +1,7 @@
 [
   {
     "id": "tasks-pack-read-through-its-surface",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-14",
     "failureMessage": "an import past claudinite-tasks' published public/ couples a consumer to a layout the pack is free to change",
     "fix": "import it from packs/claudinite-tasks/public/, adding the named export there if it is not published yet; a canon pack's own test may reach src/ for a test-only name",
@@ -17,7 +17,7 @@
   },
   {
     "id": "repo-variables-through-the-bag",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-16",
     "failureMessage": "the Actions GITHUB_TOKEN is refused on the REST variables API in every member, so the read never answers and costs a call and a log line per run",
     "fix": "read the variable from the executor's vars bag (packs/claudinite-tasks/src/world/vars-bag.mjs): a task's code-work finds every repository variable already in process.env, and engine code reads varsBag(env)",
@@ -33,7 +33,7 @@
   },
   {
     "id": "issue-label-outside-the-queue-vocabulary",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-22",
     "scope": "action",
     "failureMessage": "every label the queue reads is in the `task:` namespace, so an issue wearing one outside it reaches no run and sits",
@@ -49,7 +49,7 @@
   },
   {
     "id": "queue-mark-named-literally",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-22",
     "failureMessage": "an instruction to file queue work that leaves the label unnamed is followed by inventing one, and a label outside the `task:` namespace reaches no run",
     "scanFiles": "/^(\\.claudinite\\/(shared|local)\\/)?packs\\/[^/]+\\/(RULES\\.md|(skills|tasks)\\/[^/]+\\/(SKILL|task)\\.md)$/",

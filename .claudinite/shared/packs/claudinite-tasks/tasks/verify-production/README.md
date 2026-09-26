@@ -53,15 +53,6 @@ vacuously — and the same item then flips on its own once the release is live.
 
 ## Why the declaration reads as it does
 
-Carried over from the declaration's comments when it became `task.json`.
-
-The coded production-validation task (#1530). A verification issue that names
-this task (`Task: claudinite-tasks/verify-production`) carries declarative URL
-probes; the worker fetches and judges them as code-work — Action-side, where
-egress exists — so no agent session is ever spent, and no egress wall is ever
-hit. The grammar and the verdict flow are the worker's (see README.md beside
-it); the filing form is the basics pack's verify-in-production skill.
-
 MANUAL: an item exists only because a verification was filed and marked —
 there is nothing to put on a calendar.
 A filed production verification is its own mandate.

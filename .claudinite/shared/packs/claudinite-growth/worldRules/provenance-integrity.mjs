@@ -31,7 +31,7 @@ const packId = (dir) => dir.slice(dir.lastIndexOf('/') + 1);
 
 const rule = {
   id: 'provenance-integrity',
-  severity: 'blocking',
+  on_fail: 'block',
   since: '2026-09-20',
   doc: 'packs/claudinite-growth/skills/changing-pack-elements/SKILL.md',
   description: 'Every pack carrier names a live provenance file, and every provenance file parses',
@@ -100,7 +100,7 @@ const rule = {
       if (a.empty.length) {
         const ids = a.empty.map((e) => fileOfId(e.id)).sort();
         out.push(finding(rule, {
-          file: `${dir}/${PROVENANCE_DIR}`, severity: 'advisory',
+          file: `${dir}/${PROVENANCE_DIR}`, on_fail: 'advise',
           what: `${ids.length} provenance file${ids.length === 1 ? ' is' : 's are'} empty - elements whose history is not written yet (${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', …' : ''})`,
           fix: 'the backfill fills them from each carrier\'s history (the backfilling-provenance skill), which says how a run is sized into pull requests; nothing else is owed',
         }));
@@ -108,7 +108,7 @@ const rule = {
       // @legacy-tolerance advisory:provenance-integrity retire:#2170
       if (a.referencesDoc) {
         out.push(finding(rule, {
-          file: a.referencesDoc, severity: 'advisory',
+          file: a.referencesDoc, on_fail: 'advise',
           what: 'a pack-root references.md is the retired rationale convention',
           fix: `run \`node ${tool} convert-references ${id}\` - each entry becomes an entry on the element its key names, the numeric markers become slugs, and the doc goes`,
         }));

@@ -3,18 +3,14 @@
 //
 // TWO HALVES. `deliverGenerated` and its helpers are DEFINED here — the write half of
 // an agentless task whose whole output is a regenerated file, which this pack's own
-// fold workers and any other pack's use alike. The five landing names below it are
-// the executor's own lane (`src/deliver/land-pr.mjs`), re-exported for a worker that
-// lands its own pull request the way the executor would.
+// fold workers and any other pack's use alike. The landing names below it are the
+// executor's own lane, re-exported for a worker that lands its own pull request the
+// way the executor would.
 //
-// Deliver GENERATED files on a pull request that lands itself. It exists because two tasks need exactly this and must not each grow their own
-// copy: the per-repo skill-usage fold and the fleet-enforcer's cross-repo aggregate both
-// recompute a `*.GENERATED.json` from scratch and want it landed without a human in
-// the loop. (the update runner's own delivery is deliberately NOT folded in here: it
-// commits a whole working tree from a checkout it converged in place — a
-// different job that happens to end in a PR too. What the two DO share — every
-// nuance of actually landing the PR under the member's `maintenance.delivery` and
-// the repo's own shape — lives in land-pr.mjs, and both call it.)
+// The update runner's own delivery is deliberately NOT folded in here: it commits a
+// whole working tree from a checkout it converged in place, a different job that
+// happens to end in a PR too. What the two share, landing the PR, both take from the
+// executor's lane.
 //
 // Two properties everything here is shaped around:
 //
@@ -33,7 +29,7 @@
 //   member's delivery preference is read from the base too, for the same reason.
 //
 // Idempotence is the caller's to keep: pass files whose content is a pure function of
-// the inputs, and compare against `readAtBase` before calling — an identical
+// the inputs, and compare against `readAt` the `baseTip` before calling - an identical
 // recompute should open nothing at all.
 
 import { rmSync } from 'node:fs';
@@ -41,15 +37,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deliveryForText, pullCreateError, landDelivery } from '../src/deliver/land-pr.mjs';
 import { SETTINGS_FILE } from '../../../engine/settings-file.mjs';
-import { withTaskTrailer } from './work-item-grammar.mjs';
+import { withTaskTrailer, taskFromMessage } from './work-item-grammar.mjs';
 import { restCall } from './github.mjs';
 import { runGit } from '../src/world/processes.mjs';
 import { nowMs } from '../src/world/clock.mjs';
 import { actionsEnv } from '../src/world/actions.mjs';
 
-// This lane runs git in the checkout and calls GitHub with the run's own token;
-// both go through the world's ports, which is what keeps the REST paths and the
-// subprocess in one place.
 const git = (root, args, opts = {}) => runGit(['-C', root, ...args], opts);
 
 const gh = (token, path, opts) => restCall(token, path, opts);
@@ -68,41 +61,76 @@ export function readAt(root, sha, path) {
   try { return git(root, ['show', `${sha}:${path}`]); } catch { return null; }
 }
 
+// A ROLLING file's prior state - one whose next version is folded from its last, so
+// losing it loses history. Read at `path`, or at `legacyPath` where the file has not
+// moved yet; `moves` is what to hand `pushGenerated` so the old bytes arrive at the new
+// path before the fold writes on top of them.
+export function readRollingAt(root, sha, path, legacyPath = null) {
+  const text = readAt(root, sha, path);
+  if (text !== null || !legacyPath) return { text, moves: {} };
+  const legacy = readAt(root, sha, legacyPath);
+  return legacy === null ? { text: null, moves: {} } : { text: legacy, moves: { [legacyPath]: path } };
+}
+
 // Commit `files` ({ path: content }) onto the base tip and push to `branch`,
 // force — the content is regenerated wholesale each run, so the branch is a
 // regenerate-not-reconcile surface.
-export function pushGenerated(root, { remote, baseSha, branch, files, message }) {
+//
+// `moves` ({ from: to }) relocates a file whose data the new content is folded from.
+// Each move whose `from` is on the base and whose `to` is not lands as its OWN commit
+// first, the blob unchanged, so the history shows a pure rename carrying every byte
+// the old path held, and the `files` commit on top is an ordinary regeneration. A move
+// whose target already exists is skipped and the old file left where it is: nothing
+// here removes data that did not arrive at the new path intact.
+export function pushGenerated(root, { remote, baseSha, branch, files, message, moves = {} }) {
   const index = join(tmpdir(), `claudinite-deliver-${process.pid}-${nowMs()}.index`);
   const plumb = (args, opts) => git(root, args, { ...opts, env: { ...actionsEnv(), GIT_INDEX_FILE: index } });
+  const commitTree = (parent, msg) => git(root, [
+    '-c', 'user.name=claudinite[bot]', '-c', 'user.email=claudinite@users.noreply.github.com',
+    'commit-tree', plumb(['write-tree']).trim(), '-p', parent, '-m', msg,
+  ]).trim();
   try {
     plumb(['read-tree', baseSha]);
+    let parent = baseSha;
+    const moved = [];
+    for (const [from, to] of Object.entries(moves)) {
+      const blob = blobAt(root, baseSha, from);
+      if (!blob || blobAt(root, baseSha, to)) continue;
+      plumb(['update-index', '--add', '--cacheinfo', `100644,${blob},${to}`]);
+      plumb(['update-index', '--force-remove', from]);
+      moved.push(`${from} -> ${to}`);
+    }
+    if (moved.length) {
+      parent = commitTree(parent, withTrailerOf(message, `Move ${moved.length === 1 ? 'a rolling file' : 'rolling files'} to their new home, content unchanged\n\n${moved.join('\n')}`));
+    }
     for (const [path, content] of Object.entries(files)) {
       const blob = git(root, ['hash-object', '-w', '--stdin'], { input: content }).trim();
       plumb(['update-index', '--add', '--cacheinfo', `100644,${blob},${path}`]);
     }
-    const tree = plumb(['write-tree']).trim();
-    const commit = git(root, [
-      '-c', 'user.name=claudinite[bot]', '-c', 'user.email=claudinite@users.noreply.github.com',
-      'commit-tree', tree, '-p', baseSha, '-m', message,
-    ]).trim();
+    const commit = commitTree(parent, message);
     git(root, ['push', '--quiet', '--force', remote, `${commit}:refs/heads/${branch}`]);
     return commit;
   } finally { rmSync(index, { force: true }); }
 }
 
+// A path's blob id at a commit, or null when the path does not exist there.
+function blobAt(root, sha, path) {
+  try { return git(root, ['rev-parse', '--verify', '--quiet', `${sha}:${path}`]).trim() || null; } catch { return null; }
+}
+
+// The move commit carries the same task trailer as the message it precedes, so the
+// movement signals classify it as machinery too.
+const withTrailerOf = (message, subject) => withTaskTrailer(subject, taskFromMessage(message));
+
 // Which branch the regenerate lands on and which pull request it updates — THE
-// EXECUTOR'S DECISION, handed in (docs/PRINCIPLES.md): `branch` is the
-// one it resolved, `pr` the open pull request it said to amend, or null for a fresh
-// one on that branch. A named pull request the open list no longer carries was
+// EXECUTOR'S DECISION, handed in: `branch` is the one it resolved, `pr` the open pull
+// request it said to amend, or null for a fresh one on that branch. A named pull request the open list no longer carries was
 // closed under the run; the branch is still the one to push to, and a new pull
 // request opens on it.
 //
-// The branch is REQUIRED. The lane used to reuse an open pull request whose head
-// carried a prefix and mint `<prefix>/<stamp>` where it found none — a second
-// decision site beside the executor's, held only while a member's vendored executor
-// could predate the hand-off (#1698). An outcome that opens a pull request always
-// resolves one, so an absent branch is a caller the executor is not driving, and
-// delivering on a branch nothing is watching is worse than saying so.
+// The branch is REQUIRED: an outcome that opens a pull request always resolves one, so
+// an absent branch is a caller the executor is not driving, and delivering on a branch
+// nothing is watching is worse than saying so.
 export function generatedTarget({ pulls, branch = null, pr = null }) {
   if (!branch) {
     throw new Error('no branch to deliver on — the executor resolves it and hands it in as CLAUDINITE_TARGET_BRANCH');
@@ -117,14 +145,12 @@ export function generatedTarget({ pulls, branch = null, pr = null }) {
 // `generatedTarget`): amending an open pull request updates it in place, so a
 // daily regenerate that runs before yesterday's merged does not stack a second one.
 //
-// How the PR lands is land-pr.mjs's business, not the calling task's: the member's
-// `dailyClaudiniteUpdatesRequirePrReview` (read from the BASE tip — a repo that
-// declares it gets its PR opened and left for the owner), then the repo's own shape (no PR CI → direct merge; ungated base → verify-then-
-// land; a gate → arm auto-merge, landing poll as fallback). A PR this run could not
-// land stays open — the next run rebuilds it from the base, so nothing is lost.
+// How the PR lands is the landing lane's business, not the calling task's. A PR this
+// run could not land stays open - the next run rebuilds it from the base, so nothing
+// is lost.
 //
 // Returns { branch, number, reused, delivery, merged }.
-export async function deliverGenerated({ root, repo, base, token, branch: targetBranch = null, pr: targetPr = null, files, title, body, message, task = null, log = console.log }) {
+export async function deliverGenerated({ root, repo, base, token, branch: targetBranch = null, pr: targetPr = null, files, moves = {}, title, body, message, task = null, log = console.log }) {
   const { json: pulls } = await gh(token, `/repos/${repo}/pulls?state=open&per_page=100`);
   const chosen = generatedTarget({ pulls, branch: targetBranch, pr: targetPr });
   let { pr } = chosen;
@@ -140,7 +166,7 @@ export async function deliverGenerated({ root, repo, base, token, branch: target
   // Every commit this lane writes says which task wrote it. That trailer is what
   // the movement signals classify as machinery rather than the project moving, so
   // one task's delivery can never be the activity that wakes another.
-  const commit = pushGenerated(root, { remote, baseSha, branch, files, message: withTaskTrailer(message, task) });
+  const commit = pushGenerated(root, { remote, baseSha, branch, files, moves, message: withTaskTrailer(message, task) });
 
   if (!reused) {
     const created = await gh(token, `/repos/${repo}/pulls`, { method: 'POST', body: { head: branch, base, title, body } });
@@ -151,9 +177,8 @@ export async function deliverGenerated({ root, repo, base, token, branch: target
 
   let merged = false;
   if (pr?.number) {
-    // Runs for review members too: landDelivery still starts the PR's checks
-    // (#565 — the GITHUB_TOKEN push emitted no pull_request run, and the owner
-    // reviews against a green), then does nothing further for `review`.
+    // Runs for review members too: a GITHUB_TOKEN push emits no pull_request run,
+    // and the owner reviews against a green (#565).
     // The head sha must be THIS run's commit: a reused PR's listing still carries
     // the previous push, and polling a stale sha waits on runs that never come.
     const landed = await landDelivery({

@@ -1,7 +1,6 @@
 // THE SECURITY CHECK for the request implementer, as a precondition term — the
 // one gate that decides whether a marked issue actually runs. It happens where
-// every verdict happens: once, at pickup, on the executor (docs/PRINCIPLES.md
-// PRINCIPLES.md). It is task-local because its subject is one named issue rather than a
+// every verdict happens: once, at pickup, on the executor. It is task-local because its subject is one named issue rather than a
 // window of repo activity, which is also why the term reads the `item` it is
 // handed.
 //

@@ -36,7 +36,7 @@ function stringFields(text) {
 
 const rule = {
   id: 'task-declaration-matches-folder',
-  severity: 'blocking',
+  on_fail: 'block',
   description: "A tasks/<name>/task.json declares the id of its own directory, and its agent_instructions names a worker file that exists beside it",
   doc: 'packs/claudinite-growth/skills/writing-tasks/SKILL.md',
   why: 'task discovery is fail-soft per task — a declaration that disagrees with its folder is dropped into errors and the task silently never runs, while every scheduler run keeps reporting healthy',

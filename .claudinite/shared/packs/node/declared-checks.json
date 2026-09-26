@@ -1,7 +1,7 @@
 [
   {
     "id": "node/btoa-atob-on-text",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "btoa and atob operate on Latin1 code units, so a string with a character beyond U+00FF (Hebrew, Cyrillic, CJK, most emoji) throws or is silently corrupted, unseen by a Latin-only fixture",
     "scanFiles": "/\\.(m|c)?[jt]sx?$/",
     "scanIgnoringComments": true,

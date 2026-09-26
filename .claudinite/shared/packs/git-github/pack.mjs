@@ -6,8 +6,8 @@
 // naming it in `requires`, so the closure materializes it into every
 // declaration - never seeded directly, and the pack carries no fingerprint.
 export default {
-  version: '60922.5',
-  minEngineVersion: '60822.1',
+  version: '60925.2',
+  minEngineVersion: '60925.1',
   ruleRoutingGuidance: {
     belongs: 'git and GitHub procedure and platform: commit layering, branch and merge mechanics, workflow YAML, triggers, secrets, scheduling',
     excludes: 'the issue-branch-PR lifecycle rules themselves — basics; release pipeline content for one product — its release pack',

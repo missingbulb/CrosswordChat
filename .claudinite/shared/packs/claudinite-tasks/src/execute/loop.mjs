@@ -1,14 +1,14 @@
-// The executor (docs/PRINCIPLES.md) — a pull worker over the queue. Each
+// The executor - a pull worker over the queue. Each
 // iteration: pick the next ready item, claim it by a verified lease, re-evaluate
 // the precondition (the scheduler run asked once at the anchor; a chained stage
 // re-derives world state rather than trusting a verdict passed forward), then on
 // a go run code-work and either converge (agentless) or hand off to an agent
 // session; on a no-go close the item with the reason on record — the next
-// occurrence is the scheduler run's ask at the task's next anchor (#1115).
+// occurrence is the scheduler run's ask at the task's next anchor.
 //
 // An executor's whole interface is issue read/write plus the repo at HEAD, which
 // is what makes it platform-agnostic: the reference deployment is a job in the
-// vendored workflows (the scheduler run's post-scheduler run drain, and a `labeled`-event run for
+// vendored workflows (the scheduler run's drain, and a `labeled`-event run for
 // latency), but a runner anywhere with an issues-scope token qualifies. Nothing
 // enumerates executors; identity is self-declared in the claim comment.
 //
@@ -42,12 +42,11 @@ import {
 } from '../../public/work-item-grammar.mjs';
 
 // The claim comment carries WHO and WHEN — the executor id and its run URL —
-// because executor identity is an unbounded set and must never become a label
-// (PRINCIPLES.md).
+// because executor identity is an unbounded set and must never become a label.
 export const claimComment = ({ executor, runUrl, at }) =>
   `${CLAIM_MARKER}\nClaimed by executor \`${executor}\` at ${at}.${runUrl ? `\n\nRun: ${runUrl}` : ''}`;
 
-// Who won the claim, out of an item's comments (PRINCIPLES.md). Three precisions,
+// Who won the claim, out of an item's comments. Three precisions,
 // each an implicit assumption made explicit:
 //
 //  - "EARLIEST" MEANS LOWEST COMMENT ID, never timestamp. GitHub comment
@@ -91,10 +90,8 @@ export function conflictsWithEarlierClaim(item, myClaimId, others, { taskAfter =
   });
 }
 
-// The no-go outcome (PRINCIPLES.md): every decline CLOSES the item with the
-// reason. The roll — `Not-before` stamped, open-blocked, waiting out the period —
-// is gone, and so is the schedule board: a scheduled task's next occurrence is
-// the scheduler run's ask at its next tick, and the closed item is itself the
+// The no-go outcome: every decline CLOSES the item with the reason. A scheduled
+// task's next occurrence is the scheduler run's ask at its next tick, and the closed item is itself the
 // history the task's cadence term reads (the period this item started in is
 // consumed by it). `standing` marks whether the close should say so.
 export function noGoPlan(item, task, now, reason) {
@@ -120,19 +117,16 @@ async function timed(cost, name, fn) {
   try { return await fn(); } finally { end(); }
 }
 
-// ONE EXECUTOR RUN DRAINS THE QUEUE (docs/PRINCIPLES.md, reversing
-// one-item-per-run). Actions bills each job's runtime rounded UP to the next
-// minute, so a day's cost is the RUN count: a run that performed one item paid a
+// ONE EXECUTOR RUN DRAINS THE QUEUE. Actions bills each job's runtime rounded UP
+// to the next minute, so a day's cost is the RUN count: a run per item would pay a
 // whole invocation — checkout, setup, rounding — per item. So a run claims an
 // item, sees it to its settle, then picks the next, and ends when nothing is
-// pickable. Items still settle ONE AT A TIME: this moved the run boundary, not
-// the occupancy model, and capacity is still executor width.
+// pickable. Items still settle ONE AT A TIME: capacity is executor width.
 //
-// What still starts a run is the enumerable list docs/PRINCIPLES.md names, each cause on the
-// record: the scheduler run's drain job (dispatched only when that run leaves
+// What starts a run is an enumerable list, each cause on the record: the scheduler run's drain job (dispatched only when that run leaves
 // something pickable), a label event, an agent session's close-time drain, and
-// the workflow's failure-continuation job when a run dies mid-drain. Self-
-// re-dispatch retired with the one-item run — the remainder is this run's own.
+// the workflow's failure-continuation job when a run dies mid-drain. A run never
+// re-dispatches itself - the remainder is this run's own.
 //
 // AN ITEM THIS RUN LET GO OF IS NEVER RE-ATTEMPTED BY IT. Losing a claim race
 // leaves the item running under its winner, so the next pick simply does not see
@@ -148,7 +142,7 @@ async function timed(cost, name, fn) {
 //
 // Injected seams keep the run testable end to end without GitHub, code-work
 // subprocesses or an invocation endpoint.
-// `runCost` is the run's own stopwatch (run-record.mjs), supplied by the CLI below
+// `runCost` is the run's own stopwatch, supplied by the CLI below
 // and left null everywhere else: a run driven by a test or the simulator is not a
 // billed invocation and has no run id to file a cost under, so it times nothing and
 // stamps nothing. Where one IS supplied, every item this run settles carries the
@@ -170,7 +164,7 @@ export async function runExecutor({
   // resolves to nothing and the item is malformed rather than guessed at.
   const byPath = new Map(tasks.map((t) => [t.taskPath, `${t.pack}/${t.id}`]));
   const pathTo = (p) => byPath.get(p) ?? null;
-  // THE TARGET SEAM (PRINCIPLES.md): which branch and pull request a run works on,
+  // THE TARGET SEAM: which branch and pull request a run works on,
   // resolved from the task's declared outcome against the repo's open pull
   // requests. The member's delivery preference is what says whether a green
   // incumbent may be landed on the way; it is read once, from the same config the
@@ -274,7 +268,7 @@ async function executeItem({
 }) {
   const parsed = parseWorkItemTitle(item.title);
   const { taskPath } = parseWorkItemBody(item.body);
-  // A marked issue's identity is its machine block, not its title (PRINCIPLES.md): the id
+  // A marked issue's identity is its machine block, not its title: the id
   // is whichever task owns the worker path the block names.
   const id = parsed ? `${parsed.pack}/${parsed.task}` : pathTo(taskPath);
   const task = id ? byId.get(id) : null;
@@ -328,12 +322,12 @@ async function executeItem({
     return 'needs-human';
   }
 
-  // --- the single precondition evaluation (PRINCIPLES.md) --------------------
+  // --- the single precondition evaluation ------------------------------------
   const at = now();
   // The item's own facts — its fields, its number, whether somebody woke it — are
   // what the terms judge over: a request item's verdict is about the issue it
-  // names, which no signal bundle can single out on its own (PRINCIPLES.md), and
-  // the cadence terms hold on a woken item (PRINCIPLES.md). The signals are collected FOR
+  // names, which no signal bundle can single out on its own, and
+  // the cadence terms hold on a woken item. The signals are collected FOR
   // THIS OCCURRENCE, its own run history excluding it.
   const fields = itemFacts(item);
   const signals = await collectSignalsFor(task, at, item);
@@ -354,13 +348,13 @@ async function executeItem({
 
   if (verdict.run !== true) {
     const plan = noGoPlan(item, task, at, verdict.reason || 'no work');
-    // A DECLINED REQUEST IS DISARMED IN THE SAME CONVERGENCE (PRINCIPLES.md).
+    // A DECLINED REQUEST IS DISARMED IN THE SAME CONVERGENCE.
     // Nothing else would: an issue left carrying `claude-queued` after its run was
     // refused is one no later scheduler run adopts and no person is told about, and one
     // whose mark — if re-applied — walks into the same refusal forever.
     // A LEGACY shadow item wrote its decline back to the issue it named. A marked
     // issue IS the item, so the decline's comment and its `rejected` status already
-    // land where the person is looking and there is nothing to mirror (PRINCIPLES.md).
+    // land where the person is looking and there is nothing to mirror.
     if (fields.request && fields.request !== item.number) {
       await declineRequest(api, gh, repo, fields.request, item.number, plan.reason);
     }
@@ -375,15 +369,14 @@ async function executeItem({
     return 'obsolete';
   }
 
-  // --- code-work (unchanged contract), then converge or hand off -------------
+  // --- code-work, then converge or hand off ---------------------------------
   // The item's OWN Context is scope too, not decoration: an operator's parameters
   // (`create-work-item --context "REPOS=Alpha Beta"`) live there and nowhere else,
   // so code-work sees the union of what the item was created with and what this
-  // occurrence's precondition added. Passing only the verdict's half is what made
-  // a hand-created item's parameters unreachable (#974).
+  // occurrence's precondition added.
   const context = mergeContext(parseContextLines(item.body), verdict.context ?? []);
 
-  // --- the target: which pull request this run works on (PRINCIPLES.md) ------
+  // --- the target: which pull request this run works on ---------------------
   // Decided ONCE, here, between the go and the work, and handed to both phases —
   // code-work as environment, the agent as item fields — so neither phase
   // discovers, chooses or disposes of a pull request on its own. A read the
@@ -411,7 +404,7 @@ async function executeItem({
   }
 
   if (declaresCodeWork(task.decl)) {
-    // The work step may legitimately run for hours (PRINCIPLES.md). While it does, the
+    // The work step may legitimately run for hours. While it does, the
     // item's only sign of life is this beat — which is also what the scheduler run's leash
     // measures, so a long run is legal rather than reclaimed underneath itself.
     const endCodeWork = phase('code-work');
@@ -439,14 +432,12 @@ async function executeItem({
     }
     if (!result.ok) {
       // A RUN THAT FAILED PARKS `failure`, whatever the worker asked for (#1452).
-      // The marker used to route the park, so a worker naming `action` put a failed
-      // run in a NON-BLOCKING lane: the standing slot freed and the task re-filed the
-      // next day against a cause nobody had fixed. That is how ClaudiniteCanary
-      // reached seven copies of one fleet-digest failure and hitbut twenty-two.
+      // Routing the park by the worker's marker would put a failed run in a
+      // NON-BLOCKING lane wherever the worker named `action`: the standing slot frees
+      // and the task re-files the next day against a cause nobody has fixed.
       //
-      // The verdict is not discarded — it was always most useful as the human-facing
-      // instruction, and that is where it now goes, kind and detail both. A run that
-      // never STARTED is the other thing entirely and keeps its own lane: see the
+      // The worker's verdict goes into the human-facing instruction instead, kind
+      // and detail both. A run that never STARTED is the other thing entirely and keeps its own lane: see the
       // `missingSecrets` branch below, where nothing failed because nothing ran.
       await converge(cost, api, gh, repo, item, STATUS_RUNNING_EXECUTOR, STATUS_NEEDS_HUMAN_FAILURE, claim,
         `Code-work failed: ${result.why}`
@@ -475,8 +466,8 @@ async function executeItem({
       // yet there, and prescribed its own wake — neither done nor broken. Stamp
       // the instant as the item's `Not-before` (into the machine half, the only
       // half `parseWorkItemBody` reads) and return it to blocked; the scheduler's
-      // readiness pass releases it when the moment comes. Silent on the timeline,
-      // like the roll this replaces: the bumped field is the record, and a retry
+      // readiness pass releases it when the moment comes. Silent on the timeline:
+      // the bumped field is the record, and a retry
       // cadence must not grow a comment per wake. An ask whose instant could not
       // be read is refused loudly — the worker said "wait", and closing done on
       // it would record a pass nobody measured.
@@ -526,7 +517,7 @@ async function executeItem({
 // why, and the queued label off, so the request was disarmed rather than left
 // looking pending. Nothing writes it for an item filed under the one-issue model,
 // where the item and the issue are the same object; it stays for the shadow items
-// still draining, whose issue is a different one (PRINCIPLES.md).
+// still draining, whose issue is a different one.
 async function declineRequest(api, gh, repo, request, item, reason) {
   await api.comment(gh, repo, request,
     `Not implementing this: ${reason}\n\nThe queued run (#${item}) is closed and \`${QUEUED_LABEL}\` is removed. `
@@ -543,7 +534,7 @@ export function rollBody(body, until, reason, at) {
   return withSection(stamped, LAST_VERDICT_HEADING, lastVerdictLines({ at, reason, until }));
 }
 
-// Hand off to an agent session (PRINCIPLES.md). ONE call per item, ever — which is
+// Hand off to an agent session. ONE call per item, ever - which is
 // what lets this be as short as it is. The nonce goes on the item before the call
 // and travels in the payload, so the session can prove the fire it arrived on is
 // the hand-off this item recorded and stop if it is not.
@@ -604,14 +595,14 @@ async function handOff({ api, gh, repo, item, task, id, context, result, target 
   return 'unknown';
 }
 
-// LETTING GO OF AN OPEN ITEM KILLS YOUR CLAIM (PRINCIPLES.md, F24). An executor
-// that stops owning an item without closing it — the roll, and every
+// LETTING GO OF AN OPEN ITEM KILLS YOUR CLAIM (F24). An executor
+// that stops owning an item without closing it - a requeue, and every
 // `needs-human` park — strikes its own claim by appending the episode marker to
 // it. `claimWinner` already treats the last marker as the boundary, so a struck
 // claim stops outranking anything and the next claimant wins on its first try.
 //
-// APPENDING rather than commenting is what lets the roll stay silent (PRINCIPLES.md): an
-// hourly task that declines every hour adds no timeline entry. A successful
+// APPENDING rather than commenting is what lets a requeue stay silent: a worker
+// waiting out its subject adds no timeline entry per wake. A successful
 // hand-off deliberately does NOT strike — the episode is still live, owned by the
 // agent session — and neither does a close, since nothing re-claims a closed item.
 //
@@ -630,7 +621,7 @@ async function strikeClaim(api, gh, repo, claim) {
 // happened — the terminal-state discipline the incidents bought. The claim sits
 // before the body so every state argument is grouped ahead of the prose.
 //
-// THE COMMENT CARRIES THE EXECUTION RECORD (docs/PRINCIPLES.md). Actions logs
+// THE COMMENT CARRIES THE EXECUTION RECORD. Actions logs
 // expire, and for an agentless run — the majority — the item is the only durable
 // trace there will ever be, so the record goes where the item is rather than into
 // a log that ages out. The bracketed field is this item's issue number, which is
@@ -641,7 +632,7 @@ async function strikeClaim(api, gh, repo, claim) {
 // a run that succeeded and left a PR for a person — is neither. Absence is a
 // state of its own; inventing a fifth status is a change to stored data every
 // decoder in the fleet would have to learn.
-// THE RUN'S COST RIDES THE SAME BLOCK (run-record.mjs). A scheduler tick can only
+// THE RUN'S COST RIDES THE SAME BLOCK. A scheduler tick can only
 // print its cost into a log that expires; an executor run has items, so it writes
 // the record where the record survives. Every item this run settles gets the
 // counters AS THEY STAND at that moment, so a run that settled three items leaves
@@ -649,7 +640,7 @@ async function strikeClaim(api, gh, repo, claim) {
 // largest, which is the run's total as of its last item.
 //
 // A run that is not timing itself (a test, the simulator) supplies no `cost` and
-// the block is exactly what it was.
+// the block carries no cost line.
 const recordFor = (item, status, cost = null) => {
   // `item.taskId` is the resolved id — a marked issue's title names no task, so the
   // title parse alone would silently drop the record for every request run.
@@ -665,8 +656,8 @@ const recordFor = (item, status, cost = null) => {
 };
 
 // Park an item for a human. ONE label: the park IS the status, and its kind is what
-// the human is being asked for (PRINCIPLES.md). The two-label park it replaces could be
-// half-applied, which was a torn state of its own.
+// the human is being asked for. A two-label park could be half-applied, a torn state
+// of its own.
 async function converge(cost, api, gh, repo, item, from, park, claim, body, status = 'failed') {
   return timed(cost, 'converge', async () => {
     await strikeClaim(api, gh, repo, claim);
@@ -675,19 +666,18 @@ async function converge(cost, api, gh, repo, item, from, park, claim, body, stat
   });
 }
 
-// A close writes only to the item it holds (docs/PRINCIPLES.md; #1373 reversed
-// an earlier attempt): a dependent this close may make due is released solely by the
+// A close writes only to the item it holds: a dependent this close may make due is released solely by the
 // scheduler run's own readiness job, on its next pass, never here.
 async function close(cost, api, gh, repo, item, from, outcome, stateReason, body, status) {
   return timed(cost, 'converge', async () => {
     await api.comment(gh, repo, item.number, body + recordFor(item, status, cost));
     await clearStatus(api, gh, repo, item, from);
     await api.addLabel(gh, repo, item.number, outcome);
-    // A TERMINAL CLOSES THE ISSUE IT STANDS ON, marked or filed, and both terminals do
-    // (PRINCIPLES.md, owner 2026-09-06). `done` means nothing is left to act on; `rejected`
+    // A TERMINAL CLOSES THE ISSUE IT STANDS ON, marked or filed, and both terminals do.
+    // `done` means nothing is left to act on; `rejected`
     // means nothing will happen. Neither is a question, so neither leaves an open issue
-    // behind asking a person to agree with a verdict already reached — and re-asking is
-    // what it always was, clearing the status.
+    // behind asking a person to agree with a verdict already reached - re-asking is
+    // clearing the status.
     await api.closeIssue(gh, repo, item.number, stateReason);
   });
 }
@@ -695,7 +685,7 @@ async function close(cost, api, gh, repo, item, from, outcome, stateReason, body
 // --- CLI ----------------------------------------------------------------------
 
 export async function runExecutorJob() {
-  // THE OPERATOR HOLD, FIRST ACT (PRINCIPLES.md) — before the config load, before the
+  // THE OPERATOR HOLD, FIRST ACT - before the config load, before the
   // first API call, so a held queue reads nothing and writes nothing rather than
   // deriving the world and then declining to act on it.
   if (isSuspended()) { console.log('## Claudinite executor\n'); console.log(suspendedNotice()); return; }
@@ -730,7 +720,7 @@ export async function runExecutorJob() {
     ? `${actionsEnv().GITHUB_SERVER_URL ?? 'https://github.com'}/${repo}/actions/runs/${actionsEnv().GITHUB_RUN_ID}`
     : null;
 
-  // WHAT THIS RUN COSTS (run-record.mjs). Only the real job times itself: a run id
+  // WHAT THIS RUN COSTS. Only the real job times itself: a run id
   // is what the record is filed under, and a run without one is not a billed
   // invocation of anything.
   const runCost = startRunCost({

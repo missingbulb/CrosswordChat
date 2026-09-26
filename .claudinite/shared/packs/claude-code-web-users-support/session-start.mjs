@@ -11,14 +11,15 @@
 // memory channel instead. A step that also printed the rules would spend the session's context
 // twice for one set of them.
 //
-// AND IT READS NO STATUS FILE. The directory is the answer: the placeholder means nothing
-// landed, and why is a pure function of the config and the environment.
+// It reads the directory (the placeholder means nothing landed) and the login the prepare
+// step read, and names the login and the directory either way.
 
 import { existsSync, readFileSync } from 'node:fs';
-import { PLACEHOLDER, proseIn } from './copy_user_pack_to_repo.mjs';
-import { resolveStore, declineReason } from './user_pack_address.mjs';
+import { PLACEHOLDER, proseIn, loginRecordIn } from './copy_user_pack_to_repo.mjs';
+import { resolveStore, declineReason, packDirFor } from './user_pack_address.mjs';
 
-const note = (s) => { process.stdout.write(`PERSONAL PACK: ${s} - proceeding with default interaction behavior.\n`); process.exit(0); };
+const say = (s) => { process.stdout.write(`PERSONAL PACK: ${s}\n`); process.exit(0); };
+const note = (s) => say(`${s} - proceeding with default interaction behavior.`);
 
 const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const config = (() => {
@@ -34,15 +35,20 @@ if (prose === null) {
   note('this repo\'s engine has no session-prepare phase, so no personal pack was copied in');
 }
 
-if (prose === PLACEHOLDER) {
-  const why = declineReason(config, process.env)
-    ?? `${resolveStore(config).repo} holds no pack for this person, or it could not be read`;
-  note(why);
-}
+const declined = declineReason(config, process.env);
+if (declined) note(declined);
 
+const identity = (() => {
+  try { return JSON.parse(readFileSync(loginRecordIn(root), 'utf8')); } catch { return {}; }
+})();
+if (!identity.login) note(`no GitHub login was read for this session (${identity.error ?? 'nothing recorded'})`);
+
+const store = resolveStore(config);
+const dir = `${packDirFor(store, identity.login.toLowerCase())}/`;
+if (prose === PLACEHOLDER) note(`${store.repo} holds no pack at ${dir} for GitHub user ${identity.login}, or it could not be read`);
 // AND IT WEIGHS NOTHING. The copy is on disk before the summary step runs, off the same
 // registry the summary reads every other pack from, so the summary counts this pack with the
 // rest and one number covers the whole load. A figure emitted here would be that same prose
 // stated twice under two names, and a reader holding only the corpus figure would be told a
 // corpus smaller than the one they have.
-process.exit(0);
+say(`copied ${dir} from ${store.repo} for GitHub user ${identity.login}.`);

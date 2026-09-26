@@ -28,7 +28,7 @@ const STOP = /\.\s*stop\s*\(/;
 
 const rule = {
   id: 'mic-capture-released',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A file that opens a getUserMedia capture also stops its tracks',
   doc: 'packs/web-speech/RULES.md',
   why: 'a media stream is freed only by stopping its tracks — dropping the reference leaves the browser and OS microphone indicators lit and the device claimed, which on anything voice-driven reads to the user as "it is still listening to me"',

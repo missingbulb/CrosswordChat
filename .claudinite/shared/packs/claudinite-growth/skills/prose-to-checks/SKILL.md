@@ -1,6 +1,6 @@
 ---
 name: prose-to-checks
-description: Mine pack prose (RULES.md, SKILL.md) for always-testable rules that were never converted to checks, and convert the strongest ones. Use when auditing packs for convertible rules, when the weekly prose-to-checks sweep runs, or as the upgrade pass over prose a growth-extract run just wrote.
+description: Mine pack prose for always-testable rules never converted to checks, and convert the strongest. Use when auditing packs for convertible rules, or over prose a growth run just wrote.
 metadata:
   body: workflow
   usage:
@@ -133,14 +133,14 @@ is a schema check in disguise, and a coded rule mirroring a schema's shape by ha
 2. **Write the fixture first and see it fail** — a violating fixture must find, a clean one must
    not (the test lives beside the pack's other tests). A conversion with no proving fixture
    doesn't ship.
-3. **Ship at real severity, fail-fast** — blocking for a defect, advisory when the rule is
+3. **Ship at the real `on_fail`, fail-fast** - `block` for a defect, `advise` when the rule is
    directional by kind, or when the condition is blocking-grade but **irreversible by the time it is
    observable** (an append-only transcript, a published artifact). A blocking finding no edit can
    retract never converges — it spends every remaining Stop cycle on something nothing can fix.
    Advisory there is *diagnostic*: it names the cause the moment it appears.
-   - **Declare `since: '<today>'` beside the severity.** A blocking check is enforced as advisory for
+   - **Declare `since: '<today>'` beside the `on_fail`.** A blocking check is enforced as advisory for
      its first two weeks, so a conversion whose backlog the tree still carries lands at its real
-     severity now and starts biting once somebody has had time to clear it. Never soften a real
+     `on_fail` now and starts biting once somebody has had time to clear it. Never soften a real
      defect to `advisory` for that reason — the window is what makes softening unnecessary.
    - **Prefer a positive allowlist over an enumerated list of the bad cases.** Match the one allowed
      shape and flag everything else, rather than banning the violations you can name. An allowlist

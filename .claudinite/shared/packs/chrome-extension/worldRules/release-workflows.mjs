@@ -5,7 +5,7 @@ import { finding } from '../../../engine/checks/helpers/findings.mjs';
 // owns the triggers and calls three LOCAL reusable workflows, which — with the
 // privacy-page reusable and three composite actions — the pack materializes
 // alongside it. Nothing references Claudinite's core .github/ any more; the whole
-// set runs inside the repo. The pack keeps the copies in sync (baselining
+// set runs inside the repo. The pack keeps the copies in sync (the update
 // re-materializes on drift), so a consumer hosts the pipeline without owning it.
 //
 // The rename that made vendoring possible: the create-package reusable was
@@ -73,10 +73,10 @@ export function shipsReleasePipeline(ctx) {
 
 const rule = {
   id: 'cer/release-workflows',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'The orchestrator (chrome-extension-release.yml, named "Release to Chrome Store", daily at the contract cron) and the reusable workflows + composite actions it calls must be vendored into .github/',
   doc: 'packs/chrome-extension/skills/chrome-store-releases/SKILL.md',
-  why: 'every extension repo ships the same pipeline entirely from its own .github/ — vendored from the pack, kept in sync by baselining, with no cross-repo @main dependency',
+  why: 'every extension repo ships the same pipeline entirely from its own .github/ — vendored from the pack, kept in sync by the update, with no cross-repo @main dependency',
 
   run(ctx) {
     // RELEVANCE FIRST: a repo that codes an extension but does not publish one

@@ -3,10 +3,9 @@
 // A model-generation bump is a single edit HERE — task files and the executor
 // only ever speak in families, never concrete ids.
 //
-// The resolved value is what the executor passes as the subagent's model. Short
-// family names are themselves valid model selectors, so they are the safe
-// default; to pin a task tier to a concrete dated snapshot, change only that
-// family's value in MODEL_MAP below (nothing else needs to move).
+// Short family names are themselves valid model selectors, so they are the safe
+// default; pinning a tier to a concrete dated snapshot changes only that family's
+// value.
 
 export const MODEL_FAMILIES = ['opus', 'sonnet', 'haiku', 'none'];
 

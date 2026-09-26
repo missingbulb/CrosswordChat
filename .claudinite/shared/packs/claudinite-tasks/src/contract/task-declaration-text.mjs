@@ -1,7 +1,6 @@
 // The task declaration as a file and as text — the half every reader can load,
 // the dashboard's browser bundle included: no Node built-ins here. The fs half
-// (finding and loading a folder's declaration) is task-declaration.mjs, which
-// re-exports this.
+// (finding and loading a folder's declaration) lives beside it and re-exports this.
 //
 // `task.json` is the declaration: plain data, pointing at `task.schema.json`
 // through `$schema`, and readable by anything that can parse JSON. It is the

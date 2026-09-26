@@ -31,7 +31,7 @@ rather than leaving the next in a line of obsolete ones open beside it: the
 converge is a full recompute from the base, so last cycle's pull request holds
 nothing this cycle's does not, and it closes once the successor exists. Where it
 had concluded green and was simply never merged, it is LANDED instead and the
-cycle ends there — the member's own next converge starts from the base it moved.
+cycle ends there — the member's own next update starts from the base it moved.
 
 The cost this shape carries is the one the rewrite avoided: a member whose CI is
 slower than a cycle gets a new head to check every cycle, so a pull request

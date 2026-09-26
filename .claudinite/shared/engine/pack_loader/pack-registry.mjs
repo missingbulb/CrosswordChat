@@ -22,7 +22,7 @@ export const localPacksDir = (root) => join(resolve(root), LOCAL_PACKS_SUBDIR);
 // reads this constant. It stays exported because fielded pack versions import it by
 // name, and the engine reaches a member ahead of its packs — a named import of an
 // export that is gone is a link-time SyntaxError that faults the whole pack, fails
-// the mount's self-test and blocks the converge that would have fixed it. It comes
+// the mount's self-test and blocks the update that would have fixed it. It comes
 // out when no fielded pack version imports it any more — a question answered off
 // the trunk's own pack history by the lane-shim test that guards this surface, not
 // by what the current tree happens to import (#1911).
@@ -158,7 +158,7 @@ async function ruleModulesIn(packDir, scope, label, errors) {
     if (rule === null || typeof rule !== 'object' || typeof rule.id !== 'string' || typeof rule.run !== 'function') {
       errors.push({
         what: `${label}/${name} sits in a rule directory but default-exports no rule`,
-        fix: `default-export { id, severity, description, doc, why, run(ctx) } from ${name}, or move the module out of ${scope}/`,
+        fix: `default-export { id, on_fail, description, doc, why, run(ctx) } from ${name}, or move the module out of ${scope}/`,
         dir: packDir,
       });
       continue;
@@ -484,7 +484,7 @@ export function bundledSkillSources(packs) {
 // that set plus every pack reachable through `requires` (transitively).
 // Declared entries keep their order; each pack's pulled-in dependencies land
 // right after it, deterministically. This runs when the declaration is
-// WRITTEN — bootstrap's `--init` and the baselining backfill — so a pack's
+// WRITTEN — bootstrap's `--init` and the update's backfill — so a pack's
 // prerequisites are materialized into .claudinite-settings.json, visible and
 // droppable like every other entry (the same reason a seeded pack is written
 // explicitly rather than defaulted), never resolved implicitly at run time.

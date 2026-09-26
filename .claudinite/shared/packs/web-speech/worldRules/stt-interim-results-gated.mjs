@@ -72,7 +72,7 @@ function handlesResultInline(src) {
 
 const rule = {
   id: 'stt-interim-results-gated',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A recognizer that enables interim results gates its handler on isFinal',
   doc: 'packs/web-speech/RULES.md',
   why: 'interim hypotheses are delivered on the same result event as the final transcript, so a handler that never checks isFinal treats every half-formed guess as a finished utterance — the app acts on words the user has not said yet and repeats itself as the guess is revised, with nothing thrown and nothing logged',

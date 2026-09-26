@@ -4,7 +4,7 @@ import { finding } from '../../../engine/checks/helpers/findings.mjs';
 // on a release, so a window exists where this file sits beside an engine with no
 // `unplacedSpecKeys` to export. A named import of an absent export is a link-time
 // SyntaxError, which the loader records as a fault, which fails the self-test,
-// which parks the converge — #1400's own wedge, from the other lane.
+// which parks the update — #1400's own wedge, from the other lane.
 import * as patternRules from '../../../engine/checks/helpers/pattern-rules.mjs';
 
 // A declared check's keys ARE its vocabulary: write `scanFile` for `scanFiles`
@@ -33,7 +33,7 @@ export function unplacedKeysWith(engine, spec) {
 
 const rule = {
   id: 'declared-check-spec-keys',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'Every key in a declared check is one the engine\'s vocabulary places',
   why: 'a key the engine cannot place is dropped at load, so a typo\'d key asserts nothing at all and its check reads green forever',
 

@@ -1,12 +1,12 @@
 // THE AUTOMERGE VERDICT, AS A COMMAND — the landing lane runs this before it may
-// merge, and quotes the `AUTOMERGE:` line it prints (deliver-pr.md):
+// merge, and quotes the `AUTOMERGE:` line it prints:
 //
 //   node <this file> --base origin/main --policy 'comment-only-changes;readme-changes'
 //
 // It sits here rather than beside the policy engine because reading the diff is a
 // world edge — git, the environment, the checkout — and what a task's `automerge`
-// MEANS may not depend on who is asking. `src/contract/merge-policy.mjs` decides;
-// this reads the world and prints.
+// MEANS may not depend on who is asking. The policy engine decides; this reads the
+// world and prints.
 
 import { policyVerdict, declaredMergeRules } from '../contract/merge-policy.mjs';
 import { runGit } from '../world/processes.mjs';
@@ -46,12 +46,9 @@ export function diffEntries({ base, cwd = repoRoot() }) {
 }
 
 // --- the CLI ------------------------------------------------------------------
-// What the landing lane runs before it may merge:
-//   node <this file> --base origin/main --policy 'comment-only-changes;readme-changes'
-// Prints one line per changed file and a final `AUTOMERGE: yes|no — why` verdict
-// line the worker quotes. Pack-declared rules resolve from the repo's ACTIVE
-// packs (loaded here, not at import time — discovery re-importing this module
-// mid-evaluation must find no work started).
+// Pack-declared rules resolve from the repo's ACTIVE packs, loaded here rather than
+// at import time: discovery re-importing this module mid-evaluation must find no
+// work started.
 async function main() {
   const argv = process.argv.slice(2);
   const at = (flag) => (argv.includes(flag) ? argv[argv.indexOf(flag) + 1] : null);

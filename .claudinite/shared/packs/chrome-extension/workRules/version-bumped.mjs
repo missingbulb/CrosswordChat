@@ -36,7 +36,7 @@ export function touchesShippedFiles(changed, roots) {
 
 const rule = {
   id: 'cer/version-bumped',
-  severity: 'blocking',
+  on_fail: 'block',
   scope: 'work',
   description: 'A change to a shipped file raises the extension version in the same change',
   doc: 'packs/chrome-extension/skills/chrome-store-releases/SKILL.md',

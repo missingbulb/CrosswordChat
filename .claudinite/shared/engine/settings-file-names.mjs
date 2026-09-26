@@ -18,7 +18,7 @@ export const SETTINGS_FILE = '.claudinite-settings.json';
 // The settings-file names, as a list. One element, and nothing in this tree reads
 // it: a fielded pack version imports it BY NAME, and the engine lane reaches a
 // member ahead of the pack lane, so deleting it would fault that pack at link time
-// and the failed self-test would refuse the converge that carries the fix. It comes
+// and the failed self-test would refuse the update that carries the fix. It comes
 // out when no fielded pack version names it any more (#1911).
 export const SETTINGS_FILES = [SETTINGS_FILE];
 

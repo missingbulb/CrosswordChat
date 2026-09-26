@@ -1,7 +1,7 @@
 // How one session USED the corpus: which skills loaded and what made them load,
 // which guards fired, how many moments a triggered skill's declaration actually
 // had, and what the checks cost. The other half of a capture file's counting -
-// fold-usage.mjs counts what the session produced, this counts what the corpus did
+// the fold counts what the session produced, this counts what the corpus did
 // to it - and the record the usage review's rules are evaluated against.
 //
 // EVERY COUNTER HERE IS A FLOOR. The marks are the hooks' own `hooklog` lines,
@@ -11,8 +11,7 @@
 // the check counters already state for themselves.
 import { isUserMessage, commandName, skillToolLoads, toolCalls, entryText } from './capture-entries.mjs';
 
-// A hooklog line - `<iso> run=<id> <hook>: <message>`, the format hook-log.mjs
-// writes and session-start-command.sh mirrors. Deduped on the whole line: the
+// A hooklog line - `<iso> run=<id> <hook>: <message>`. Deduped on the whole line: the
 // timestamp is to the second and the run id is per hook execution, so two
 // recordings of one emission collapse and two real emissions do not.
 const HOOK_LINE_RE = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) run=(\S+) ([A-Za-z]+): (.+)/g;
@@ -65,12 +64,12 @@ export function readMark({ hook, message }) {
 //
 //   claudinite-check-timing v1 <scope> total=<ms> <rule>=<ms> …
 //
-// Spelled here rather than imported from `engine/checks/check-timing.mjs`, which
-// renders it: the engine and this pack land on separate cycles, so every member
-// spends a window holding an older engine beside this pack, and a static import of
-// a module that engine does not carry fails the whole mount's self-test. The drift
-// guard is a test - `corpus-use.test.mjs` drives the ENGINE's real renderer and
-// fails if this reader stops reading what it writes.
+// Spelled here rather than imported from the engine module that renders it: the
+// engine and this pack land on separate cycles, so every member spends a window
+// holding an older engine beside this pack, and a static import of a module that
+// engine does not carry fails the whole mount's self-test. The drift guard is a
+// test that drives the ENGINE's real renderer and fails if this reader stops
+// reading what it writes.
 const RE_TIMING = /claudinite-check-timing v1 (\S+) total=(\d+)((?: [^\s=]+=\d+)*)\s*$/;
 export function parseTiming(text) {
   const m = RE_TIMING.exec(String(text ?? ''));

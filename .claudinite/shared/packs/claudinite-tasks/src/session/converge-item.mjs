@@ -1,32 +1,29 @@
-// THE TERMINAL TRANSITION, IN CODE (#892; docs/PRINCIPLES.md).
+// THE TERMINAL TRANSITION, IN CODE.
 // A work-item session ends by performing five ordered side effects — comment,
 // drop `task:agent`, add the outcome label, carry the execution record, close
 // with the right state reason — on the item it holds, and nothing else: a
-// converge never writes to another work item (docs/PRINCIPLES.md; #1373 reversed
-// an earlier attempt). Releasing a dependent a close may have freed is the scheduler run's
+// converge never writes to another work item. Releasing a dependent a close may have freed is the scheduler run's
 // job alone. Asking a session to perform these effects from prose is asking for
 // it at the moment its context is fullest and the remaining work looks like
 // formality; both of the first two live agentic runs got part of it wrong,
 // silently, in different ways.
 //
-// THIS FILE RUNS IN ONE PLACE: INSIDE A WORK-ITEM SESSION. `public/instructions.md`
-// step 6 is its only caller — no workflow invokes it, no module imports it. The
-// Actions side converges through `executor.mjs`, which owns that path entirely.
+// THIS FILE RUNS IN ONE PLACE: INSIDE A WORK-ITEM SESSION. The session's instructions
+// are its only caller - no workflow invokes it, no module imports it. The Actions
+// side converges through the executor, which owns that path entirely.
 //
 // SO EVERY LINE HERE ASSUMES MCP, AND NOTHING HERE MAY REACH THE NETWORK. A session
 // holds its GitHub access through its own tools; a subprocess it spawns has no route
 // to them and none to the REST API. This file therefore PLANS a transition and
 // PRINTS it addressed to those tools — it never performs one. Printing the calls is
 // the successful outcome, on stdout, exit 0. That is not a fallback: it is the only
-// path, and it must never read as a failure. A REST executor lived here once and did
-// (#1491) — a session met its `console.error` before it met the path written for it,
-// reported that it could not converge, and left the item to the repair phase's 3h leash,
-// which parks a finished run as a human decision. Five sampled items across five
-// repos were exactly that.
+// path, and it must never read as a failure - a session that meets a `console.error`
+// reports that it could not converge and leaves the item to the repair phase's leash,
+// which parks a finished run as a human decision (#1491).
 //
 // The split is the same one the executor already draws: THE SESSION SUPPLIES THE
 // JUDGMENT — which outcome, and the prose of what happened — and the CODE decides
-// every step of the transition. A session that stops early now leaves an item that
+// every step of the transition. A session that stops early leaves an item that
 // is visibly unconverged, rather than one that looks finished and is not.
 //
 // Usage — the item is handed in, because this process cannot read it:
@@ -86,15 +83,15 @@ export function parseArgs(argv) {
 // notion of which item it holds came from an untrusted fire payload.
 export function refusal(item, issue) {
   if (!item) return `#${issue} could not be read`;
-  // A marked issue IS its own item (PRINCIPLES.md), so the title test cannot be the
-  // membership test any more: what says this is one is the machine block adoption
+  // A marked issue IS its own item, so the title test cannot be the
+  // membership test: what says this is one is the machine block adoption
   // wrote — never the body's first line, which on a marked issue is a person's prose.
   //
   // THREE SIGNALS, ANY ONE SUFFICIENT. A membership test gated on the single artifact
   // it exists to validate refuses exactly the items that artifact is missing from: an
-  // issue adopted before the block delimiters existed carries its fields bare, and was
-  // refused here into a by-hand convergence that dropped half the transition
-  // (missingbulb/Shepherd#360). The origin label is the independent one — carried for
+  // issue adopted before the block delimiters existed carries its fields bare, and
+  // refusing it forces a by-hand convergence that drops half the transition. The
+  // origin label is the independent one - carried for
   // life, and platform-write-gated like the block was.
   const marked = ORIGIN_LABELS.some((name) => hasLabel(item, name));
   if (!parseWorkItemTitle(item.title ?? '') && machineBlockOf(item.body ?? '') === null && !marked) {
@@ -138,19 +135,15 @@ export function convergeComment(item, { summary, pr, record, boundary = false })
   return `${summary.trim()}${waiting}${line}${ends}`;
 }
 
-// THE TRANSITION AS DATA (#1374). The side effects were a straight line of
-// `await api.…` calls, which silently made REST the only way to perform them —
-// and the sessions `invoke.mjs` hands work to have no REST route to their own
-// repository, so the last step of every agentic run was the one step that
-// environment could not take.
-//
-// So the sequence is planned as OPS and executed by whoever can. The planner is
+// THE TRANSITION AS DATA (#1374). The sessions agentic work is handed to have no
+// REST route to their own repository, so the sequence is planned as OPS and
+// executed by whoever can. The planner is
 // the single source of what a convergence IS; the executors differ only in
 // transport. The session still supplies nothing but the judgment.
 //
 // Removes are granular and unconditional — every spelling of the status being
-// left, not only the ones this snapshot shows (apply-status.mjs's rule: a member's
-// items outlive its converges, so an item may wear an older engine's spelling).
+// left, not only the ones this snapshot shows: a member's items outlive its
+// converges, so an item may wear an older engine's spelling.
 export function convergeOps(item, plan) {
   const spec = OUTCOMES[plan.outcome];
   // A park leaves the item open for somebody else to claim, so its comment carries
@@ -179,7 +172,7 @@ export function convergeOps(item, plan) {
     ops.push({ kind: 'setBody', issue: item.number, body: editItemBody(item.body, (m) => withEndsWhen(m, plan.pr)) });
   }
 
-  // SUPERSEDING (PRINCIPLES.md). The executor decided at resolution which of this
+  // SUPERSEDING. The executor decided at resolution which of this
   // task's earlier pull requests a `supersede_existing_pr` run replaces and stamped
   // them on the item; they close only once THIS run's own pull request exists — a
   // run that delivered nothing, or broke, leaves them where they were, so a review
@@ -192,8 +185,8 @@ export function convergeOps(item, plan) {
   }
 
   if (spec.closes) {
-    // A DONE TERMINAL CLOSES THE ISSUE IT STANDS ON, marked or filed (#1489,
-    // reversing docs/PRINCIPLES.md's "never a marked issue"). `done` is the one outcome
+    // A DONE TERMINAL CLOSES THE ISSUE IT STANDS ON, marked or filed (#1489).
+    // `done` is the one outcome
     // that means nothing is left for anyone to act on, so an issue left open under
     // it asks its author to come and agree with what the run already settled. Every
     // other outcome parks, and a park leaves the issue open to be waited on.
@@ -201,8 +194,8 @@ export function convergeOps(item, plan) {
     return ops;
   }
 
-  // A REQUEST ITEM WRITES BACK TO ITS ISSUE, on the one end that is its business
-  // (PRINCIPLES.md). Only the approval park: a failure deliberately writes nothing and
+  // A REQUEST ITEM WRITES BACK TO ITS ISSUE, on the one end that is its business.
+  // Only the approval park: a failure deliberately writes nothing and
   // leaves `claude-queued` standing, because re-arming work that writes code is a
   // person's decision and that standing label is what stops the next scheduler run
   // queueing a second run of the same request. Only a LEGACY shadow item writes
@@ -286,7 +279,7 @@ async function main() {
     return;
   }
 
-  // The repo this item lives in. `--repo` is what instructions.md passes; the two
+  // The repo this item lives in. `--repo` is what the session's instructions pass; the two
   // environment names answer for a session whose harness sets one of them.
   const repo = plan.repo ?? actionsEnv().CLAUDINITE_ITEM_REPO ?? actionsEnv().GITHUB_REPOSITORY ?? null;
   if (!repo) {
@@ -299,8 +292,8 @@ async function main() {
   // of the file — so the session reads it with its own tools and passes it through.
   // A file rather than an argument: an item's body is prose of arbitrary length, and
   // a shell-quoted one is a quoting bug waiting for the first apostrophe.
-  // `CLAUDINITE_ITEM_JSON` stays readable for a member whose instructions.md is a
-  // cycle behind, since a mount updates on its own schedule.
+  // `CLAUDINITE_ITEM_JSON` stays readable for a member whose session instructions are
+  // a cycle behind, since a mount updates on its own schedule.
   const raw = plan.itemFile
     ? await readFile(plan.itemFile, 'utf8')
     : (actionsEnv().CLAUDINITE_ITEM_JSON ?? '');

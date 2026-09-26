@@ -8,8 +8,8 @@ const hasMarkerNearRoot = (ctx, marker) =>
   });
 
 export default {
-  version: '60922.1',
-  minEngineVersion: '60822.1',
+  version: '60925.2',
+  minEngineVersion: '60925.1',
   ruleRoutingGuidance: {
     belongs: 'conventions for a Node/npm project — module resolution, ESM vs CJS, dependency justification, jsdom test divergences',
     excludes: 'browser-runtime API behaviour — that is html or web-speech; Python packaging is python',

@@ -1,7 +1,7 @@
-// The precondition engine (docs/PRINCIPLES.md): may THIS task run now? A
+// The precondition engine: may THIS task run now? A
 // task declares `preconditions` — a list of named conditions — and this module
 // turns that declaration plus the collected signals into a verdict. Sibling of
-// merge-policy.mjs beside it, and deliberately its mirror image in two ways:
+// the merge policy, and deliberately its mirror image in two ways:
 //
 //   THE LIST IS A CONJUNCTION. `['X', 'Y || Z']` is `X && (Y || Z)`. An automerge
 //   policy GRANTS, so its comma is a union; preconditions REQUIRE, so the comma
@@ -14,9 +14,8 @@
 //   stops running — so an unknown term, a malformed argument or an unreadable
 //   signal returns `{ error }`, a failed run in the queue's failure lane.
 //
-// THE EXPRESSION IS WHAT MUST HOLD, NEVER WHO ASKS (docs/PRINCIPLES.md). The
-// engine keeps no calendar: every scheduler tick asks every task whose declaration
-// says `trigger: 'schedule'`, and the cadence such a task keeps is one of its own
+// THE EXPRESSION IS WHAT MUST HOLD, NEVER WHO ASKS. The engine keeps no calendar:
+// every scheduler tick asks every task whose declaration says `trigger: 'schedule'`, and the cadence such a task keeps is one of its own
 // conditions, read off its own run history, `schedule:at-most-<cadence>`, beside
 // whatever else it requires. The same conditions are judged, identically, at the
 // pick of an item somebody created, so this module never asks which of the two
@@ -241,14 +240,13 @@ const capturedInWindow = (s, windowDays) => {
 const openPrs = (s) => s?.prs?.open ?? [];
 
 const BUILTIN_TERMS = new Map(Object.entries({
-  // --- the run-history terms (docs/PRINCIPLES.md) ----------------------
+  // --- the run-history terms ---------------------------------------------------
   // Judged before any other signal is collected — the `runs` bundle comes off the
   // issue list the scheduler already holds — so a task whose cadence declines
   // costs no read at all on the ticks it does not run.
 
-  // No run since this UTC period opened. Both halves of the old occurrence guard: an
-  // item CREATED since it opened is this period's, and so is one CLOSED since then,
-  // because an item that started before the boundary and ran past it consumed this
+  // No run since this UTC period opened: an item CREATED since it opened is this
+  // period's, and so is one CLOSED since then, because an item that started before the boundary and ran past it consumed this
   // period too, and a second one beside it is a double run.
   [SCHEDULE_TERM]: {
     signals: ['runs'],
@@ -260,7 +258,6 @@ const BUILTIN_TERMS = new Map(Object.entries({
       const woken = wokenReason(item);
       if (woken) return woken;
       const cadence = cadenceOfScheduleArg(arg);
-      // The instant is the caller's to supply, since a term never reads the clock.
       if (ms(now) === null || Number.isNaN(ms(now))) return { error: `${SCHEDULE_TERM}:${arg} has no instant to place in a period: the caller supplied no \`now\`` };
       const opened = anchorInstant(cadence, now);
       const openedMs = opened.getTime();
@@ -272,7 +269,7 @@ const BUILTIN_TERMS = new Map(Object.entries({
   },
 
   // The same term under the name it was introduced with, so a member's own task file
-  // carrying the old spelling keeps working forever (calendar.mjs, DUE_TERM). It is
+  // carrying the old spelling keeps working forever. It is
   // not a second behaviour: it translates its argument and delegates, so the two can
   // never answer differently. `normalizeTaskDeclaration` rewrites a LOADED declaration
   // to the current spelling, which is why this is reached only by a caller that did
@@ -482,7 +479,7 @@ export const BUILTIN_TERM_NAMES = [...BUILTIN_TERMS.keys()];
 // false — a decline that cost nothing beyond the run history — or every conjunct
 // held. The scheduler asks this way first, with the `runs` bundle alone, so a
 // task whose cadence declines never collects its other signals. In full mode a
-// missing signal is a term that does not hold, as it always was.
+// missing signal is a term that does not hold.
 export function evaluatePreconditions({
   preconditions, signals = {}, config = {}, item = null, terms = new Map(), windowDays = null, now = null,
   partial = false,

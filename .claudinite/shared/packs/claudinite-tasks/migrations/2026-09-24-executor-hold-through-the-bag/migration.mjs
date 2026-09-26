@@ -1,7 +1,7 @@
 // Drop the named operator-hold line from every member's live executor workflow once the
 // vars bag carries it.
 //
-// WHY THE LINE IS DEAD WEIGHT. `hold.mjs` reads the hold out of `CLAUDINITE_VARS` first
+// WHY THE LINE IS DEAD WEIGHT. The hold is read out of `CLAUDINITE_VARS` first
 // and falls back to the named env copy only where the job has no bag. An executor that
 // carries `CLAUDINITE_VARS: ${{ toJSON(vars) }}` therefore never consults the named line:
 // both come from the same `vars` context, so the bag always answers. The stubs no longer

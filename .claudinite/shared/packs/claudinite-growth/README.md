@@ -96,7 +96,7 @@ already-pushed logs, so it is the conversation half of the ordinary `growth-extr
 
 The [usage-fold](../claudinite-tasks/tasks/usage-fold/README.md) task counts skill loads **and
 their denominators** (captures, merges, sessions, user messages, user commands) out of the logs
-this pack captures, into `.claudinite/local/usage.GENERATED.json`: day rows recomputed statelessly
+this pack captures, into `.claudinite/usage/sessions-and-elements.json`: day rows recomputed statelessly
 inside the raw retention window, week rows appended once past a `foldedThrough` watermark. The
 question it answers is loads *against the sessions where that skill's own declared trigger
 plausibly applied*. Zeros are implicit (a skill with no loads has no key), so "never loads" is read

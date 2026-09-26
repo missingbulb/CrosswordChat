@@ -8,7 +8,7 @@
 // Assert against THIS, not a hand-built shape.
 //
 // `root` is the Action-side checkout: the manifest version and the configured
-// retention are read from it (signals/local.mjs), because a scheduled run already
+// retention are read from it, because a scheduled run already
 // has the tree on disk and an API round-trip would buy nothing.
 
 import { localSignalContext } from '../world/git.mjs';
@@ -23,7 +23,7 @@ import { localSignalContext } from '../world/git.mjs';
 // the queue where the caller already fetched it (the scheduler run) — null where
 // the collector reads it for itself (the executor at pick).
 //
-// `local` is the checkout half of the ctx (world/git.mjs) where the caller already
+// `local` is the checkout half of the ctx where the caller already
 // has it: a collector that builds several contexts over one `root` probes the disk
 // once instead of once per context. Absent, it is read here.
 export function buildSignalContext({

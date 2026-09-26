@@ -1,7 +1,7 @@
 // The queue's pre-policy "narrow diff" verdict, kept for the items and callers
-// that still speak it. The general mechanism is `merge-policy.mjs` at this
-// pack's root — `Merge: if-narrow` resolves there to the `narrow-diff` composite
-// policy, and new callers go straight to that module and its CLI. What stays
+// that still speak it. The general mechanism is the merge-policy engine -
+// `Merge: if-narrow` resolves there to the `narrow-diff` composite policy, and new
+// callers go straight to that engine and its CLI. What stays
 // here is the original whole-diff verdict shape (`narrowVerdict`) and its CLI,
 // both built on the primitives merge-policy now owns.
 //

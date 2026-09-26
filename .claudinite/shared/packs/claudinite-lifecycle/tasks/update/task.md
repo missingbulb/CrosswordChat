@@ -1,8 +1,8 @@
 # Update — the apply stage
 
-The deterministic half already ran. Preprocessing converged this repo's mount to the
+The deterministic half already ran. Preprocessing updated this repo's mount to the
 canon's current engine and pack versions, ran the version-ranged migrations, gated the
-result on the converged tree's own `selftest --strict`, and opened the update PR. The
+result on the updated tree's own `selftest --strict`, and opened the update PR. The
 work item names the branch and says which packs moved.
 
 **You are here for one of three reasons**, and the issue says which:
@@ -11,7 +11,7 @@ work item names the branch and says which packs moved.
   Action token is refused for. Nothing here needs judgment; you are the credential.
 - **A pack's updated rules have met content this repo authored** and the canon has never
   seen. This is the half that needs judgment, and it is all of the judgment there is.
-- **The converge wrote files this repo's own tests can see** — engine code, a config
+- **The update wrote files this repo's own tests can see** — engine code, a config
   file, a source file a migration rewrote. Nothing has run this repo's own test suite
   against those writes.
 
@@ -64,7 +64,7 @@ Run it the way this repository runs it, read out of its own docs and config rath
 than guessed at. A repo with no suite has nothing to run here; say so and move on.
 
 A failure is yours to repair **only where this cycle's writes caused it**. The item's
-reason names the files the converge wrote that a test could see; start from those, and
+reason names the files the update wrote that a test could see; start from those, and
 from the record named in §3 where there is one.
 
 - A test that broke because the new rules changed what this repo should do — repair the

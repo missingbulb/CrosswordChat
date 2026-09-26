@@ -6,7 +6,12 @@ import { packEntryId } from '../../../engine/pack_loader/pack-registry.mjs';
 // import of an export the member's engine lacks is a link-time SyntaxError that faults the
 // whole pack rather than one rule.
 import * as registry from '../../../engine/pack_loader/pack-registry.mjs';
-import { RULES_INDEX_FILE, RULES_INDEX_IMPORT } from '../../../engine/pack_loader/generate-rules-index.mjs';
+// The index's path and import line through a namespace too: both moved into
+// `.claudinite/flat/` in one engine release, and this rule reads whichever the member's
+// engine writes.
+import * as rulesIndex from '../../../engine/pack_loader/generate-rules-index.mjs';
+
+const { RULES_INDEX_FILE, RULES_INDEX_IMPORT } = rulesIndex;
 
 // That root as this rule spells repo paths: POSIX, whatever host the constant was joined on.
 // An engine without it leaves a sentinel no path can start with, so the exemption below
@@ -14,6 +19,9 @@ import { RULES_INDEX_FILE, RULES_INDEX_IMPORT } from '../../../engine/pack_loade
 const COPIED_ROOT = typeof registry.TEMP_PACKS_SUBDIR === 'string'
   ? registry.TEMP_PACKS_SUBDIR.split(/[\\/]/).join('/')
   : '\u0000';
+
+// The directory the index's imports resolve against, from the engine that wrote it.
+const INDEX_DIR = posix.dirname(RULES_INDEX_FILE.split(/[\\/]/).join('/'));
 
 // The rules index is the ONLY channel a pack's prose reaches a session on (#807). The
 // SessionStart prose step that used to carry it is gone, deliberately — one channel, so
@@ -43,7 +51,7 @@ const COPIED_ROOT = typeof registry.TEMP_PACKS_SUBDIR === 'string'
 // last converge, whose rules are simply not loading.
 const rule = {
   id: 'rules-index-current',
-  severity: 'blocking',
+  on_fail: 'block',
   description: `${RULES_INDEX_FILE} must exist, import every declared pack's rules, and be imported by CLAUDE.md`,
   doc: 'vendoring/DESIGN.md',
   why: 'it is the only channel a pack\'s rules reach a session on; missing, stale or unimported means the session silently runs with none',
@@ -88,11 +96,11 @@ const rule = {
 
       for (const rel of imports) {
         // Resolved from the index's OWN directory, because that is what the harness
-        // resolves against — the canon's imports climb out of `.claudinite/` with
+        // resolves against - the canon's imports climb out of `.claudinite/flat/` with
         // `..`, so this has to normalize rather than concatenate. A dangling import is
         // #807 in a new costume: the channel works, the rules still do not arrive, and
         // nothing says so.
-        const path = posix.normalize(posix.join('.claudinite', rel));
+        const path = posix.normalize(posix.join(INDEX_DIR, rel));
         // Except for the one import no checkout can satisfy: the pack copied for the
         // person in front of the session, which the step runner writes every session and
         // nobody tracks. Judged against the committed tree it would read as dangling in

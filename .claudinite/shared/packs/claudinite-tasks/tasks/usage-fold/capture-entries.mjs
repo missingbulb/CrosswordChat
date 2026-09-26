@@ -1,7 +1,7 @@
 // Reading ONE transcript entry - the shapes every counter in this task asks
 // about, in the one place that knows them. Both counting passes read entries
-// (fold-usage.mjs counts what the session produced, corpus-use.mjs what the
-// corpus did to it), and a shape spelled twice would let the two disagree about
+// (one counts what the session produced, the other what the corpus did to it),
+// and a shape spelled twice would let the two disagree about
 // what a load or a human turn is.
 
 // A genuine human turn. POSITIVE test, deliberately: the transcript stamps a
@@ -46,7 +46,6 @@ export function skillToolLoads(entry) {
     .map((b) => b.input.skill);
 }
 
-// The tool_use blocks of an assistant entry, as { name, input, id }.
 export function toolCalls(entry) {
   if (entry?.type !== 'assistant' || !Array.isArray(entry?.message?.content)) return [];
   return entry.message.content

@@ -1,15 +1,19 @@
 # claude-code-web-users-support — working from Claude Code on the web
 
 - **A person asking to change one of their personal rules** - edit the pack that travels with
-  them, `<path>/<email>/` in the store repo this pack names, never here and never in the canon,
+  them, `<path>/<login>/` in the store repo this pack names, never here and never in the canon,
   and append the entry on the rule's provenance file inside that pack, the person the actor; a
   project convention in disguise belongs in the pack owning its subject, and a rule triggering a
   command owns only the trigger phrase.
 
 - **A person asking to record their personal rules with nothing there yet** - create
-  `<path>/<email>/RULES.md` in that store repo, the directory named for their exact identity,
-  case included: the reader copies `<path>/<email>/` and nothing else, so any other name is
-  silently never copied.
+  `<path>/<login>/RULES.md` in that store repo, named for their GitHub login in lower case, since
+  any other name is silently never copied, and regenerate the store's CODEOWNERS in the same
+  change:
+
+  ```
+  node .claudinite/shared/packs/claude-code-web-users-support/write_store_codeowners.mjs
+  ```
 
 - **A person wanting a skill or a check of their own, not just rules** - put it in that same
   directory, which is an ordinary pack: `skills/<name>/SKILL.md`, `worldRules/`,

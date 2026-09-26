@@ -1,4 +1,4 @@
-// The tasks the ENGINE itself ships (docs/PRINCIPLES.md), as opposed to
+// The tasks the ENGINE itself ships, as opposed to
 // the ones a declared pack contributes. There is exactly one: `implement-request`,
 // the task a marked issue's work item names.
 //
@@ -59,7 +59,7 @@ export function requestTaskPath(root) {
 }
 
 // THE APPROVAL PHRASE. A comment beginning `/claude go` is how somebody with push
-// access blesses an issue they did not open (PRINCIPLES.md) — the blessing is the
+// access blesses an issue they did not open - the blessing is the
 // comment, never the mark. It lives here because two places need the same one: the
 // `request` signal, which reads which logins wrote it, and the request task's
 // precondition, which judges their permission.

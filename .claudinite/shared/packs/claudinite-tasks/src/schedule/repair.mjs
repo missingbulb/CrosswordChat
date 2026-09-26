@@ -1,15 +1,13 @@
-// THE REPAIR PHASE of the scheduler run (docs/PRINCIPLES.md) - the recovery that
-// used to run once a day as a task of its own, planned here as ops the same run
-// applies before it asks any task whether it wants to run.
+// THE REPAIR PHASE of the scheduler run - the recovery, planned here as ops the same
+// run applies before it asks any task whether it wants to run.
 //
-// IT IS STILL A FALLBACK. Every rule below repairs something that already went
+// IT IS A FALLBACK. Every rule below repairs something that already went
 // wrong - a label swap that tore, a session that died, a park nobody answered, a
 // terminal nobody closed - and the healthy flow of a task never passes through
 // here: an item the machinery handled correctly is settled by whoever handled it,
 // before any of this runs. A new rule here is a claim that a failure mode exists
 // and that nothing nearer to it can close it out; the alternative to writing one
-// is usually fixing the flow that left the mess. What changed when this moved is
-// its siting and its latency, not its standing.
+// is usually fixing the flow that left the mess.
 //
 // AND IT ONLY EVER READS OPEN ITEMS. An item somebody closed is finished, park
 // label and all: a person ending a park by closing its issue is an answer, not a
@@ -22,9 +20,9 @@
 // repair could only ever land after the tick that filed it, and could never feed
 // the drain gate that dispatches an executor for what it freed.
 //
-// The verdicts stay pure in `./repair-rules.mjs`; this module decides
-// which op each verdict becomes and which of them may be threaded back into the
-// item list the ask reads. The shell in `run.mjs` does the GitHub I/O.
+// The verdicts stay pure in the rules; this module decides which op each verdict
+// becomes and which of them may be threaded back into the item list the ask reads.
+// The shell does the GitHub I/O.
 
 import {
   staleReadyItems, staleReadyComment, deadAgentItems, deadAgentComment,
@@ -42,7 +40,7 @@ import {
   statusOf, parseWorkItemTitle, parseWorkItemBody, taskIdFromPath, spellingsOf,
 } from '../../public/work-item-grammar.mjs';
 
-// The three ops this phase emits, each a label-and-body mechanic `run.mjs` applies:
+// The ops this phase emits, each a label-and-body mechanic the shell applies:
 //   { kind: 'escalate', issue, from, to, body }        status -> a park, item stays open
 //   { kind: 'retire',   issue, from, to, body, close } status -> a terminal, issue closes
 //   { kind: 'close-terminal', issue, body, close }     the close a torn transition never made
@@ -51,8 +49,8 @@ import {
 // `confirm` names the pure predicate the shell must see hold on a FRESH read before
 // it writes. Only the three rules whose premise is a TRANSIENT carry one - "this
 // looks torn", "nobody has touched this" - because a swap in flight is
-// indistinguishable from one that tore and `items` is a snapshot seconds old (#1104:
-// #1101 closed `task:done` at 12:50:13Z and was escalated at 12:50:21Z). The rules
+// indistinguishable from one that tore and `items` is a snapshot seconds old
+// (#1104). The rules
 // that turn on a clock over a stable label need no second read.
 //
 // `clearInReview` is the one write that lands on a DIFFERENT issue than the one the
@@ -66,8 +64,8 @@ const threadable = (op) => !op.confirm;
 
 // Apply an op's effect to the in-memory item, mirroring exactly what the shell
 // writes - status cleared of EVERY spelling, the new label added, and for a retire
-// the close itself. The cadence terms read these items (`signals/index.mjs` folds
-// `ctx.items` into each task's run history), so an effect that is written to GitHub
+// the close itself. The cadence terms read these items as each task's run history,
+// so an effect that is written to GitHub
 // but not to the snapshot leaves the ask judging a world one write out of date.
 function threadEffect(item, op) {
   if (op.from) {
@@ -199,7 +197,7 @@ export function planRepair({
   }
 
   // A TORN ADOPTION IS NOT A TORN ITEM. Adoption writes the machine block and then
-  // the status (`run.mjs` job 4), so a block with no status is the shape a failed
+  // the status (the run's job 4), so a block with no status is the shape a failed
   // label call leaves - and it is exactly what job 4 re-adopts on the next run. It
   // reaches this rule looking identical to a swap that tore, so the issues job 4
   // owns are excluded here rather than parked out from under it.
@@ -217,14 +215,6 @@ export function planRepair({
   // place rather than a module: a rule here reads the items this phase has already
   // listed and costs no read of its own, which is the whole reason such a rule
   // belongs in this pass rather than in a sweep of its own.
-  //
-  // What lived here until the merge: the slot scheduler's `[claudinite-task]`
-  // dispatch issues (#974), escalated when stale, re-armed when their trigger event
-  // was lost. All three of its rules went when the task did. The re-arm and the
-  // dead-claim were already no-ops - re-emitting a ready label for a trigger nothing
-  // listens to arms nothing, and no session claims a dispatch issue any more - and
-  // the escalation's population is a closed set that only shrinks. A member still
-  // holding one closes it by hand, which is one issue, once.
   //
   // A future rule here states which retired mechanism it cleans up after and what
   // bounds its population, so the next reader can tell a live rule from one whose

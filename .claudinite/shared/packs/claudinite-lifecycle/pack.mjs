@@ -13,8 +13,8 @@
 // exist. Both run outside any check, because activation reads the literal
 // declaration.
 export default {
-  version: '60924.1',
-  minEngineVersion: '60822.1',
+  version: '60925.4',
+  minEngineVersion: '60925.1',
   ruleRoutingGuidance: {
     belongs: 'using Claudinite itself — the vendored mount, the pack declaration, bootstrapping, adopting packs, the self-refresh update',
     excludes: 'working discipline and the task lifecycle — basics; authoring Claudinite content, scheduled tasks included — claudinite-growth; git — git-github',

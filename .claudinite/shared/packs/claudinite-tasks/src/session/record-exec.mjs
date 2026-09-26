@@ -1,15 +1,13 @@
 // Print one machine-readable execution record for the dispatch this executor
-// session ran — `claudinite-task-exec v1 <pack>/<task> [<slot>] <status>`
-// (run-record.mjs, the single home of the format). The executor runs this in
-// code at step 4, right after converging its issue, so the record lands in the
-// session transcript exactly as printed; the capture step ships the transcript
-// to the conversation-logs branch, and the usage fold counts the statuses out
-// of it deterministically. Hard-coded on purpose: the count must never depend
-// on how an agent chose to phrase its final message.
+// session ran - `claudinite-task-exec v1 <pack>/<task> [<slot>] <status>`. The
+// executor runs this in code right after converging its issue, so the record
+// lands in the session transcript exactly as printed, where the usage fold counts
+// the statuses deterministically. Hard-coded on purpose: the count must never
+// depend on how an agent chose to phrase its final message.
 //
-// The code-decided terminal verdicts (`task-gone`, `invalid`) are printed by
-// resolve-dispatch.mjs itself; this CLI exists for the two verdicts only the
-// end of the run can know (`success`, `failed`).
+// The code-decided terminal verdicts (`task-gone`, `invalid`) are printed where
+// they are decided; this CLI exists for the two verdicts only the end of the run
+// can know (`success`, `failed`).
 //
 // Usage: node record-exec.mjs <pack>/<task> <slot> <success|failed>
 

@@ -84,7 +84,7 @@ Whichever source it came from:
   it, never merge it, and never read the standing PR as a failure: degrading an
   authorized landing to review is the repo's stated intent, and member config wins.
 - **Missing or empty** — proceed as `auto-merge` (the default). Do **not** write the key:
-  materializing it is the update converge's job, not yours.
+  materializing it is the update's job, not yours.
 - **Anything else** — someone stated an intent you cannot honour, and guessing could
   deliver its opposite. Leave the PR open (the posture that merges nothing) and name the
   unrecognized value in your wrap-up comment on the work item.
@@ -105,7 +105,9 @@ it once this repo's required checks pass.
   evidence, exactly as the code lane's landing pass does. Read the workflow runs on the
   PR's **head sha**:
   - A run parked at `action_required` **never ran** — it is neither a pass nor a failure;
-    ignore it and judge by the runs that actually executed.
+    ignore it and judge by the runs that actually executed. It can register before the
+    runs that will execute, so a head whose only runs are parked is not yet judgeable:
+    keep waiting for the real ones to appear.
   - Wait (within your run's time budget) for the real runs to conclude. Everything
     concluded, nothing failed, at least one succeeded → merge (squash).
   - Anything genuinely failed (`failure`, `timed_out`, `cancelled`, `startup_failure`),

@@ -1,6 +1,7 @@
 ---
 name: growth-dedup
-description: Prune a repo's local packs of items the mounted Claudinite canon now covers — remove, strip to residue, or track a wording drift, never grow an entry. Use when the growth dedup task runs, or when asked to reconcile or dedup local packs against the canon.
+description: Prune a repo's local packs of items the mounted canon now covers. Use when asked to reconcile or dedup local packs against the canon.
+disable-model-invocation: true
 metadata:
   body: workflow
   usage:
@@ -16,7 +17,7 @@ human-gated PR and the tracking issue.
 
 **The yardstick is the mounted canon** — the exact revision the repo currently consumes, what
 `.claudinite/shared/` holds at the mount's stamp — never a live fetch (a promotion is visible
-here only once baselining has converged the mount to include it). The mount is never a prune
+here only once the update has brought the mount to include it). The mount is never a prune
 *target*, only what you prune *against*.
 
 ## Start from the canon's diff, not the canon
@@ -85,7 +86,7 @@ general point, or does it make a point the canon doesn't?" Prune the first; keep
 The canon carries rules as **conformance checks**, not only prose. A local item is covered when
 a canon check *enforces* it — stronger coverage than a stated line, since the rule runs on every
 session and CI pass. Consult the machine-readable rule catalog
-(`node .claudinite/shared/engine/checks/check_the_world.mjs --list`: id, severity, description,
+(`node .claudinite/shared/engine/checks/check_the_world.mjs --list`: id, on_fail, description,
 doc pointer — it lists the active local packs' own checks too) alongside the prose corpus, and
 when a check covers the item, **quote the rule id** where you'd otherwise quote a canon line.
 This cuts both ways: a **local pack's own check** is redundant once a canon check enforces the

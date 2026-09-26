@@ -49,7 +49,7 @@ function fileExtension(path) {
 // guard flags such an entry so the redundancy is fixed at the source.
 const rule = {
   id: 'shared-constants',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A value copied across files that can\'t share an import must appear the declared number of times in each (and, in regex mode, be identical everywhere)',
   doc: 'packs/basics/RULES.md',
   why: 'a value duplicated across files that can\'t share an import drifts silently when a rename or bump lands in some but not all',

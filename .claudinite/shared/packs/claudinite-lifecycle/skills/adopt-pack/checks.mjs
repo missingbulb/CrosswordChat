@@ -16,7 +16,7 @@ const idsOf = (decl) =>
 
 const rule = {
   id: 'adoption-answers-pending',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A pack newly declared on this branch records an answer for every adoption question it asks',
   doc: 'packs/README.md',
   scope: 'work',

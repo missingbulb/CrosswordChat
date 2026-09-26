@@ -1,6 +1,6 @@
 ---
 name: deterministic-expecteds
-description: What makes a rendered expected byte-stable — the pinned clock, faked inputs, real fonts, fixed-duration pumps — and the per-stack rendering recipe (jsdom+satori for DOM products, Flutter golden files) with pixel-exact comparison. Use when writing a case, the render harness or the fake world under dev/requirements.
+description: What makes a rendered expected byte-stable, and the per-stack rendering recipe. Use when writing a case, the render harness or the fake world under dev/requirements.
 metadata:
   body: guidelines
   usage:

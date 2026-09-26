@@ -3,7 +3,7 @@
 // signed-in person, in a managed container, and a terminal session does neither.
 //
 // It carries an ADDRESS, not content. Its entry config names the STORE - a repository, and
-// a path inside it holding one `<email>/` directory per person:
+// a path inside it holding one `<login>/` directory per person, named by GitHub login:
 //
 //   { "id": "claude-code-web-users-support", "config": { "repo": "owner/name" } }
 //
@@ -12,8 +12,8 @@
 // `environment-setup-command.sh` is the generic body a project pastes into its web
 // environment's Setup script field. What a repo does with the pack is its README.
 export default {
-  version: '60924.1',
-  minEngineVersion: '60822.1',
+  version: '60925.2',
+  minEngineVersion: '60925.1',
   ruleRoutingGuidance: {
     belongs: 'what a project offers people working from Claude Code on the web, where the session knows who they are',
     excludes: 'project conventions and process — those are the packs that own each subject',
@@ -22,7 +22,7 @@ export default {
   questions: [
     {
       id: 'store',
-      prompt: 'Where do this project\'s people keep the pack that travels with them - the repository holding one `<email>/` directory per person? Give an `owner/name` (a fleet usually has one repo for this), or say "n/a - none" if this project has no such store.',
+      prompt: 'Where do this project\'s people keep the pack that travels with them - the repository holding one `<login>/` directory per person, named by GitHub login? Give an `owner/name` (a fleet usually has one repo for this), or say "n/a - none" if this project has no such store.',
       distill: 'the answer\'s `owner/name` becomes this entry\'s `config.repo` (add `config.path` only when the directories do not sit in `preferences/`); "n/a" leaves the entry without a config and the personal-pack feature inert',
     },
   ],

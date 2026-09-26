@@ -1,7 +1,7 @@
 [
   {
     "id": "task-phase-discipline",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "the precondition is the ONLY decision point — a later-phase skip hides work from the run records and re-litigates a verdict already given",
     "scanFiles": "/(^|\\/)tasks\\/[^/]+\\/(task\\.md|[^/]+\\.mjs)$/",
     "excludeFiles": "/(^|\\/)tasks\\/[^/]+\\/task\\.mjs$/",
@@ -24,7 +24,7 @@
   },
   {
     "id": "legacy-check-spellings",
-    "severity": "advisory",
+    "on_fail": "advise",
     "since": "2026-09-03",
     "failureMessage": "the merged assertion families no longer accept their pre-merge spelling, and a spelling the engine cannot place is dropped at load — the assertion is simply not there",
     "scanFiles": "/declared-checks\\.json$/",
@@ -48,7 +48,7 @@
   },
   {
     "id": "doc-pointers-resolve",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-04",
     "failureMessage": "the doc pointer is the More line a finding prints, and nothing opens it until the check fires — a stale one sits broken until a session follows it into nothing",
     "scanIgnoringComments": true,
@@ -71,7 +71,7 @@
   },
   {
     "id": "check-ships-with-test",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-04",
     "scope": "work",
     "failureMessage": "a check nobody watched fail meets its first false positive in a member's Stop hook, where every session pays for it",

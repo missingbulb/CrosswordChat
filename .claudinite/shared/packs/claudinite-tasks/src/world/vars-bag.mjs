@@ -1,12 +1,10 @@
 // The executor's repository-variable bag (#1492).
 //
-// WHY THIS EXISTS. Actions requires a workflow to name each value it passes, so
-// before this a task needing a repo variable needed the executor workflow to name it —
-// and `.github/workflows/` is the one path a converge cannot write, so that meant a
-// human-merged PR in every member, the coupling that wedged one in #1296. One static
-// line, `CLAUDINITE_VARS: ${{ toJSON(vars) }}`, ends it: the workflow stops being a
-// function of what any task declares, and setting a variable in repo settings is the
-// whole of adding one.
+// WHY THIS EXISTS. Actions requires a workflow to name each value it passes, and
+// `.github/workflows/` is the one path an update cannot write, so a variable named
+// there costs a human-merged PR in every member (#1296). One static line,
+// `CLAUDINITE_VARS: ${{ toJSON(vars) }}`, keeps the workflow independent of what any
+// task declares, and setting a variable in repo settings is the whole of adding one.
 //
 // WHY THE SECRETS BAG CANNOT DO THE SAME. `toJSON(secrets)` is the shape GitHub's
 // malicious-workflow detection flags (#1336): the run parks with zero jobs until a
@@ -30,9 +28,9 @@ export const varsBag = (env = actionsEnv()) => parseBag(env[VARS_BAG_ENV]);
 // it should lose.
 //
 // ADDITIVE, NEVER OVERWRITING — the one place this deliberately differs from the
-// secrets bag, which wins over a same-named plain variable. That bag replaced named
-// lines and is subtracted from the inherited environment before it is applied, so it
-// has nothing to collide with. This one is applied ON TOP of a live runner environment
+// secrets bag, which wins over a same-named plain variable: that bag is subtracted
+// from the inherited environment before it is applied, so it has nothing to collide
+// with. This one is applied ON TOP of a live runner environment
 // it does not own, and a repository variable is any name an owner typed into a settings
 // box. A repo with a variable called `PATH` or `HOME` must not be able to reach into a
 // task subprocess and replace the runner's own; anything already present came from the

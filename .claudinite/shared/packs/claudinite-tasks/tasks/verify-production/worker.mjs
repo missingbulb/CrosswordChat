@@ -1,4 +1,4 @@
-// The verify-production code-work (#1530) — the I/O shell around probes.mjs. It
+// The verify-production code-work (#1530) - the I/O shell around the probes. It
 // runs Action-side, which is the whole reason this task exists: an agent session
 // has no egress, so a verification whose artifact is a live URL (a Pages site, a
 // deployed config) can only be read from here.

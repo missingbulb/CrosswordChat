@@ -18,7 +18,7 @@ import { interviewState } from './interview.mjs';
 // runs synchronously without re-discovering packs.
 const rule = {
   id: 'interview-answer-stale',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'A stored adoption-interview answer names a question its pack still declares',
   doc: 'packs/README.md',
   why: 'a stale answer silently stops matching its question, so the stored intent goes unread and the interview re-asks',

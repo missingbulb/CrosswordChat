@@ -18,8 +18,8 @@
 // first time; and, for at most `SCHEDULER_RUNS_PER_FOLD` scheduler runs, at most
 // `JOB_LOGS_PER_RUN` log reads each. On this repo's cadence — the scheduler's two
 // ticks a day and the executor runs a quiet queue dispatches — that is under ten
-// calls a day, which `test/tasks/tasks-usage-fold/read-run-costs.test.mjs` asserts
-// by counting the fetches a representative day makes.
+// calls a day, which a test asserts by counting the fetches a representative day
+// makes.
 //
 // `MAX_RUN_READS` is the runaway guard rather than the budget: a day that somehow
 // produced hundreds of runs stops at the cap, leaves the watermark at the last run
@@ -78,7 +78,7 @@ export function makeReader({ token = process.env.GITHUB_TOKEN, api = API, fetchI
 // THE ROUNDING RULE IS UNVERIFIED FROM HERE. #1872 asks for it to be checked against
 // GitHub's billing documentation and cited; a session in this repo cannot reach
 // `docs.github.com` at all (the egress proxy refuses the domain), so the rule below
-// is the one this repo already states for itself in `src/execute/loop.mjs` —
+// is the one this repo already states for itself in the executor loop -
 // "Actions bills each job's runtime rounded UP to the next minute" — and not a
 // reading of the docs. Confirming it against
 // docs.github.com/en/billing/concepts/product-billing/github-actions needs an

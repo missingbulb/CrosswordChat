@@ -176,8 +176,10 @@ export function usageOf(fm) {
   return { expect: EXPECTS.includes(expect) ? expect : null, problems };
 }
 
-// The metadata of the skill at `dir`: { name, description, body, usage, forceLoadPaths,
-// toolCallTriggers, promptTriggers, toolResultTriggers }.
+// The metadata of the skill at `dir`: { name, description, modelInvocable, body, usage,
+// forceLoadPaths, toolCallTriggers, promptTriggers, toolResultTriggers }. `modelInvocable`
+// is false under the harness's `disable-model-invocation: true`, which keeps the description
+// out of every session's context and leaves the skill to `/name` or a read by path.
 // Unreadable is empty metadata, on the harness's own terms.
 export function skillMetadata(dir) {
   let fm = {};
@@ -185,6 +187,7 @@ export function skillMetadata(dir) {
   return {
     name: typeof fm.name === 'string' ? fm.name : '',
     description: typeof fm.description === 'string' ? fm.description : '',
+    modelInvocable: fm['disable-model-invocation'] !== 'true',
     body: bodyOf(fm),
     usage: usageOf(fm),
     forceLoadPaths: forceLoadPathsOf(fm),

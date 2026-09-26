@@ -7,12 +7,9 @@
 // to completed ones, newest-first from the API and returned oldest-first so a
 // truncated pass leaves a watermark the next fold continues from.
 //
-// IT READS NO JOB LOGS. Its predecessor did — two calls per run — to recover the slot
-// scheduler's per-task records, and that writer is gone (#974): nothing has printed
-// one since, so those calls now buy nothing at any cadence, let alone hourly. What a
-// run DID with each task is read from the queue's own items instead (read-queue.mjs),
-// which is the record that replaced it. So the cost here is two calls per fold, flat,
-// however many runs are in the window.
+// IT READS NO JOB LOGS. What a run DID with each task is read from the queue's own
+// items instead, so the cost here is two calls per fold, flat, however many runs are
+// in the window.
 //
 // FORWARD-ONLY, past `runsFoldedThrough`, and only over COMPLETED runs — an
 // in-progress run has no conclusion to count, and leaving the watermark behind it is
@@ -27,7 +24,7 @@ import { SCHEDULER_WORKFLOW_FILE, EXECUTOR_WORKFLOW_FILE } from '../../src/world
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 
 // The two workflows and the name each is counted under in the hour rows. The words are
-// the aggregate's own counter keys (`usage-format.mjs`), so they are spelled once.
+// the aggregate's own counter keys, so they are spelled once.
 export const WATCHED_WORKFLOWS = Object.freeze([
   { workflow: 'scheduler', file: SCHEDULER_WORKFLOW_FILE },
   { workflow: 'executor', file: EXECUTOR_WORKFLOW_FILE },
@@ -38,8 +35,7 @@ export const WATCHED_WORKFLOWS = Object.freeze([
 // pruned.
 export const FIRST_FOLD_LOOKBACK_DAYS = 3;
 
-// A tiny REST reader — JSON only, since nothing here fetches a log any more.
-// `fetchImpl` is injected so the tests drive it without a network.
+// A tiny REST reader, JSON only. `fetchImpl` is injected so the tests drive it without a network.
 export function makeReader({ token = process.env.GITHUB_TOKEN, api = API, fetchImpl = fetch } = {}) {
   const headers = {
     accept: 'application/vnd.github+json',

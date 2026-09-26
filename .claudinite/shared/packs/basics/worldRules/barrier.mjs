@@ -13,7 +13,7 @@ import { DEFAULT_DOC } from '../barriers.mjs';
 // barriers.mjs beside this file builds those.)
 const rule = {
   id: 'barrier',
-  severity: 'blocking',
+  on_fail: 'block',
   doc: DEFAULT_DOC,
   description: "Folders must not reference across a declared barrier (the basics pack entry's config.barriers)",
   why: 'a declared folder barrier encodes an architectural boundary; a crossing reference erodes it silently',

@@ -1,7 +1,6 @@
-// THE ESCALATION SURFACE FOR A WORKFLOW THAT FAILED AS A WHOLE (docs/PRINCIPLES.md).
-// A scheduled run reaches no one when it goes red — nothing is
-// watching the Actions tab — so a run-level failure becomes a human-visible
-// issue instead.
+// THE ESCALATION SURFACE FOR A WORKFLOW THAT FAILED AS A WHOLE. A scheduled run
+// reaches no one when it goes red - nothing is watching the Actions tab - so a
+// run-level failure becomes a human-visible issue instead.
 //
 // ONE OPEN ISSUE, by a fixed title: create-or-comment, so a week of nightly
 // failures is one thread rather than seven issues. The labels are ensured
@@ -12,9 +11,9 @@
 // parked in the `failure` lane — the one a person diagnoses (#1119).
 //
 // This lives in the engine rather than in the workflows that call it because
-// `.github/workflows/` is the one path a converge cannot push into: a member's
+// `.github/workflows/` is the one path an update cannot push into: a member's
 // copy of a workflow moves only through a PR a human merges, while this module
-// converges nightly like the rest of the engine.
+// updates nightly like the rest of the engine.
 
 import { pathToFileURL } from 'node:url';
 import { makeGh } from '../world/github.mjs';

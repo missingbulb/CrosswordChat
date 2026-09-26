@@ -19,7 +19,7 @@ function specPath(work) {
 // re-litigated.
 const rule = {
   id: 'feature-requirements-first',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A feature run must land an independent requirements-doc commit before its first code commit',
   doc: 'packs/executable-requirements/RULES.md',
   scope: 'work',

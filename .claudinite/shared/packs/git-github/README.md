@@ -9,7 +9,7 @@ judgment rather than shape — what a `schedule:` trigger actually guarantees
 
 No prose of its own — the lifecycle checks (`task-lifecycle`, `squash-merge-history`) stay in
 `basics`. Every repo gets this pack through `basics`'s `requires` closure (materialized into
-declarations at `--init` and the baselining backfill), never by direct seeding.
+declarations at `--init` and the update's backfill), never by direct seeding.
 
 ## Checks
 

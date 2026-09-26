@@ -56,7 +56,7 @@ function dispatchedCtor(src, args, ctors) {
 
 const rule = {
   id: 'synthetic-input-events-target-app-node',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A synthetic input event is dispatched at a node inside the app, not document/body',
   doc: 'packs/host-page/RULES.md',
   why: 'a host page handles input by delegation, one listener near its own root — an event dispatched at document or document.body bubbles past that root and never arrives, silently, and reads exactly like "the app ignores untrusted events"',

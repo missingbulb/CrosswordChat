@@ -1,11 +1,8 @@
-// THE TARGET — which pull request a run works on (docs/PRINCIPLES.md,
-// docs/PRINCIPLES.md). A task's `expected_outcome` says what its run does to pull
+// THE TARGET - which pull request a run works on. A task's `expected_outcome` says what its run does to pull
 // requests; the executor resolves that into a concrete branch and pull request
 // ONCE, after the precondition said go and before code-work, and hands the
 // answer to both phases (code-work as environment, the agent as item fields).
-// Neither phase discovers, chooses or disposes of a pull request on its own —
-// that was three independent decisions in three places, and a task could not
-// even say "append to my open pull request".
+// Neither phase discovers, chooses or disposes of a pull request on its own.
 //
 // A task's open pull requests are recognised two ways, either sufficient: the
 // branch prefix this module mints (`claudinite/<pack>/<task>/`), or the
@@ -74,12 +71,12 @@ export function planTarget({ outcome, incumbents = [], mergeable = null, disposi
   if (!opensPullRequest(canonical)) return none('this task changes no code');
   if (canonical === 'fresh_pr') return fresh('a fresh branch; earlier pull requests of this task are left as they are');
 
-  // A task declared to amend has NO PREROGATIVE to open a second pull request
-  // (owner, 2026-09-22). "Create new" names one situation - there is nothing to
+  // A task declared to amend has NO PREROGATIVE to open a second pull request.
+  // "Create new" names one situation - there is nothing to
   // amend - and a conflicted or unjudgeable incumbent is not that situation. The
   // run either works, by resolving the conflict on the branch it was given, or it
   // fails; a quiet fork leaves the first pull request open and accumulating beside
-  // the second, which is how one task came to hold two.
+  // the second.
   if (canonical === 'amend_existing_or_create_new_pr') {
     if (!newest) return fresh('no open pull request of this task to amend');
     if (mergeable === null) {
@@ -97,9 +94,8 @@ export function planTarget({ outcome, incumbents = [], mergeable = null, disposi
   if (!newest) return fresh('no open pull request of this task to supersede');
   const numbers = incumbents.map((p) => p.number);
   if (disposition === 'merge') {
-    // The previous delivery had concluded green and was never landed — the exact
-    // member whose CI outruns the landing budget every day, which the next-cycle
-    // disposal used to rescue. Landing it is finishing this task's own delivery;
+    // The previous delivery had concluded green and was never landed - a member
+    // whose CI outruns the landing budget. Landing it is finishing this task's own delivery;
     // the tree this run holds predates that merge, so the occurrence ends here and
     // the next one converges from the moved base.
     return {
@@ -170,8 +166,8 @@ export async function resolveTarget({
     return planTarget({ outcome: canonical, incumbents, mergeable, branch });
   }
 
-  // supersede_existing_pr — judged by the runs on the newest incumbent's head,
-  // exactly as the next-cycle disposal judged it. An unreadable head is `close`:
+  // supersede_existing_pr - judged by the runs on the newest incumbent's head.
+  // An unreadable head is `close`:
   // the successor this run opens gets its own chance to land.
   const runsRes = await listRunsForSha(gh, repo, newest.head?.sha ?? '');
   const runs = runsRes.status === 200

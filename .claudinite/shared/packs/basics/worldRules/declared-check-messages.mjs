@@ -33,7 +33,7 @@ function messageFields(node, atRuleLevel, out) {
 
 const rule = {
   id: 'declared-check-messages',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'Every declared check\'s message fields stay within the word caps, with no fix repeated inside one rule',
   why: 'a declaration has no comments or doc pointer — its messages are the whole check, and a message that runs to a paragraph (or a remedy pasted per assertion) stops being readable as one',
 
