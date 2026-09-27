@@ -22,3 +22,11 @@
 - **Mechanism:** a RULES.md rule in `local/crossword-chat`, triggered on "Speaking from the content
   script"; the general `chrome.tts` rules are canon `web-speech`'s.
 - **Landed:** #407 (Closes #396).
+
+## 2026-09-13 · retired · converted into the tts-port-contract-parity check
+- **Reason:** the deletion test: the check parses each port's exported factory and flags any method
+  one port exposes that the other doesn't, which fully covers what this rule described — the
+  paragraph is deleted whole from RULES.md.
+- **Actor:** the claudinite-growth/prose-to-checks-sweep task; via #573.
+- **Model:** Claude Sonnet 5.
+- **Landed:** #460.
