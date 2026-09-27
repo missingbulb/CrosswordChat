@@ -1,4 +1,4 @@
-// The two operator levers (docs/PRINCIPLES.md), which are the whole of
+// The two operator levers, which are the whole of
 // urgency, forcing, fan-out and retry:
 //
 //   create-work-item <pack>/<task> [--urgent] [--context …] [--not-before ISO]
@@ -11,12 +11,10 @@
 // re-queue out of `needs-human`, which is no accident: "run this now" and "retry
 // this now" are the same operation on the same object. The executor still
 // evaluates the precondition at pick, so a force that finds no work SAYS so where
-// the operator reads it. The slot scheduler's whole forcing apparatus — its override
-// bag, the forced-verdict path, the `~f` slot marker and the watermark exclusion —
-// reduced to these two levers and was deleted (#974).
+// the operator reads it.
 //
 // FORCING AD-HOC WORK IS CREATING AN ITEM — a parameterized run, an unscheduled
-// task's run, a fan-out target. Ad-hoc is STRUCTURAL (PRINCIPLES.md): an unscheduled
+// task's run, a fan-out target. Ad-hoc is STRUCTURAL: an unscheduled
 // task is never asked by the scheduler, and a qualified title is a different title
 // from the standing one — so such an item is invisible to the scheduler run's
 // guards in both directions, neither suppressing the next occurrence nor consuming
@@ -71,7 +69,7 @@ export async function wakeItem(gh, repo, number, { urgent = false } = {}) {
   const issue = await api.readIssue(gh, repo, number);
   if (!issue) return { ok: false, error: `#${number} could not be read` };
   // `Woken:` is what lets the task's cadence terms hold at the next pick — the wake
-  // stands in for the cadence (docs/PRINCIPLES.md) — while everything else it requires
+  // stands in for the cadence - while everything else it requires
   // still applies; a wake is the one write that stamps it.
   const body = withWoken(withNotBefore(issue.body ?? '', null), nowIso());
   if (body !== issue.body) await setIssueBody(gh, repo, number, body);
@@ -116,12 +114,11 @@ export async function createWorkItem(gh, repo, { pack, task, taskPath, scheduled
       notBefore: opts.notBefore,
       blockedBy: opts.blockedBy,
       context: opts.context.length ? opts.context : [FORCED_CONTEXT],
-      // Created by hand: the cadence terms hold on it.
       woken: nowIso(),
     }),
     // A hand-created item is `manual` by construction — a declared task, and
     // nobody's schedule asked for it — and the origin is worn for life beside
-    // whatever status it holds (PRINCIPLES.md).
+    // whatever status it holds.
     labels: [ORIGIN_MANUAL, blocked ? STATUS_BLOCKED : STATUS_READY, ...(opts.urgent ? [URGENT] : [])],
   });
   if (!res.number) return { ok: false, error: `could not create the item: ${res.status}` };

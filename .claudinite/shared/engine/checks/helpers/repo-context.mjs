@@ -158,14 +158,14 @@ function vendoredSet(root, files) {
 // outside this set is a typo or a stale name — a settings error as real as invalid
 // JSON, caught at load so it can't silently change nothing. Per-pack parameters
 // live on that pack's own `packs` entry as `config`; the top-level `packConfig` key
-// they came from was folded by the `pack-entry-config` baseline migration
+// they came from was folded by the `pack-entry-config` migration record
 // (engine/migrations/) and stopped being read on #1640's window, so a straggler now
 // gets that unknown-setting error.
 // `engineVersion` is the engine version this repo's mount holds, written by the
 // update flows; a pack's installed version sits on that pack's own entry. Both were
 // a nested `claudinite` block until #1252, alongside an `updated` datetime and a
 // `ref` — those two held the provenance of the last FULL re-vendor rather than of
-// this mount, so a member converging nightly read as months stale, and nothing may
+// this mount, so a member updating nightly read as months stale, and nothing may
 // judge freshness by them any more because they no longer exist.
 // `dailyClaudiniteUpdatesRequirePrReview` is the harsh override: true leaves this
 // repo's daily update PR open for a human. Absent — the normal shape — means it
@@ -202,7 +202,7 @@ const KNOWN_CONFIG_KEYS = [...CONFIG_KEYS, ...LEGACY_CONFIG_KEYS];
 // The predicate this module used to own, kept ONLY for the pack-lane window. The engine
 // and a pack reach a member on separate cycles, so every member spends a window holding
 // this engine beside a pack version that still imports `isDormant` from here — and a
-// missing export there is a crash mid-converge, in the flow that would have delivered
+// missing export there is a crash mid-update, in the flow that would have delivered
 // the fix.
 //
 // It reads the retired top-level key and nothing else, which is exactly right for the
@@ -223,7 +223,7 @@ const SCHEDULE_KEYS = ['dailyHour', 'weeklyDay', 'monthlyDay', 'dispatch', 'agen
 // periods, and the scheduler workflow's own cron hours are derived from the repo name
 // at scaffold, so nothing reads these three. They stay ACCEPTED rather than becoming
 // unknown keys, because an unknown key is a blocking settings error and every member
-// still carries them until its own converge runs the record that strips them out;
+// still carries them until its own update runs the record that strips them out;
 // `legacy-shape-in-use` is the advisory that tells each holder, and #2181 takes them
 // off SCHEDULE_KEYS once the record has had its window.
 // @legacy-tolerance advisory:legacy-shape-in-use retire:#2181
@@ -279,7 +279,7 @@ export const PACK_ENTRY_KEYS = ['id', 'version', 'config', 'answers', 'rules', '
 // downstream lookup — packEntries, the packConfig view — keys by the pack's
 // own id whichever form the file used), `rules` and `accept` are the top-level
 // and per-entry settings merged (an entry-sourced acceptance carries
-// `pack: <id>` as provenance; conflicting severity overrides are a settings
+// `pack: <id>` as provenance; conflicting on_fail overrides are a settings
 // error), and `packConfig` is the per-pack parameter view, built from each
 // entry's `config`. Checks and env machinery
 // read this one shape regardless of which form the file used.
@@ -345,7 +345,7 @@ export function loadConfig(root) {
     }
     if (entry.rules !== undefined) {
       if (entry.rules !== null && typeof entry.rules === 'object' && !Array.isArray(entry.rules)) normalized.rules = entry.rules;
-      else badShape('rules', 'an object of per-rule severity overrides');
+      else badShape('rules', 'an object of per-rule overrides ("off", "advise" or "block")');
     }
     if (entry.accept !== undefined) {
       if (Array.isArray(entry.accept)) normalized.accept = entry.accept;
@@ -364,19 +364,19 @@ export function loadConfig(root) {
 
   // --- rules: top-level and per-entry merged; a conflict is a settings error,
   // never a silent last-writer-wins — two packs (or a pack and the top level)
-  // disagreeing about a rule's severity is a decision the project must make.
+  // disagreeing about a rule's on_fail is a decision the project must make.
   const rules = {};
   const ruleSource = {};
   const mergeRules = (overrides, source) => {
-    for (const [ruleId, severity] of Object.entries(overrides)) {
-      if (ruleId in rules && rules[ruleId] !== severity) {
+    for (const [ruleId, value] of Object.entries(overrides)) {
+      if (ruleId in rules && rules[ruleId] !== value) {
         errors.push({
-          what: `rule "${ruleId}" is set to "${rules[ruleId]}" by ${ruleSource[ruleId]} and "${severity}" by ${source}`,
+          what: `rule "${ruleId}" is set to "${rules[ruleId]}" by ${ruleSource[ruleId]} and "${value}" by ${source}`,
           fix: 'make the overrides agree, or keep the rule on one of them',
         });
         continue;
       }
-      rules[ruleId] = severity;
+      rules[ruleId] = value;
       ruleSource[ruleId] = source;
     }
   };

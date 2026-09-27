@@ -1,12 +1,11 @@
-// THE HOLDER'S SIGN OF LIFE (docs/PRINCIPLES.md).
+// THE HOLDER'S SIGN OF LIFE.
 // A work step is the work: it may legitimately run for hours, and while it does
 // the item goes dark and the executing leash cannot tell it from a dead runner.
 // So the executor comments on its own item at a fixed interval, and the scheduler run's
 // reclaim measures silence from THAT rather than from a run-length cap.
 //
-// One mechanism, two things it buys: long work becomes legal (the run cap that
-// held the leash arithmetic together retires), and the item's timeline stays live
-// through work nobody can otherwise see.
+// One mechanism, two things it buys: long work becomes legal, and the item's
+// timeline stays live through work nobody can otherwise see.
 //
 // WHAT COUNTS AS ACTIVITY IS THE HOLDER'S OWN SIGNAL, never the issue's
 // `updated_at` (#924). Any comment moves `updated_at` — including one written by
@@ -22,8 +21,8 @@ import { parseProgressLines, withSection } from '../../public/work-item-grammar.
 
 export const HEARTBEAT_MARKER = '<!-- claudinite-heartbeat -->';
 
-// Comfortably inside the executing leash (60m), so a live holder is never
-// reclaimed on a single missed beat: it takes four in a row.
+// Comfortably inside the executing leash, so a live holder is never reclaimed on a
+// single missed beat.
 export const HEARTBEAT_MS = 15 * 60e3;
 
 export const heartbeatComment = ({ executor, at, minutes }) =>
@@ -79,9 +78,8 @@ export async function withHeartbeat(work, { beat, intervalMs = HEARTBEAT_MS, log
 // --- the agent phase's beat -----------------------------------------------------
 
 // The executor's beat above stops at the hand-off: its process exits, and an agent
-// session then holds the item for as long as its own work takes. Nothing beat there,
-// so the agent leash had only the issue's `updated_at` to read — the very clock this
-// file exists to stop trusting.
+// session then holds the item for as long as its own work takes. Without a beat of
+// its own, the agent leash would have only the issue's `updated_at` to read.
 //
 // The session cannot beat the way the executor does. It has no process of its own to
 // hang a timer on, and a scheduled wake reaches it between tool results rather than
@@ -99,8 +97,7 @@ export const agentBeatComment = ({ session, at, note }) =>
 //
 // APPENDED, not replaced: the body is the only surface a run can grow in place,
 // because the GitHub toolset a session has offers comment creation and no comment
-// edit. So the body carries the account and the beats carry the trail — the same
-// split the standing trackers use, arrived at from the opposite direction.
+// edit. So the body carries the account and the beats carry the trail.
 export const withProgress = (body, line) =>
   withSection(body, PROGRESS_HEADING, [...parseProgressLines(body), line]);
 

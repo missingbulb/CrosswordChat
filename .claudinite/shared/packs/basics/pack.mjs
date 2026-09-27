@@ -1,15 +1,9 @@
 
-// The baseline pack: cross-project working discipline, the task lifecycle, and
-// the general engineering skills. Declared explicitly like every other pack — no pack is active by
-// default. Bootstrap's --init seeds the declaration and the nightly update
-// backfills it into existing consumers; never fingerprinted (the declaration is
-// authoritative — dropping it is a deliberate choice).
+// The basics pack: cross-project working discipline, the task lifecycle, and the general
+// engineering skills. Active only where a repo declares it, and never fingerprinted.
 //
-// Its skills/ holds general engineering practice every project's work can call for,
-// whatever its technology, mounted wherever basics is declared (which --init seeds
-// everywhere). When one stops being a baseline activity, its directory moves to the
-// pack whose projects need it (#385 moved the git/GitHub and Claudinite-lifecycle
-// skills out).
+// Its skills/ holds the general engineering practice any project's work can call for, whatever
+// its technology, mounted wherever this pack is declared.
 import { contributedBarrierRules } from './barriers.mjs';
 
 export default {
@@ -18,10 +12,10 @@ export default {
   // `migrationApplies` is `want > have` against the stamped version, and what gets
   // stamped is this manifest's number — so a record declaring a version above it would
   // re-apply every cycle, forever, draining never.
-  version: '60924.1',
-  minEngineVersion: '60822.1',
+  version: '60925.5',
+  minEngineVersion: '60925.1',
   ruleRoutingGuidance: {
-    belongs: 'cross-project working discipline, issue-branch-PR lifecycle, repo hygiene, doc/reference integrity and the baseline engineering, testing and debugging skills',
+    belongs: 'cross-project working discipline, issue-branch-PR lifecycle, repo hygiene, doc/reference integrity and the general engineering, testing and debugging skills',
     excludes: 'technology-specific content — its own tech pack; git procedure and GitHub Actions workflow or platform behaviour — git-github',
   },
   seededByDefault: true,

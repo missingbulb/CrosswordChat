@@ -5,7 +5,7 @@
 // WHY THIS LIVES IN THIS PACK. Every effect dormancy has is an effect on the queue —
 // nothing is instantiated, nothing is picked up, and nothing outside expects movement.
 // A repo that declares no tasks pack has no scheduler at all, so the word means nothing
-// there, and an engine that validated it for such a repo was answering for a mechanism
+// there, and an engine validating it for such a repo would be answering for a mechanism
 // it does not own. So the setting is one of this pack's parameters, declared where the
 // pack is:
 //
@@ -18,8 +18,8 @@
 //     nobody is working on.
 //   - NO UPKEEP CEREMONY FROM OUTSIDE. Whatever looks at this repo from the outside
 //     reads the same declaration and asks it nothing about its upkeep: neither its
-//     scheduler nor its mount is judged, and no fleet-wide operation is run against it
-//     (owner, 2026-09-13). A scheduler TOLD to stop must not then be nagged for
+//     scheduler nor its mount is judged, and no fleet-wide operation is run against it.
+//     A scheduler TOLD to stop must not then be nagged for
 //     stopping, and a mount nothing will converge cannot be behind in a way anyone is
 //     going to fix — both verdicts would be findings with no owner. What a reader owes
 //     such a repo instead is the word "dormant" where those verdicts would have sat.
@@ -71,8 +71,8 @@ function declared(config) {
   if (own !== undefined) return own;
   // The retired spelling, underneath the pack entry so a converged member is never
   // overridden by a stale key its migration left behind. `raw` is the declaration as
-  // the member wrote it, which is where a top-level key survives now that the engine
-  // no longer normalizes one it does not own.
+  // the member wrote it, which is where a top-level key survives: the engine does not
+  // normalize one it does not own.
   // @legacy-tolerance advisory:legacy-shape-in-use retire:#1846
   return config.raw?.[DORMANT_CONFIG_KEY] ?? config[DORMANT_CONFIG_KEY];
 }

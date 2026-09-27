@@ -1,6 +1,7 @@
 ---
 name: triaging-usage-findings
-description: Turn a usage-review finding that has lasted into a proposed change - read the element's provenance first, settle which of the rule's causes it is, and write the edit itself rather than a description of it. Use when a usage-triage run hands you lasting findings, or when an owner asks what to do about one.
+description: Turn a lasting usage-review finding into a proposed change, written as the edit itself. Use on a usage-triage run, or when asked what to do about a finding.
+disable-model-invocation: true
 metadata:
   body: workflow
   usage:
@@ -11,7 +12,7 @@ metadata:
 
 A finding is evidence that a decision may be due, never the decision. Your output
 is one pull request per subject carrying the **edit itself** - the moved lines,
-the changed trigger, the demoted severity - because a proposal is worth only as
+the changed trigger, the demoted on_fail - because a proposal is worth only as
 much as the diff it can be read against, and a decline costs a close.
 
 Never merge what you open.

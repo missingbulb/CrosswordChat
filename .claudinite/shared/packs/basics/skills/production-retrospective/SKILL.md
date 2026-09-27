@@ -1,6 +1,6 @@
 ---
 name: production-retrospective
-description: Design and file the review that comes back on its own once a larger element has lived in production. Use when designing a larger element, when filing a migration plan's chain, when a merge completes a design-doc'd element, or when defining a new retrospective class for a pack, a repo, or the fleet.
+description: Design and file the review that comes back once a larger element has lived in production. Use when designing such an element, or when its merge completes it.
 metadata:
   body: workflow
   usage:
@@ -145,7 +145,7 @@ rule this skill sets:
 |---|---|---|
 | Post-adoption | a repo adopts Claudinite or a pack | did its tasks run, did checks stay green, did the owner fight it |
 | New scheduled task | a new task's first week of runs | is the cadence right, do runs converge, is it filing noise |
-| Fleet rollout | a fleet-baseline force, or a pack seeded across members | did every member converge, what parked, what stayed `unknown` |
+| Fleet rollout | a fleet-update force, or a pack seeded across members | did every member update, what parked, what stayed `unknown` |
 | Rule effectiveness | a growth-extract batch lands | did the friction recur, are the rules loaded but ignored |
 | Grant of a credential or permission | a token created or widened | is it used at all, is it still least-privilege |
 | Retirement | a mechanism removed or a repo handed off | do references dangle, did anything break silently |

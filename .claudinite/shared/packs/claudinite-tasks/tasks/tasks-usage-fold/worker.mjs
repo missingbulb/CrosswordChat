@@ -1,10 +1,7 @@
-// The tasks-usage-fold work step - the module the runner calls `worker` on
-// (cwd = this task dir, bounded by code_work_timeout). The whole
-// task: no agent phase.
+// The tasks-usage-fold work step, and the whole task: no agent phase.
 //
-// It holds NO counting logic. The counting and folding are `fold-tasks-usage.mjs`,
-// its sibling; the reads are `read-run-costs.mjs` and `read-items.mjs` beside it.
-// This file is the I/O shell:
+// It holds NO counting logic: the counting, the folding and the reads live in its
+// siblings. This file is the I/O shell:
 //
 //   1. read the prior file from the BASE TIP — never the working tree, which may be
 //      sitting on another task's branch;
@@ -16,7 +13,7 @@
 //      events answer, and the executor's cost record riding its comments;
 //   4. fold: hour rows over the last three days, day rows over the last month, week
 //      rows advanced past `foldedThrough`;
-//   5. deliver the regenerated `.claudinite/local/tasks-usage.GENERATED.json`, and
+//   5. deliver the folded usage file, and
 //      open NOTHING when the recompute is byte-identical apart from its stamp.
 //
 // THE API BUDGET, which is the reason the reads are shaped as they are. Per fold:
@@ -24,18 +21,17 @@
 // four job-log reads (two scheduler ticks a day, at most two jobs each); one issues
 // listing page; and one timeline read per item closing for the first time. On this
 // repo's own cadence — two ticks a day, a quiet queue — the run half of that is
-// under ten calls a day, which `test/tasks/tasks-usage-fold/read-run-costs.test.mjs`
-// asserts by counting the fetches a representative day makes.
+// under ten calls a day, which a test asserts by counting the fetches a
+// representative day makes.
 //
-// The aggregate lives under `.claudinite/local/` because that is the repo-owned area
-// the vendoring refresh never touches; `merge=ours` reaches it through the mount's
-// own `.gitattributes`, whose `*GENERATED*` pattern the engine converges.
+// The aggregate lives under `.claudinite/usage/`, beside the repo's other rolling
+// records, where the vendoring refresh never reaches.
 
 import { readFileSync } from 'node:fs';
-import { baseTip, readAt, remoteUrl } from '../../public/delivery.mjs';
+import { baseTip, readAt, readRollingAt, remoteUrl } from '../../public/delivery.mjs';
 import { AUTOMERGE_TRAILER } from '../../src/contract/merge-policy.mjs';
 import {
-  encodeTasksUsageFile, decodeTasksUsageFile, renderTasksUsageFile, withoutStamp, TASKS_USAGE_PATH,
+  encodeTasksUsageFile, decodeTasksUsageFile, renderTasksUsageFile, withoutStamp, TASKS_USAGE_PATH, LEGACY_TASKS_USAGE_PATH,
 } from '../../src/items/tasks-usage-format.mjs';
 import { foldTasksUsage } from './fold-tasks-usage.mjs';
 import { makeReader, readRunCosts } from './read-run-costs.mjs';
@@ -70,8 +66,9 @@ export async function worker({ root, repo, token, defaultBranch, automerge, deli
   if (minuteRate === null) log('no `actionsMinuteRate` in this pack\'s config — the file records minutes and no spend');
 
   const baseSha = baseTip(root, remote, base);
+  const rolling = readRollingAt(root, baseSha, TASKS_USAGE_PATH, LEGACY_TASKS_USAGE_PATH);
   let prior = {};
-  try { prior = decodeTasksUsageFile(JSON.parse(readAt(root, baseSha, TASKS_USAGE_PATH) ?? '{}')); } catch { /* unparsable → refold */ }
+  try { prior = decodeTasksUsageFile(JSON.parse(rolling.text ?? '{}')); } catch { /* unparsable → refold */ }
 
   const now = new Date().toISOString();
   const reader = makeReader({ token });
@@ -113,6 +110,7 @@ export async function worker({ root, repo, token, defaultBranch, automerge, deli
   const pr = await deliver({
     stamp: today, branchPrefix: PR_BRANCH_PREFIX,
     files: { [TASKS_USAGE_PATH]: text },
+    moves: rolling.moves,
     message: `Claudinite: fold tasks usage\n\n${AUTOMERGE_TRAILER}: ${automerge}`,
     title: 'Claudinite: tasks usage fold',
     body: [

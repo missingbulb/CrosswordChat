@@ -91,7 +91,7 @@ The two workflow files and the routine endpoints cannot converge into place — 
 is the one directory a member's nightly update may never write — so they are scaffolded once, at
 adoption, by the `adopt-pack` skill. They are static from then on: the per-repo cron minute and
 anchor hours are written once, secrets travel as one fixed line, and the `run:` lines name mount
-pack paths behind which everything converges nightly.
+pack paths behind which everything updates nightly.
 
 ## Checks
 
@@ -120,7 +120,7 @@ The first two are relevance-first — inert until the repo carries a `tasks/<nam
 
 - `task-declaration-shape` — a task declaration the scheduler reads is incomplete or illegal — no `trigger` saying who mints an occurrence, an unknown condition, an illegal value — so the task never fires or fires wrong.
 - `task-code-work-env` — a task reads a `CLAUDINITE_*` variable code-work never sets, so a parameter (a scope filter, a dry-run switch) silently never arrives and the run goes green in its most dangerous mode.
-- `executor-workflow-secrets` — the executor workflow does not pass a secret the tasks of this repo's packs declare, so the queue picks the item up and only the run finds out the secret is not there. The list is the tasks' alone; an invocation endpoint's `tokenSecret` is config, stamped by the converge and reported by the invocation call itself. Advisory because the remedy is a human-merged PR to `.github/workflows/`, the one fix a member's own machinery cannot make.
+- `executor-workflow-secrets` — the executor workflow does not pass a secret the tasks of this repo's packs declare, so the queue picks the item up and only the run finds out the secret is not there. The list is the tasks' alone; an invocation endpoint's `tokenSecret` is config, stamped by `converge-workflows.mjs` and reported by the invocation call itself. Advisory because the remedy is a human-merged PR to `.github/workflows/`, the one fix a member's own machinery cannot make.
 - `issue-label-outside-the-queue-vocabulary`: an `issue_write` call applies a label outside the `task:` namespace, which no scheduler run, executor or janitor reads: the issue is filed as if something would pick it up. `task:origin:ad-hoc` asks the queue for the work; no label at all is the ordinary issue.
 - `queue-mark-named-literally`: a pack's prose tells a session to mark an issue for the queue, or to tag a backlog issue, without naming the label; naming `task:origin:ad-hoc` on the line satisfies it.
 - `automerge-policy-scope` — a branch that stamped the `Claudinite-Automerge-Policy` trailer (its run intends to land its own PR) carries a diff its declared policy does not cover, which is exactly the unreviewed change the policy exists to stop.

@@ -1,26 +1,14 @@
-// The executor's per-task secret selection (docs/PRINCIPLES.md).
+// The executor's per-task secret selection: a task's code-work gets exactly the names
+// that task declared, selected here, rather than the executor's whole environment.
 //
-// WHAT THIS MODULE IS FOR NOW: making PRINCIPLES.md's claim true. A task's code-work
-// gets exactly the names that task declared, selected here, where before every task's
-// work step inherited the executor's whole environment and saw every stamped secret.
-// That selection is independent of how the secrets arrive, and it is why this module
-// survives the reversal below.
-//
-// THE BAG IS RETIRED (#1336, reversing #1301). The executor briefly carried one static
-// line, `CLAUDINITE_SECRETS: ${{ toJSON(secrets) }}`, so the workflow would stop being
-// a function of the task set — `.github/workflows/` is the one path a converge cannot
-// write, and a new secret therefore needs a human-merged PR in every member, which is
-// what wedged one in #1296. But serialising the whole secrets context is the shape
-// GitHub's malicious-workflow detection flags: every executor run parked with zero
-// jobs until a person clicked Approve, silently, fleet-wide. The owner took the
-// trade back — a rare human-merged PR beats a permanent human click on every run.
-//
-// So the workflow names its secrets again and NOTHING SETS THE BAG. The plain
-// environment is therefore the LIVE source, and the bag READER is the tolerance: it
-// stays because a member whose live executor still stamps one moves off it only
-// through a human-merged PR of its own, and dropping the reader early would hand
-// that member's code-work the whole blob, since the scrub in code-work-run.mjs goes
-// with it. Its retirement is a fleet read rather than a canon release (#1914).
+// NOTHING SETS THE BAG (#1336). Serialising the whole secrets context into one
+// variable is the shape GitHub's malicious-workflow detection flags, parking every
+// executor run until a person approves it, so the workflow names its secrets and the
+// plain environment is the LIVE source. The bag READER is the tolerance: a member
+// whose live executor still stamps one moves off it only through a human-merged PR of
+// its own, and dropping the reader early would hand that member's code-work the whole
+// blob, since the scrub goes with it. Its retirement is a fleet read rather than a
+// canon release (#1914).
 
 import { parseBag } from './env-bag.mjs';
 import { actionsEnv } from './actions.mjs';
@@ -32,15 +20,8 @@ export const SECRETS_BAG_ENV = 'CLAUDINITE_SECRETS';
 // is a better answer than a crash inside a JSON parse.
 export const secretsBag = (env = actionsEnv()) => parseBag(env[SECRETS_BAG_ENV]);
 
-// One secret's value, or undefined.
-//
-// LEGACY EXECUTOR WORKFLOWS ARE READ AT THE DOOR. A member's live
-// `claudinite-executor.yml` moves only through a human-merged PR, so every member
-// spends a window running this engine against a workflow that still stamps names
-// directly and sets no bag. Reading `env[name]` when the bag does not carry it is
-// what makes that window uneventful. The fallback comes out on #1642's window: a
-// member's live workflow moves only through a human-merged PR, so the window is what
-// that PR is given, and no census of who has merged it is available here.
+// One secret's value, or undefined: the bag's where a legacy executor still stamps
+// one, the plain environment otherwise.
 export function secretValue(name, env = actionsEnv(), bag = secretsBag(env)) {
   // The bag holds every secret the repository has, so its own variable is not a
   // secret anyone may ask for by name — otherwise one declaration re-exports all of

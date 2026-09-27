@@ -11,7 +11,7 @@ export function seedDeclaration(root, packs) {
   const path = settingsPath(root);
   if (existsSync(path)) return { path, existed: true, declared: null };
   const ctx = buildContext({ root, mode: 'all' });
-  // No pack is active by default, so the baseline is seeded as an explicit
+  // No pack is active by default, so basics is seeded as an explicit
   // declaration alongside the fingerprinted packs: every pack that flags
   // `seededByDefault` is written in (discovered structurally — the engine names
   // no pack), plus the ones a fingerprint detects. A seeded pack is still

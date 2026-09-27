@@ -1,7 +1,7 @@
 [
   {
     "id": "tts-voices-cached-empty",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-15",
     "failureMessage": "getVoices() is empty until the browser has loaded voices, so a module-scope cache stays empty for the page's life and every utterance silently falls back to the OS default voice",
     "scanFileClasses": ["javascriptFiles"],

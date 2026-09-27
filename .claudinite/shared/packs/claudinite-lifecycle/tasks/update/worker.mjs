@@ -59,7 +59,7 @@ async function gh(token, path, { method = 'GET', body } = {}) {
 // worker, which correctly stood down and exited 0 in zero seconds for weeks.
 //
 // So the rehearsal announces that it really ran, and the workflow fails when this
-// line is absent. Any future path that skips the converge is caught by construction
+// line is absent. Any future path that skips the update is caught by construction
 // rather than by someone noticing a suspiciously fast green.
 export const REHEARSAL_MARKER = 'claudinite-rehearsal: converged';
 
@@ -112,7 +112,7 @@ export async function worker({ root, repo, defaultBranch, token, target }) {
   // REHEARSAL MODE (the live canary): converge this repo against a NAMED canon ref,
   // report, and restore the working tree — no branch, no commit, no PR, and above
   // all no stamp. A stamped branch head would leave the canary pointing off trunk,
-  // which is exactly what the next converge's anti-rewind guard refuses: a rehearsal
+  // which is exactly what the next update's anti-rewind guard refuses: a rehearsal
   // that wedges its own canary.
   const rehearsalRef = process.env.CLAUDINITE_CANON_REF || null;
 
@@ -136,7 +136,7 @@ export async function worker({ root, repo, defaultBranch, token, target }) {
   // it in. Nothing here reads the open pull requests or picks a name.
   //
   // That disposal is what keeps a member that cannot land from accumulating a line
-  // of obsolete pull requests, one a night: the converge is a full recompute from
+  // of obsolete pull requests, one a night: the update is a full recompute from
   // the base, so the one left standing is always this cycle's answer.
   //
   // Required, because an outcome that opens a pull request always resolves a branch:
@@ -150,7 +150,7 @@ export async function worker({ root, repo, defaultBranch, token, target }) {
   const targetPr = target.pr;
   if (!rehearsalRef && !branch) {
     console.error('claudinite-needs-human: action — this mount is too far behind to converge itself;'
-      + ' re-baseline it against the canon');
+      + ' re-vendor it from the canon');
     throw new Error('no CLAUDINITE_TARGET_BRANCH — this repo\'s executor predates the target hand-off (#1695)');
   }
 
@@ -275,7 +275,7 @@ export async function worker({ root, repo, defaultBranch, token, target }) {
       await gh(token, `/repos/${repo}/issues/${pr.number}/labels`, { method: 'POST', body: { labels: [terminal.label] } });
       console.error(`update: left PR #${pr.number} open and labelled ${terminal.label} — ${terminal.why}`);
       // NON-ZERO, so the work item lands in `needs-human` rather than closing
-      // `task:done`. This terminal means the converge DID NOT DELIVER — the PR
+      // `task:done`. This terminal means the update DID NOT DELIVER — the PR
       // is parked awaiting a person — and a run that delivered nothing must not
       // report success. Exiting 0 here is what hid #939 for five days: every
       // member's nightly update closed `task:done` while its PR sat parked, so

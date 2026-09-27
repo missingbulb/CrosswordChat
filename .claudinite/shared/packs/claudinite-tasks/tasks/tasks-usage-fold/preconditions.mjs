@@ -19,17 +19,18 @@
 
 import { readFileSync } from 'node:fs';
 import { mostRecentAnchor } from '../../src/items/anchors.mjs';
-import { decodeTasksUsageFile, TASKS_USAGE_PATH } from '../../src/items/tasks-usage-format.mjs';
+import { decodeTasksUsageFile, TASKS_USAGE_PATH, LEGACY_TASKS_USAGE_PATH } from '../../src/items/tasks-usage-format.mjs';
 
 // The mark the last fold left, read from the checkout the run holds. Null for a repo
 // that has never folded — which is movement by definition, since everything its
 // machinery has ever done is unread.
 export function foldedThroughAt(root) {
-  try {
-    return decodeTasksUsageFile(JSON.parse(readFileSync(`${root}/${TASKS_USAGE_PATH}`, 'utf8'))).runsFoldedThrough;
-  } catch {
-    return null;
+  for (const path of [TASKS_USAGE_PATH, LEGACY_TASKS_USAGE_PATH]) {
+    try {
+      return decodeTasksUsageFile(JSON.parse(readFileSync(`${root}/${path}`, 'utf8'))).runsFoldedThrough;
+    } catch { /* not at this path - the file may not have moved yet */ }
   }
+  return null;
 }
 
 export const terms = {

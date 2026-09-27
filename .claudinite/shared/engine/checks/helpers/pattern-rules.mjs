@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { finding } from './findings.mjs';
+import { finding, failingAs, onFailOf, ON_FAIL } from './findings.mjs';
 import { parseYaml } from './minimal-yaml.mjs';
 import { stripComments } from './code-scanning.mjs';
 import { normalizeEdges, barrierFindings, staleFindings } from './reference-scanning.mjs';
@@ -10,16 +10,18 @@ import { normalizeEdges, barrierFindings, staleFindings } from './reference-scan
 // A pack's declarations live in `packs/<pack>/declared-checks.json` (a skill's
 // in `<pack>/skills/<name>/declared-checks.json`), an array of specs the pack
 // registry discovers structurally and compiles here into ordinary
-// `{ id, severity, why, run(ctx) }` rule objects the runner treats like any
+// `{ id, on_fail, why, run(ctx) }` rule objects the runner treats like any
 // other. Nothing wires them: dropping a declaration into the file adds it.
 //
 // The format admits no comments — the pattern plus its failureMessage/what/fix
 // text IS the check — and no prose pointers: a declaration states its own case
 // or it isn't finished. So a spec carries exactly:
 //   id              the rule id settings and findings name it by
-//   severity        'blocking' | 'advisory'
+//   on_fail         'block' | 'advise' - what a finding does to the run
+//                   (`severity: 'blocking' | 'advisory'` is still read, see
+//                   LEGACY_ON_FAIL in helpers/findings.mjs)
 //   since           optional 'YYYY-MM-DD' — the date this check was added. A
-//                   blocking check is enforced as advisory for its first
+//                   `block` check is enforced as `advise` for its first
 //                   GRACE_DAYS from it (helpers/findings.mjs), so a check can
 //                   land against a tree that still violates it.
 //   failureMessage  why this matters, printed on every finding the rule makes
@@ -45,7 +47,7 @@ import { normalizeEdges, barrierFindings, staleFindings } from './reference-scan
 // typo (asserting nothing, silently) or a key a newer engine knows, and the load
 // cannot tell them apart. Refusing it would wedge the second case — a member's
 // pack lane and engine lane converge on separate cycles, so a declaration can
-// legitimately reach an engine older than its vocabulary, and the converge that
+// legitimately reach an engine older than its vocabulary, and the update that
 // would deliver the newer engine is itself gated on the load (#1400). The typo is
 // caught instead by the `declared-check-spec-keys` world rule, advisory where the
 // skew is possible and blocking in the canon, where engine and declarations ship
@@ -202,8 +204,9 @@ import { normalizeEdges, barrierFindings, staleFindings } from './reference-scan
 //                      path source reads the `value` group of every tracked
 //                      path the regex hits (the whole path without one). The
 //                      added-lines source is the line source over the lines
-//                      the change adds. Every value carries its ORIGIN — the
-//                      file, the line where a line produced it — plus the named
+//                      the change adds, less any value a line it removes from
+//                      the same file also carried. Every value carries its
+//                      ORIGIN - the file, the line where a line produced it - plus the named
 //                      groups of the path and line regexes that found it, and
 //                      all of them interpolate into the quantifiers' templates
 //                      and anchor their findings; a value found twice in one
@@ -468,7 +471,7 @@ const excluded = (path, exclude) =>
 // the `declared-check-spec-keys` world rule (see the header).
 const MSG = ['what', 'fix'];
 const SPEC_KEYS = {
-  spec: ['id', 'severity', 'since', 'failureMessage', 'fix', 'scope', 'scanFiles', 'scanTracked', 'excludeFiles',
+  spec: ['id', 'on_fail', 'severity', 'since', 'failureMessage', 'fix', 'scope', 'scanFiles', 'scanTracked', 'excludeFiles',
     'scanFileClasses', 'excludeFileClasses', 'scanIgnoringComments', 'scanIgnoringMarkdownFences',
     'relevantWhen', 'whenMissing',
     'maxLines', 'maxLineLength', 'skipLinesMatching', 'matchLines', 'countMatchingLines',
@@ -1076,7 +1079,13 @@ function resolveValueSets(ctx, spec, parsed) {
       for (const f of ctx.changedFiles) {
         const pm = s.inFilesMatching.exec(f);
         if (!pm || excluded(f, spec.excludeMatchers)) continue;
-        for (const { line, text } of ctx.addedLines(f)) collectLine(s, text, f, line, pm.groups ?? {}, add);
+        // A value the change also removed from this file was already there: the
+        // line was edited, not added.
+        const before = new Set();
+        for (const { line, text } of ctx.removedLines(f)) collectLine(s, text, f, line, pm.groups ?? {}, (v) => before.add(v));
+        for (const { line, text } of ctx.addedLines(f)) {
+          collectLine(s, text, f, line, pm.groups ?? {}, (v, ...rest) => { if (!before.has(v)) add(v, ...rest); });
+        }
       }
     } else {
       const docPaths = s.fromParsedFile !== undefined ? [s.fromParsedFile]
@@ -1584,7 +1593,7 @@ export function guardFindings(rule, call, priorCalls = [], at = '(tool call)') {
 
 // The Stop-time backstop: every call the transcript records, judged in order,
 // each anchored by its tool and ordinal so a finding names the call it means.
-// Every finding here is ADVISORY, whatever the rule's severity: the transcript
+// Every finding here ADVISES, whatever the rule's on_fail: the transcript
 // is append-only, so a call that ran cannot be un-run and a call the hook
 // denied never ran at all — either way no edit could clear a block, and a
 // block nothing can clear spends every remaining Stop of the session (a call
@@ -1600,7 +1609,7 @@ function actionFindings(rule, work) {
     counts.set(call.name, n);
     const found = guardFindings(rule, call, calls.slice(0, i), `(session) ${call.name} call #${n}`);
     const denied = (call.deniedBy ?? []).includes(rule.id);
-    out.push(...found.map((f) => ({ ...f, severity: 'advisory', what: denied ? `${f.what} (denied at the hook)` : f.what })));
+    out.push(...found.map((f) => ({ ...failingAs(f, 'advise'), what: denied ? `${f.what} (denied at the hook)` : f.what })));
   });
   return out;
 }
@@ -1953,8 +1962,12 @@ export function patternRule(declaration, { selfExclude = null } = {}) {
   if (typeof declaration.id !== 'string' || !declaration.id.trim()) {
     throw new Error('a declared check needs a non-empty "id"');
   }
-  if (declaration.severity !== 'blocking' && declaration.severity !== 'advisory') {
-    throw new Error(`${where}: severity must be "blocking" or "advisory", not ${JSON.stringify(declaration.severity)}`);
+  // `on_fail` alone is checked against its values; the legacy `severity` is
+  // taken only where `on_fail` is absent, so a mistyped new value never falls
+  // back to an old one.
+  const onFail = declaration.on_fail !== undefined ? declaration.on_fail : onFailOf({ severity: declaration.severity });
+  if (!ON_FAIL.includes(onFail)) {
+    throw new Error(`${where}: on_fail must be "block" or "advise", not ${JSON.stringify(declaration.on_fail ?? declaration.severity)}`);
   }
   // `since` is the date the check was authored, and the engine holds a blocking
   // check to advisory for its first GRACE_DAYS from it (findings.mjs). Validated
@@ -2005,7 +2018,7 @@ export function patternRule(declaration, { selfExclude = null } = {}) {
   }
   const rule = {
     id: spec.id,
-    severity: spec.severity,
+    on_fail: onFail,
     ...(spec.since ? { since: spec.since } : {}),
     why: spec.failureMessage,
     ...(spec.scope ? { scope: spec.scope } : {}),

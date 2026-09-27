@@ -1,6 +1,6 @@
 // Anchors — when a cadence's occurrence falls (docs/PRINCIPLES.md).
 //
-// The arithmetic lives in `calendar.mjs`; this module exposes exactly the two
+// The arithmetic lives in the calendar module; this one exposes exactly the two
 // questions asked of it: "which period is current" (what a `schedule:at-most-`
 // term measures a task's run history against) and "when does the next one open"
 // (what the dashboard renders), plus the period a cadence repeats on, and the

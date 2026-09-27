@@ -9,7 +9,8 @@
   ],
   "expected_outcome": "amend_existing_or_create_new_pr",
   "automerge": [
-    "under:.claudinite/local && generated-file-changes"
+    "rolling-usage-files",
+    "rolling-usage-file-moves"
   ],
   "code_worker_mjs": "worker.mjs",
   "code_work_timeout": 600

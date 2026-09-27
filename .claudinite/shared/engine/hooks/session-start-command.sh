@@ -117,7 +117,7 @@ run_step selftest           node "$corpus/engine/selftest.mjs"
 # NO PROSE STEP. The active packs' RULES.md used to be emitted here, and #807 measured
 # what that cost: 79,750 of this hook's 82,267 bytes, silently truncated to a ~2KB
 # preview on the way into a live session, with no signal back either way. The corpus
-# now reaches a session through `.claudinite/claudinite-rules.GENERATED.md`, imported
+# now reaches a session through `.claudinite/flat/claudinite-rules.GENERATED.md`, imported
 # by the repo's CLAUDE.md, which the harness loads in full
 # (engine/pack_loader/generate-rules-index.mjs). What is left here is what only a
 # session can compute — which is the test for anything proposed for this hook.

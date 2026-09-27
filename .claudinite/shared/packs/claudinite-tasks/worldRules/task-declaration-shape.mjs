@@ -10,12 +10,12 @@ import { validatePreconditions, termsMap, preconditionNeedsItem } from '../src/c
 import { TASK_DECLARATION_PATH_RE, readDeclarationFields } from '../src/contract/task-declaration-text.mjs';
 
 // Every scheduler task is a `tasks/<name>/task.json` carrying the declaration
-// contract (docs/PRINCIPLES.md) with legal enum values. This
+// contract with legal enum values. This
 // asserts that shape statically at author time — the executor and scheduler
-// validate the same contract at run time (task-contract.mjs), so an illegal
+// validate the same contract at run time, so an illegal
 // condition/model/outcome, or a missing field, is caught here first.
 //
-// RELEVANCE FIRST (engine/checks/README.md): gated on a task declaration file
+// RELEVANCE FIRST: gated on a task declaration file
 // existing, so the check is inert on any repo without tasks. Static text over the
 // self-contained file — a `task.json` parsed whole — keyed off the canonical enum
 // lists so the legal values never drift from the runtime validator.
@@ -23,8 +23,7 @@ import { TASK_DECLARATION_PATH_RE, readDeclarationFields } from '../src/contract
 // The term names the task's own `preconditions.mjs` exports, read as text: the
 // check runs over a file listing, not a module graph, so it recognises a
 // task-local condition by the key that defines it. A term the file computes
-// rather than spells is not found, and its declaration reads as unknown — which
-// is the same "write it so a reader can see it" the literal rule above states.
+// rather than spells is not found, and its declaration reads as unknown.
 // Read as TEXT, never imported: a check must not execute a member's own module. So
 // each term is its name plus the two properties of it a declaration can be wrong
 // about — `needsItem`, which decides whether the term can be judged at a tick at
@@ -51,7 +50,7 @@ function siblingTerms(ctx, taskFile) {
 
 const rule = {
   id: 'task-declaration-shape',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A tasks/<name>/task.json carries the task contract (id, description, trigger, preconditions, expected_outcome) with legal enum values, a stated trigger saying who mints an occurrence and a well-formed precondition expression stating when the task runs; an agentic task names its worker file and bounds its run, and any code_work carries a timeout and stays task-local',
   doc: 'packs/claudinite-tasks/README.md',
   why: 'the scheduler run and executor read agent_model/expected_outcome/preconditions from this file, not the work item — an illegal or missing value means a task never fires, fires wrong, or writes past its ceiling',
@@ -62,7 +61,7 @@ const rule = {
       const text = ctx.read(file);
       if (text === null) continue;
       const flag = (what, fix) => out.push(finding(rule, { file, what, fix }));
-      const advise = (what, fix) => out.push(finding(rule, { file, severity: 'advisory', what, fix }));
+      const advise = (what, fix) => out.push(finding(rule, { file, on_fail: 'advise', what, fix }));
 
       const decl = readDeclarationFields(text);
       if (decl.error) {
@@ -77,9 +76,9 @@ const rule = {
         if (v === null) flag(`declares no "${key}"`, `add "${key}": one of ${legal.join(', ')}`);
         else if (!legal.includes(v)) flag(`"${key}" is "${v}", not a legal value`, `use one of: ${legal.join(', ')}`);
       };
-      // `frequency` is retired (docs/PRINCIPLES.md): the cadence is a condition in
-      // `preconditions`, and nothing reads the field any more. BLOCKING, unlike the
-      // renames below, because the runtime contract rejects it too - a declaration
+      // `frequency` is retired: the cadence is a condition in `preconditions`, and
+      // nothing reads the field. BLOCKING because the runtime contract rejects it
+      // too - a declaration
       // carrying it no longer runs, so saying so at author time is the whole point.
       // Flagged by NAME rather than left unrecognised, so its author is told the term
       // to write instead of reading as a task that simply forgot its cadence.
@@ -91,7 +90,7 @@ const rule = {
           : `write the cadence as a condition - "preconditions": [${JSON.stringify(term)}, …] - with "trigger": "schedule" beside it, and drop a "none"`);
       }
       // `trigger` says whether the scheduler asks this task at every tick, and is
-      // REQUIRED: nothing derives it from the shape of the conditions any more, so a
+      // REQUIRED: nothing derives it from the shape of the conditions, so a
       // declaration stating none fails contract validation and the task never runs.
       // Blocking here is what turns that into an edit an author can make, at the line
       // the field goes on, rather than a silent absence from the scheduler's roster.
@@ -122,7 +121,7 @@ const rule = {
         }
       }
 
-      // agent_model is OPTIONAL: absent means no agent (task-defaults.mjs), so the
+      // agent_model is OPTIONAL: absent means no agent, so the
       // checks below judge the model the task will actually run at.
       const declaredModel = str('agent_model');
       if (decl.has('agent_model') && (declaredModel === null || !MODEL_FAMILIES.includes(declaredModel))) {
@@ -170,7 +169,7 @@ const rule = {
       // What must hold for a run, and OPTIONAL: a declaration stating none requires
       // nothing, and every occurrence of it runs. The expression is judged term by term.
       if (decl.has('preconditions')) {
-        // Deliberately strict: a declaration whose trigger is computed cannot be
+        // Deliberately strict: a declaration whose conditions are computed cannot be
         // audited by anyone reading it, which is the whole reason the field is data.
         const stated = decl.list('preconditions');
         if (stated === null) {
@@ -181,7 +180,7 @@ const rule = {
         }
       }
 
-      // The code-work/timeout guards (docs/PRINCIPLES.md). Either form of the work
+      // The code-work/timeout guards. Either form of the work
       // step: the runtime contract reads both through `declaresCodeWork`, and a check
       // watching one of two structurally-identical surfaces reads as strictness on
       // the other.

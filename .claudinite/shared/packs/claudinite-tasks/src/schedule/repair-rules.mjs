@@ -1,4 +1,4 @@
-// The queue's repair rules (docs/PRINCIPLES.md) — the recovery that needs
+// The queue's repair rules - the recovery that needs
 // judgment or a longer horizon than the run's own deterministic label mechanics. Each rule is
 // pure, returning the items it claims plus the comment it would post; the
 // scheduler run is the only I/O shell over them.
@@ -51,8 +51,7 @@ const idle = (item, now) => ms(now) - (ms(item.updated_at) ?? ms(item.created_at
 
 // Rule A — STALE READY. An item no executor picked for ~2 of its own periods comes
 // out of the queue as a human's problem. The period is read from the task's
-// declared cadence term at HEAD (no title parsing — that was the slot grammar); an
-// item whose task is unknown, or keeps no cadence, falls back to a day.
+// declared cadence term at HEAD; an item whose task is unknown, or keeps no cadence, falls back to a day.
 //
 // WHICH TASK, on a marked issue: its title is the person's own, so the id comes
 // from the worker path its machine block names — without that fallback a request
@@ -63,8 +62,8 @@ export function staleReadyItems(open = [], now, { periodFor = () => null, factor
     const parsed = parseWorkItemTitle(i.title) ?? taskIdFromPath(parseWorkItemBody(i.body).taskPath);
     if (!parsed) return false;
     const per = periodFor(`${parsed.pack}/${parsed.task}`) ?? 86400e3;
-    // `readySince` is the item's last touch: every transition into ready is a
-    // label write, so an item that has sat unread since then has not been touched.
+    // The last touch stands for when it became ready: every transition into ready
+    // is a label write, so an item that has sat unread since then has not been touched.
     return idle(i, now) >= factor * per;
   });
 }
@@ -83,10 +82,9 @@ export const staleReadyComment = (item) => {
 // answers when the beat's note last changed, so a run that keeps beating the same
 // note is reclaimed on the same leash as one that went silent — otherwise the beat
 // would buy immortality, and the signal would degrade from "work is happening" to
-// "a process is alive". An item with no beats answers null and is judged the old
-// way, off the issue clock: that is every item filed before the beat existed, and
-// the assumption there is stated rather than discovered — a legitimately
-// longer-running agent must touch its item, or it is declared dead.
+// "a process is alive". An item with no beats answers null and is judged off the
+// issue clock: a legitimately longer-running agent must touch its item, or it is
+// declared dead.
 export function deadAgentItems(open = [], now, { leashMs = AGENT_LEASH_MS, progressAt = () => null } = {}) {
   return open.filter((i) => {
     if (!isStatus(i, STATUS_RUNNING_AGENT)) return false;
@@ -108,10 +106,9 @@ export const deadAgentComment = (item, sessionNote = null, { wedged = false } = 
 // and a human who decides it is dead closes it by hand.
 //
 // THE BOUND IS IDLENESS, NEVER AGE (owner, 2026-09-22). Measured from `created_at`
-// the rule had no terminating condition: once an item crossed two days it matched
-// on every pass for the rest of its life, and the sweep carried no once-only guard,
-// so a chain link waiting on a long review collected one comment per run forever.
-// Measured from the item's own last activity, the comment this rule posts resets
+// the rule has no terminating condition: an item past the bound matches on every
+// pass for the rest of its life, one comment per run. Measured from the item's own
+// last activity, the comment this rule posts resets
 // the clock it is read from, which makes the comment its own guard: the next one is
 // two idle days away, and a person or a run touching the item pushes it further out.
 //
@@ -148,7 +145,7 @@ export const statelessComment = () =>
 // Rule E — THE SUPERSEDED PARK (#1452). A park is a question about a moment: THIS
 // run of this task needs a person. Nothing ever revisits it, so when the cause is
 // later fixed the question stays open, and a person has to read it to find out it
-// is already answered — 22 of them in one member for one unset secret.
+// is already answered.
 //
 // A later CLEAN run of the same task is that answer, in the queue's own record. The
 // item converges `rejected` naming the run, and the person never reads it.
@@ -163,10 +160,8 @@ export const statelessComment = () =>
 // so this park's question is answered. Both origins a person's action produces are
 // the opposite of fungible, for their own reasons. An AD-HOC item is somebody's own
 // issue, adopted as itself, and every one of them runs the SAME task
-// (`implement-request`), so any later ad-hoc run at all reads as evidence about
-// every parked one. That is not a near miss: two verification issues were closed
-// citing a third issue's run, their own `Verify:` assertion never executed and the
-// owed verification silently discarded (#1161, #1253, on #1154's evidence). A
+// (`implement-request`), so any later ad-hoc run at all would read as evidence about
+// every parked one, closing a verification whose own `Verify:` never executed. A
 // MANUAL item names a task the queue does know, but somebody pulled its lever to
 // ask something the schedule was not asking — usually a qualifier scoping the run —
 // so the task's next clean occurrence did different work. What answers either park
@@ -194,19 +189,17 @@ export const supersededComment = (run) =>
 // Rule F — THE ORPHANED PARK (#1452, widened #1461). A park this repo CANNOT RUN at
 // HEAD is asking a person about work that can never happen. The executor already
 // closes such an item obsolete when it picks one (#1446) — but a PARKED item is never
-// picked, so that verdict could never reach the set that needs it most:
-// ClaudiniteCanary's seven parked `fleet-digest` items, for a task since retired.
+// picked, so that verdict never reaches it.
 //
 // TWO WAYS AN ITEM IS UNRUNNABLE, and the second is why this rule is not just an id
 // lookup. An item carries its task twice — the id in its title and the worker PATH in
 // its body — and only the id is canonicalized across a pack rename
 // (`parseWorkItemTitle`). So an item open across one keeps naming the pre-rename
-// directory, the executor's path guard refuses it (executor.mjs), and it parks
-// `failure` — where the id lookup alone still reads it as a live task and leaves it
-// there. Nothing rewrites an item body and HEAD's path moves only on another rename,
-// so that mismatch is permanent: no answer a human could give makes the item runnable
-// (ClaudiniteCanary#115, which froze `logs-prune` there for eleven days, because a
-// `failure` park holds the task's lane).
+// directory, the executor's path guard refuses it, and it parks `failure` - where
+// the id lookup alone still reads it as a live task and leaves it there, holding the
+// task's lane. Nothing rewrites an item body and HEAD's path moves only on another
+// rename, so that mismatch is permanent: no answer a human could give makes the item
+// runnable.
 //
 // `tasks` is the declared task set at HEAD. EMPTY MEANS UNKNOWN, never "everything
 // retired": discovery returning nothing is a broken read, and acting on it would close
@@ -316,14 +309,13 @@ export const unclosedTerminalComment = (status) => (status === STATUS_DONE
     + `so it has been sitting open looking like live work. Closing it; if the work is still wanted, re-queue it (${requeueHint}).`);
 
 // Rule I — THE ABANDONED FAILURE PARK (#1785). A `failure` park is the one kind that
-// HOLDS THE TASK'S LANE (`isBlockingPark`, honoured in `planSchedulerRun` job 1), and
+// HOLDS THE TASK'S LANE (`isBlockingPark`), and
 // that is what makes it the one kind with no terminating condition of its own. Rule E
 // answers a park with a later clean run of the same task — but while this park stands
 // no further occurrence is ever filed, so that answer can never arrive. The other
 // three kinds all have one: `action` does not hold the lane, so later runs happen and
 // rule E fires; `approval` ends when its pull request resolves (rule G); `decision` is
-// a choice a person owes. `failure` alone sits forever
-// (missingbulb/TLDR#275: parked by the agent leash, untouched for over three weeks).
+// a choice a person owes. `failure` alone sits forever.
 //
 // So the CLOCK is the answer here, and closing the item is the whole of it: the lane
 // is released, the scheduler files a fresh occurrence, and a fault that is still there

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "rolling-usage-files",
+    "pathMatching": "/^\\.claudinite\\/usage\\/[^/]+\\.json$/",
+    "changeKinds": ["added", "modified"],
+    "editShape": "any"
+  },
+  {
+    "name": "rolling-usage-file-moves",
+    "pathMatching": "/^\\.claudinite\\/local\\/(usage|tasks-usage)\\.GENERATED\\.json$/",
+    "changeKinds": ["deleted"],
+    "editShape": "any"
+  }
+]

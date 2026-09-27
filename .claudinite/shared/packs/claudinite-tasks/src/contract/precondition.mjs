@@ -25,9 +25,8 @@ export function defaultWindowMs(task) {
 export const windowDaysOf = (task, signals) => signals?.runs?.window?.days ?? defaultWindowMs(task) / DAY_MS;
 
 // Run one task's precondition. THE only place a precondition is ever called, so a
-// test that drives this drives what production drives — a precondition first
-// written to take `{ signals }` passed its own direct-call test and threw on every
-// real run, which is the failure this seam exists to make impossible.
+// test that drives this drives what production drives, and a precondition cannot
+// pass a direct-call test while throwing on every real run.
 //
 // One form comes through here: the declarative `preconditions` expression, which
 // is the only gate a task may declare (#1617). It fails LOUD by construction — a
@@ -40,8 +39,6 @@ export function evaluatePrecondition(task, signals, packConfig = {}, item = null
     config: packConfig,
     item,
     terms: task.terms,
-    // The window the signals were collected over, read off the bundle where it
-    // was decided (src/signals/for-task.mjs).
     windowDays: windowDaysOf(task, signals),
     // The instant this verdict is for — the same one the signals were collected
     // for, so a clock-reading term and a windowed one cannot disagree about when

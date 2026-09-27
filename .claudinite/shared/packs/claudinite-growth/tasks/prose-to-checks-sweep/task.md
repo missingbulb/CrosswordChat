@@ -6,7 +6,7 @@ always-testable rules that were never converted to checks, and convert the stron
 own upgrade pass, not this sweep's.
 
 **The corpus is `.claudinite/local/packs/` and nothing else** — this repo's own local packs. A canon
-pack it only mounts under `.claudinite/shared/` is swept in the repo that owns it: the next converge
+pack it only mounts under `.claudinite/shared/` is swept in the repo that owns it: the next update
 replaces that tree whole, so an edit there is lost either way.
 
 Convert prose to checks in a single PR.

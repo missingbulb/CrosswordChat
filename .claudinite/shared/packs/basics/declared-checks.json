@@ -1,7 +1,7 @@
 [
   {
     "id": "squash-merge-history",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "the squash-only repo setting can be off or bypassed; a merge commit in the work is the effect that proves it",
     "scope": "work",
     "forbidIntroducedMergeCommits": {
@@ -11,7 +11,7 @@
   },
   {
     "id": "warning-suppression",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "an unexplained suppression hides the signal instead of recording why the fix was rejected",
     "fix": "add the reason on the suppression line or in the comment above — or fix the cause; if it genuinely can't be annotated, accept it in .claudinite-settings.json with a reason",
     "scanFiles": "/^(?!.*\\.md$)/",
@@ -56,7 +56,7 @@
   },
   {
     "id": "no-conflict-markers",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "a conflict marker left behind breaks the file, and in a rules or config file it silently changes what the repo instructs every later session and check to do",
     "scanFiles": "/.*/",
     "matchLines": [
@@ -69,7 +69,7 @@
   },
   {
     "id": "rules-line-length",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "a rule changed one word at a time still shows as a whole-paragraph diff when its bullet is one physical line",
     "scanFiles": "/(^|\\/)RULES\\.md$/",
     "maxLineLength": {
@@ -80,21 +80,21 @@
   },
   {
     "id": "skill-description-length",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "a skill's description is in every session's window whether the skill loads or not, so one written as a summary charges every session for a method almost none of them need",
     "scanTracked": true,
     "scanFiles": "/(^|\\/)SKILL\\.md$/",
     "matchLines": [
       {
-        "match": "/^description:(?:\\s+\\S+){61}/",
-        "what": "this description runs past 60 words",
+        "match": "/^description:(?:\\s+\\S+){31}/",
+        "what": "this description runs past 30 words",
         "fix": "cut it to what decides whether to reach for the skill, and leave the method to the body, which loads only when the skill does"
       }
     ]
   },
   {
     "id": "generated-merge-driver",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "without merge=ours a conflicting merge on a generated file gets hand-resolved and desyncs from its source",
     "requireIndexCoverage": [
       {
@@ -121,7 +121,7 @@
   },
   {
     "id": "catalog-completeness",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "a hand-maintained catalog that omits a real pack misroutes readers and hides capability; the check keeps the index honest against the tree",
     "relevantWhen": {
       "trackedFileMatches": "/^engine\\/pack_loader\\/pack-registry\\.mjs$/"
@@ -140,7 +140,7 @@
   },
   {
     "id": "untracked-test-file",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "work",
     "failureMessage": "a suite driven by git ls-files never executes an untracked test, so a green run is not coverage of it",
     "flagUntrackedFilesMatching": [
@@ -153,7 +153,7 @@
   },
   {
     "id": "grep-context-without-content",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-06",
     "scope": "action",
     "failureMessage": "under the default files_with_matches mode a context flag is silently ignored, so the call answers a file list and never the lines it asked for",
@@ -169,7 +169,7 @@
   },
   {
     "id": "generated-file-hand-edit",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-06",
     "scope": "action",
     "failureMessage": "a GENERATED file is written by its generator, and a hand edit is overwritten by the next run while its merge conflicts are resolved by neither side",
@@ -184,7 +184,7 @@
   },
   {
     "id": "wakeup-without-prompt",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-06",
     "scope": "action",
     "failureMessage": "the harness rejects a wake-up that carries no prompt, and a rejection leaves no fallback armed",
@@ -202,7 +202,7 @@
   },
   {
     "id": "pipe-tail-hides-exit",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "failureMessage": "a trailing tail or head replaces the pipeline's exit code with its own and discards the earlier lines a failure would have shown",
     "guardToolCalls": [
@@ -217,7 +217,7 @@
   },
   {
     "id": "pkill-pattern-self-match",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "failureMessage": "pkill -f matches the invoking shell's own command line, which carries the pattern",
     "guardToolCalls": [
@@ -232,7 +232,7 @@
   },
   {
     "id": "github-list-without-fields",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "failureMessage": "an unnarrowed list or search answers with a single-line dump that Read cannot slice",
     "guardToolCalls": [
@@ -248,7 +248,7 @@
   },
   {
     "id": "ask-user-question-already-decided",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "failureMessage": "a blocking question spends real human wall-clock, and most are already answered by an instruction in context, by state one read away, or by the recommended option being the status quo",
     "guardToolCalls": [
@@ -263,7 +263,7 @@
   },
   {
     "id": "bare-wait-in-fresh-shell",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-06",
     "scope": "action",
     "failureMessage": "each Bash call is a fresh shell, so a wait with no job launched in the same call returns at once, looking like a satisfied wait",
@@ -280,7 +280,7 @@
   },
   {
     "id": "manufactured-no-op-call",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "failureMessage": "a call made only to occupy the turn can come back with no visible text, which the harness then interrupts to ask for a real response",
     "guardToolCalls": [
@@ -295,7 +295,7 @@
   },
   {
     "id": "sub-issue-without-parent",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "since": "2026-09-06",
     "failureMessage": "a child issue linked only by a number in its body leaves the parent blind to what is still open under it",

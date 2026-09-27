@@ -1,6 +1,6 @@
 ---
 name: changing-pack-elements
-description: What a change to a pack's element owes - the entry on its provenance file, which kind, and how to append it - and what a pack's README carries. Loaded for any edit of a pack's RULES.md, skills, checks, tasks, manifest, README or provenance folder, in a repo's local pack or on a canon's shelf.
+description: What a change to a pack's element owes: the provenance entry, its kind, what a README carries. Loaded for any edit of a pack's rules, skills, checks, tasks or manifest.
 metadata:
   body: workflow
   usage:
@@ -44,7 +44,7 @@ check's its id with `/` as `-`; a task's its id; the manifest's `_pack.md`. Whic
 | prose turned into a check | `converted`, with `Mechanism` and the deletion-test verdict |
 | a skill's description or `force-load-on-*` trigger | `trigger-changed`, with `Mechanism` |
 | a task's preconditions, `expected_outcome`, `automerge`, model or worker | `policy-changed`, with `Mechanism` |
-| a check's severity, or the gate deciding when it fires | `severity-changed`, with `Mechanism` |
+| a check's `on_fail`, or the gate deciding when it fires | `severity-changed`, with `Mechanism` |
 | what an element applies to, where its text reads the same - a manifest's `requires` or fingerprint, a check's file scope, a skill's corpus | `scope-changed`, with `Mechanism` |
 | a new element | `born`, with `Mechanism` - and `mark` first if the carrier has no file |
 | an element removed | `retired` - the file stays, and this is its last entry |
@@ -102,12 +102,13 @@ entries are dated in the past by definition, and under that flag the file is re-
 date order rather than appended to. Two things only it may do:
 
 - **Replace what the references conversion wrote.** A file the conversion filled carries a
-  `born` dated by the conversion write rather than by the element. Where the derived birth
-  is earlier, that placeholder is what is being corrected and the tool drops it, naming it
-  in the run's output; where the placeholder's date *is* the birth, no earlier born arrives
-  and it stands. The dates decide, so neither truncating these files as a class nor leaving
-  them is the rule. Only the conversion's own entry is ever replaced - an entry somebody
-  wrote is never dropped, whatever its date.
+  `born` dated by the conversion write rather than by the element. Where the batch brings a
+  born dated on or before it - an earlier birth, or the same day verified with the commit
+  behind it - that placeholder is what is being corrected and the tool drops it, naming it
+  in the run's output; a batch bringing no born leaves it standing. The dates decide, so
+  neither truncating these files as a class nor leaving them is the rule. Only the
+  conversion's own entry is ever replaced - an entry somebody wrote is never dropped,
+  whatever its date.
 - **Open a file the marking pass could not.** An element retired *before* that pass is named
   by no carrier, so nothing will ever create its file. A `--backfill` batch that opens with
   `born` creates it; its whole history, birth through `retired`, arrives at once or not at
@@ -130,6 +131,6 @@ own shape. Move it there; do not write it here.
 
 ## 3. The mount is never edited
 
-A file under `.claudinite/shared/` arrived from a canon and the next converge replaces the
+A file under `.claudinite/shared/` arrived from a canon and the next update replaces the
 whole tree. Change it in the canon, or carry the difference in the repo's own
 `.claudinite/local/packs/`.

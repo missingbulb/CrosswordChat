@@ -1,6 +1,7 @@
 ---
 name: improve-comments
-description: Improve a repo's own comments as a pass of their own: delete, correct, add the why. Use when working a repo's comments deliberately (the basics pack's improve-comments task), never as a side effect of another change.
+description: Improve a repo's own comments as a pass of their own: delete, correct, add the why. Never as a side effect of another change.
+disable-model-invocation: true
 metadata:
   body: workflow
   usage:
@@ -58,8 +59,8 @@ code it sits above and ask which of these it is.
    commit that happens to be in front of you. A guessed why is a wrong comment with
    confidence, which is shape 2 arriving pre-broken.
 
-**Where a comment must name a path, spell it in one canonical place and point every other
-mention there.** A path duplicated across comments is a rename waiting to break silently.
+**A comment naming a file path or name** is a rename waiting to break silently: drop the
+mention wherever the comment still reads without it.
 
 ## What to leave alone
 
@@ -72,10 +73,9 @@ mention there.** A path duplicated across comments is a rename waiting to break 
   site; it is the review record, and it is load-bearing however redundant it reads.
 - **A doc comment a tool publishes** (JSDoc, docstrings, Javadoc). It is an output surface,
   not an aside — improve it as documentation or not at all.
-- **Anything under `.claudinite/`.** The mount is not this repo's source: the vendored
-  half is replaced whole by the next converge, so a comment improved there is gone by
-  morning, and the local packs are written by the growth tasks. The gate reds a change
-  there whatever it holds.
+- **Anything under `.claudinite/shared/`.** The vendored mount is not this repo's source:
+  the next update replaces it whole, so a comment improved there is gone by morning. The
+  gate reds a change there whatever it holds.
 - **Anything outside the files you were handed.** A comment two directories away being
   wrong is next run's work.
 
