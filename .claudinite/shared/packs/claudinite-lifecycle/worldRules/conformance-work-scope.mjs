@@ -43,7 +43,7 @@ export const invokesEntry = (files, read) => files.some((f) => (read(f) ?? '').i
 
 const rule = {
   id: 'conformance-work-scope',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'A member\'s CI runs the work-scope sweep as well as the world sweep',
   doc: 'bootstrap.md',
   why: 'the work scope is the only one that can see what a change did rather than what the repo now contains, and it ran at a session\'s Stop hook or not at all — so a rule about the change was enforced only where a session happened to be',

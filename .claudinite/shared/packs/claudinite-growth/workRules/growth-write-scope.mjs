@@ -36,7 +36,7 @@ const inSurface = (p) => p.startsWith(LOCAL_ROOT);
 
 const rule = {
   id: 'growth-write-scope',
-  severity: 'blocking',
+  on_fail: 'block',
   scope: 'work',
   doc: 'packs/claudinite-growth/README.md',
   description: 'A growth run (extract, dedup, either sweep) writes only the repo\'s own local packs',

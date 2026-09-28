@@ -1,5 +1,4 @@
-// The LOCAL-DISK half of the signal collectors' `ctx` (per-project-scheduling
-// PRINCIPLES.md). Two collectors read facts off `ctx` that no GitHub read can
+// The LOCAL-DISK half of the signal collectors' `ctx`. Two collectors read facts off `ctx` that no GitHub read can
 // supply — the shipped manifest version and whether this repo publishes at all
 // (`release.manifestVersion`, `release.shipsPipeline`), and the configured log
 // retention (`conversationLogs.retentionDays`). The scheduler runs Action-side
@@ -10,8 +9,8 @@
 // This deliberately sits BESIDE the collectors rather than inside them. The
 // collectors stay pure over an injected `ctx` (`ctx.X ?? null`), so the whole
 // signal layer still unit-tests against a fake `gh` with no repo on disk; this
-// module is the one place that touches the filesystem, and signals/context.mjs folds its
-// result into the ctx it hands the collectors.
+// module is the one place that touches the filesystem, and the signal context folds
+// its result into the ctx it hands the collectors.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,9 +21,8 @@ import { join } from 'node:path';
 // both readers match paths that came off git or the GitHub API.
 export const LOCAL_PACK_ROOT = '.claudinite/local/packs/';
 
-// Where a browser-extension manifest may sit, in the order the retired gate
-// probed them (recovered from the pack's deleted run_daily gate): the first one
-// carrying a `version` wins. Absent/unparsable/versionless → null, which the
+// Where a browser-extension manifest may sit: the first one carrying a `version`
+// wins. Absent/unparsable/versionless → null, which the
 // consuming precondition reads as "no manifest version to judge".
 const MANIFEST_PATHS = ['manifest.json', 'src/manifest.json', 'public/manifest.json', 'dist/manifest.json'];
 
@@ -61,7 +59,7 @@ function readShipsReleasePipeline(root) {
 }
 
 // The log-retention window, in days, from the declared packs' entry config
-// (`retention_days` in .claudinite-settings.json). Read through the caller's
+// (`retention_days`). Read through the caller's
 // existing per-pack config reader rather than a second settings parser, and
 // keyed by the PARAMETER, not by a pack name — core does not name the pack that
 // happens to declare it. First declared pack carrying a numeric value wins.

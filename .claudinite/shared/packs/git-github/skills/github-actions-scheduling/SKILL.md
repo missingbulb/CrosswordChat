@@ -1,6 +1,6 @@
 ---
 name: github-actions-scheduling
-description: What a GitHub Actions `schedule:` trigger actually guarantees — late fires, dropped fires, the 60-day disable — and how to build and describe scheduled work around it. Use when adding, changing, explaining, or debugging anything that runs on a cron in GitHub Actions.
+description: What a GitHub Actions `schedule:` trigger actually guarantees. Use when adding, changing, explaining or debugging anything that runs on a cron in GitHub Actions.
 metadata:
   body: guidelines
   usage:

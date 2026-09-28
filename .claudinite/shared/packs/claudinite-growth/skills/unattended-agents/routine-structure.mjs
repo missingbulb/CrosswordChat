@@ -30,7 +30,7 @@ function children(files, d, pred) {
 
 const rule = {
   id: 'routine-structure',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A routine/task folder has a routine.md or task.md entry point wired to the scripts it invokes',
   doc: 'packs/claudinite-growth/skills/unattended-agents/SKILL.md',
   why: 'a routine is prose (read) + scripts (executed); a dangling invocation or an orphan/entry-less script means the agent runs the wrong thing or the job hides where it is never read',
@@ -72,7 +72,7 @@ const rule = {
       for (const s of scripts) {
         if (text.includes(basename(s))) continue;
         out.push(finding(rule, {
-          file: s, line: null, severity: 'advisory',
+          file: s, line: null, on_fail: 'advise',
           what: `is never invoked by ${join(dir, ENTRY)}`,
           fix: `invoke it from ${ENTRY}, or remove it — a script the routine never runs does not earn its place`,
         }));
@@ -83,7 +83,7 @@ const rule = {
         const body = ctx.read(s);
         if (body === null || body.startsWith('#!')) continue;
         out.push(finding(rule, {
-          file: s, line: 1, severity: 'advisory',
+          file: s, line: 1, on_fail: 'advise',
           what: 'has no shebang line',
           fix: 'start the script with a shebang (e.g. #!/usr/bin/env bash) so it runs standalone',
         }));

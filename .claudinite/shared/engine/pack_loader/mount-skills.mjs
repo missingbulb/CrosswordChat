@@ -3,7 +3,7 @@
 // exactly one pack's own tree (`<pack>/skills/<skill>/`, canon and local alike
 // — #385); this hook takes the union over the packs declared in
 // .claudinite-settings.json (no pack is active by default — bootstrap seeds
-// `basics`, which bundles the baseline skills)
+// `basics`, which bundles the general skills)
 // and (re)generates the `.claude/skills/<name>` symlinks to match —
 // created, retargeted, and removed as the declarations change, so the mounted
 // set always tracks the packs and nothing is ever committed (a committed link

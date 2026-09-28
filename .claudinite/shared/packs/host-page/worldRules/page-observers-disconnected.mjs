@@ -30,7 +30,7 @@ const STOPPED = /\.\s*disconnect\s*\(/;
 
 const rule = {
   id: 'page-observers-disconnected',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A file that starts a DOM observer also disconnects one',
   doc: 'packs/host-page/RULES.md',
   why: 'an observer on a host page outlives whatever started it — the single-page app never unloads, so "stopped" work keeps waking on every host mutation and the guest is never really inert',

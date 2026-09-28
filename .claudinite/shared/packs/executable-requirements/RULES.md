@@ -3,8 +3,7 @@
 ## 1. The layout is the contract
 
 - Everything lives under **`dev/requirements/`**: `requirements.md` (the numbered prose spec),
-  one **top-level folder per kind**, `shared/` for cross-kind infra, and the runners/gates. The
-  spec file's path is the framework's structural fingerprint — this pack activates on it.
+  one **top-level folder per kind**, `shared/` for cross-kind infra, and the runners/gates.
 
 - **The folder is the kind.** A case's kind is the directory it lives in; the case declares no
   kind field. Cases are

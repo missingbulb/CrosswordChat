@@ -7,9 +7,9 @@ recovery, CI-trigger rules, merge-relocation traps), the squash, capture and ver
 judgment rather than shape — what a `schedule:` trigger actually guarantees
 ([github-actions-scheduling](skills/github-actions-scheduling/SKILL.md)).
 
-No prose of its own — the lifecycle checks (`task-lifecycle`, `squash-merge-history`) stay in
+No prose of its own: the lifecycle check (`task-lifecycle`) stays in
 `basics`. Every repo gets this pack through `basics`'s `requires` closure (materialized into
-declarations at `--init` and the baselining backfill), never by direct seeding.
+declarations at `--init` and the update's backfill), never by direct seeding.
 
 ## Checks
 

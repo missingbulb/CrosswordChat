@@ -1,7 +1,7 @@
 [
   {
     "id": "claudinite-isolation",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "the vendored canon is refreshed nightly and refactored upstream — code that reaches into it inherits every canon rename as a breaking change",
     "fix": "inline the few lines you need into your own tree, remove the reference, or accept it with a reason in .claudinite-settings.json (rule \"claudinite-isolation\")",
     "relevantWhen": { "pathExists": ".claudinite/shared" },
@@ -17,7 +17,7 @@
   },
   {
     "id": "scheduler-workflow-shape",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "the scheduler is the repo's only cron, so a drifted cron or a missing guard silently breaks staggering, double-run safety, or manual runs",
     "scanFiles": ".github/workflows/claudinite-scheduler.yml",
     "countMatchingLines": [
@@ -67,7 +67,7 @@
   },
   {
     "id": "claudinite-lifecycle-declared",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "claudinite-lifecycle carries Claudinite's own rules — the mount, the declaration, adoption, the update and the task contract — a member that does not declare it runs the machinery with none of them",
     "checkParsedFiles": [
       {
@@ -80,17 +80,17 @@
   },
   {
     "id": "shared-tree-edit-guard",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-06",
     "scope": "action",
-    "failureMessage": "the update flow replaces .claudinite/shared/ whole on its next converge, so an edit there is discarded — silently, and only once the mount next refreshes",
+    "failureMessage": "the update flow replaces .claudinite/shared/ whole on its next run, so an edit there is discarded — silently, and only once the mount next refreshes",
     "guardToolCalls": [
       {
         "tool": "/^(Edit|Write|NotebookEdit)$/",
         "inputField": "file_path",
         "match": "/(?:^|\\/)\\.claudinite\\/shared\\//",
         "what": "{tool} writes {field}, inside the vendored .claudinite/shared/ tree",
-        "fix": "make the change in the canon instead, or carry a difference this repo alone needs under .claudinite/local/packs/, which survives every converge"
+        "fix": "make the change in the canon instead, or carry a difference this repo alone needs under .claudinite/local/packs/, which survives every update"
       },
       {
         "tool": "Bash",

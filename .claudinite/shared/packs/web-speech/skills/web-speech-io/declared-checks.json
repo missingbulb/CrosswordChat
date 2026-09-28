@@ -1,7 +1,7 @@
 [
   {
     "id": "web-speech-no-window-api-in-service-worker",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "the recognition API and speechSynthesis live on window, which a service worker has none of — referencing them there throws or reads undefined, so the listen or speak silently never happens",
     "scanFiles": {
       "inParsedFilesMatching": "/(^|\\/)manifest\\.json$/",
@@ -23,7 +23,7 @@
   },
   {
     "id": "web-speech-recognition-feature-detected",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "Chrome exposes recognition only under the webkit prefix and other contexts may expose neither, so the bare prefixed constructor throws a ReferenceError wherever that global is absent",
     "scanFileClasses": ["javascriptFiles"],
     "matchLines": [
@@ -37,7 +37,7 @@
   },
   {
     "id": "web-speech-capture-released-on-pagehide",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "a page frozen into the bfcache is suspended, not destroyed, so a live recognizer or getUserMedia stream keeps the microphone on until a pagehide handler stops it",
     "scanFileClasses": ["javascriptFiles"],
     "repoWide": [

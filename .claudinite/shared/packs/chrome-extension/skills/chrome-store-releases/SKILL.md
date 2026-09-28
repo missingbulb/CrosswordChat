@@ -1,6 +1,6 @@
 ---
 name: chrome-store-releases
-description: The Chrome Web Store release standard every extension repo of ours ships. Use when setting up an extension repo to publish, when changing or debugging its release pipeline, when asked to "bump version" on an extension repo, or when a cer/ check fires.
+description: The Chrome Web Store release standard. Use when setting up an extension repo to publish, changing or debugging its release pipeline, bumping its version, or when a cer/ check fires.
 metadata:
   body: workflow
   usage:
@@ -23,11 +23,11 @@ five `workflow_call`-only **reusable workflows**, and the
 **vendored into each extension repo's own `.github/`**, where the whole pipeline runs with no
 cross-repo dependency. GitHub only resolves a reusable workflow or composite action from a repo's
 own `.github/`, so "the logic lives in the pack" means the pack holds the templates and each repo
-hosts a *managed* copy: the pack keeps every copy in sync — baselining re-materializes on drift via
+hosts a *managed* copy: the pack keeps every copy in sync — the update re-materializes on drift via
 the `chrome-release-vendoring` migration — so a repo **hosts** the pipeline without **owning** it.
 Treat the vendored `.github/workflows/` + `.github/actions/` set as generated: edit the pack, not
 the copy. A repo adds only its **required** `.github/release.config` (five explicit keys, **no
-defaults**). A merged canon change reaches every extension repo through the nightly baselining, not
+defaults**). A merged canon change reaches every extension repo through the nightly update, not
 a live `@main` reference. Everything a repo used to carry as workflow values — the version files, the
 zip location, the test gate, the shipping set, and the previously per-repo `bump`/`filter` scripts
 — is either pack logic (the bump, and `npm run build`) or an explicit `release.config` key, so no
@@ -222,7 +222,7 @@ in the repo's first-publication issue).*
 
 ## Setting up a new extension repo
 
-1. Declare the pack in `.claudinite-settings.json`; baselining then **vendors the release set** — the
+1. Declare the pack in `.claudinite-settings.json`; the update then **vendors the release set** — the
    [orchestrator](../../stubs/workflows/chrome-extension-release.yml) plus the reusable workflows under
    [`stubs/workflows/`](../../stubs/workflows/) and the composite actions under
    [`stubs/actions/`](../../stubs/actions/) — into this repo's own `.github/`. (Setting up before the next

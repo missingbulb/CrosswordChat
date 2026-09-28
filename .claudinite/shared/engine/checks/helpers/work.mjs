@@ -85,6 +85,8 @@ class Work {
   get config() { return this.ctx.config; }
   read(path) { return this.ctx.read(path); }
   readBase(path) { return this.ctx.readBase(path); }
+  listBase() { return this.ctx.listBase?.() ?? null; }
+  prefetchBase(paths) { this.ctx.prefetchBase?.(paths); }
   exists(path) { return this.ctx.exists(path); }
   packConfig(id) { return this.ctx.config?.packConfig?.[id]; }
 

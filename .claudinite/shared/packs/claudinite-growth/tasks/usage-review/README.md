@@ -9,7 +9,7 @@ declarations rather than by code, and writes what it found.
 
 ## What it writes
 
-`.claudinite/local/usage-review.GENERATED.json`, on one accumulating pull request
+`.claudinite/usage/element-review-findings.json`, on one accumulating pull request
 that merges only when a person merges it:
 
 | | |
@@ -19,7 +19,7 @@ that merges only when a person merges it:
 | `notEvaluated` | the rule/subject pairs held back by a floor, with the figure that fell short. *No findings* means something only when this is empty |
 | `unstated` | the skills declaring no expectation. Only *always loaded* is evaluated for those, and the list is the nudge to declare |
 
-Beside it, `.claudinite/local/dashboard/claudinite-growth.GENERATED.json` - the
+Beside it, `.claudinite/usage/claudinite-growth-dashboard-values.json` - the
 values for the two widgets [dashboard.json](../../dashboard.json) declares.
 
 ## The rules

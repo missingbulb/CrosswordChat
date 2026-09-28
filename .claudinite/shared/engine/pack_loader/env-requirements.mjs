@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Environment requirements — a pack declares a toolchain (or per-repo deps) a
 // cloud session needs but the base image doesn't ship, via an optional `env`
-// field on its pack.mjs. Driven by the repo's ACTIVE packs and the per-pack
+// field on its manifest. Driven by the repo's ACTIVE packs and the per-pack
 // parameters it supplies in .claudinite-settings.json (each pack entry's
 // `config`, which loadConfig presents as the `packConfig` view):
 //
@@ -18,20 +18,30 @@
 //                          the probes ARE the source of truth.
 //   node env.mjs plan      Print what install would run (review / debug).
 //
-// A pack's declaration — `setup` and `probe` may be a string, or a function of
-// the project's per-pack params (so a repo can say WHERE its package.json is):
-//   env: {
-//     label: 'Node dependencies',
-//     setup: (p) => (p.dirs ?? ['.']).map((d) => `( cd "${d}" && npm ci ) || true`).join('\n'),
-//     probe: (p) => (p.dirs ?? ['.']).map((d) => `[ -d "${d}/node_modules" ]`).join(' && '),
+// A pack's declaration - `setup` and `probe` may be a string, or a template repeated
+// once per value of one of the project's per-pack params (so a repo can say WHERE its
+// package.json is), `{}` standing for the value and `whenUnset` for an absent or empty
+// param. The copies of a setup run as lines; the copies of a probe must all hold:
+//   "env": {
+//     "label": "Node dependencies",
+//     "setup": { "forEach": "dirs", "whenUnset": ["."], "template": "( cd \"{}\" && npm ci ) || true" },
+//     "probe": { "forEach": "dirs", "whenUnset": ["."], "template": "[ -d \"{}/node_modules\" ]" }
 //   }
+// A module manifest may still give either as a function of the params.
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { loadPacks, isActive } from './pack-registry.mjs';
 import { loadConfig } from '../checks/helpers/repo-context.mjs';
 
-const resolveField = (field, params) =>
-  typeof field === 'function' ? field(params) : field;
+const JOINERS = { setup: '\n', probe: ' && ' };
+
+const resolveField = (field, params, joiner) => {
+  if (typeof field === 'function') return field(params);
+  if (field === null || typeof field !== 'object') return field;
+  const given = params[field.forEach];
+  const values = Array.isArray(given) && given.length ? given : field.whenUnset ?? [];
+  return values.map((v) => field.template.replaceAll('{}', v)).join(joiner);
+};
 
 /**
  * The env declarations of a repo's active packs, each resolved against the
@@ -50,8 +60,8 @@ export async function activeEnvs(projectRoot, { packs, config } = {}) {
       return {
         id: p.id,
         label: p.env.label ?? p.id,
-        setup: resolveField(p.env.setup, params),
-        probe: resolveField(p.env.probe, params),
+        setup: resolveField(p.env.setup, params, JOINERS.setup),
+        probe: resolveField(p.env.probe, params, JOINERS.probe),
       };
     });
 }

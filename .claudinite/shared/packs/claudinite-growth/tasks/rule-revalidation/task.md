@@ -5,7 +5,7 @@ environment — the shape a harness call accepts, what the Action's token may re
 exists, how a platform behaves — and correct what no longer holds.
 
 **The corpus is `.claudinite/local/packs/` and nothing else.** A canon pack this repo only mounts
-under `.claudinite/shared/` is revalidated in the repo that owns it: the next converge replaces that
+under `.claudinite/shared/` is revalidated in the repo that owns it: the next update replaces that
 tree whole, so an edit there is lost either way.
 
 ## The method lives in the skill

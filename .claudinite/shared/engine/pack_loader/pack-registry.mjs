@@ -2,7 +2,8 @@ import { readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateManifest, normalizeManifest } from './pack-schema.mjs';
-import { applyPackConventions, bundledSkillDirs, ruleModuleFiles, RULE_DIRS } from './pack-conventions.mjs';
+import { applyPackConventions, bundledSkillDirs, ruleModuleFiles, RULE_DIRS, manifestFileIn } from './pack-conventions.mjs';
+import { readManifest } from './pack-manifest.mjs';
 import { canonicalPackId, canonicalPackIdAmong } from './renamed-packs.mjs';
 
 // This module lives at <canon>/engine/pack_loader/; the packs it scans at <canon>/packs/.
@@ -22,7 +23,7 @@ export const localPacksDir = (root) => join(resolve(root), LOCAL_PACKS_SUBDIR);
 // reads this constant. It stays exported because fielded pack versions import it by
 // name, and the engine reaches a member ahead of its packs — a named import of an
 // export that is gone is a link-time SyntaxError that faults the whole pack, fails
-// the mount's self-test and blocks the converge that would have fixed it. It comes
+// the mount's self-test and blocks the update that would have fixed it. It comes
 // out when no fielded pack version imports it any more — a question answered off
 // the trunk's own pack history by the lane-shim test that guards this surface, not
 // by what the current tree happens to import (#1911).
@@ -68,11 +69,12 @@ export const SHARED_SUBDIR = join('.claudinite', 'shared');
 // it, the prose injector points sessions at it.
 export const PACK_DIRECTORY_FILE = 'packs/directory.GENERATED.md';
 
-// Load a directory of `<name>/pack.mjs` manifests, isolating each import so one
-// broken manifest can't sink the rest (a consumer-authored local pack.mjs must
+// Load a directory of `<name>/pack.json` (or `pack.mjs`) manifests, isolating each read so one
+// broken manifest can't sink the rest (a consumer-authored local manifest must
 // never disable every other pack's prose/checks/skills). Each loaded pack is
 // stamped with `dir` (its own directory — prose and bundled skills resolve off
-// this, so a pack's files never have to sit under a single shared root) and
+// this, so a pack's files never have to sit under a single shared root),
+// `manifestFile` (which spelling it was read from, for a finding to point at) and
 // `local` (whether it came from a consumer's own local packs). A pack's skills live
 // in its own tree — `<pack>/skills/<skill>/` is the one bundled-skill shape,
 // canon and local alike (#385: a skill rides exactly one pack; there is no
@@ -158,7 +160,7 @@ async function ruleModulesIn(packDir, scope, label, errors) {
     if (rule === null || typeof rule !== 'object' || typeof rule.id !== 'string' || typeof rule.run !== 'function') {
       errors.push({
         what: `${label}/${name} sits in a rule directory but default-exports no rule`,
-        fix: `default-export { id, severity, description, doc, why, run(ctx) } from ${name}, or move the module out of ${scope}/`,
+        fix: `default-export { id, on_fail, description, doc, why, run(ctx) } from ${name}, or move the module out of ${scope}/`,
         dir: packDir,
       });
       continue;
@@ -168,7 +170,7 @@ async function ruleModulesIn(packDir, scope, label, errors) {
   return rules;
 }
 
-async function scanPackDir(dir, { local, temp, subdir }, errors) {
+async function scanPackDir(dir, { local, temp, subdir, checksFor }, errors) {
   const out = [];
   if (!existsSync(dir)) return out;
   const label = subdir ?? (local ? LOCAL_PACKS_SUBDIR : 'packs');
@@ -193,15 +195,15 @@ async function scanPackDir(dir, { local, temp, subdir }, errors) {
   for (const name of names) {
     const packDir = join(dir, name);
     const rel = ownNamespace ? `${label}/${name}` : `packs/${name}`;
-    const manifest = join(packDir, 'pack.mjs');
-    if (!existsSync(manifest)) continue;
+    const manifestName = manifestFileIn((file) => existsSync(join(packDir, file)));
+    if (!manifestName) continue;
     let mod;
     try {
-      mod = (await import(pathToFileURL(manifest).href)).default;
+      mod = await readManifest(join(packDir, manifestName));
     } catch (e) {
       errors.push({
         what: `the pack in ${rel} failed to load: ${e.message}`,
-        fix: `fix pack.mjs in ${rel}, or remove the pack`,
+        fix: `fix ${manifestName} in ${rel}, or remove the pack`,
         dir: packDir,
       });
       continue;
@@ -217,7 +219,7 @@ async function scanPackDir(dir, { local, temp, subdir }, errors) {
     if (!mod || typeof mod.id !== 'string') {
       errors.push({
         what: `the pack in ${rel} has no object default export carrying a usable id`,
-        fix: 'export default { version, ruleRoutingGuidance, ... } from its pack.mjs — the id is the directory name unless the manifest overrides it with a string',
+        fix: `make ${manifestName} an object { version, ruleRoutingGuidance, ... } - the id is the directory name unless the manifest overrides it with a string`,
         dir: packDir,
       });
       continue;
@@ -226,7 +228,7 @@ async function scanPackDir(dir, { local, temp, subdir }, errors) {
     // for free, so this can only fire on a manifest that OVERRODE the id — and the
     // override is exactly what must not be allowed here: the engine activates a pack
     // by its exported id, but the fleet planner reads a local pack's daily tasks by
-    // directory name (it never imports pack.mjs), so a mismatch would silently
+    // directory name (it never reads the manifest), so a mismatch would silently
     // diverge — the engine runs the pack while the fleet skips its task.
     if (ownNamespace && mod.id !== name) {
       errors.push({
@@ -254,7 +256,11 @@ async function scanPackDir(dir, { local, temp, subdir }, errors) {
     // A coded rule's scope is the list it sits in; a declaration has no list, so
     // its own `scope` picks the list it joins — and normalizeManifest stamps the
     // same answer back either way.
-    const declared = await declaredChecksIn(packDir, rel, errors);
+    // A caller that will run only some packs' checks names them (`checksFor`, over the
+    // pack's id), and the rest skip the imports: every manifest still loads, since a
+    // rule may read any pack's metadata. A copied pack is active by being there.
+    const wantChecks = !checksFor || temp || checksFor(ownNamespace ? mod.id : canonicalPackId(mod.id));
+    const declared = wantChecks ? await declaredChecksIn(packDir, rel, errors) : [];
     // The pack's CODED rules, discovered the same way its declared ones already
     // were: `<pack>/worldRules/*.mjs` and `<pack>/workRules/*.mjs`, each module
     // default-exporting one rule. A manifest that declares the list overrides the
@@ -262,12 +268,12 @@ async function scanPackDir(dir, { local, temp, subdir }, errors) {
     // only for a scope the manifest left unspoken.
     const scanned = {};
     for (const scope of RULE_DIRS) {
-      if (mod[scope] !== undefined) continue;
+      if (mod[scope] !== undefined || !wantChecks) continue;
       scanned[scope] = await ruleModulesIn(packDir, scope, rel, errors);
     }
     // A CANON pack's own id is canonicalized like a declared one. A member's mount
     // is replaced per pack and per version, so a repo can hold a pack DIRECTORY
-    // renamed by a migration record while the `pack.mjs` inside it still carries the
+    // renamed by a migration record while the manifest inside it still carries the
     // old id — the tree is only rewritten once the canon ships a version above the
     // one that repo has. Read literally, that pack announces an id nothing declares
     // and goes inert, taking its checks, prose and tasks with it silently. A local
@@ -281,9 +287,9 @@ async function scanPackDir(dir, { local, temp, subdir }, errors) {
       ...(ownNamespace ? {} : { id: canonicalPackId(mod.id), rawId: mod.id }),
       // A declaration judging the session — scope "work" or "action" — rides the
       // work list: both run at Stop, over the change and the transcript.
-      worldRules: [...(mod.worldRules ?? scanned.worldRules ?? []), ...declared.filter((r) => r.scope !== 'work' && r.scope !== 'action')],
-      workRules: [...(mod.workRules ?? scanned.workRules ?? []), ...declared.filter((r) => r.scope === 'work' || r.scope === 'action')],
-    }), dir: packDir, local: Boolean(local), temp: Boolean(temp) };
+      worldRules: wantChecks ? [...(mod.worldRules ?? scanned.worldRules ?? []), ...declared.filter((r) => r.scope !== 'work' && r.scope !== 'action')] : [],
+      workRules: wantChecks ? [...(mod.workRules ?? scanned.workRules ?? []), ...declared.filter((r) => r.scope === 'work' || r.scope === 'action')] : [],
+    }), dir: packDir, manifestFile: manifestName, local: Boolean(local), temp: Boolean(temp) };
     // A task is scheduled work over a repository, picked up by a runner reading the
     // repo's tracked packs. A copied pack is neither tracked nor there tomorrow, so a
     // task it declares can never be picked up - report it rather than run half of it.
@@ -294,7 +300,7 @@ async function scanPackDir(dir, { local, temp, subdir }, errors) {
         dir: packDir,
       });
     }
-    pack.skillChecks = await scanSkillChecks(packDir, errors);
+    pack.skillChecks = wantChecks ? await scanSkillChecks(packDir, errors) : [];
     out.push(pack);
   }
   return out;
@@ -335,8 +341,8 @@ async function scanSkillChecks(packDir, errors) {
   return rules;
 }
 
-// Discover every pack structurally — canon `packs/<name>/pack.mjs` always, plus a
-// consumer's own `<localRoot>/.claudinite/local/packs/<name>/pack.mjs` when a
+// Discover every pack structurally - canon `packs/<name>/` always, plus a consumer's
+// own `<localRoot>/.claudinite/local/packs/<name>/` when a
 // localRoot is given (the repo under test / the session's project root). No
 // registry list to maintain — dropping a directory in adds it. Returns the packs
 // plus any load-time `errors` (a broken manifest, a missing id, an id collision);
@@ -344,9 +350,9 @@ async function scanSkillChecks(packDir, errors) {
 // SessionStart hooks just skip the offending pack. Canon is scanned first, so a
 // local pack may not shadow a canon id — the collision is reported and the local
 // one dropped (a consumer extends the canon, never silently overrides it).
-export async function discoverPacks({ localRoot, session = false } = {}) {
+export async function discoverPacks({ localRoot, session = false, checksFor = null } = {}) {
   const errors = [];
-  const canon = await scanPackDir(packsDir, { local: false }, errors);
+  const canon = await scanPackDir(packsDir, { local: false, checksFor }, errors);
   // Re-resolve each canon id now the whole tree is known, so an ABSORBED pack's
   // leftover directory keeps its own id instead of colliding with the survivor
   // sitting beside it (#1186). scanPackDir cannot make this call alone: it sees
@@ -354,7 +360,7 @@ export async function discoverPacks({ localRoot, session = false } = {}) {
   const rawCanonIds = new Set(canon.map((p) => p.rawId));
   for (const pack of canon) pack.id = canonicalPackIdAmong(pack.rawId, rawCanonIds);
   const local = localRoot
-    ? await scanPackDir(localPacksDir(localRoot), { local: true, subdir: LOCAL_PACKS_SUBDIR }, errors)
+    ? await scanPackDir(localPacksDir(localRoot), { local: true, subdir: LOCAL_PACKS_SUBDIR, checksFor }, errors)
     : [];
   // ASKED FOR, never assumed. A copied pack governs the SESSION - its prose, its skills,
   // its checks - and says nothing about the repository: a conformance sweep over the
@@ -484,7 +490,7 @@ export function bundledSkillSources(packs) {
 // that set plus every pack reachable through `requires` (transitively).
 // Declared entries keep their order; each pack's pulled-in dependencies land
 // right after it, deterministically. This runs when the declaration is
-// WRITTEN — bootstrap's `--init` and the baselining backfill — so a pack's
+// WRITTEN — bootstrap's `--init` and the update's backfill — so a pack's
 // prerequisites are materialized into .claudinite-settings.json, visible and
 // droppable like every other entry (the same reason a seeded pack is written
 // explicitly rather than defaulted), never resolved implicitly at run time.

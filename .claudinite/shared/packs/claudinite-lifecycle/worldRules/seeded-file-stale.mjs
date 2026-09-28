@@ -36,7 +36,7 @@ import { isActive } from '../../../engine/pack_loader/pack-registry.mjs';
 // would turn such a member red every night with no move of its own to clear it.
 const rule = {
   id: 'seeded-file-stale',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: "A file a pack seeded at adoption still carries every line of that pack's current template",
   doc: 'packs/claudinite-lifecycle/README.md',
   why: 'a seeded file is written once and never converged, so a pack that reshapes its template leaves every existing member running the adoption-era copy — which fails wherever the pack has since moved, with nothing anywhere saying so',
@@ -63,7 +63,7 @@ const rule = {
           what: `was seeded from ${pack.id}'s ${template} and no longer carries ${missing.length === 1 ? 'a line' : `${missing.length} lines`} that template has — the first is \`${missing[0]}\``,
           fix: `re-seed it — \`cp ${from} ${dest}\` — then re-apply whatever this repo deliberately changed in its copy`
             + (dest.startsWith('.github/workflows/')
-              ? ', and get that PR merged: a converge cannot push to .github/workflows/, which is why nothing delivered the change'
+              ? ', and get that PR merged: an update cannot push to .github/workflows/, which is why nothing delivered the change'
               : ''),
         }));
       }

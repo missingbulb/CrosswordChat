@@ -1,5 +1,5 @@
 // Executor-side deterministic validation of a dispatch issue, BEFORE any model
-// judgment (docs/PRINCIPLES.md). Given the issue body, it asserts
+// judgment. Given the issue body, it asserts
 // in code that the first line is a legal task path, the task file exists at HEAD,
 // its pack is declared, and its `task.json` sibling parses to a well-formed
 // declaration — then resolves the model and outcome ceiling the executor will
@@ -7,9 +7,8 @@
 // converges it to needs-human), so a forged or mangled issue never runs.
 //
 // Pure over injected capabilities so it unit-tests without a repo or GitHub. It
-// is NOT a CLI — the executor shell beside it, `resolve-dispatch.mjs`, is what
-// drives it in production: that shell takes the issue body out of the label
-// event's payload on disk and wires `exists`/`isPackDeclared`/`loadTask` to the
+// is NOT a CLI - the executor shell beside it is what drives it in production:
+// that shell takes the issue body out of the label event's payload on disk and wires `exists`/`isPackDeclared`/`loadTask` to the
 // checkout, so validating a dispatch costs no GitHub call at all.
 
 import { normalizeTaskDeclaration, validateTaskDeclaration } from '../contract/task-contract.mjs';
@@ -18,7 +17,7 @@ import { resolveModel } from '../contract/model-map.mjs';
 import { BUILT_IN_PACK, BUILT_IN_PATH_RE, BUILT_IN_PUBLIC_PATH_RE } from '../contract/built-in-tasks.mjs';
 import { parseWorkItemBody } from '../../public/work-item-grammar.mjs';
 
-// The only shape a dispatch first line may take (PRINCIPLES.md). Anchored end to
+// The only shape a dispatch first line may take. Anchored end to
 // end — no query strings, no trailing junk, exactly one pack and one task
 // segment under a packs/ root. The `.claudinite/(shared|local)/` prefix is
 // OPTIONAL: a consumer's task path carries it (its canon is mounted at
@@ -40,16 +39,15 @@ const reject = (reason, extra = {}) => ({ ok: false, reason, ...extra });
 // Returns { ok:true, pack, task, taskPath, model, resolvedModel, outcome },
 // { ok:false, gone:true, pack, task, reason } — a well-formed dispatch whose task
 // the repo NO LONGER CARRIES (file gone, sibling gone, pack undeclared): the
-// executor CLOSES the issue as obsolete (owner, 2026-08-06) rather than parking
+// executor CLOSES the issue as obsolete rather than parking
 // it on needs-human, because a task that was removed or deactivated is not an
 // anomaly a human needs to triage — or { ok:false, reason } for a genuinely
 // malformed dispatch (bad path shape, unparseable declaration), which stays a
 // needs-human convergence since it may be forgery or a broken task.
 export function validateDispatchBody(body, { exists, isPackDeclared, loadTask, loadTerms = () => new Map() }) {
   const firstLine = dispatchFirstLine(body);
-  // Two legal shapes: a pack task, and the engine's own built-in root
-  // (docs/PRINCIPLES.md). The built-in one is not a pack and is never declared — wherever the
-  // queue runs it is active — so it skips the declaration check rather than failing
+  // Two legal shapes: a pack task, and the engine's own built-in root. The
+  // built-in one is not a pack and is never declared - wherever the queue runs it is active - so it skips the declaration check rather than failing
   // it, and nothing else about validation differs.
   const builtIn = BUILT_IN_PATH_RE.exec(firstLine) ?? BUILT_IN_PUBLIC_PATH_RE.exec(firstLine);
   const m = builtIn ? [firstLine, BUILT_IN_PACK, builtIn[1]] : DISPATCH_PATH_RE.exec(firstLine);
@@ -82,7 +80,7 @@ export function validateDispatchBody(body, { exists, isPackDeclared, loadTask, l
   const problems = validateTaskDeclaration(decl, terms);
   if (problems.length) return reject(`${declPath} is not a valid task declaration: ${problems.map((p) => p.what).join('; ')}`, { pack, task });
 
-  // The model a task that reads its item's choice runs at (PRINCIPLES.md). The field
+  // The model a task that reads its item's choice runs at. The field
   // is written by the scheduler run from a write-gated label and validated on the way out of
   // the parser, so an unrecognised family has already become absent here and the
   // declared default stands — a request nobody can run would look accepted forever.
@@ -100,7 +98,7 @@ export function validateDispatchBody(body, { exists, isPackDeclared, loadTask, l
     // rule list) — normalized above, so a legacy ceiling already carries its
     // equivalent. Null only for a `none` task, which opens nothing to merge.
     automerge: decl.automerge ?? null,
-    // The best-effort run bound (docs/PRINCIPLES.md): the executor
+    // The best-effort run bound: the executor
     // surfaces it into the subagent's brief as "fail after N minutes". Always set
     // for an agentic task (the contract requires it); null for an agentless one.
     executionTimeout: decl.agent_execution_timeout ?? null,

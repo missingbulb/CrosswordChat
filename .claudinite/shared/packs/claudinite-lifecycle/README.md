@@ -47,6 +47,7 @@ not prose: the session that has lost its rules is the session least able to noti
 | `legacy-shape-in-use` | medium | complexity | check: advisory |
 | `skill-loaded-before-editing` | high | correctness | check: blocking |
 | `skills-index-current` | medium | correctness | check: blocking |
+| `flat-declarations-current` | medium | correctness | check: blocking |
 
 What goes wrong when one fires:
 
@@ -57,6 +58,7 @@ What goes wrong when one fires:
 - `conformance-work-scope` — CI gates the tree but not the change, so every commit-scoped rule is enforced only where a session's Stop hook happens to run.
 - `seeded-file-stale` — a file some pack seeded at adoption has fallen behind that pack's template, and since a seeded file is never converged nothing else would ever say so: the member goes on running a copy whose pack has moved.
 - `scheduler-workflow-shape` — the vendored scheduler's cron, concurrency or dispatch guard has drifted: staggering, double-run safety or manual runs break.
+- `flat-declarations-current` - `.claudinite/flat/tasks.GENERATED.json` or `dashboard.GENERATED.json` no longer matches a declared pack's `task.json` or `dashboard.json`, so the dashboard and a session asking what runs here read a roster that is not the repo's. Regenerate with `generate-flat-declarations.mjs --write`.
 
 The **task contract** and its checks are deliberately NOT here. Those ask whether a task is
 *written* correctly, which is authoring; every check above asks whether Claudinite is *working* in
@@ -73,14 +75,14 @@ loaded that skill, and this rule catches the edits the guard never saw (a `sed`,
 asking the diff the same question. Both read one resolver,
 `engine/pack_loader/path-scoped-skills.mjs`. A load is a `Skill` tool call or a `Read` of the
 skill's own SKILL.md. `skills-index-current` keeps the generated
-`.claudinite/claudinite-skills.GENERATED.md` — every mounted skill with what loads it, the
+`.claudinite/flat/claudinite-skills.GENERATED.md` — every mounted skill with what loads it, the
 scoped ones first — naming what the declared packs actually bundle.
 
 ## Skills
 
 | Skill | For |
 |---|---|
-| [`adopt-claudinite`](skills/adopt-claudinite/SKILL.md) | setting a project up on Claudinite for the first time — mount, hooks, checks, skills — and re-baselining one to pick up updates |
+| [`adopt-claudinite`](skills/adopt-claudinite/SKILL.md) | setting a project up on Claudinite for the first time — mount, hooks, checks, skills — and re-vendoring one to pick up updates |
 | [`adopt-pack`](skills/adopt-pack/SKILL.md) | adding a pack to a repo that already runs Claudinite: declare, interview, re-vendor, scaffold, land |
 
 The adoption skills bundle two more checks of the same kind, over the answers a member stores

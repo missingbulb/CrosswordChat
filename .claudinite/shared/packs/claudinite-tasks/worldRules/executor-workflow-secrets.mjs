@@ -37,7 +37,7 @@ import { EXECUTOR_WORKFLOW, taskSecretNames, secretEnvLine, passesSecret } from 
 // does one whose executor carries an endpoint token.
 const rule = {
   id: 'executor-workflow-secrets',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'The executor workflow passes every secret the tasks of this repo\'s packs declare',
   doc: 'packs/claudinite-tasks/README.md',
   why: 'a secret the executor does not name statically never reaches the job, and the task fails only once the queue has already picked its item up',

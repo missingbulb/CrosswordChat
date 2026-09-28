@@ -1,6 +1,6 @@
 # chrome-extension pack
 
-Active when a `manifest.json` declares `manifest_version` — the MV3 build/runtime gotchas that apply while you're *coding* an extension. Mostly prose (`RULES.md`); the gotchas with a static signature in the source are checks.
+Suggested when a `manifest.json` at the repo root or one directory down declares `"manifest_version": 3` - the MV3 build/runtime gotchas that apply while you're *coding* an extension. Mostly prose (`RULES.md`); the gotchas with a static signature in the source are checks.
 
 Releasing and Chrome-Web-Store publication live here too, in the [**chrome-store-releases**](skills/chrome-store-releases/SKILL.md) skill (the standard: the pipeline's contract, the setup steps, the manual store actions), the **vendored release set** ([`stubs/workflows/`](stubs/workflows/) + [`stubs/actions/`](stubs/actions/), materialized into each consumer's own `.github/` by the `chrome-release-vendoring` migration), the `cer/` conformance checks, and the `store-release` task that fires the daily release.
 

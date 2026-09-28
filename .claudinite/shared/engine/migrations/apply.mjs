@@ -6,6 +6,7 @@
 //   - declarePacks  — declare a pack (and its config) the member does not carry yet
 //   - normalizeLocalDeclarations — rewrite local-pack declarations to `local/<id>`
 //   - updateTaskSchedulingFields — bring local-pack task.json scheduling fields up to date
+//   - manifestsToJson - rewrite local-pack pack.mjs manifests as pack.json
 // Idempotent: a no-op once everything has been applied. Dependency-free.
 //
 // Two roots. The DEST is the repo being healed (CLAUDE_PROJECT_DIR / cwd). The

@@ -31,10 +31,10 @@
 // results and decides the outcome, so the whole decision surface is testable
 // without a repo on disk.
 
-import { existsSync, readFileSync, readdirSync, lstatSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, lstatSync, realpathSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { SETTINGS_FILE } from './settings-file.mjs';
+import { SETTINGS_FILE, settingsPath } from './settings-file.mjs';
 import { hasInstalledMount } from './installed-versions.mjs';
 
 export const MOUNT = '.claudinite/shared';
@@ -178,6 +178,60 @@ export function probeMigrations(migrations) {
   return pass('migrations');
 }
 
+// --- rules-loaded: the one probe over a RESULT -----------------------------
+// Every probe above judges the machinery that SHOULD put the packs' prose in front
+// of the model; each can pass while the model still receives none of it (an import
+// the harness declined to follow, a CLAUDE.md it never read, a pack copied after the
+// index was written). What the harness actually loaded is recorded in the session
+// transcript as `instructions` attachments, each file with the content it read, and
+// that record is what this probe judges. It can only run once a turn has begun, so
+// the session-start report never carries it; the Stop hook does.
+
+// null when the transcript records no attachments of any kind: that is a harness
+// that keeps no such record, which says nothing about what loaded. Attachments
+// present with no instructions among them is a harness that loaded no instructions.
+export function readLoadedInstructions(transcriptText) {
+  let sawAttachment = false;
+  let at = null;
+  const files = new Map();
+  for (const line of transcriptText.split('\n')) {
+    if (!line.trim()) continue;
+    let entry;
+    try { entry = JSON.parse(line); } catch { continue; }
+    const attachment = entry?.attachment;
+    if (!attachment || typeof attachment !== 'object') continue;
+    sawAttachment = true;
+    if (attachment.type !== 'instructions' || !Array.isArray(attachment.files)) continue;
+    const stamp = Date.parse(entry.timestamp);
+    if (at === null && Number.isFinite(stamp)) at = stamp;
+    for (const file of attachment.files) {
+      if (typeof file?.path === 'string' && typeof file.content === 'string') files.set(file.path, file.content);
+    }
+  }
+  return sawAttachment ? { at, files } : null;
+}
+
+// `expected`: one { pack, path, content, modifiedAt } per active pack's prose file.
+// A file written after the harness read it is this session's own edit, not a load
+// that went wrong, so it is not judged.
+export function probeRulesLoaded(expected, loaded) {
+  if (loaded === null) return skip('rules-loaded', 'the transcript keeps no record of what the harness loaded');
+  if (!expected.length) return skip('rules-loaded', 'no active pack carries prose');
+  const missing = [];
+  const differs = [];
+  for (const { pack, path, content, modifiedAt } of expected) {
+    if (!loaded.files.has(path)) { missing.push(pack); continue; }
+    if (loaded.at !== null && modifiedAt > loaded.at) continue;
+    if (loaded.files.get(path).trim() !== content.trim()) differs.push(pack);
+  }
+  if (!missing.length && !differs.length) return pass('rules-loaded');
+  const parts = [];
+  if (missing.length) parts.push(`never loaded: ${missing.join(', ')}`);
+  if (differs.length) parts.push(`loaded but different from disk: ${differs.join(', ')}`);
+  return fail('rules-loaded', `this session's context is missing pack rules: ${parts.join('; ')}`,
+    'start a new session; if it recurs, the CLAUDE.md import of the rules index is not reaching the harness');
+}
+
 // --- the I/O shell ---------------------------------------------------------
 
 function makeIo(root) {
@@ -244,6 +298,42 @@ export async function runSelfTest(root) {
     probeScheduler(io),
     probeMigrations(migrations),
   ]);
+}
+
+// The expected side is every ACTIVE pack's prose as the session would load it,
+// the copied per-person pack included, which is why the loader runs with `session`.
+export async function runRulesLoaded(root, transcriptPath) {
+  let transcriptText;
+  try { transcriptText = readFileSync(transcriptPath, 'utf8'); } catch (e) {
+    return skip('rules-loaded', `the transcript could not be read: ${e.message}`);
+  }
+  const loaded = readLoadedInstructions(transcriptText);
+  if (loaded === null) return probeRulesLoaded([], null);
+  const corpus = dirname(dirname(fileURLToPath(import.meta.url)));
+  try {
+    const registry = await import(pathToFileURL(join(corpus, 'engine/pack_loader/pack-registry.mjs')).href);
+    let declared = [];
+    try { declared = JSON.parse(readFileSync(settingsPath(root), 'utf8')).packs ?? []; } catch { /* no declaration: only copied packs are active */ }
+    const packs = await registry.loadPacks({ localRoot: root, session: true });
+    const expected = [];
+    for (const pack of packs.filter((p) => registry.isActive(p, { packs: declared }))) {
+      if (!pack.prose) continue;
+      const path = join(pack.dir, pack.prose);
+      let real;
+      try { real = realpathSync(path); } catch { continue; }
+      expected.push({ pack: pack.id, path: real, content: readFileSync(real, 'utf8'), modifiedAt: statSync(real).mtimeMs });
+    }
+    const files = new Map();
+    for (const [p, content] of loaded.files) {
+      let real = p;
+      try { real = realpathSync(p); } catch { /* recorded path no longer on disk: kept as written */ }
+      files.set(real, content);
+    }
+    return probeRulesLoaded(expected, { at: loaded.at, files });
+  } catch (e) {
+    return fail('rules-loaded', `the pack set could not be read to compare against: ${e.message}`,
+      'the engine is broken or half-vendored; re-run the update task');
+  }
 }
 
 // CLI. Default is REPORT-ONLY (exit 0) because the SessionStart orchestrator

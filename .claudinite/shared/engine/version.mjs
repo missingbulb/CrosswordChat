@@ -15,11 +15,11 @@
 // passed the live canary rehearsal once (DESIGN §2.1), and the bump is what declares
 // that happened. An engine migration is written against the version it lands in — it
 // applies to repos below that value.
-export const ENGINE_VERSION = '60902.1';
+export const ENGINE_VERSION = '60928.1';
 
 // THE VERSION FORMAT — how every engine and pack version in the corpus is written,
 // read and ordered. The helpers below are imported by every side that creates a
-// version (each `packs/*/pack.mjs`), stamps one (the update
+// version (each `packs/*/` manifest), stamps one (the update
 // flows), compares two (the update
 // planners, the dashboard, the fleet roster) or scrapes one out of source text over
 // the API. They live beside the constant rather than in a module of their own so the
@@ -121,7 +121,7 @@ export function nextVersion(current, today = new Date()) {
 }
 
 // The version-shaped fragment for the text scrapers — the readers that lift a
-// version out of `engine/version.mjs` or a `pack.mjs` fetched over the API, where
+// version out of `engine/version.mjs` or a pack manifest fetched over the API, where
 // there is nothing to import. Kept here so the six of them cannot disagree about
 // what a version looks like; each wraps it in its own anchor.
 export const VERSION_SOURCE = String.raw`\d+(?:\.\d+)?`;

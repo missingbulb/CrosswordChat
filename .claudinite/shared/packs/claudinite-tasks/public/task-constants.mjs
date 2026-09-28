@@ -6,8 +6,8 @@
 // why additive change is the strongly preferred shape and a rename needs a migration.
 //
 // Values only. The decode and encode over them — the title grammar, the status decode
-// over an item's labels, the body fields' parse and serialize — is
-// `work-item-grammar.mjs`, beside this file.
+// over an item's labels, the body fields' parse and serialize - live in the work-item
+// grammar beside this file.
 
 // The title prefix. Disjoint from the slot mechanism's `[claudinite-task]` on
 // purpose: the two mechanisms coexist per-repo behind `taskScheduler.dispatch`,
@@ -40,7 +40,7 @@ export const STATUS_REJECTED = `${STATUS_PREFIX}rejected`;
 export const LIVE_STATUSES = Object.freeze([
   STATUS_BLOCKED, STATUS_READY, STATUS_RUNNING_EXECUTOR, STATUS_RUNNING_AGENT,
 ]);
-// THE PARK KINDS. A park is ONE label since the flip — `task:status:needs-human-<kind>`
+// THE PARK KINDS. A park is ONE label - `task:status:needs-human-<kind>`
 // — and the kind is what the human is being asked for, which is the whole
 // difference between a queue a person can skim and one they have to read.
 //
@@ -67,12 +67,10 @@ export const STATUS_LABELS = Object.freeze([
 ]);
 
 // THE ORIGIN (docs/PRINCIPLES.md) — who asked for this item, worn for the
-// item's whole life beside whatever status it holds. Read here; the writers arrive
-// with the write-side flip.
+// item's whole life beside whatever status it holds.
 export const ORIGIN_PREFIX = 'task:origin:';
 export const ORIGIN_PLANNED = `${ORIGIN_PREFIX}planned`;
-// The two shapes a person's ask takes, which were one label until the trigger
-// field made them nameable apart (#1725). `manual` is an occurrence of a DECLARED
+// The two shapes a person's ask takes. `manual` is an occurrence of a DECLARED
 // task somebody pulled the lever on — a wake, a hand-created item — so the queue
 // already knows what work it is. `ad-hoc` is somebody's own issue, adopted as
 // itself, which every time runs the same task (`implement-request`) over a
@@ -255,9 +253,8 @@ export const WOKEN_FIELD = 'Woken';
 
 // The three fields a REQUEST item carries (docs/PRINCIPLES.md). `Request` is the issue this
 // run implements — the whole payload, since the request task has no code-work phase
-// to hand one over. `Model` is the family the asker chose, copied here by the scheduler run
-// from a write-gated label and read only by a task that declares
-// `model_from_request`; it is the first thing an item carries that defines
+// to hand one over. `Model` is the family the asker chose, read only by a task that
+// declares `model_from_request`; it is the first thing an item carries that defines
 // behaviour, which is why it is fenced rather than waved through (PRINCIPLES.md).
 export const REQUEST_FIELD = 'Request';
 export const MODEL_FIELD = 'Model';
@@ -270,7 +267,7 @@ export const MODEL_FIELD = 'Model';
 export const TASK_FIELD = 'Task';
 
 // `Merge` is the asker's standing authorization: a POLICY EXPRESSION the run
-// hands to the policy engine (merge-policy.mjs) — `anything`, a `a;b;reject:c`
+// hands to the merge-policy engine - `anything`, a `a;b;reject:c`
 // rule list, or the legacy `if-narrow` (the narrow-diff composite). The run may
 // land its own pull request only on that engine's yes, and must park for
 // approval otherwise. An absent field is the default — never merge — so an item
@@ -322,13 +319,11 @@ export const LAST_VERDICT_HEADING = 'Last verdict';
 // contract rejects at author time any code-work whose declared timeout reaches the
 // executing leash (F17 — a code-work reclaimed while alive livelocks its item).
 //
-// The vendored workflows carry the fourth agreement, and the heartbeat reframed
-// it (PRINCIPLES.md): what must hold is HEARTBEAT INTERVAL < EXECUTING LEASH, so a
-// holder that is alive is never reclaimed, rather than a run cap short enough to
-// kill a hung runner before its claim is reaped. The cap bought the guarantee
-// that a zombie's code-work never ran beside its replacement's; what carries that
-// now is code-work's own re-entrancy requirement, since a partitioned runner can
-// keep working while its beats fail to post.
+// The vendored workflows carry the fourth agreement (PRINCIPLES.md): HEARTBEAT
+// INTERVAL < EXECUTING LEASH, so a holder that is alive is never reclaimed. A
+// zombie's code-work running beside its replacement's is covered by code-work's own
+// re-entrancy requirement, since a partitioned runner can keep working while its
+// beats fail to post.
 
 // A dead executor claim is reclaimed after this much silence — the holder's own
 // silence, measured from its last claim or heartbeat (#924), never the issue's
@@ -351,7 +346,7 @@ export const STUCK_BLOCKED_MS = 2 * 86400e3;
 // `Claudinite-Task: <pack>/<task>` says a scheduled task wrote this commit; the
 // movement terms read it, so the writer classifies its own output and a task added
 // tomorrow is classified correctly on its first run. `Claudinite-Automerge-Policy:
-// <policy>` is the arming trailer the landing lane reads (`src/contract/merge-policy.mjs`).
+// <policy>` is the arming trailer the landing lane reads.
 // A trailer is what survives a squash merge into the default branch, which is the
 // commit the `commits` collector actually reads.
 export const TASK_TRAILER = 'Claudinite-Task';

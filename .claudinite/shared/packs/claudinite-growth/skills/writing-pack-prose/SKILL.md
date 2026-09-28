@@ -1,6 +1,6 @@
 ---
 name: writing-pack-prose
-description: How pack prose is written - RULES.md rules, SKILL.md bodies and check text in a Claudinite pack, local or canon - brevity, structure, triggerability, findability, the marker that names a rule's provenance file. Loaded for any edit of a pack's RULES.md or SKILL.md, and when landing a lesson as prose.
+description: How pack prose is written: brevity, structure, triggerability, the provenance marker, a pack's pitch. Loaded for any edit of a pack's RULES.md, SKILL.md or manifest, and when landing a lesson as prose.
 metadata:
   body: guidelines
   usage:
@@ -8,6 +8,8 @@ metadata:
   force-load-on-file-edits-paths:
     - "**/packs/*/RULES.md"
     - "**/packs/*/skills/*/SKILL.md"
+    - "**/packs/*/pack.json"
+    - "**/packs/*/pack.mjs"
 ---
 
 # Writing pack prose
@@ -106,6 +108,24 @@ forever, whether or not it ever applies — so prose is rationed, and the ration
   teaches a world the reader won't find.
 - **Rewriting an existing rule** — carry the source's own strength forward. A rewrite must not
   weaken a rule, and it must not strengthen one either.
+
+## A pack's pitch
+
+- **Knowing who reads a pitch** - a developer whose repository does not run Claudinite, deciding
+  from this one paragraph on the claudinite.com dashboard whether the pack is worth adopting. No
+  session ever loads it, so it sells the pack rather than instructing anyone.
+
+- **Writing a pitch** - lead with what goes wrong in a repository without the pack, then what
+  the pack changes: its main skills by name and the process it runs by itself. Plain and
+  concrete, with no hype, no commands, no markdown, no links and no paths, inside the manifest's
+  word cap.
+
+- **Counting what a pack carries in its pitch** - in rounded words ("a few", "about a dozen",
+  "dozens"), only for the kinds the pack has, never an exact number: the pitch then survives the
+  pack's growth, and is rewritten only when what the pack is for changes.
+
+- **Pitching a stub pack** - say it starts empty and is where the repository's own lessons
+  about its subject collect; never promise content it does not carry.
 
 ## The provenance log - where a rule's rationale lives
 

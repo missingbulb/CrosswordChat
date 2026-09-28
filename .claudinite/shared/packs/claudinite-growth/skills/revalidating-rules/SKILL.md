@@ -1,6 +1,7 @@
 ---
 name: revalidating-rules
-description: Re-probe the pack rules whose truth lives outside the repository — harness tool contracts, token reach, whether an MCP tool exists, a platform's behaviour — and correct the ones that have gone stale. Use when a revalidation sweep runs over a corpus of packs, or when asked whether a rule's environmental claim still holds.
+description: Re-probe pack rules whose truth lives outside the repository and correct the stale ones. Use on a revalidation sweep, or when asked whether a rule's environmental claim still holds.
+disable-model-invocation: true
 metadata:
   body: workflow
   usage:
@@ -80,8 +81,7 @@ old evidence gets no entry, and the run's pull request body is its record; `rewo
 where the probe corrected the rule. An entry is never edited: a stale reason is answered by a new
 entry. An **empty** file met on the way - an element whose history is not yet written - is filled
 first, from `provenance.mjs history <pack> <element>`, source-first, as the
-[backfilling-provenance](../backfilling-provenance/SKILL.md) skill describes; that is how a
-member's local pack backfills on this cadence with no pass of its own.
+[backfilling-provenance](../backfilling-provenance/SKILL.md) skill describes.
 
 ## Correcting what is stale
 

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { parseFrontmatter, bodyOf } from '../../pack_loader/skill-frontmatter.mjs';
-import { PROSE_FILE, SKILLS_DIR, RULE_DIRS, PROVENANCE_DIR } from '../../pack_loader/pack-conventions.mjs';
+import { PROSE_FILE, SKILLS_DIR, RULE_DIRS, PROVENANCE_DIR, manifestFileIn } from '../../pack_loader/pack-conventions.mjs';
 
 // THE PROVENANCE LOG'S MECHANISM: the file grammar, the marker that binds a prose
 // rule to its file, how a pack's carriers are enumerated and which file each one
@@ -205,10 +205,11 @@ const headingOf = (e) => `${e.date} · ${e.kind} · ${e.title}`;
 //
 // A file the references conversion filled carries a placeholder `born` dated by the
 // conversion write rather than by the element's birth. Where the batch supplies a born
-// dated EARLIER, that placeholder is the thing being corrected, so it is dropped and
-// named in `superseded`; where the placeholder's date is the real birth, no earlier
-// born arrives and it stands. That distinction is read off the dates rather than left
-// to the run, which is why this is the tool's job and not a prompt's (#2223).
+// dated on or before it, that placeholder is the thing being corrected - an earlier
+// date, or the same date verified by hand with the commit behind it - so it is dropped
+// and named in `superseded`; where the batch brings no born, it stands. That
+// distinction is read off the dates rather than left to the run, which is why this is
+// the tool's job and not a prompt's (#2223).
 export function backfilledText(existing, entries, { kinds = KINDS, firstKind = 'born' } = {}) {
   const problems = [];
   for (const e of entries) problems.push(...entryProblems(e, { kinds }));
@@ -221,7 +222,7 @@ export function backfilledText(existing, entries, { kinds = KINDS, firstKind = '
     // Only the conversion's own placeholder is replaced, never an entry somebody wrote:
     // a batch carrying an earlier born would otherwise silently delete real history, and
     // the point of this lane is to correct a date the conversion never knew.
-    if (born && e.kind === 'born' && e.date > born && CONVERTED_TITLE.test(e.title ?? '')) { superseded.push(headingOf(e)); return false; }
+    if (born && e.kind === 'born' && e.date >= born && CONVERTED_TITLE.test(e.title ?? '')) { superseded.push(headingOf(e)); return false; }
     return true;
   });
   const merged = [...keep];
@@ -461,7 +462,7 @@ export function packCarriers(packDir, io) {
     const doc = readJson(io, `${packDir}/${f}`);
     for (const d of doc?.rules ?? []) if (typeof d?.id === 'string') declarations.push({ id: d.id, file: `${packDir}/${f}` });
   }
-  return { rules, guidelines, skills, checks, tasks, declarations, manifest: io.exists(`${packDir}/pack.mjs`) };
+  return { rules, guidelines, skills, checks, tasks, declarations, manifest: manifestFileIn((f) => io.exists(`${packDir}/${f}`)) !== null, manifestFile: manifestFileIn((f) => io.exists(`${packDir}/${f}`)) };
 }
 
 // The provenance files of a pack: id → { file, text, entries, errors, status, empty }.
@@ -551,7 +552,7 @@ export function auditPack(packDir, io) {
   for (const c of carriers.checks) name(elementIdOf(c.id), `check ${c.id}`, { file: c.file, line: null });
   for (const t of carriers.tasks) name(t.id, `task ${t.id}`, { file: t.file, line: null });
   for (const d of carriers.declarations) name(d.id, `declared rule ${d.id}`, { file: d.file, line: null });
-  if (carriers.manifest) name(PACK_ELEMENT, 'the manifest', { file: `${packDir}/pack.mjs`, line: null });
+  if (carriers.manifest) name(PACK_ELEMENT, 'the manifest', { file: `${packDir}/${carriers.manifestFile}`, line: null });
   for (const [id, f] of files) {
     for (const e of f.errors) out.parseErrors.push({ file: f.file, line: e.line, what: e.what });
     for (const e of entryFaults(f.entries)) out.entryFaults.push({ file: f.file, line: e.line, what: e.what });

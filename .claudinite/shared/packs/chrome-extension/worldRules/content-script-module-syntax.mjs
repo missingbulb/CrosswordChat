@@ -113,7 +113,7 @@ function registeredScriptPaths(src) {
 
 const rule = {
   id: 'content-script-module-syntax',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A content script\'s own files carry no static import/export — they are injected as classic scripts',
   doc: 'packs/chrome-extension/RULES.md',
   why: 'static `content_scripts` and `chrome.scripting.registerContentScripts` inject their files as CLASSIC scripts — there is no module mode — so a top-level import throws "Cannot use import statement outside a module" and the script never runs, and the error lands in the host page\'s console rather than the extension\'s, so nothing in your own devtools says why',

@@ -1,22 +1,16 @@
 // The scheduling CALENDAR: the frequency vocabulary and the period arithmetic
-// (docs/PRINCIPLES.md). Pure and stateless. Given a frequency and a `now` it answers
+// Pure and stateless. Given a frequency and a `now` it answers
 // exactly one question, WHEN did that frequency's current period open.
 //
 // THE PERIOD IS THE UTC CALENDAR, and nothing a repo configures (#1995). A day opens
-// at midnight UTC, a week on the Sunday that opened it, a month on its 1st. The
-// retired `taskScheduler` anchor let a repo move those boundaries, which bought
-// nothing any reader could use: its stated purpose was to order members ahead of the
-// canon by an hour, and this repo's own record showed the cron's fire time wandering
-// 68 minutes across one week, wider than the stagger it was supposed to guarantee.
-// What it cost was a seam. Before the configured hour the current period was still
-// yesterday's, so the same run read as consumed at 03:00 and as open at 09:00, and
-// "has it run today" was never the question the term actually answered.
+// at midnight UTC, a week on the Sunday that opened it, a month on its 1st. A
+// configurable boundary buys no ordering the cron's wandering fire time can keep, and
+// costs a seam: before the configured hour the current period is still yesterday's,
+// so the same run reads as consumed at 03:00 and as open at 09:00.
 //
 // There is no occurrence IDENTITY here, and that is the point: under the
 // work-item queue an occurrence is identified by the item's issue number, so the
-// calendar owns the instants and nothing else. `src/items/anchors.mjs` is the only
-// consumer of the arithmetic; the vocabulary below is what the task contract and
-// the author-time declaration check read.
+// calendar owns the instants and nothing else.
 //
 // All times are UTC. This module never reads the clock itself, `now` is always
 // injected, so every answer is deterministic and testable.
@@ -25,8 +19,8 @@
 // against and the author-time declaration check rejects anything outside.
 //
 // `manual` is the one non-cadence: a manual task has no occurrence at all, so the
-// scheduler run never instantiates it and it runs only from an item created by hand
-// (`src/schedule/create-work-item.mjs`, run directly). It exists for operator levers — work that
+// scheduler run never instantiates it and it runs only from an item created by hand.
+// It exists for operator levers - work that
 // answers no recurring question but wants a task's whole apparatus (declaration,
 // contract validation, code-work, the work item) when a human pulls it.
 export const FREQUENCIES = ['daily', 'weekly', 'monthly', 'manual'];
@@ -54,9 +48,8 @@ export function anchorInstant(frequency, now) {
 }
 
 // --- the cadence terms ----------------------------------------------------------
-// How a task states WHEN it runs, inside its own `preconditions`
-// (docs/PRINCIPLES.md): the engine keeps no calendar of its own, so the cadence is one of the
-// task's conditions, read off its own run history at every scheduler tick.
+// How a task states WHEN it runs, inside its own `preconditions`: the engine keeps
+// no calendar of its own, so the cadence is one of the task's conditions, read off its own run history at every scheduler tick.
 //
 //   schedule:at-most-<daily|weekly|monthly>   no run created or closed since this
 //                                             UTC period opened
@@ -101,7 +94,7 @@ export function cadenceOfScheduleArg(arg) {
 export const DUE_TERM = 'due';
 
 // Rewrite every `due:<cadence>` in an expression to the current spelling, in place,
-// leaving everything else byte-identical. Applied by `normalizeTaskDeclaration`.
+// leaving everything else byte-identical.
 export function normalizeCadenceTerms(preconditions) {
   if (!Array.isArray(preconditions)) return preconditions;
   return preconditions.map((entry) => (typeof entry === 'string'
@@ -116,9 +109,8 @@ export function normalizeCadenceTerms(preconditions) {
 }
 
 // The term references an expression carries: each entry split on `||`, each
-// reference `{ name, arg }` with the argument after the first colon. The same
-// grammar precondition-policy.mjs parses, re-spelled here so this module stays
-// import-free; the policy engine's parse is the one that validates.
+// reference `{ name, arg }` with the argument after the first colon. The policy
+// engine's parse of the same grammar is the one that validates.
 const alternativesOf = (entry) => String(entry ?? '').split(ALTERNATIVE_SEPARATOR).map((t) => t.trim()).filter(Boolean)
   .map((t) => { const c = t.indexOf(':'); return c === -1 ? { name: t, arg: null } : { name: t.slice(0, c).trim(), arg: t.slice(c + 1).trim() }; });
 const entriesOf = (preconditions) => (Array.isArray(preconditions) ? preconditions : []).map(alternativesOf);

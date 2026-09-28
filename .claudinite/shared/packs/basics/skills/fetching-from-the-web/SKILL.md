@@ -1,6 +1,6 @@
 ---
 name: fetching-from-the-web
-description: Reading a page or a file from the web in a session — exact bytes over a summarizing fetch, and what a 403 or an egress block means. Use before any WebFetch or curl, and when a fetch is denied.
+description: Reading a page or file from the web: exact bytes over a summary, and what a 403 or egress block means. Use before any WebFetch or curl.
 metadata:
   body: guidelines
   usage:

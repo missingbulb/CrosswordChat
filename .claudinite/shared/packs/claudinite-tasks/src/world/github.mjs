@@ -1,21 +1,21 @@
 // THE GITHUB PORT. Every REST path this pack calls is spelled in this module or in
-// the published client it builds on (`public/github.mjs`), and nowhere else: a
+// the published client it builds on, and nowhere else: a
 // caller names the OPERATION it wants — read this issue, swap this label, merge this
 // pull request — and never the URL that performs it. That is what makes the outward
 // edge countable and replaceable; a module that spelled its own path would be a
 // second GitHub client nothing knows about.
 //
 // The transport is `gh(path) -> { status, json }`, made by the client's `makeGh` and
-// passed to every operation as its first argument. It stays an injected function rather than
-// a bound client because the whole pack tests against a fake `gh`, and because the
-// fleet planner supplies its own reader over a different token.
+// passed to every operation as its first argument. It stays an injected function
+// rather than a bound client because the whole pack tests against a fake `gh`, and
+// because the fleet planner supplies its own reader over a different token.
 //
 // A non-2xx returns `{ status, json: null }` rather than throwing, so a 404 (no
 // release yet, missing file) is data, not an error. Callers that must not mistake
 // a refusal for an answer read the STATUS — a 403 from a repo whose Actions cannot
 // write puts a plausible object where the result should be.
 //
-// LABEL WRITES ARE GRANULAR, ALWAYS (docs/PRINCIPLES.md): add and remove NAMED
+// LABEL WRITES ARE GRANULAR, ALWAYS: add and remove NAMED
 // labels (POST/DELETE), never write the label SET (PUT). A set-write replaces from
 // a stale snapshot and clobbers concurrent transitions — a bug class GitHub's own
 // CLI shipped (cli/cli#4861) — and with a scheduler run and several executors all
@@ -122,7 +122,7 @@ export const removeLabel = (gh, repo, number, name) =>
 // GitHub has no atomic label swap. That is safe because labels are visibility and
 // the pick filter, never the arbiter (the claim comments are); what a torn swap
 // CAN leave is an open item wearing no state label at all, which the repair phase
-// repairs (docs/PRINCIPLES.md).
+// repairs.
 export async function swapLabel(gh, repo, number, from, to) {
   await removeLabel(gh, repo, number, from);
   return addLabel(gh, repo, number, to);
@@ -130,9 +130,9 @@ export async function swapLabel(gh, repo, number, from, to) {
 
 // --- comments -----------------------------------------------------------------
 
-// The ONE sanctioned edit to a comment, and the reason the arbitration record is
-// no longer strictly append-only: an executor striking its OWN claim on the way
-// out (docs/PRINCIPLES.md). Only a claim's author ever edits it, so a claim can be
+// The ONE sanctioned edit to a comment, and the one exception to the arbitration
+// record being append-only: an executor striking its OWN claim on the way out. Only
+// a claim's author ever edits it, so a claim can be
 // withdrawn but never forged earlier, and comment ids still give the total order
 // arbitration reads.
 export const editComment = (gh, repo, commentId, body) =>
@@ -189,7 +189,7 @@ export const listRunsForSha = (gh, repo, sha) =>
 export const latestRelease = (gh, repo) => gh(`/repos/${repo}/releases/latest`);
 
 // A repository Actions variable, answered from the executor's vars bag in the shape the
-// REST read once returned. Kept at this name for a member's local pack that imports it;
+// REST read returns. Kept at this name for a member's local pack that imports it;
 // the API route itself is never asked, because the Actions GITHUB_TOKEN is refused on it
 // in every member (`repo-variables-through-the-bag`).
 export const readRepoVariable = async (_gh, _repo, name, env = actionsEnv()) => {

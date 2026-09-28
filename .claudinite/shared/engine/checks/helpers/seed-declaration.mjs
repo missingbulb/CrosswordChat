@@ -6,12 +6,13 @@ import { writeFileSync, existsSync } from 'node:fs';
 import { buildContext } from './repo-context.mjs';
 import { settingsPath } from '../../settings-file.mjs';
 import { resolveDeclaredPacks } from '../../pack_loader/pack-registry.mjs';
+import { detectsRelevance } from '../../pack_loader/relevance-detector.mjs';
 
 export function seedDeclaration(root, packs) {
   const path = settingsPath(root);
   if (existsSync(path)) return { path, existed: true, declared: null };
   const ctx = buildContext({ root, mode: 'all' });
-  // No pack is active by default, so the baseline is seeded as an explicit
+  // No pack is active by default, so basics is seeded as an explicit
   // declaration alongside the fingerprinted packs: every pack that flags
   // `seededByDefault` is written in (discovered structurally — the engine names
   // no pack), plus the ones a fingerprint detects. A seeded pack is still
@@ -22,7 +23,7 @@ export function seedDeclaration(root, packs) {
   // them from the seeding so a repo that already carries local packs (but
   // no config yet) doesn't auto-declare them.
   const seeded = packs.filter((p) => p.seededByDefault && !p.local).map((p) => p.id);
-  const detected = [...seeded, ...packs.filter((p) => p.detect && !p.local && p.detect(ctx)).map((p) => p.id)];
+  const detected = [...seeded, ...packs.filter((p) => p.relevanceDetector && !p.local && detectsRelevance(p.relevanceDetector, ctx)).map((p) => p.id)];
   // A pack can't be imported without its dependencies — pull each declared pack's
   // `requires` closure into the declaration so it's complete and visible.
   const declared = resolveDeclaredPacks(detected, packs);

@@ -35,7 +35,7 @@
 //   says what it actually looked at.
 //
 // Living in engine/ is what makes it a fleet mechanism rather than a recipe:
-// the engine root vendors wholesale on every converge, so a member's workflow
+// the engine root vendors wholesale on every update, so a member's workflow
 // carries one invocation that never changes, and this logic converges to every
 // member the moment it changes here.
 //

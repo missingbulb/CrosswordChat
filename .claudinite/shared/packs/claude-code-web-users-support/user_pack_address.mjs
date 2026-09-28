@@ -10,11 +10,11 @@
 // `repo` is required, because what a person carries belongs to them rather than to any one
 // project, and a repository is the smallest thing that can hold it for a whole fleet without
 // living inside any member of it. `path` is where the people sit in that repository and
-// defaults to `preferences`. One directory per person, named for their exact identity:
-// `<path>/<email>/`, an ordinary pack directory.
+// defaults to `preferences`. One directory per person, named for their GitHub login in lower
+// case: `<path>/<login>/`, an ordinary pack directory.
 //
 // THE PERMISSION is a separate question with the same answer shape. A session that has no
-// identity, no store, or no person watching has nowhere to copy from and no one to copy for,
+// store, or no person watching has nowhere to copy from and no one to copy for,
 // and every reader needs the same list of reasons: one to stop, the other to say why.
 //
 // Dependency-free and pure. The caller supplies the parsed config and the environment, so
@@ -36,16 +36,16 @@ export function resolveStore(config) {
 
 // Where one person's pack sits inside the store, as a repo-relative directory path. An
 // address only: whether it is read from a working tree or cloned is the caller's business.
-export function packDirFor(store, email) {
-  return `${store.path}/${email}`;
+export function packDirFor(store, login) {
+  return `${store.path}/${login}`;
 }
 
-// Is this string usable as the name of a person's pack? It becomes a path segment and an
-// argument to git, so an implausible one is refused rather than traversed with: `../../x` as
-// an "email" would address an arbitrary directory.
-export const isUsableIdentity = (email) => typeof email === 'string'
-  && /^[^\s/\\]+@[^\s/\\]+$/.test(email)
-  && !email.includes('..');
+// Is this string usable as the name of a person's pack? A GitHub login in lower case: GitHub
+// compares logins case-insensitively and a directory name does not, so the store keeps one
+// spelling. It becomes a path segment and an argument to git, so it is held to GitHub's own
+// rule rather than anything looser: `../../x` as a "login" would address an arbitrary directory.
+export const isUsableIdentity = (name) => typeof name === 'string'
+  && /^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){0,38}$/.test(name);
 
 // Why this session gets no personal pack, in the reader's own words, or null when it should
 // get one. Pure, so the step that says this and the step that acts on it cannot disagree,
@@ -56,15 +56,11 @@ export const isUsableIdentity = (email) => typeof email === 'string'
 // decision, a callout closing every turn) misdirects a run nobody is watching. Only an
 // explicit "not attended" declines, so an older harness that sets nothing still copies.
 export function declineReason(config, env) {
-  const tidy = (s) => String(s).replace(/["\\]/g, '');
   if (!resolveStore(config)) {
     return 'this project declares no store for personal packs (the pack entry\'s "config": { "repo": … })';
   }
   if (env.CLAUDE_CODE_SESSION_ATTENDED === '0') {
     return 'the session is unattended (CLAUDE_CODE_SESSION_ATTENDED=0) and a personal pack is for a present person';
   }
-  const email = env.CLAUDE_CODE_USER_EMAIL || '';
-  if (!email) return 'CLAUDE_CODE_USER_EMAIL is not set';
-  if (!isUsableIdentity(email)) return `CLAUDE_CODE_USER_EMAIL (${tidy(email)}) is not a usable directory name`;
   return null;
 }

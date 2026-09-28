@@ -1,7 +1,7 @@
 // Scheduling wiring: the two workflow files a repo running scheduled work carries, and
-// the per-repo cron they are stamped with. Split from the engine's distribution wiring
-// (engine/converge-wiring.mjs) because their subject is this pack's mechanism — a repo
-// that declares no tasks pack carries neither file (#1317).
+// the per-repo cron they are stamped with. They belong to this pack rather than the
+// engine's distribution wiring because a repo that declares no tasks pack carries
+// neither file.
 //
 // SCAFFOLDED, NEVER CONVERGED. `.github/workflows/` is the one directory a member's
 // nightly may not push to — the Action's own GITHUB_TOKEN is refused there — so these
@@ -9,10 +9,7 @@
 // adopt-pack skill after), and the repo owns them from that moment. That is affordable
 // because their content is static: secrets travel as one fixed line, the cron minute and
 // anchor hours are written once here, and every `run:` names a mount path behind which
-// the code converges nightly.
-//
-// Operates on a repo working tree at `root` with node:fs directly, returning a summary of
-// what it wrote — idempotent: a repo already carrying both files produces an empty list.
+// the code updates nightly.
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -22,12 +19,10 @@ import { loadConfig, ENDPOINTS_KEY } from '../../../../engine/checks/helpers/rep
 import { actionsEnv, repoRoot } from '../world/actions.mjs';
 
 export const SCHEDULER_WORKFLOW = '.github/workflows/claudinite-scheduler.yml';
-// The queue's second workflow (docs/PRINCIPLES.md). The first one keeps the
-// path above: `claudinite-scheduler.yml` holds the scheduler run and its drain, so the repo
-// still has exactly one cron at one well-known path.
+// The queue's second workflow. The scheduler workflow holds both the scheduler run and
+// its drain, so the repo has exactly one cron at one well-known path.
 export const EXECUTOR_WORKFLOW = '.github/workflows/claudinite-executor.yml';
-// Endpoint tokens ride the same rail as a task's declared secrets (PRINCIPLES.md,
-// PRINCIPLES.md): the config maps an endpoint name to a URL and to the NAME of the Actions
+// Endpoint tokens ride the same rail as a task's declared secrets: the config maps an endpoint name to a URL and to the NAME of the Actions
 // secret holding its token, and the stamp puts that name in the executor's env
 // exactly as a `code_work_required_secrets` entry. The executor reads it only at the
 // moment of the invocation call; nothing else in a task's life ever sees it.
@@ -42,7 +37,7 @@ export function endpointTokenSecrets(config) {
 // the converge writes rather than a second opinion of it. This half is the one the
 // `executor-workflow-secrets` check holds a member to: the tasks its packs contribute
 // are what the owner's list is, and an endpoint's token is config rather than a task's
-// declaration (the invocation call names its own missing token, queue/invoke.mjs).
+// declaration (the invocation call names its own missing token).
 export function taskSecretNames(taskDeclarations) {
   return [...new Set(taskDeclarations.flatMap((decl) => decl?.code_work_required_secrets ?? []))].sort();
 }
@@ -52,7 +47,7 @@ export function secretNames(taskDeclarations, config) {
   return [...new Set([...taskSecretNames(taskDeclarations), ...endpointTokenSecrets(config)])].sort();
 }
 
-// The same list, discovered from the tree. Async because task discovery is.
+// The same list, discovered from the tree.
 export async function declaredSecrets(root, config) {
   const { discoverTasks } = await import('../contract/discover.mjs');
   const { tasks } = await discoverTasks(root, config);
@@ -68,15 +63,14 @@ export async function declaredSecrets(root, config) {
 // WHY NOT ONE `toJSON(secrets)` LINE. Because that is what GitHub's
 // malicious-workflow detection flags (#1336): the run parks with zero jobs until a
 // person approves it, which an unattended queue can neither absorb nor notice. The
-// cost this reinstates is real and known — the file becomes a function of the task
-// set again, and `.github/workflows/` is the one path a converge cannot write, so a
+// cost is real and known - the file becomes a function of the task set, and `.github/workflows/` is the one path an update cannot write, so a
 // NEW secret needs a human-merged PR in every member (#1296). That is the trade the
 // owner took: a rare human-merged PR beats a permanent human click on every run.
 //
 // A stub says WHERE with the `# claudinite:secrets` marker. Marker or nothing: the
 // scheduler-run stub carries no marker and must not be stamped — it has two jobs
 // carrying GITHUB_TOKEN and only the executing one may ever see a secret, and its
-// drain dispatches the executor rather than running task code (PRINCIPLES.md).
+// drain dispatches the executor rather than running task code.
 export const SECRETS_MARKER = /^[ \t]*# claudinite:secrets\b.*$/m;
 
 // The env line one secret travels on, and the read of it. The stamp writes these
