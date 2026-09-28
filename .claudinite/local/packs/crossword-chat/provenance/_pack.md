@@ -26,3 +26,9 @@
   scan (`xwd__`) is the project's own `extension-test/unit/arch.test.js`; keeping an empty
   `references.md` - every rule cites the file, REQ or MT that records it.
 - **Landed:** #407 (Closes #396).
+
+## 2026-09-28 · reworded · dropped the retired marker/detect fingerprint fields (#582)
+- **Reason:** legacy-shape-in-use flagged the manifest's `marker`/`detect` fields as a retired
+  fingerprint nothing reads; a local pack is declared by hand, never fingerprinted.
+- **Actor:** claudinite-lifecycle/update task, work item #582.
+- **Landed:** #587

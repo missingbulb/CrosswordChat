@@ -7,7 +7,5 @@ export default {
     belongs: 'CrosswordChat\'s own instances — its adapter paths, NYT-measured behaviours, fixture and REQ ids',
     excludes: 'anything true of another repo — host-page, web-speech and chrome-extension own the general rules',
   },
-  marker: null,
-  detect: null,
   prose: 'RULES.md',
 };
