@@ -11,12 +11,13 @@
 //
 // Every task here writes `.claudinite/local/packs/` and nothing else.
 export default {
-  version: '60924.1',
-  minEngineVersion: '60822.1',
+  version: '60927.2',
+  minEngineVersion: '60925.1',
   ruleRoutingGuidance: {
     belongs: 'authoring Claudinite content here — lesson extraction, dedup, revalidation, conversation logs, skill-usage folding, the task contract',
     excludes: 'this repo\'s Claudinite status — mount, declaration, adoption, update — claudinite-lifecycle; code comments — basics; fleet sweeps — claudinite-fleet-sheepdog',
   },
+  pitch: 'Lets the repo learn from its own work. Scheduled tasks read recent commits, merged pull requests and captured Claude Code conversations for lessons worth keeping, and land them as rules in the repo\'s own packs through pull requests that merge after CI. Other tasks turn testable prose into coded checks, re-verify rules about outside platforms, review which rules actually get used, and prune what the shared library now covers. About a dozen skills carry the method, led by extracting lessons from activity and conversations and converting prose to checks.',
   seededByDefault: true,
   requires: ['claudinite-lifecycle'],
 };

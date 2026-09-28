@@ -110,14 +110,17 @@ try {
 
   // The mounted skills, split by HOW they load: an AUTO-TRIGGER skill carries a
   // `force-load-on-*` trigger, so a hook loads it deterministically at the moment it
-  // names; a REGULAR skill is offered on its description and loaded on judgment.
+  // names; a REGULAR skill is offered on its description and loaded on judgment; a
+  // MANUAL skill is hidden from the model, reached by `/name` or by a task reading it.
   const { skillMetadata } = await import(join(loaderDir, 'skill-frontmatter.mjs'));
   let autoTrigger = 0;
   let regular = 0;
+  let manual = 0;
   for (const dir of bundledSkillSources(active).values()) {
     const m = skillMetadata(dir);
     const triggers = m.forceLoadPaths.length + m.toolCallTriggers.length + m.promptTriggers.length + m.toolResultTriggers.length;
-    if (triggers > 0) autoTrigger += 1;
+    if (!m.modelInvocable) manual += 1;
+    else if (triggers > 0) autoTrigger += 1;
     else regular += 1;
   }
 
@@ -128,6 +131,7 @@ try {
     plural(checks, 'code check'),
     plural(autoTrigger, 'auto-trigger skill'),
     plural(regular, 'regular skill'),
+    ...(manual ? [plural(manual, 'manual skill')] : []),
   ];
 
   // Whatever the active packs' steps said about themselves, in the order the

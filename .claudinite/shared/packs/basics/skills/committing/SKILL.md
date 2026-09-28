@@ -1,6 +1,6 @@
 ---
 name: committing
-description: How a commit is cut — one concern per commit, the issue it references, a landed commit revised only by a new one, files staged by name. Use before any git commit.
+description: How a commit is cut: one concern per commit, the issue it references, files staged by name. Use before any git commit.
 metadata:
   body: guidelines
   usage:

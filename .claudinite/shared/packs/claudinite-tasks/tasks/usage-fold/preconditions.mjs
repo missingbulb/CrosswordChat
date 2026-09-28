@@ -1,6 +1,6 @@
-// tasks-usage-fold's own precondition term.
+// The machinery half's precondition term.
 //
-// The fold's trigger is MOVEMENT IN THE MACHINERY — a scheduler tick or an executor
+// That half's trigger is MOVEMENT IN THE MACHINERY — a scheduler tick or an executor
 // run that this file has not counted yet — and no built-in term can say that: every
 // movement condition reads the project's commits, issues, pull requests and
 // captures, and a repo whose only activity is its own queue is silent by all four.
@@ -19,17 +19,18 @@
 
 import { readFileSync } from 'node:fs';
 import { mostRecentAnchor } from '../../src/items/anchors.mjs';
-import { decodeTasksUsageFile, TASKS_USAGE_PATH } from '../../src/items/tasks-usage-format.mjs';
+import { decodeTasksUsageFile, TASKS_USAGE_PATH, LEGACY_TASKS_USAGE_PATH } from '../../src/items/tasks-usage-format.mjs';
 
 // The mark the last fold left, read from the checkout the run holds. Null for a repo
 // that has never folded — which is movement by definition, since everything its
 // machinery has ever done is unread.
 export function foldedThroughAt(root) {
-  try {
-    return decodeTasksUsageFile(JSON.parse(readFileSync(`${root}/${TASKS_USAGE_PATH}`, 'utf8'))).runsFoldedThrough;
-  } catch {
-    return null;
+  for (const path of [TASKS_USAGE_PATH, LEGACY_TASKS_USAGE_PATH]) {
+    try {
+      return decodeTasksUsageFile(JSON.parse(readFileSync(`${root}/${path}`, 'utf8'))).runsFoldedThrough;
+    } catch { /* not at this path - the file may not have moved yet */ }
   }
+  return null;
 }
 
 export const terms = {

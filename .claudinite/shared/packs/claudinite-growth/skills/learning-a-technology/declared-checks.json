@@ -1,7 +1,7 @@
 [
   {
     "id": "technology-skill-cites-dated-sources",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-10",
     "failureMessage": "a technology skill is trusted as verified by every session that loads it, so one that names no dated source and no verification record cannot be told from one written from memory",
     "scanFiles": "/(^|\\/)skills\\/[^/]+\\/SKILL\\.md$/",
@@ -23,7 +23,7 @@
   },
   {
     "id": "technology-skill-links-inside-its-folder",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-10",
     "failureMessage": "a technology skill is promoted by lifting its folder into another pack, and a link out of that folder dangles the moment it lands",
     "scanFiles": "/(^|\\/)skills\\/[^/]+\\/SKILL\\.md$/",
@@ -39,7 +39,7 @@
   },
   {
     "id": "technology-skill-code-imports-inside-its-folder",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-10",
     "failureMessage": "a technology skill's code travels with its folder, and an import that reaches outside it breaks silently wherever the folder lands",
     "scanFiles": "/(^|\\/)skills\\/[^/]+\\/[^/]+\\.(md|mjs|cjs|js)$/",

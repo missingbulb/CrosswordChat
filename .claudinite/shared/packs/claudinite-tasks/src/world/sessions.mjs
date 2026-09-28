@@ -1,6 +1,5 @@
 // Agent invocation (docs/PRINCIPLES.md). The executor starts the
-// agent session with an API CALL rather than by arming a label event, which is
-// what retires the re-arm, the grace window and the transport dance — and what
+// agent session with an API CALL rather than by arming a label event, which
 // makes a lost hand-off a synchronous, visible failure at the executor instead of
 // a label event fired into the void.
 //
@@ -8,8 +7,7 @@
 // into every consuming repo, so it must never carry deployment detail or anything
 // adjacent to a credential: `invocation_endpoint: 'fleet'` names a key, and the
 // repo's own config maps that key to a URL and to the NAME of the repo Actions
-// secret holding its token. That indirection is also what replaces the whole
-// self/fleet apparatus — reach is a property of which endpoint you call, so a
+// secret holding its token. Reach is then a property of which endpoint you call, so a
 // task needing wider access names a different endpoint and nothing else in the
 // system needs a concept of scope.
 //
@@ -25,9 +23,8 @@ export const DEFAULT_ENDPOINT = 'default';
 
 // The endpoint is a ROUTINE'S API TRIGGER — `POST /v1/claude_code/routines/
 // <trigger-id>/fire` with a per-routine bearer token — which is what Claude Code
-// on the web actually exposes to an HTTP caller. Three consequences the design's
-// "a CCR API call" did not spell out, each verified against the routines docs
-// rather than assumed:
+// on the web actually exposes to an HTTP caller. Three consequences, each verified
+// against the routines docs rather than assumed:
 //
 //  - THE BEHAVIOR IS THE ROUTINE'S STORED PROMPT, not ours. `text` reaches the
 //    session wrapped in a `<routine-fire-payload>` block explicitly labelled
@@ -39,13 +36,12 @@ export const DEFAULT_ENDPOINT = 'default';
 //  - THE BODY CARRIES ONE FIELD. `text` is freeform and unparsed — structured
 //    JSON would arrive as a literal string — so the item number and nonce go in
 //    as prose, and nothing else goes in at all.
-//  - THERE IS NO IDEMPOTENCY KEY (standing entry 11, answered: the endpoint
-//    offers none), which is exactly why THIS MODULE CALLS ONCE PER ITEM AND NEVER
+//  - THERE IS NO IDEMPOTENCY KEY (the endpoint offers none), which is exactly why THIS MODULE CALLS ONCE PER ITEM AND NEVER
 //    RETRIES. A retry is only safe when you know the first call did nothing, and
 //    a client-side timeout is the one case where you cannot know — the session
 //    may well have started. Retrying there is what would make invocation
 //    at-least-once and put two sessions on one item; declining to retry is what
-//    keeps it at-most-once and lets the whole agent-side claim protocol delete.
+//    keeps it at-most-once.
 //    An outcome we did not learn is reported as UNKNOWN and resolved by the agent
 //    leash, which is a rule that already exists, rather than by a guess here.
 //
@@ -106,11 +102,9 @@ export function agentInvoker({ repo, config, env = process.env, fetchImpl = fetc
       // fails silently, the task just doesn't work yet, and the item names what to
       // fix (PRINCIPLES.md).
       //
-      // WHAT WAS OBSERVED, AND BOTH CAUSES. The first version asserted "the secret
-      // is not set in this repo", which this code cannot see: on the member that
-      // wedged in #1296 the secret was set the whole time and the executor workflow
-      // simply never passed it. The reader believed the message, went to the Secrets
-      // page, found it present, and had nowhere to go next.
+      // The message names both causes because this code cannot tell them apart: a
+      // secret set in the repo but never passed by the executor workflow reads as
+      // empty here exactly like an unset one (#1296).
       return { ok: false, answered: true, error: `\`${endpoint.tokenEnv}\`, the token for invocation endpoint "${endpoint.name}", is empty in this job. Either the repository secret is not set, or \`.github/workflows/claudinite-executor.yml\` does not pass it — check that this repo's executor workflow names it under the \`# claudinite:secrets\` marker — a workflow whose list has not caught up with the endpoint's \`tokenSecret\` is the usual cause, and only a human-merged PR moves that file` };
     }
 

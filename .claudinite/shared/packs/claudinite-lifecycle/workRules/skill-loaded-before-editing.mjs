@@ -12,7 +12,7 @@ import * as scoped from '../../../engine/pack_loader/path-scoped-skills.mjs';
 // diff: did the session load the skill each changed path is scoped to.
 const rule = {
   id: 'skill-loaded-before-editing',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A file a skill forces itself for (force-load-on-file-edits-paths) changed, or a tool call one forces itself for (force-load-on-tool-calls) ran, in a session that never loaded that skill',
   doc: 'engine/pack_loader/path-scoped-skills.mjs',
   scope: 'work',

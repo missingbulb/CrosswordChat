@@ -1,6 +1,7 @@
 // The one Stop command a consumer's .claude/settings.json wires. The settings
 // file must be as clean as possible and change as seldom as possible (#385), so
-// this address is the stable contract. It gates — fast-exiting when the session
+// this address is the stable contract. Once per session it first runs the
+// self-test's rules-loaded probe (../selftest.mjs). It then gates, fast-exiting when the session
 // changed nothing — then runs the WORK sweep (../checks/check_the_work.mjs: the
 // rules judging this change, with the session transcript) and blocks the stop
 // (exit 2) while blocking findings remain, feeding them back into the session.
@@ -21,6 +22,48 @@ const workRunner = join(dirname(fileURLToPath(import.meta.url)), '..', 'checks',
 
 const git = (...a) => spawnSync('git', a, { cwd: projectRoot, encoding: 'utf8' });
 
+// Claude Code passes the hook's input JSON on stdin; its transcript_path is what
+// lets the conversation-surface rules see the session. A manual run (TTY, or no
+// parseable input) simply runs without them — they self-skip on a null transcript.
+let transcriptPath = null;
+try {
+  if (!process.stdin.isTTY) {
+    const input = readFileSync(0, 'utf8');
+    if (input.trim()) transcriptPath = JSON.parse(input).transcript_path ?? null;
+  }
+} catch { /* no usable hook input — conversation rules self-skip */ }
+
+// Once per session, and BEFORE the fast path, since a first turn that only answered a
+// question changes nothing: did the harness put every active pack's rules in front of
+// the model? The first stop that finds it did not blocks, so the session says so while
+// the owner is there to start another; every later stop only advises, because nothing
+// inside the session can repair its own context.
+if (transcriptPath) {
+  const stateFile = join(
+    tmpdir(),
+    `claudinite-rules-loaded-${createHash('sha256').update(transcriptPath).digest('hex').slice(0, 12)}.json`
+  );
+  let judged = null;
+  if (existsSync(stateFile)) {
+    try { judged = JSON.parse(readFileSync(stateFile, 'utf8')); } catch { /* unreadable: judge again */ }
+  }
+  if (judged === null) {
+    const { runRulesLoaded } = await import('../selftest.mjs');
+    const probe = await runRulesLoaded(projectRoot, transcriptPath);
+    hooklog('Stop', `rules-loaded ${probe.ok === true ? 'pass' : probe.ok === null ? `skip (${probe.detail})` : 'FAIL'}`);
+    writeFileSync(stateFile, JSON.stringify(probe));
+    if (probe.ok === false) {
+      process.stderr.write(
+        `Claudinite rules-loaded self-test failed: ${probe.detail}. Tell the owner this session is running without those rules before anything else, and: ${probe.fix}. This blocks once; later stops only advise.\n`
+      );
+      hooklog('Stop', 'done exit=2 rules-not-loaded');
+      process.exit(2);
+    }
+  } else if (judged.ok === false) {
+    console.log(`claudinite: ${judged.detail}. ${judged.fix}`);
+  }
+}
+
 // Fast path: nothing changed vs the base and the tree is clean → stay silent.
 const status = git('status', '--porcelain');
 let dirty = status.status === 0 && status.stdout.trim() !== '';
@@ -33,17 +76,6 @@ if (!dirty) {
   }
 }
 if (!dirty) process.exit(0); // clean fast path — nothing ran, nothing to log
-
-// Claude Code passes the hook's input JSON on stdin; its transcript_path is what
-// lets the conversation-surface rules see the session. A manual run (TTY, or no
-// parseable input) simply runs without them — they self-skip on a null transcript.
-let transcriptPath = null;
-try {
-  if (!process.stdin.isTTY) {
-    const input = readFileSync(0, 'utf8');
-    if (input.trim()) transcriptPath = JSON.parse(input).transcript_path ?? null;
-  }
-} catch { /* no usable hook input — conversation rules self-skip */ }
 
 hooklog('Stop', 'start checks');
 const run = spawnSync(process.execPath, [workRunner, ...(transcriptPath ? ['--transcript', transcriptPath] : [])], {

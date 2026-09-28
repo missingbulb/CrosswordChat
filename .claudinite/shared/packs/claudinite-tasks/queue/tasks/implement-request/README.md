@@ -2,8 +2,6 @@
 
 ## Why the declaration reads as it does
 
-Carried over from the declaration's comments when it became `task.json`.
-
 The request implementer (docs/PRINCIPLES.md) — the engine's one built-in
 task, and the only one that may read an item's `Model`.
 
@@ -31,7 +29,7 @@ becomes the item's `Merge:` field (PRINCIPLES.md), a policy expression the worke
 hands to the policy engine, and the task ceiling must not sit below whatever
 an asker may legitimately authorize. A ceiling is a maximum, not an
 instruction: with no such field the worker opens a pull request and parks at
-the approval lane exactly as every request did before, and with one it still
+the approval lane, and with one it still
 parks whenever the policy engine says the diff is not covered.
 A run that died mid-flight leaves a branch, a PR, or neither, and only a person
 can say whether the half-done work stands — so nothing re-queues it mechanically.

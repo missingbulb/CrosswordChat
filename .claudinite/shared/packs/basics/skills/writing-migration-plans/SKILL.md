@@ -1,6 +1,6 @@
 ---
 name: writing-migration-plans
-description: How a plan's phases are ordered so nothing stalls mid-run. Use BEFORE writing any DESIGN.md, migration plan, phased implementation plan, rollout or cutover plan (including the moment you are about to create a docs/<initiative>/ file), when asked to run a plan as a chain of ad-hoc tasks, and when working through a plan's tracking issue.
+description: How a plan's phases are ordered so nothing stalls mid-run. Use before writing any DESIGN.md, migration, rollout or phased plan, or when working through a plan's tracking issue.
 metadata:
   body: workflow
   usage:
@@ -93,7 +93,7 @@ Approval of the stack is approval of the stack: it does not extend to a fix auth
 (basics' *Acting on an approval to merge, ship or proceed*).
 
 **3. Execution steps — a chain, not a checklist.** Once phase zero has landed the setup and the
-approved stack has begun merging, the remaining steps run the migration: force the converge,
+approved stack has begun merging, the remaining steps run the migration: force the update,
 backfill the members, watch the cutover, merge the gated PR, retire the shim. If the first two
 sorts were done properly there is no *approval* gate among them — but there is almost always a
 **wait**, because each step's precondition is the previous step's effect becoming observable
@@ -229,7 +229,7 @@ the change made sense — so the plan states it and the link's brief repeats it.
 per link, at plan time, and record the answers in the tracking issue:
 
 - **How many PRs.** Sort the coding steps into *phases* and *divisions*. A phase has an exit its
-  successor waits on — a fold field that must accumulate through the nightly converge before a
+  successor waits on — a fold field that must accumulate through the nightly update before a
   page can read it, a stub a member must carry. A division is only labour, and could ship in any
   order. One PR per phase; group divisions that share a pack, and split them where one's failing
   test would hold the other hostage. One PR for everything spends one approval but stalls on any

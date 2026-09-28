@@ -1,6 +1,6 @@
 ---
 name: working-with-generated-files
-description: Working with a file a test or tool generates — naming it, changing the generator rather than the file, and resolving its merge conflicts by regenerating. Loaded for any edit of a GENERATED file.
+description: Working with a generated file: naming it, changing the generator rather than the file, resolving conflicts by regenerating. Loaded for any edit of a GENERATED file.
 metadata:
   body: guidelines
   usage:

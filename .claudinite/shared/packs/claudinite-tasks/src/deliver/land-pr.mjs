@@ -1,26 +1,22 @@
 // Land a task's delivered pull request under the REPO's delivery settings — the
-// single home for the auto-merge nuances every PR-delivering task shares. These
-// helpers were built inside the baselining worker (#455/#565/#649/#677/#690);
-// they live here because the other landing tasks hit the identical failure
-// shapes (an arm rejected "clean status" on an ungated base stranding a green PR
-// forever), and two copies of this precedence is exactly the drift the corpus
-// forbids.
+// single home for the auto-merge nuances every PR-delivering task shares: every
+// landing task hits the identical failure shapes (an arm rejected "clean status"
+// on an ungated base stranding a green PR forever), and two copies of this
+// precedence would drift.
 //
 // The contract that keeps tasks simple: a task declares only its outcome CEILING
-// (`automerge` — what it MAY land; merge-policy.mjs owns whether a granular
+// (`automerge` - what it MAY land; the merge-policy engine owns whether a granular
 // policy covers the actual diff). Whether the PR actually
 // lands unreviewed is the MEMBER REPO's call — `dailyClaudiniteUpdatesRequirePrReview`
 // in its settings file, where `true` degrades every authorized landing to review
 // (member config wins, docs/PRINCIPLES.md). Tasks stay
 // unaware of that setting by construction: they hand their PR to landDelivery()
-// (directly, or through deliver-generated.mjs) and the repo-shape nuances stay
-// here:
+// and the repo-shape nuances stay here:
 //
 //   - `review` member          → the PR is opened and LEFT — never armed, never merged.
 //   - no pull_request CI at all → MERGE directly. GitHub's auto-merge is a queue
 //     for checks; with nothing to queue behind, the arm is rejected ("Pull
-//     request is in clean status") every time, and while that rejection was
-//     swallowed a repo that asked for auto-merge got no merge at all.
+//     request is in clean status") every time.
 //   - CI present, but the base branch REQUIRES nothing → the arm is equally
 //     doomed (same clean-status rejection, #677): skip it, wait for this run's
 //     own dispatched evidence, and land on it (verify-then-merge).
@@ -38,8 +34,8 @@
 // the same thing — a nuance changed here changes there in the same commit.
 //
 // DISPOSING of a previous run's pull request is NOT here: which pull request a run
-// works on — reuse it, supersede it, land it — is the executor's single decision
-// (`queue/target.mjs`), and `pullDisposition` below is the predicate it judges with.
+// works on - reuse it, supersede it, land it - is the executor's single decision,
+// and `pullDisposition` below is the predicate it judges with.
 
 import { taskTrailer } from '../../public/work-item-grammar.mjs';
 import { restCall, graphqlCall } from '../world/github.mjs';
@@ -137,11 +133,10 @@ export function deliveryForText(text) {
 // guard), so the delivery starts the PR's checks itself: dispatch every workflow
 // that WOULD have run on pull_request and CAN be dispatched.
 //
-// "Suppresses" is only half true, and the other half is #455/#205/#95: on some
-// members GitHub CREATES the pull_request run and parks it at `action_required`
-// awaiting an approval nobody clicks. The dispatch above still supplies the real
-// green, but the parked run is what auto-merge refuses over — which is why
-// arming is not the end of the story and pullDisposition exists.
+// On some members GitHub does CREATE the pull_request run and parks it at
+// `action_required` awaiting an approval nobody clicks (#455). The dispatch still
+// supplies the real green, but the parked run is what auto-merge refuses over -
+// which is why arming is not the end of the story and pullDisposition exists.
 //
 // Reading the triggers is a best-effort TEXTUAL scan of a workflow's top-level
 // `on:` block (no YAML parser in the corpus). It covers the shapes workflows
@@ -191,13 +186,12 @@ export function ciDispatchPlan(files) {
 // ciDispatchPlan, POST a dispatch per selected workflow, and log every outcome —
 // a silent no-checks PR is exactly the failure mode this exists to close. Needs
 // the scheduler workflow's `actions: write` (a read-only token 403s the POST
-// silently — the store-release lesson).
+// silently).
 // Returns { dispatch, missing, started }: `dispatch`/`missing` are the PLAN
 // (what the tree says should run), `started` the dispatches GitHub actually
 // accepted (204). The landing poll must wait only on `started` — a POST that
-// 403'd (the scheduler workflow missing `actions: write`, the canon's own copy
-// on 2026-08-08) starts nothing, and counting the plan had the poll waiting for
-// a run that could never come.
+// 403'd starts nothing, and counting the plan would have the poll waiting for
+// a run that can never come.
 export async function dispatchCiRuns({ token, repo, branch, log = console.log }) {
   const ref = encodeURIComponent(branch);
   const { json: dir } = await gh(token, `/repos/${repo}/contents/.github/workflows?ref=${ref}`);
@@ -255,9 +249,7 @@ export function pullCreateError(status, json) {
 //
 // GitHub's auto-merge is a QUEUE FOR CHECKS. On a repo with no PR CI there is
 // nothing to queue behind: the mutation is rejected ("Pull request is in clean
-// status"), and since the failure was swallowed the PR sat open forever — a repo
-// that asked for `auto-merge` got no merge at all. Seven of twelve consumers were
-// in exactly that shape (no `pull_request` trigger anywhere in .github/workflows).
+// status"), so a repo that asked for `auto-merge` would get no merge at all.
 //
 // So: no CI to wait for → MERGE IT, which is what `auto-merge` meant all along.
 //
@@ -267,7 +259,7 @@ export function pullCreateError(status, json) {
 // appear. That is a fact about the tree, not a race against checks registering.
 //
 // `gate` is what the BASE BRANCH requires (classifyMergeGate) — the thing
-// GitHub's auto-merge actually queues behind. CI existing was the wrong
+// GitHub's auto-merge actually queues behind. CI existing is not the
 // predicate (#677): on an unprotected base the PR is mergeable the whole time
 // its checks run, so `enablePullRequestAutoMerge` is rejected "clean status"
 // every cycle no matter how green — arming there is doomed, and the delivery
@@ -376,8 +368,8 @@ export function failureSummary(runs) {
 
 // --- landing THIS run's PR when the arm could not (#649) ----------------------
 // On a member whose pull_request run is gated, EVERY arm fails; deferring to the
-// next cycle's disposal put a standing ~24h offset between a task's output and
-// that member's main. The evidence that settles it does not take a day to
+// next cycle's disposal would put a standing ~24h offset between a task's output
+// and that member's main. The evidence that settles it does not take a day to
 // arrive: the dispatched run this delivery just started concludes in minutes at
 // worst. So we wait for it, once, and merge on exactly the reasoning disposal
 // uses. Same decision, made now.
@@ -385,22 +377,17 @@ export function failureSummary(runs) {
 // Bounded and cheap because it only runs where the arm ALREADY failed (or was
 // skipped as doomed): a healthy member arms and returns without waiting at all.
 //
-// TWO BOUNDS, because the poll waits on two different things and one number
-// answered both wrongly (#1026). Nothing VISIBLE is the short case: a dispatch
-// that has registered no run is a dispatch that may never register one, so
-// waiting long buys nothing. A run we can see EXECUTING is the opposite — the
-// evidence is on its way and the only question is whether the prework budget
-// outlasts it. Collapsed into one 180s bound, a member whose slowest check took
-// 3m29s had its green PR abandoned 26s short every cycle and landed a day late
-// by the next cycle's disposal, which is exactly the offset #649 closed.
+// TWO BOUNDS, because the poll waits on two different things (#1026). Nothing
+// VISIBLE is the short case: a dispatch that has registered no run is a dispatch
+// that may never register one, so waiting long buys nothing. A run we can see
+// EXECUTING is the opposite - the evidence is on its way and the only question is
+// whether the code-work budget outlasts it.
 //
-// The in-flight bound is ceilinged by the PREWORK budget it spends, not by what
-// CI might take: the shortest `prework_timeout` among the tasks that land their
-// own PR is 600s, and the poll is the tail of a prework that has already
-// converged a tree and opened a PR. 300s leaves that preamble its room. A member
-// whose CI outruns even this still lands next cycle — but now it SAYS so
-// (failureSummary below), where before the give-up was indistinguishable from a
-// red repo.
+// The in-flight bound is ceilinged by the code-work budget it spends, not by what
+// CI might take: the poll is the tail of a code-work that has already converged a
+// tree and opened a PR, and must leave that preamble its room. A member whose CI
+// outruns even this still lands next cycle, and says so (failureSummary) rather
+// than reading as a red repo.
 export const LAND_TIMEOUT_MS = 180_000;
 export const LAND_INFLIGHT_TIMEOUT_MS = 300_000;
 export const LAND_POLL_MS = 5_000;
@@ -414,14 +401,16 @@ export const LAND_POLL_MS = 5_000;
 // therefore leaves its PR open for the next run (or a human) to dispose of.
 // `expected` is how many verification runs THIS delivery dispatched on the head
 // seconds ago. Fewer visible runs than that is the API still registering them —
-// a POLL, never a verdict. Without it, the first read 0.3s after the dispatch
-// found an empty list and judged "nothing will ever verify this", stranding
-// seven members' green PRs in one forced fleet pass (2026-08-07).
+// a POLL, never a verdict: a read moments after the dispatch finds an empty list.
+// A run parked at `action_required` is not one this delivery started: GitHub can
+// register a held pull_request run before the dispatched one, and counting it would
+// meet `expected` early and judge a PR whose real run has not appeared (#861).
 export function landAttempt({
   delivery, runs, expected = 0, elapsedMs = 0,
   timeoutMs = LAND_TIMEOUT_MS, inflightTimeoutMs = LAND_INFLIGHT_TIMEOUT_MS,
 }) {
-  if ((runs ?? []).length < expected) return elapsedMs >= timeoutMs ? 'give-up' : 'poll';
+  const visible = (runs ?? []).filter((r) => r && r.conclusion !== 'action_required');
+  if (visible.length < expected) return elapsedMs >= timeoutMs ? 'give-up' : 'poll';
   const disposition = pullDisposition({ delivery, runs });
   if (disposition === 'merge') return 'merge';
   // `wait` is precisely "a run is not `completed`" — the seen-it-executing case,

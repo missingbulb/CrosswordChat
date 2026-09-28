@@ -20,12 +20,17 @@
 // tree already says — so by the time a manifest reaches this spec, `id`, `prose`,
 // `badge` and `skills` are present whether or not the author wrote them.
 import { isDeclaredVersion } from '../version.mjs';
+import { validateRelevanceDetector } from './relevance-detector.mjs';
 
 // The routing budget. Both sides of `ruleRoutingGuidance` become one row of the
 // pack catalog (packs/directory.GENERATED.md), which a session reads when deciding
 // which pack owns a piece of content — so the cap keeps a row scannable: enough for
 // a boundary and a pointer to the pack that owns the other side.
 export const MAX_ROUTING_WORDS = 20;
+
+// The pitch budget. A pitch is the paragraph a repo that does not run Claudinite reads
+// when a dashboard says the pack would fit it: one paragraph, so it stays read.
+export const MAX_PITCH_WORDS = 100;
 
 // The two conformance scopes. A rule's scope is its PLACEMENT on the manifest —
 // `worldRules` audit repo state, `workRules` judge the change and session in
@@ -88,8 +93,12 @@ export const PACK_FIELDS = {
   ruleRoutingGuidance: { required: true, describe: 'what belongs in this pack and what does not, each at most 20 words', valid: isPlainObject },
   badge: { describe: 'the pack badge filename, resolved off the pack directory — badge.svg by convention where one is present', valid: (v) => typeof v === 'string' },
   hidden: { describe: 'whether the pack is withheld from the adoptable-pack catalog (packs/directory.GENERATED.md) — for a pack that exists to serve the corpus itself rather than to be adopted', valid: (v) => typeof v === 'boolean' },
-  detect: { describe: 'a fingerprint predicate over the repo context, or null', valid: (v) => v === null || typeof v === 'function' },
-  marker: { describe: 'a human-readable glob naming what detect looks for, or null', valid: (v) => v === null || typeof v === 'string' },
+  pitch: { describe: `what adopting the pack gains a repo, in one paragraph of at most ${MAX_PITCH_WORDS} words for a reader who does not run Claudinite: its main skills and process gains, and rough counts rather than exact ones, so the paragraph outlives the pack's growth`, valid: (v) => typeof v === 'string' && v.trim() !== '' },
+  relevanceDetector: { describe: 'the fingerprint as data - { about, paths, text?, search? } (relevance-detector.mjs) - or null', valid: (v) => v === null || (typeof v === 'object' && !Array.isArray(v)) },
+  // @legacy-tolerance advisory:legacy-shape-in-use retire:#2374
+  detect: { describe: 'the retired fingerprint function; nothing reads it, and a local pack drops it', valid: (v) => v === null || typeof v === 'function' },
+  // @legacy-tolerance advisory:legacy-shape-in-use retire:#2374
+  marker: { describe: 'the retired fingerprint description; nothing reads it, and a local pack drops it', valid: (v) => v === null || typeof v === 'string' },
   prose: { describe: 'the filename injected at session start, or null — RULES.md by convention where one is present, so declare it only to name another file or to suppress it', valid: (v) => v === null || typeof v === 'string' },
   seededByDefault: { describe: 'whether bootstrap --init seeds this pack everywhere', valid: (v) => typeof v === 'boolean' },
   requires: { describe: 'pack ids this pack depends on, resolved when the declaration is written', valid: isStringArray },
@@ -148,6 +157,12 @@ export function validateManifest(mod, { label, skillDirs = [] } = {}) {
       }
     }
   }
+
+  if (typeof mod.pitch === 'string' && wordCount(mod.pitch) > MAX_PITCH_WORDS) {
+    err(`pitch is ${wordCount(mod.pitch)} words, over the ${MAX_PITCH_WORDS}-word cap`, `cut it to ${MAX_PITCH_WORDS} words, since it is one paragraph a newcomer reads`);
+  }
+
+  if ('relevanceDetector' in mod) for (const what of validateRelevanceDetector(mod.relevanceDetector ?? null)) err(what, 'see engine/pack_loader/relevance-detector.mjs for the shape');
 
   // A rule's scope is where it is declared; the manifest is the authority. A
   // rule module may still carry `scope` for the dispatch seam that reads it off

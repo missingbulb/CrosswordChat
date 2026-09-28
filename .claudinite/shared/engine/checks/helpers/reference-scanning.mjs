@@ -6,7 +6,7 @@ import { normPrefix, under } from './path-containment.mjs';
 // folders (`from`) from referencing another (`to`); the engine finds every
 // crossing reference. Mechanism only, like every helper here: the edges are
 // POLICY and arrive as data — a declared check's `forbidReferences` entries
-// (pattern-rules.mjs), or the baseline pack's per-repo config rule and its
+// (pattern-rules.mjs), or the basics pack's per-repo config rule and its
 // pack-manifest contribution seam — and every failure text beyond the
 // composed crossing message stays with the declaration.
 //
@@ -15,7 +15,7 @@ import { normPrefix, under } from './path-containment.mjs';
 // bare filename) only counts when it *resolves to a real tracked path* inside the
 // barred folder. An English word that merely happens to be a folder's name never
 // resolves, so it never fires — no per-language parser, no allowlist of file
-// types, and near-zero false positives. The baseline pack's barrier guide documents
+// types, and near-zero false positives. The basics pack's barrier guide documents
 // the edge vocabulary, including the reference forms this does not resolve.
 // (One deliberate exception: with `matchNames: true` an edge opts into matching
 // the bare *names* of its barred folders — restricted to distinctive names so
@@ -637,7 +637,7 @@ const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Run the given edges over the context. Returns { findings, stale }: the crossing
 // findings that survive each edge's reviewed exceptions, plus the stale exception
 // pairs the caller may surface as prune-me findings (gated on a whole-repo sweep).
-// `rule` supplies id / severity / doc. Every crossing finding carries the resolved
+// `rule` supplies id / on_fail / doc. Every crossing finding carries the resolved
 // path as `resolved`; config-shape findings (empty glob) do not.
 //
 // The per-context scan state — the repo index, each file's split lines and
@@ -864,7 +864,7 @@ export function specFinding(rule, { what, fix }) {
     what: `barriers config: ${what}`,
     why: 'a malformed barrier declaration silently enforces nothing',
     fix,
-    severity: 'blocking',
+    on_fail: 'block',
   });
 }
 

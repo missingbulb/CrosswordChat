@@ -18,7 +18,7 @@ const RESTORES = /^[^#\n]*\bgit\s+(?:checkout|switch)\s+main\b/m;
 
 const rule = {
   id: 'task-worker-restores-main',
-  severity: 'blocking',
+  on_fail: 'block',
   since: '2026-09-06',
   description:
     'a local task worker that commits or pushes returns the checkout to `main` first',

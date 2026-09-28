@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "dashboards": {
+    "claudinite-growth": {
+      "path": ".claudinite/shared/packs/claudinite-growth/dashboard.json",
+      "declaration": {
+        "$schema": "../claudinite-dashboard/dashboard-descriptor.schema.json",
+        "widgets": [
+          {
+            "id": "usage-findings",
+            "kind": "window",
+            "label": "usage findings",
+            "noun": "findings",
+            "glyph": "◎"
+          },
+          {
+            "id": "usage-newest",
+            "kind": "list",
+            "label": "newest findings",
+            "glyph": "◎"
+          }
+        ],
+        "repo": [
+          "usage-findings",
+          "usage-newest"
+        ],
+        "fleet": {
+          "member": "usage-findings"
+        }
+      }
+    },
+    "git-github": {
+      "path": ".claudinite/shared/packs/git-github/dashboard.json",
+      "declaration": {
+        "$schema": "../claudinite-dashboard/dashboard-descriptor.schema.json",
+        "widgets": [
+          {
+            "id": "stars",
+            "kind": "stat",
+            "label": "stars",
+            "noun": "stars",
+            "glyph": "★",
+            "source": "repo-stars"
+          }
+        ],
+        "repo": [
+          "stars"
+        ],
+        "fleet": {
+          "member": "stars"
+        }
+      }
+    }
+  }
+}

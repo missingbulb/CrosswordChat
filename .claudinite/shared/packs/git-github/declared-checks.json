@@ -1,7 +1,7 @@
 [
   {
     "id": "gha/secrets-in-job-if",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "secrets are not available in a job-level if:, so the condition cannot evaluate and the job fails instead of skipping",
     "scanFiles": "/^(?:\\.github\\/workflows|packs\\/[^/]+\\/stubs\\/workflows)\\/[^/]+\\.ya?ml$/",
     "scanTracked": true,
@@ -17,7 +17,7 @@
   },
   {
     "id": "gha/run-pipefail",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "GitHub's implicit run shell is bash -e without pipefail, so a failing piped command still shows the step green",
     "fix": "add defaults.run.shell: bash (workflow- or job-level) so the step runs with -o pipefail",
     "scanFiles": "/^(?:\\.github\\/workflows|packs\\/[^/]+\\/stubs\\/workflows)\\/[^/]+\\.ya?ml$/",
@@ -40,7 +40,7 @@
   },
   {
     "id": "gha/checkout-submodules",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "checkout does not fetch submodules by default, so any gate reading submodule content passes vacuously",
     "relevantWhen": { "pathExists": ".gitmodules" },
     "scanFiles": "/^(?:\\.github\\/workflows|packs\\/[^/]+\\/stubs\\/workflows)\\/[^/]+\\.ya?ml$/",
@@ -56,7 +56,7 @@
   },
   {
     "id": "gha/scheduled-failure-escalation",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "nobody watches an unattended run — a red schedule/workflow_run/repository_dispatch run reaches no one",
     "scanFiles": "/^\\.github\\/workflows\\/[^/]+\\.ya?ml$/",
     "scanTracked": true,
@@ -71,7 +71,7 @@
   },
   {
     "id": "gha/label-create-before-add",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "--add-label fails when the label does not exist yet — GitHub will not create it on demand",
     "scanFiles": "/^(?:\\.github\\/workflows|packs\\/[^/]+\\/stubs\\/workflows)\\/[^/]+\\.ya?ml$/",
     "scanTracked": true,
@@ -86,7 +86,7 @@
   },
   {
     "id": "gha/unique-automation-branch",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "a date-keyed branch collides with itself on a repeat run for the same key",
     "scanFiles": "/^(?:\\.github\\/workflows|packs\\/[^/]+\\/stubs\\/workflows)\\/[^/]+\\.ya?ml$/",
     "scanTracked": true,
@@ -101,7 +101,7 @@
   },
   {
     "id": "gha/pages-artifact-symlinks",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "upload-pages-artifact tars with --dereference and fails on the dangling .claude/skills/* symlinks, blocking every deploy",
     "relevantWhen": {
       "trackedFileMatches": "/^\\.claude\\/skills\\//",
@@ -123,7 +123,7 @@
   },
   {
     "id": "gha/no-scheduled-fleet-executor",
-    "severity": "blocking",
+    "on_fail": "block",
     "failureMessage": "a second cron competes with the one schedule the repo is meant to have — the per-repo scheduler, which owns every recurring Claudinite job",
     "scanFiles": "/^\\.github\\/workflows\\/[^/]+\\.ya?ml$/",
     "scanTracked": true,
@@ -146,7 +146,7 @@
   },
   {
     "id": "gha/cron-minute-off-the-hour",
-    "severity": "advisory",
+    "on_fail": "advise",
     "failureMessage": "a cron on a round minute is the firing GitHub's scheduler queue most often delays or silently drops, since every repo's cron lands there at once",
     "fix": "move the minute to a single fixed literal in :10–:50, clear of the :00 stampede and the hour boundary",
     "scanFiles": "/^(?:\\.github\\/workflows|packs\\/[^/]+\\/stubs\\/workflows)\\/[^/]+\\.ya?ml$/",
@@ -163,7 +163,7 @@
   },
   {
     "id": "issue-labels-overwrite",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "failureMessage": "issue_write's labels field replaces the issue's whole label set, so naming one label silently drops every other",
     "guardToolCalls": [
@@ -177,7 +177,7 @@
   },
   {
     "id": "pull-request-head-unqualified",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-06",
     "scope": "action",
     "failureMessage": "a bare branch name in list_pull_requests' head filter does not filter — it can hand back an unrelated PR as a match, with no error",
@@ -193,7 +193,7 @@
   },
   {
     "id": "codeload-tarball-fetch",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-06",
     "scope": "action",
     "failureMessage": "codeload.github.com is a different host from github.com and a sandbox proxy commonly denies it while git operations against the same repo work",
@@ -209,7 +209,7 @@
   },
   {
     "id": "search-code-lower-bound",
-    "severity": "advisory",
+    "on_fail": "advise",
     "scope": "action",
     "failureMessage": "search_code's index can lag and silently undercount — one fleet-wide sweep found 3 of 11 affected repos through it — with no error or partial-result flag",
     "guardToolCalls": [
@@ -224,7 +224,7 @@
   },
   {
     "id": "branch-from-bare-main",
-    "severity": "blocking",
+    "on_fail": "block",
     "since": "2026-09-16",
     "scope": "action",
     "failureMessage": "a sandboxed checkout's local `main` can sit pinned stale, so branching from it by bare name rather than `origin/main` can silently start from frozen history",

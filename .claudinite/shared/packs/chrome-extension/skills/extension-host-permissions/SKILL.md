@@ -1,6 +1,6 @@
 ---
 name: extension-host-permissions
-description: Getting a content script onto third-party pages without an install-time host warning — optional_host_permissions, chrome.permissions.request inside a user gesture, dynamic registration, and reconciling the grant on every worker start. Use when a content script must run on arbitrary sites, or when editing a manifest's permissions.
+description: Running a content script on third-party pages without an install-time host warning. Use when a content script must run on arbitrary sites, or when editing a manifest's permissions.
 metadata:
   body: guidelines
   usage:

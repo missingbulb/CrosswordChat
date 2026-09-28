@@ -45,10 +45,9 @@ const FETCH_WINDOW_MS = 5 * 60_000;
 // A remote-tracking base ref is only as fresh as the last fetch, and a cloud session's
 // clone freezes it at container-creation time — so every commit the base branch gained
 // since lands inside `mergeBase..HEAD` and gets billed to the work. That is a wrong
-// verdict, not a stale one: the delta rules (squash-merge-history above all, a *blocking*
-// rule) report other people's commits as introduced by this change, and `--changed`
-// widens to files the change never touched. Refreshing the ref once per run is what makes
-// "the work" mean the work.
+// verdict, not a stale one: the delta rules report other people's commits as introduced by
+// this change, and `--changed` widens to files the change never touched. Refreshing the
+// ref once per run is what makes "the work" mean the work.
 //
 // Best-effort by construction — no network, no remote, a lock held, a slow server: the
 // fetch fails or times out and the run continues against the ref as it stands, exactly as
@@ -158,14 +157,14 @@ function vendoredSet(root, files) {
 // outside this set is a typo or a stale name — a settings error as real as invalid
 // JSON, caught at load so it can't silently change nothing. Per-pack parameters
 // live on that pack's own `packs` entry as `config`; the top-level `packConfig` key
-// they came from was folded by the `pack-entry-config` baseline migration
+// they came from was folded by the `pack-entry-config` migration record
 // (engine/migrations/) and stopped being read on #1640's window, so a straggler now
 // gets that unknown-setting error.
 // `engineVersion` is the engine version this repo's mount holds, written by the
 // update flows; a pack's installed version sits on that pack's own entry. Both were
 // a nested `claudinite` block until #1252, alongside an `updated` datetime and a
 // `ref` — those two held the provenance of the last FULL re-vendor rather than of
-// this mount, so a member converging nightly read as months stale, and nothing may
+// this mount, so a member updating nightly read as months stale, and nothing may
 // judge freshness by them any more because they no longer exist.
 // `dailyClaudiniteUpdatesRequirePrReview` is the harsh override: true leaves this
 // repo's daily update PR open for a human. Absent — the normal shape — means it
@@ -202,7 +201,7 @@ const KNOWN_CONFIG_KEYS = [...CONFIG_KEYS, ...LEGACY_CONFIG_KEYS];
 // The predicate this module used to own, kept ONLY for the pack-lane window. The engine
 // and a pack reach a member on separate cycles, so every member spends a window holding
 // this engine beside a pack version that still imports `isDormant` from here — and a
-// missing export there is a crash mid-converge, in the flow that would have delivered
+// missing export there is a crash mid-update, in the flow that would have delivered
 // the fix.
 //
 // It reads the retired top-level key and nothing else, which is exactly right for the
@@ -223,7 +222,7 @@ const SCHEDULE_KEYS = ['dailyHour', 'weeklyDay', 'monthlyDay', 'dispatch', 'agen
 // periods, and the scheduler workflow's own cron hours are derived from the repo name
 // at scaffold, so nothing reads these three. They stay ACCEPTED rather than becoming
 // unknown keys, because an unknown key is a blocking settings error and every member
-// still carries them until its own converge runs the record that strips them out;
+// still carries them until its own update runs the record that strips them out;
 // `legacy-shape-in-use` is the advisory that tells each holder, and #2181 takes them
 // off SCHEDULE_KEYS once the record has had its window.
 // @legacy-tolerance advisory:legacy-shape-in-use retire:#2181
@@ -279,7 +278,7 @@ export const PACK_ENTRY_KEYS = ['id', 'version', 'config', 'answers', 'rules', '
 // downstream lookup — packEntries, the packConfig view — keys by the pack's
 // own id whichever form the file used), `rules` and `accept` are the top-level
 // and per-entry settings merged (an entry-sourced acceptance carries
-// `pack: <id>` as provenance; conflicting severity overrides are a settings
+// `pack: <id>` as provenance; conflicting on_fail overrides are a settings
 // error), and `packConfig` is the per-pack parameter view, built from each
 // entry's `config`. Checks and env machinery
 // read this one shape regardless of which form the file used.
@@ -345,7 +344,7 @@ export function loadConfig(root) {
     }
     if (entry.rules !== undefined) {
       if (entry.rules !== null && typeof entry.rules === 'object' && !Array.isArray(entry.rules)) normalized.rules = entry.rules;
-      else badShape('rules', 'an object of per-rule severity overrides');
+      else badShape('rules', 'an object of per-rule overrides ("off", "advise" or "block")');
     }
     if (entry.accept !== undefined) {
       if (Array.isArray(entry.accept)) normalized.accept = entry.accept;
@@ -364,19 +363,19 @@ export function loadConfig(root) {
 
   // --- rules: top-level and per-entry merged; a conflict is a settings error,
   // never a silent last-writer-wins — two packs (or a pack and the top level)
-  // disagreeing about a rule's severity is a decision the project must make.
+  // disagreeing about a rule's on_fail is a decision the project must make.
   const rules = {};
   const ruleSource = {};
   const mergeRules = (overrides, source) => {
-    for (const [ruleId, severity] of Object.entries(overrides)) {
-      if (ruleId in rules && rules[ruleId] !== severity) {
+    for (const [ruleId, value] of Object.entries(overrides)) {
+      if (ruleId in rules && rules[ruleId] !== value) {
         errors.push({
-          what: `rule "${ruleId}" is set to "${rules[ruleId]}" by ${ruleSource[ruleId]} and "${severity}" by ${source}`,
+          what: `rule "${ruleId}" is set to "${rules[ruleId]}" by ${ruleSource[ruleId]} and "${value}" by ${source}`,
           fix: 'make the overrides agree, or keep the rule on one of them',
         });
         continue;
       }
-      rules[ruleId] = severity;
+      rules[ruleId] = value;
       ruleSource[ruleId] = source;
     }
   };
@@ -624,6 +623,7 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
   // and each readBase is otherwise a git subprocess.
   const readCache = new Map();
   const readBaseCache = new Map();
+  const baseTree = once(() => (mergeBase() ? lines(gitTry(root, 'ls-tree', '-r', '--name-only', mergeBase())) : []));
 
   // The work-scoping fields are accessors over the memos above; `root`, `mode`,
   // `baseRef`, `tracked`, `untracked` and `config` stay plain values, being either
@@ -670,6 +670,35 @@ export function buildContext({ root, mode = 'changed', baseOverride = null, tran
       if (!mergeBase()) return null;
       if (!readBaseCache.has(path)) readBaseCache.set(path, gitTry(root, 'show', `${mergeBase()}:${path}`));
       return readBaseCache.get(path);
+    },
+
+    // Every path at the scoping base, in one subprocess where asking readBase path by
+    // path costs one each; empty if no base resolves.
+    listBase() { return baseTree(); },
+
+    // Fill readBase's cache for many paths in one subprocess. A caller about to read
+    // a whole tree at the base pays one `cat-file --batch` instead of a `show` per file.
+    prefetchBase(paths) {
+      if (!mergeBase()) return;
+      const want = [...new Set(paths)].filter((p) => !readBaseCache.has(p) && !p.includes('\n'));
+      if (!want.length) return;
+      const r = spawnSync('git', ['cat-file', '--batch'], {
+        cwd: root, input: want.map((p) => `${mergeBase()}:${p}\n`).join(''), maxBuffer: 1024 * 1024 * 1024,
+      });
+      if (r.status !== 0) return;
+      const out = r.stdout;
+      let at = 0;
+      for (const path of want) {
+        const eol = out.indexOf(10, at);
+        if (eol < 0) return;
+        const header = out.toString('utf8', at, eol);
+        at = eol + 1;
+        const m = /^[0-9a-f]+ (\w+) (\d+)$/.exec(header);
+        if (!m) { if (header.endsWith(' missing')) readBaseCache.set(path, null); continue; }
+        const size = Number(m[2]);
+        if (m[1] === 'blob') readBaseCache.set(path, out.toString('utf8', at, at + size));
+        at += size + 1;
+      }
     },
 
     // Added lines of one file relative to the scoping base (untracked file = every line).

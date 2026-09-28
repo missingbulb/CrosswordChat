@@ -1,7 +1,7 @@
 // The parse both of the executor's bags share.
 //
 // The executor hands its job's contexts to task code as JSON in a single environment
-// variable — one bag for `secrets` (secrets-bag.mjs), one for `vars` (vars-bag.mjs).
+// variable - one bag for `secrets`, one for `vars`.
 // What the two do with a parsed bag differs sharply, which is why they are separate
 // modules; how a bag is READ does not, which is why that part lives here rather than
 // twice.

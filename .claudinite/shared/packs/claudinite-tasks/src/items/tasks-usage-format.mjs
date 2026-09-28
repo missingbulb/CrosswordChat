@@ -1,6 +1,6 @@
-// The ON-DISK SHAPE of `.claudinite/local/tasks-usage.GENERATED.json` — what the
+// The ON-DISK SHAPE of `.claudinite/usage/task-runs-and-costs.json` — what the
 // machinery cost and how well it ran, as opposed to what the repo's SESSIONS did,
-// which is `usage-format.mjs`'s file beside it.
+// which is the session usage file's.
 //
 // TWO FILES, NOT ONE, and the split is by SOURCE rather than by subject. The session
 // fold's numbers come out of captured transcripts and a handful of listings; these
@@ -32,11 +32,14 @@ import { ALL_RUN_PHASES } from './run-record.mjs';
 
 export const TASKS_USAGE_VERSION = 1;
 
-// Where the file lives, spelled once. Under `.claudinite/local/` because that is the
-// repo-owned area the vendoring refresh never touches, and `merge=ours` reaches it
-// through the mount's own `.gitattributes`, whose `*GENERATED*` pattern the engine
-// converges — so this file needs no attributes line of its own.
-export const TASKS_USAGE_PATH = '.claudinite/local/tasks-usage.GENERATED.json';
+// Where the file lives, spelled once: `.claudinite/usage/`, beside the repo's other
+// rolling records. Rolling, not regenerated - each fold starts from the last - so its
+// name carries no GENERATED and no merge attribute resolves a conflict by dropping a side.
+export const TASKS_USAGE_PATH = '.claudinite/usage/task-runs-and-costs.json';
+// Where it lived before. Read as the prior state until the file has moved, and moved by
+// the delivery rather than dropped.
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#2323
+export const LEGACY_TASKS_USAGE_PATH = '.claudinite/local/tasks-usage.GENERATED.json';
 
 // The queue's own outcome words, spelled here for the same reason the session file
 // spells them: this pack and the engine land on separate cycles, so a NEW engine

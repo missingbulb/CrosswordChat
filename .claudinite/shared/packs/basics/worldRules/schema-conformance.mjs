@@ -17,7 +17,7 @@ import * as jsonSchema from '../../../engine/checks/helpers/json-schema.mjs';
 // point at no repo-relative schema.
 const rule = {
   id: 'schema-conformance',
-  severity: 'blocking',
+  on_fail: 'block',
   since: '2026-09-04',
   description: 'Every JSON document whose $schema is a repo-relative path satisfies that schema',
   doc: 'engine/checks/README.md',

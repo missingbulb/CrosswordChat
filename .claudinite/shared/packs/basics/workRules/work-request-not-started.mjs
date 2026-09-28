@@ -32,7 +32,7 @@ const WORK_CLASSES = ['correction', 'feature', 'process-change'];
 
 const rule = {
   id: 'work-request-not-started',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A reply that classified the owner\'s comment as work must be followed by work — a session ending with no tool call at all has not started it',
   doc: 'packs/basics/RULES.md',
   scope: 'work',

@@ -7,8 +7,7 @@ import { join } from 'node:path';
 // pack does not do that". The id repeated the directory name; `badge` and `prose`
 // named the two files beside the manifest; `skills`, `worldRules` and `workRules`
 // listed subdirectory and module contents the loader can read for itself; and
-// `detect: null, marker: null` said, in two lines per pack, that a pack carries no
-// fingerprint. A field with exactly one correct value is not a declaration; it is
+// `relevanceDetector: null` said that a pack carries no fingerprint. A field with exactly one correct value is not a declaration; it is
 // a line every author copies and every reviewer skips.
 //
 // So this is the manifest's DEFAULT LAYER and `pack.mjs` states only what neither
@@ -55,7 +54,7 @@ export const RULE_DIRS = ['worldRules', 'workRules'];
 // already means by "not fingerprinted" — the declaration is authoritative and the
 // drift check stands down in both directions — so silence resolves to it rather
 // than to `undefined`, and no reader has to handle a third state.
-const UNFINGERPRINTED = { detect: null, marker: null };
+const UNFINGERPRINTED = { relevanceDetector: null };
 
 // The skill directory names a pack bundles: every subdirectory of `<pack>/skills/`.
 // A SKILL.md is NOT required here — a directory may carry only a skill's checks —

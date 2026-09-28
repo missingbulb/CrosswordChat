@@ -3,14 +3,14 @@
 // conventions - layout, naming, gates, kinds, gallery, determinism - shared by
 // every project that runs its spec as tests.
 export default {
-  version: '60922.1',
-  minEngineVersion: '60822.1',
+  version: '60927.2',
+  minEngineVersion: '60927.1',
   ruleRoutingGuidance: {
     belongs: 'running a numbered spec as tests: dev/requirements layout, requirement ids, kinds, coverage and gallery gates, determinism rules',
     excludes: 'doc-first judgment, owner-owned expecteds and honest-gap tracking — spec-driven-product; general test practice — basics writing-tests',
   },
-  marker: 'dev/requirements/requirements.md',
-  detect: (ctx) => ctx.tracked.includes('dev/requirements/requirements.md'),
+  pitch: 'Turns the repo\'s requirements document into a spec that runs as tests. Every requirement line gets a case in a standard layout, and the project\'s own gates prove each one is covered and that rendered outputs stay byte-stable. Three skills do the authoring work: writing a requirement leaf and picking its case kind, writing a saga that captures a multi-step story as a golden storyboard, and making rendered expected outputs deterministic. A couple of rules and a check keep the case layout consistent.',
+  relevanceDetector: { about: 'dev/requirements/requirements.md', paths: /^dev\/requirements\/requirements\.md$/ },
   questions: [
     {
       id: 'ui_testing',

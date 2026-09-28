@@ -1,4 +1,4 @@
-// The ON-DISK SHAPE of `.claudinite/local/usage.GENERATED.json` — the file this task
+// The ON-DISK SHAPE of `.claudinite/usage/sessions-and-elements.json` — the file this task
 // writes, and the only thing that reads it back is this task's next run.
 //
 // It lives here, beside the fold, because the shape is this task's own business.
@@ -38,17 +38,16 @@ import { PARK_KINDS } from '../../public/task-constants.mjs';
 
 export const USAGE_VERSION = 4;
 
-// The queue's own outcome words — what `outcomeOf`
-// (packs/claudinite-tasks/queue/work-item.mjs) decodes a closed work item to, plus `none`
-// for one that closed wearing no outcome label at all.
+// The queue's own outcome words - what `outcomeOf` decodes a closed work item to, plus
+// `none` for one that closed wearing no outcome label at all.
 //
 // Spelled here rather than imported from the engine, unlike the two task
 // vocabularies above it: those symbols are long fielded, while a NEW engine export
 // would not be — the engine and this pack land in separate PRs on separate cycles,
 // so every member spends a window holding an older engine beside this pack, and a
 // pack that fails to load fails the whole mount's self-test. The drift guard is a
-// test instead: `fold-usage.test.mjs` drives the real `outcomeOf` over every outcome
-// label and fails if this list stops matching what it can return.
+// test instead, driving the real `outcomeOf` over every outcome label and failing if
+// this list stops matching what it can return.
 export const QUEUE_OUTCOMES = Object.freeze(['done', 'delivered', 'obsolete', 'none']);
 
 // The counter vocabularies, each in the order its tuple spells them. This is the
@@ -85,7 +84,7 @@ export const USAGE_FIELDS = Object.freeze({
   // merely printed at it.
   checkFindings: Object.freeze(['blocking', 'advisory', 'sessions', 'persisted', 'relent']),
   // Keyed by SKILL. Why the skill's body entered the session, in the order
-  // corpus-use.mjs's LOAD_CAUSES spells them - `voluntary` is the session
+  // LOAD_CAUSES spells them - `voluntary` is the session
   // reaching for it, every other slot names the thing that made it load.
   skillLoadsBy: Object.freeze([
     'voluntary', 'blockedEdit', 'blockedCall', 'resultTrigger', 'promptTrigger', 'command', 'read',
@@ -136,8 +135,8 @@ export const CAPTURE_DAY_FIELDS = Object.freeze([
   'captures', 'merges', 'sessions', 'userMessages', 'userCommands',
 ]);
 
-// The week field each day field folds into. Same name throughout except the two the
-// week spells differently, and `days`, which counts rows rather than summing one.
+// The week field each day field folds into. Same name throughout except
+// `sessionDays`, and `days`, which counts rows rather than summing one.
 export const WEEK_FROM_DAY = Object.freeze({ sessionDays: 'sessions' });
 
 // The row's sub-maps that carry a counter TUPLE per key — the ones a vocabulary is

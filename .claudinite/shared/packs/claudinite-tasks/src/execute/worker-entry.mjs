@@ -1,9 +1,9 @@
-// THE RUNNER'S OWN ENTRY POINT for a task declaring `code_worker_mjs` (owner,
-// 2026-09-22). The runner already owns the subprocess - it builds the command, sets
+// THE RUNNER'S OWN ENTRY POINT for a task declaring `code_worker_mjs`. The runner
+// already owns the subprocess - it builds the command, sets
 // the environment, bounds the run and echoes the output - so it owns the entry point
 // too, and a worker module holds the work and nothing else.
 //
-// What every raw `code_work` worker re-implemented, and what lives here once:
+// What every worker would otherwise re-implement, and what lives here once:
 //
 //   - THE PARAMETERS BAG. The CLAUDINITE_* environment is read here and handed over
 //     as data, so a module never touches `process.env` and can be called directly
@@ -73,15 +73,11 @@ export function workerParams(env, taskDir) {
     branch: text('CLAUDINITE_TARGET_BRANCH'),
     pr: number('CLAUDINITE_TARGET_PR'),
   };
-  // Every line this run prints, under the task's own name and its item. Fourteen
-  // workers built this same expression for themselves; the runner knows all three
-  // parts of it.
   const log = (s) => console.log(`${task ?? 'task'}${item.number ? ` [#${item.number}]` : ''}: ${s}`);
   const bag = {
     root,
-    // The executor always sets `CLAUDINITE_REPO`; the runner's own variable is the
-    // fallback every raw worker wrote for itself, kept so the bag answers the same
-    // question outside a code-work run as inside one.
+    // The executor always sets `CLAUDINITE_REPO`; the runner's own variable lets the
+    // bag answer the same question outside a code-work run as inside one.
     repo,
     defaultBranch: text('CLAUDINITE_DEFAULT_BRANCH'),
     pack,
@@ -96,11 +92,9 @@ export function workerParams(env, taskDir) {
     // few that build a remote URL out of it.
     token,
     // THE REST CLIENT, READY. There is no run in which one cannot be built - the
-    // executor's workflow sets `GITHUB_TOKEN` unconditionally - so a worker that
-    // checked for the token before making its own was guarding a case that does not
-    // occur. A client on a DIFFERENT credential is a different object and stays the
-    // worker's own: `FLEET_GITHUB_TOKEN` is a declared secret that really can be
-    // missing, and the fleet's own `makeGh` says so in the terms of its whole grant.
+    // executor's workflow sets `GITHUB_TOKEN` unconditionally - so a worker need not
+    // check for the token. A client on a DIFFERENT credential stays the worker's own:
+    // `FLEET_GITHUB_TOKEN` is a declared secret that really can be missing.
     gh: makeGh({ token }),
     log,
     // Where the runner collects the job summary a person reads on the run's page.
@@ -108,8 +102,6 @@ export function workerParams(env, taskDir) {
     stepSummary: text('GITHUB_STEP_SUMMARY'),
     // What this task authorizes to land unreviewed, as the trailer's own expression,
     // for a worker that writes the arming trailer onto a commit it pushes itself.
-    // Read off the declaration beside the module rather than imported from it - three
-    // workers were loading their own `task.json` for this one string.
     automerge: policyExpression(decl.automerge),
     // THE GENERATED-FILE DELIVERY, with everything the runner already knows filled
     // in. A caller passes what is its own - the files, the title, the body, the
@@ -123,11 +115,8 @@ export function workerParams(env, taskDir) {
   return bag;
 }
 
-// What the runner binds into a worker's `deliver`: the checkout, the repository, the
-// base branch, the token, the branch and pull request the executor resolved, the task
-// that is writing, and the run's logger. Named rather than inlined because ONE of them
-// cannot be checked by reading the call: the task id was a hand-written
-// `'<pack>/<task>'` literal at every delivery, and a rename leaves that literal stale
+// What the runner binds into a worker's `deliver`. Bound here rather than written at
+// each delivery because a hand-written `'<pack>/<task>'` id goes stale on a rename
 // with no error at all - the commit stops reading as machinery and starts waking every
 // movement-gated task in the repo.
 export const deliveryArguments = ({ root, repo, defaultBranch, token, target, pack, task, log }) => ({

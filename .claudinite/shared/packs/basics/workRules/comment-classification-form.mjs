@@ -43,7 +43,7 @@ function bareDeclaration(text) {
 
 const rule = {
   id: 'comment-classification-form',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'The `Comment class:` line must carry the class alone — every class token on it is declared, however the line phrases them',
   doc: 'packs/basics/RULES.md',
   scope: 'work',

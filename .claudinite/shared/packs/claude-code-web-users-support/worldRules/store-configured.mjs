@@ -12,7 +12,7 @@ import { resolveStore } from '../user_pack_address.mjs';
 // state legitimately for a while. It is a nudge with the fix in it.
 const rule = {
   id: 'preferences-store-configured',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'A declared claude-code-web-users-support pack names a store its session-start step can read',
   doc: 'packs/claude-code-web-users-support/RULES.md',
   why: 'a declared pack with no store injects nobody\'s preferences and says so only in a fail-soft note nobody reads twice',

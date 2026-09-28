@@ -44,16 +44,15 @@ export function runActivePackRules(ctx, packs, { includeRule, onContributeError 
   // questions) — checks run synchronously and can't re-discover packs themselves.
   ctx.packs = packs;
   const activePacks = packs.filter((p) => isActive(p, ctx.config));
-  for (const pack of activePacks) {
-    const contributed = contributedRules(pack, activePacks,
-      onContributeError ? (e) => onContributeError(pack, e) : null);
-    for (const rule of [...(pack.rules ?? []), ...(pack.skillChecks ?? []), ...contributed]) {
-      if (!includeRule(rule)) continue;
-      if (ctx.config.rules[rule.id] === 'off') continue;
-      const started = timings ? performance.now() : 0;
-      findings.push(...runRule(rule, ctx));
-      if (timings) timings.push({ id: rule.id, ms: performance.now() - started });
-    }
+  const planned = activePacks.flatMap((pack) => [
+    ...(pack.rules ?? []), ...(pack.skillChecks ?? []),
+    ...contributedRules(pack, activePacks, onContributeError ? (e) => onContributeError(pack, e) : null),
+  ]).filter((rule) => includeRule(rule) && ctx.config.rules[rule.id] !== 'off');
+  ctx.plannedRules = planned;
+  for (const rule of planned) {
+    const started = timings ? performance.now() : 0;
+    findings.push(...runRule(rule, ctx));
+    if (timings) timings.push({ id: rule.id, ms: performance.now() - started });
   }
   return findings;
 }

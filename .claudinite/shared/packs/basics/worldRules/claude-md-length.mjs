@@ -6,7 +6,7 @@
 //
 // Coded rather than declared: the declaration language matches lines within one file,
 // and this assertion is a sum over a set of files that only reading the first one
-// names. The check kept its id when it moved off `maxLines`: `usage.GENERATED.json`
+// names. The check kept its id when it moved off `maxLines`: `sessions-and-elements.json`
 // stores its finding counts under that name, and a rename would read the series as
 // ending rather than continuing.
 import { dirname, join, normalize } from 'node:path';
@@ -68,7 +68,7 @@ function importedTree(ctx, entry) {
 
 const rule = {
   id: 'claude-md-length',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'Everything CLAUDE.md pulls into the window, counted together, stays under the context budget',
   why: 'every session in the repo pays for the whole import tree before it reads a line of the work, and the file that names it is often one line long',
 

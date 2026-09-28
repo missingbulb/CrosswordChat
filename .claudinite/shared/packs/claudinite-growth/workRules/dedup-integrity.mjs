@@ -42,7 +42,7 @@ const DEDUP_RUN = /\bdedup\b|\bcanon now (?:covers|owns)\b/i;
 
 const rule = {
   id: 'dedup-prune-integrity',
-  severity: 'blocking',
+  on_fail: 'block',
   scope: 'work',
   doc: 'packs/claudinite-growth/skills/growth-dedup/SKILL.md',
   description: 'A dedup edit only removes portable text — it never grows a local pack or re-imports a canon rule into it',

@@ -1,6 +1,6 @@
 ---
 name: write-a-requirement-leaf
-description: How a requirement leaf is written in the executable spec — the backtick-numbered one-liner with its detail collapsed under it, and which kind (surface snapshot, behavior, logic, saga, per-project, e2e singleton) its case takes. Use when adding or reshaping a requirement line in requirements.md.
+description: How a requirement leaf is written in the executable spec, and which kind its case takes. Use when adding or reshaping a requirement line in requirements.md.
 metadata:
   body: workflow
   usage:

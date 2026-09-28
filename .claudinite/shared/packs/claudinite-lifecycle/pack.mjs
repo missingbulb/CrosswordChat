@@ -13,12 +13,13 @@
 // exist. Both run outside any check, because activation reads the literal
 // declaration.
 export default {
-  version: '60924.1',
-  minEngineVersion: '60822.1',
+  version: '60927.2',
+  minEngineVersion: '60925.1',
   ruleRoutingGuidance: {
     belongs: 'using Claudinite itself — the vendored mount, the pack declaration, bootstrapping, adopting packs, the self-refresh update',
     excludes: 'working discipline and the task lifecycle — basics; authoring Claudinite content, scheduled tasks included — claudinite-growth; git — git-github',
   },
+  pitch: 'The groundwork that keeps the system itself correct in a repo. Its two skills adopt the whole setup and add individual packs, each with its adoption questions and scaffolding. A scheduled update task brings the repo to the current engine and pack versions through a tested pull request, and another adopts packs the repo has been asked to take on. About a dozen rules and more than a dozen checks stop sessions from editing vendored files in place or assuming a pack is active when it was never declared.',
   seededByDefault: true,
   // The consumer-isolation wall (claudinite-isolation) is a declared check — a
   // forbidReferences entry in this pack's declared-checks.json, run by the

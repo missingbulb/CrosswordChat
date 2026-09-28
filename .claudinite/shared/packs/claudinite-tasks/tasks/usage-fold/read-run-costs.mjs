@@ -18,8 +18,8 @@
 // first time; and, for at most `SCHEDULER_RUNS_PER_FOLD` scheduler runs, at most
 // `JOB_LOGS_PER_RUN` log reads each. On this repo's cadence — the scheduler's two
 // ticks a day and the executor runs a quiet queue dispatches — that is under ten
-// calls a day, which `test/tasks/tasks-usage-fold/read-run-costs.test.mjs` asserts
-// by counting the fetches a representative day makes.
+// calls a day, which a test asserts by counting the fetches a representative day
+// makes.
 //
 // `MAX_RUN_READS` is the runaway guard rather than the budget: a day that somehow
 // produced hundreds of runs stops at the cap, leaves the watermark at the last run
@@ -31,7 +31,7 @@
 // read costs that run its minutes and nothing else, and a log that cannot be read
 // costs that tick its cost record. Neither takes the run counts down with it.
 
-import { makeReader as makeJsonReader, readRuns, WATCHED_WORKFLOWS } from '../usage-fold/read-runs.mjs';
+import { makeReader as makeJsonReader, readRuns, WATCHED_WORKFLOWS } from './read-runs.mjs';
 import { parseRunCosts } from '../../src/items/run-record.mjs';
 
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
@@ -55,7 +55,7 @@ export function makeReader({ token = process.env.GITHUB_TOKEN, api = API, fetchI
   const headers = {
     accept: 'application/vnd.github+json',
     'x-github-api-version': '2022-11-28',
-    'user-agent': 'claudinite-tasks-usage-fold',
+    'user-agent': 'claudinite-usage-fold',
     ...(token ? { authorization: `Bearer ${token}` } : {}),
   };
   const { json } = makeJsonReader({ token, api, fetchImpl });
@@ -78,7 +78,7 @@ export function makeReader({ token = process.env.GITHUB_TOKEN, api = API, fetchI
 // THE ROUNDING RULE IS UNVERIFIED FROM HERE. #1872 asks for it to be checked against
 // GitHub's billing documentation and cited; a session in this repo cannot reach
 // `docs.github.com` at all (the egress proxy refuses the domain), so the rule below
-// is the one this repo already states for itself in `src/execute/loop.mjs` —
+// is the one this repo already states for itself in the executor loop -
 // "Actions bills each job's runtime rounded UP to the next minute" — and not a
 // reading of the docs. Confirming it against
 // docs.github.com/en/billing/concepts/product-billing/github-actions needs an

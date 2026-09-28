@@ -13,8 +13,8 @@
 //   THE OPERATIONS A WORKER NEEDS. `dispatchWorkflow`, and the tracker issue a
 //   recurring task logs every run to (`findOrCreateTracker`, `writeTracker`). A worker
 //   that needs a further REST call asks for the operation to be published rather than
-//   composing a path: `src/world/github.mjs` is the port that spells every other path
-//   this pack calls, and it builds on the transport here.
+//   composing a path: the pack's port spells every other path this pack calls, and it
+//   builds on the transport here.
 //
 //   THE ISSUE CALLS THE TRACKER MAKES, spelled here because the tracker is here and
 //   this file imports nothing — the port re-exports them, so nothing else spells them.
@@ -27,11 +27,6 @@
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 
 // --- how many calls this process has made ---------------------------------------
-// Every REST and GraphQL request this pack makes passes through one of the three
-// functions below, which is what makes the outward edge countable at all: a run's
-// API spend is a property of the PORT, not of any caller, and asking each caller to
-// report its own would be a second count to drift.
-//
 // Process-wide because a run IS a process — the scheduler and the executor each get
 // a fresh one — and the cost record the run prints is about that process. A request
 // that failed still counts: it was made, it was billed against the rate limit, and
@@ -44,9 +39,8 @@ export const apiCallCount = () => apiCalls;
 // it: a run that reset its own counter mid-flight would report the remainder.
 export const resetApiCallCount = () => { apiCalls = 0; };
 
-// The Action-side reader/writer. `packs/claudinite-tasks/` is the one place that
-// legitimately uses the Action's `GITHUB_TOKEN` — everything session-side stays
-// MCP-only (docs/PRINCIPLES.md).
+// The Action-side reader/writer. This pack is the one place that legitimately uses
+// the Action's `GITHUB_TOKEN` - everything session-side stays MCP-only.
 //
 // `path` is an API path beginning with `/` (e.g. `/repos/owner/name/commits`); the
 // base URL and auth are applied here.
@@ -129,7 +123,7 @@ export const comment = (gh, repo, number, body) =>
 
 // --- workflows -----------------------------------------------------------------
 
-// Fire a `workflow_dispatch`. It is how the queue CHAINS (PRINCIPLES.md) — a run
+// Fire a `workflow_dispatch`. It is how the queue CHAINS - a run
 // that settled its item starts a fresh one rather than leaving the remainder for
 // the cron — and `workflow_dispatch` is one of the two events the default
 // `GITHUB_TOKEN` may fire, the explicit exemption in the same recursion guard that
@@ -160,13 +154,7 @@ export const readPagesSite = (gh, repo) => gh(`/repos/${repo}/pages`);
 // LIBRARY, not a phase: nothing in the scheduler knows a task has a tracker, no
 // declaration carries one, and no task is expected to want one. A task that keeps
 // an aggregated record calls these from its OWN code-work and passes the number to
-// its agentic phase through the ordinary hand-off payload (`delivered.issue`,
-// rendered into the work item by queue/code-work-run.mjs).
-//
-// It exists because two tasks had each grown a private copy of the same search, and
-// the copies had already diverged in a way that matters — one filtered `is:open`,
-// which never matches a tracker at rest and so opens a second one the moment
-// anybody closes the first.
+// its agentic phase through the ordinary hand-off payload (`delivered.issue`).
 //
 // TWO PROPERTIES THE LOOKUP IS SHAPED AROUND:
 //
@@ -202,12 +190,10 @@ export function pickTracker(items, title) {
 // EVERY state: a tracker's resting state is closed, so a state-filtered lookup
 // misses all of them.
 //
-// A tracker found OPEN is closed on the way back. Creation has closed since #951,
-// but that only ever covered a tracker this code minted — one that predates the
-// fix, or whose closing PATCH failed, had nothing anywhere that would ever look at
-// its state again, so it sat open indefinitely (#904, open from 2026-08-16). The
-// repair rides the lookup because every task's own run performs one, which is the
-// only pass guaranteed to reach every tracker in the fleet.
+// A tracker found OPEN is closed on the way back: one whose closing PATCH failed has
+// nothing else that would ever look at its state again. The repair rides the lookup
+// because every task's own run performs one, which is the only pass guaranteed to
+// reach every tracker in the fleet.
 export async function findTracker(gh, repo, title) {
   const want = title.trim();
   const q = encodeURIComponent(`repo:${repo} in:title "${want}"`);
@@ -227,8 +213,7 @@ export async function findTracker(gh, repo, title) {
 }
 
 // Create the tracker and close it — TWO calls, because issue creation always lands
-// an issue open and ignores a `state` argument, so the single-call version left
-// every tracker open across the fleet (#951).
+// an issue open and ignores a `state` argument.
 export async function createTracker(gh, repo, title, body = null) {
   const want = title.trim();
   const created = await postIssue(gh, repo, { title: want, body: body ?? trackerSeedBody(want) });
