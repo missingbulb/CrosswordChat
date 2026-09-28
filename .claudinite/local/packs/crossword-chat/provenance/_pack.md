@@ -26,3 +26,11 @@
   scan (`xwd__`) is the project's own `extension-test/unit/arch.test.js`; keeping an empty
   `references.md` - every rule cites the file, REQ or MT that records it.
 - **Landed:** #407 (Closes #396).
+
+## 2026-09-28 · scope-changed · dropped the retired marker/detect fingerprint fields (#582)
+- **Reason:** advisory legacy-shape-in-use (canon #1638) — a local pack is declared by hand in
+  `.claudinite-settings.json`, never fingerprinted, so the always-null fields were dead weight.
+- **Mechanism:** pack.json manifest; no functional change, both fields were already null.
+- **Actor:** the claudinite-lifecycle/update task, work item #582.
+- **Model:** Claude Sonnet 5, per the commit trailer.
+- **Landed:** #590
