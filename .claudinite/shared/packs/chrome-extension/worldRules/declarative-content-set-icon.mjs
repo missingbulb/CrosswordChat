@@ -72,7 +72,7 @@ function topLevelKeys(obj) {
 
 const rule = {
   id: 'declarative-content-set-icon',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A chrome.declarativeContent.SetIcon action supplies imageData, never path',
   // Points at the pack README, not RULES.md: this rule is carried by the check
   // alone, and the old pointer sent a reader to a file that never explained the

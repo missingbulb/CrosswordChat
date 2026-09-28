@@ -6,7 +6,7 @@ always-testable rules that were never converted to checks, and convert the stron
 own upgrade pass, not this sweep's.
 
 **The corpus is `.claudinite/local/packs/` and nothing else** — this repo's own local packs. A canon
-pack it only mounts under `.claudinite/shared/` is swept in the repo that owns it: the next converge
+pack it only mounts under `.claudinite/shared/` is swept in the repo that owns it: the next update
 replaces that tree whole, so an edit there is lost either way.
 
 Convert prose to checks in a single PR.
@@ -18,7 +18,7 @@ The conversion method — how to spot an always-testable rule in prose, judge co
 ## What a run does
 
 1. **Pick convertible prose** under the corpus above — rules that govern **how we work** (not what the product does — see the skill's first gate), that are *always testable* (a deterministic condition a check could assert), and that no existing check already covers. Prefer the strongest, clearest candidates; converting one or two solid rules well beats churning many shakily.
-2. **Convert per the skill** — author the rule module in its owning pack, register it in that pack's `pack.mjs`, and add a **fixture test that fires on a violating input and stays quiet on a clean one** (see-it-fail is mandatory — a check that can't be made confident is left as prose, never shipped broken). Then apply the skill's **deletion test** to the prose the check now stands beside — a paragraph the check fully covers is deleted whole, never trimmed.
+2. **Convert per the skill** - author the rule module in its owning pack's `worldRules/` or `workRules/`, and add a **fixture test that fires on a violating input and stays quiet on a clean one** (see-it-fail is mandatory - a check that can't be made confident is left as prose, never shipped broken). Then apply the skill's **deletion test** to the prose the check now stands beside - a paragraph the check fully covers is deleted whole, never trimmed.
 3. **Deliver on the branch and pull request your item names** — push this round to `Target-branch:`, and onto `Target-pr:` where one is named: the round then joins the review already pending, so a reviewer who has not got to last week's work reads one PR, not three. Where none is named, open the pull request on that branch under the title `Claudinite growth: prose to checks`. Never search for an open pull request or pick a branch of your own. Either way the commit references the tracking issue so the `task-lifecycle` gate passes, and the repo's offline test suite is green before you push.
 4. **Say what converted in the PR body** — the prose converted and the check id it became, per conversion. That, and the commit, are the record; there is no standing issue. Never bump a pack's version or write a `VERSIONS.md` row — both are derived on the base branch after the change lands.
 

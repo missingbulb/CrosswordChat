@@ -60,7 +60,7 @@ function reach(src, argsStart, args) {
 
 const rule = {
   id: 'mic-constraints-not-screen-capture',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A microphone capture never asks for getDisplayMedia-only constraints',
   doc: 'packs/web-speech/RULES.md',
   why: 'suppressLocalAudioPlayback and restrictOwnAudio are getDisplayMedia screen-capture constraints — they filter a captured tab\'s own playout, not a microphone — so getUserMedia silently ignores them while the author believes self-echo is now handled at the capture layer and never writes the guard that would have handled it',

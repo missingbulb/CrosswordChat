@@ -25,7 +25,7 @@ function depNames(pkg) {
 
 const rule = {
   id: 'node/earn-each-dependency',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'A newly added package.json dependency should be earned — prefer a built-in or a few lines for a narrow job',
   doc: 'packs/basics/RULES.md',
   scope: 'work',

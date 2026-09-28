@@ -1,13 +1,11 @@
-// WHEN A BLOCKED ITEM MAY RUN (docs/PRINCIPLES.md; #1373 reversed an earlier
-// attempt). One caller asks this question: the
+// WHEN A BLOCKED ITEM MAY RUN (#1373). One caller asks this question: the
 // scheduler run, at every tick, over every open item. A close does not - releasing a
 // dependent is deciding whether the world has moved on, which is what the
 // scheduler run exists to re-derive, and a task execution converging its own
 // item has no business relabelling a sibling work item to answer it.
 //
-// The backstop framing survives the reversal unchanged: nothing but the
-// scheduler run's own pass ever releases a blocked item, so a chain link
-// waits at most one scheduler run for its dependency to be noticed.
+// Nothing but the scheduler run's own pass ever releases a blocked item, so a
+// chain link waits at most one scheduler run for its dependency to be noticed.
 
 import { STATUS_BLOCKED } from '../../public/task-constants.mjs';
 import { isStatus, parseWorkItemBody } from '../../public/work-item-grammar.mjs';

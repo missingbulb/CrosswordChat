@@ -28,7 +28,7 @@ function datesTheCheck(since) {
 
 const rule = {
   id: 'declared-check-since',
-  severity: 'blocking',
+  on_fail: 'block',
   // Dated on its own terms: a member holding an undated blocking action check reads
   // this the moment it converges, and the remedy is theirs to write.
   since: '2026-09-06',
@@ -45,7 +45,7 @@ const rule = {
       if (!Array.isArray(specs)) continue;
       for (const spec of specs) {
         if (!spec || typeof spec !== 'object' || typeof spec.id !== 'string') continue;
-        if (spec.scope !== 'action' || spec.severity !== 'blocking') continue;
+        if (spec.scope !== 'action' || findings.onFailOf(spec) !== 'block') continue;
         if (datesTheCheck(spec.since)) continue;
         const anchor = text.slice(0, text.indexOf(`"${spec.id}"`)).split('\n').length;
         out.push(findings.finding(rule, {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // World-scope conformance runner (see DESIGN.md): the rules that audit repo
 // state as it exists now, plus the pack-agnostic settings/load integrity
-// diagnostics (malformed config, an unknown pack, a broken pack.mjs). Rules that
+// diagnostics (malformed config, an unknown pack, a broken pack manifest). Rules that
 // judge the current change (`scope: 'work'`) run in check_the_work.mjs, which
 // this file shares no code with — only the scope-blind mechanism helpers
 // (run-active-pack-rules.mjs, report-findings.mjs). It names NO pack: adoption
@@ -12,15 +12,16 @@
 //   --changed   transitional: scope to files changed vs the merge-base with main
 //               (adopting a repo with a backlog only — not the enforcement default)
 //   --base REF  override the base ref
-//   --list      machine-readable catalog of every rule, both scopes (id, severity, description, doc)
+//   --list      machine-readable catalog of every rule, both scopes (id, on_fail, description, doc)
 //   --init      write .claudinite-settings.json — basics plus the fingerprinted packs
 import { buildContext } from './helpers/repo-context.mjs';
 import { discoverPacks, packEntryId } from '../pack_loader/pack-registry.mjs';
 import { runActivePackRules, packRules } from './run-active-pack-rules.mjs';
 import { reportFindings } from './report-findings.mjs';
+import { onFailOf } from './helpers/findings.mjs';
 
 const configError = (what, fix) => ({
-  rule: 'config', severity: 'blocking', file: '.claudinite-settings.json', line: null,
+  rule: 'config', on_fail: 'block', file: '.claudinite-settings.json', line: null,
   what, why: 'the settings file is what executes — a bad key, value, or pack name silently changes what runs', fix, doc: 'engine/checks/README.md',
 });
 
@@ -28,7 +29,7 @@ const args = process.argv.slice(2);
 const has = (flag) => args.includes(flag);
 const value = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : null);
 // The repo to sweep. `--root` first, then CLAUDE_PROJECT_DIR, and only then the cwd.
-// The env var is not a convenience: the callers that run this from inside a converge
+// The env var is not a convenience: the callers that run this from inside an update
 // (the update runner) have a cwd that no longer exists — the vendor step deletes
 // `.claudinite/shared/`, which is where code-work's cwd lives — and `process.cwd()` then
 // throws `ENOENT … uv_cwd` before a single check runs, which reads from the outside as
@@ -36,7 +37,7 @@ const value = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : nu
 // this way; this closes the disagreement for every caller, not just that one.
 const root = value('--root') || process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-// A pack that fails to load — a pack.mjs whose import throws, a rule module that
+// A pack that fails to load - a manifest that will not read, a rule module that
 // won't load, an unparseable declared-checks.json — is absent from `packs`, with
 // the reason on `errors`. So a caller reading one without the other cannot tell a
 // pack that was never there from one that did not load: it emits a short answer
@@ -74,7 +75,7 @@ if (has('--list')) {
     // states its own case — so the catalog prints its failure message in that
     // column and leaves the pointer empty.
     console.log(packRules(packs)
-      .map((r) => `${r.id}\t${r.severity}\t${r.description ?? r.why ?? ''}\t${r.doc ?? ''}`)
+      .map((r) => `${r.id}\t${onFailOf(r)}\t${r.description ?? r.why ?? ''}\t${r.doc ?? ''}`)
       .join('\n'));
   }
 } else if (has('--init')) {
@@ -107,7 +108,7 @@ async function sweep() {
   // Settings validity is checked at load: malformed JSON, an unknown
   // property, and a wrong pack name are all equally settings errors. loadConfig
   // reports the first two; the runner adds unknown pack names (only it holds the
-  // registry) and broken/duplicate local pack.mjs faults.
+  // registry) and broken/duplicate local pack manifest faults.
   const findings = [];
   for (const e of ctx.config.errors) findings.push(configError(e.what, e.fix));
   for (const e of packErrors) findings.push(configError(e.what, e.fix));
@@ -125,12 +126,9 @@ async function sweep() {
   // other active-pack rules; a malformed `questions` field arrives as a load fault
   // in packErrors above. Neither names a pack here.)
 
-  // The world rules: everything not scoped to the work. A broken contributedRules
-  // seam is a config-level fault surfaced here (the world runner owns diagnostics).
+  // The world rules: everything not scoped to the work.
   findings.push(...runActivePackRules(ctx, packs, {
     includeRule: (rule) => rule.scope !== 'work' && rule.scope !== 'action',
-    onContributeError: (pack, e) => findings.push(configError(
-      `the "${pack.id}" pack's contributedRules failed: ${e.message}`, 'fix the pack manifest, or the contribution it interprets')),
   }));
   // No timing record here: a clean world run prints nothing and exits 0, which is
   // the contract its callers read silence against. The Stop hook's own sweep

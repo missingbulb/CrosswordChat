@@ -1,19 +1,14 @@
-// Code-work, executor-side (docs/PRINCIPLES.md). The contract is
-// unchanged from the slot mechanism — a subprocess with the task dir as cwd, the
-// declared `code_work_required_secrets` as environment, a hard timeout, and the conditional
-// `CLAUDINITE_REQUEST_AGENT` hand-off — so this module is a thin adapter that
-// gives the queue's item identity where the slot id used to go, and adds the two
-// things the queue states explicitly:
+// Code-work, executor-side: a subprocess with the task dir as cwd, the declared
+// `code_work_required_secrets` as environment, a hard timeout, and the conditional
+// `CLAUDINITE_REQUEST_AGENT` hand-off. Two things the queue states explicitly:
 //
-//  - RE-ENTRANCY IS THE REQUIREMENT, NOT IDEMPOTENCY (PRINCIPLES.md). A dead executor's
-//    claim is reclaimed and the item re-picked, so code-work can run again over its
-//    own half-done work. That is convergence — check what exists, continue from
-//    there — and it was always true of code-work; the contract simply never said so.
-//    Since the heartbeat replaced the run cap (PRINCIPLES.md), overlap is no longer
-//    excluded by construction: a partitioned runner keeps working while its beats
-//    fail to post, its claim is reclaimed on that silence, and the replacement
-//    starts. Re-entrancy is what makes that safe, which is why it is the contract.
-//  - A DECLARED SECRET THAT IS NOT CONFIGURED IS NAMED, NOT GUESSED AT (PRINCIPLES.md).
+//  - RE-ENTRANCY IS THE REQUIREMENT, NOT IDEMPOTENCY. A dead executor's claim is
+//    reclaimed and the item re-picked, so code-work can run again over its own
+//    half-done work. That is convergence - check what exists, continue from there.
+//    Overlap is not excluded by construction: a partitioned runner keeps working
+//    while its beats fail to post, its claim is reclaimed on that silence, and the
+//    replacement starts. Re-entrancy is what makes that safe.
+//  - A DECLARED SECRET THAT IS NOT CONFIGURED IS NAMED, NOT GUESSED AT.
 //    Code-work is the only task code that ever sees a secret VALUE, so this is the
 //    one place that can tell "unset" from "empty", and the item converges to
 //    triage naming exactly which one is missing.
@@ -26,8 +21,7 @@ import { targetEnv } from './target.mjs';
 import { actionsEnv } from '../world/actions.mjs';
 
 // The declared secrets this environment does not carry. Absent is missing; a
-// set-but-empty one is the repo's own choice and is passed through. Read through
-// the bag, which also answers for a legacy workflow that still stamps by name.
+// set-but-empty one is the repo's own choice and is passed through.
 export const missingSecrets = (names = [], env = actionsEnv()) =>
   names.filter((n) => secretValue(n, env) === undefined);
 
@@ -38,11 +32,10 @@ export const missingSecrets = (names = [], env = actionsEnv()) =>
 // carries the whole repository's, and a task's blast radius should be the list it wrote
 // down (#1336). Variables are not: `vars` is non-sensitive by construction, so there is
 // no blast radius to narrow and a declaration would buy nothing but a second place to
-// keep in sync. vars-bag.mjs states why they are additive rather than overriding.
+// keep in sync.
 //
 // Under a workflow that names its secrets there is no bag to subtract, so the stamped
-// names stay inherited until that member's own executor workflow lands; the fallback in
-// secrets-bag.mjs states the retirement condition. Neither raw blob is ever handed on.
+// names stay inherited. Neither raw blob is ever handed on.
 export function taskEnv(names = [], env = actionsEnv()) {
   const out = { ...env };
   delete out[SECRETS_BAG_ENV];
@@ -53,9 +46,8 @@ export function taskEnv(names = [], env = actionsEnv()) {
 
 // The CLAUDINITE_* variables code-work is handed, and the whole of them: a worker
 // reading any other one is reading something nobody sets, which is silent and
-// permanent (a `CLAUDINITE_OVERRIDES` left over from the slot scheduler read as an
-// empty bag, so a fleet sweep's REPOS filter and DRY_RUN switch were inert and
-// every run was unscoped and live — #974).
+// permanent: a parameter that never arrives leaves the run in its most dangerous
+// mode (#974).
 //
 // Built as one object so the NAMES cannot drift from what is actually passed:
 // `CODE_WORK_ENV_VARS` below is this function's own key set, and the check that
@@ -64,16 +56,15 @@ export const codeWorkEnv = ({ root, repo, defaultBranch, task, item, context = [
   CLAUDINITE_REPO_ROOT: root,
   CLAUDINITE_REPO: repo,
   CLAUDINITE_DEFAULT_BRANCH: defaultBranch ?? '',
-  // The item's identity where the slot id used to be: the queue has no slot, and
-  // the issue number IS the occurrence (PRINCIPLES.md).
+  // The issue number IS the occurrence.
   CLAUDINITE_ITEM: String(item.number),
   CLAUDINITE_PACK: task.pack,
   CLAUDINITE_TASK: task.id,
   // The item's binding scope, one line per Context bullet — and the channel an
-  // operator's parameters ride (PRINCIPLES.md).
+  // operator's parameters ride.
   CLAUDINITE_CONTEXT: context.join('\n'),
   CLAUDINITE_REQUEST_AGENT: requestPath,
-  // WHICH BRANCH AND PULL REQUEST THIS RUN WORKS ON (PRINCIPLES.md), decided by the
+  // WHICH BRANCH AND PULL REQUEST THIS RUN WORKS ON, decided by the
   // executor before this subprocess started. A worker pushes to the branch and
   // opens or updates the pull request it is told about — never finds one itself.
   ...targetEnv(target),
@@ -86,7 +77,7 @@ export const CODE_WORK_ENV_VARS = Object.freeze(
 // The command this phase actually spawns. A `code_work` declaration IS the command;
 // a `code_worker_mjs` one names a module, and the command is the runner's own entry
 // point around it - which is the whole point of the field: the wrapping is ours to
-// write once rather than every worker's to re-implement (worker-entry.mjs).
+// write once rather than every worker's to re-implement.
 //
 // The entry point is addressed absolutely because the subprocess runs with the TASK
 // directory as cwd, and it is resolved from this module's own URL so the path holds
@@ -134,8 +125,7 @@ export function codeWorkRunner({ root, repo, defaultBranch, env = actionsEnv() }
       agentRequested: requested,
       // The worker's come-back-later ask, honoured only on this OK path — a failed
       // run is a failure whatever it printed. Read over both streams like the
-      // triage marker, and null for the workers that never ask, which is all of
-      // them before #1530.
+      // triage marker, and null for the workers that never ask.
       requeue: readRequeueMarker(`${result.stdout}\n${result.stderr}`),
       delivered: deliveredLines(payload?.delivered),
       // The unmerged PR, structured, beside its rendered line: an item whose run

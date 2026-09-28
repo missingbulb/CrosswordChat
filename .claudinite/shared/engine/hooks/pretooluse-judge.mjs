@@ -14,17 +14,17 @@
 //    carries no permissionDecision: `allow` would skip the permission prompt
 //    for the call, and an advisory has no business approving anything. The
 //    same declarations run again over the transcript at Stop, advisory
-//    there whatever the severity — the record for a hook that never fired;
+//    there whatever the on_fail - the record for a hook that never fired;
 //  - a Bash command that deletes a remote branch is blocked (the delete-push
 //    fails in this environment, so it can never succeed).
-// Registered on every tool (the converge's PRETOOLUSE_MATCHER) — see
+// Registered on every tool (converge-wiring's PRETOOLUSE_MATCHER) — see
 // bootstrap.md. A call no declaration names costs the cached context read
 // (hook-context.mjs) and says nothing. A guard that cannot decide lets the call
 // through: an unreadable declaration or registry is the mount self-test's
 // finding, never a session wedged on tools.
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { hooklog } from '../checks/helpers/hook-log.mjs';
-import { applyGrace } from '../checks/helpers/findings.mjs';
+import { applyGrace, failingAs, onFailOf } from '../checks/helpers/findings.mjs';
 import { guardFindings } from '../checks/helpers/pattern-rules.mjs';
 import { missingSkillsFor, missingSkillsForCall } from '../pack_loader/path-scoped-skills.mjs';
 import { hookContext, sessionReader, loadInstruction } from './hook-context.mjs';
@@ -90,17 +90,17 @@ function actionVerdict(call, ctx, session) {
     let found;
     try { found = guardFindings(rule, call, countsCalls ? session.calls() : []); }
     catch (e) { hooklog('PreToolUse', `action-guard-failed ${rule.id} ${e?.message ?? e}`); continue; }
-    const level = ctx.overrides[rule.id];
-    findings.push(...found.map((f) => (level === 'advisory' || level === 'blocking' ? { ...f, severity: level } : f)));
+    const level = onFailOf(ctx.overrides[rule.id] ?? '');
+    findings.push(...found.map((f) => (level ? failingAs(f, level) : f)));
   }
   findings = applyGrace(findings);
   const render = (f) => `${f.what}. ${f.why ? `${f.why}. ` : ''}Fix: ${f.fix}`;
-  const blocking = findings.filter((f) => f.severity === 'blocking');
+  const blocking = findings.filter((f) => f.on_fail === 'block');
   if (blocking.length) {
     hooklog('PreToolUse', `done exit=2 action-guard ${blocking.map((f) => f.rule).join(',')}`);
     return { block: blocking.map((f) => `Blocked by ${f.rule}: ${render(f)}`).join('\n'), reason: 'action-guard' };
   }
-  const advisory = findings.filter((f) => f.severity === 'advisory');
+  const advisory = findings.filter((f) => f.on_fail === 'advise');
   if (!advisory.length) return {};
   hooklog('PreToolUse', `advisory action-guard ${advisory.map((f) => f.rule).join(',')}`);
   return { context: advisory.map((f) => `[claudinite ${f.rule}] ${render(f)}`).join('\n') };

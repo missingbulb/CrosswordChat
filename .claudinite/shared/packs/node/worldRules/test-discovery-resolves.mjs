@@ -78,7 +78,7 @@ export function judgeCommand(command, paths) {
 
 const rule = {
   id: 'node/test-discovery-resolves',
-  severity: 'blocking',
+  on_fail: 'block',
   since: '2026-09-06',
   description: 'A `node --test` invocation must name test paths that exist — default discovery skips dot-directories',
   doc: 'packs/node/RULES.md',

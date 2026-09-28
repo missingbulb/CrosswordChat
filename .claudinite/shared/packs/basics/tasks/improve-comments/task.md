@@ -30,8 +30,8 @@ and the safety case does not hold.
 
 Three consequences the skill states and this run lives with: a file whose language the parser
 cannot read counts as code, so leave its comments alone; adding or deleting a code file, or
-deleting a `README.md`, is never within this pass; and `.claudinite/` is outside it entirely —
-the precondition keeps the mount out of Context, and the gate reds a change there anyway.
+deleting a `README.md`, is never within this pass; and `.claudinite/shared/` is outside it entirely:
+the precondition keeps the vendored mount out of Context, and the gate reds a change there anyway.
 
 ## Output: one PR, delivered to land
 

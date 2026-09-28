@@ -1,6 +1,6 @@
 ---
 name: learning-a-technology
-description: Teach a repo a new technology for a job of its own. Use when asked to make a repo do something with a technology nobody there has used yet (host it on X, send through Y, publish to Z), or to "research how to do this correctly" and "create a skill" for it.
+description: Teach a repo a technology nobody there has used yet. Use when asked to host, send or publish through something new, or to research it and create a skill.
 metadata:
   body: workflow
   usage:

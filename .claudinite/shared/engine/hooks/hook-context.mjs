@@ -76,8 +76,8 @@ export function loadInstruction(missing, projectRoot) {
 // `hookContext(projectRoot, event)` → { overrides, scoped, triggered, actionRules,
 // source }: the path-scoped skill declarations, the triggered-skill declarations
 // and the `scope: "action"` rules of the active packs, plus the settings
-// overrides. Deriving them means loading the registry — importing every
-// pack.mjs — which dominates a hook's run, so the derivation is memoised in a
+// overrides. Deriving them means loading the registry - reading every
+// manifest - which dominates a hook's run, so the derivation is memoised in a
 // file under the OS temp dir, keyed by the project root, and trusted only while
 // a stat fingerprint of everything it was derived from still holds: the settings
 // file, the pack scan roots, each active pack's directory, manifest,
@@ -153,7 +153,7 @@ async function derive(projectRoot, declared) {
     settingsPath(projectRoot), join(corpusRoot, 'packs'), localPacksDir(projectRoot),
     ...ENGINE_INPUTS.map((rel) => join(corpusRoot, rel)),
     ...packs.flatMap((p) => [
-      p.dir, join(p.dir, 'pack.mjs'), join(p.dir, 'declared-checks.json'), join(p.dir, 'skills'),
+      p.dir, join(p.dir, 'pack.json'), join(p.dir, 'pack.mjs'), join(p.dir, 'declared-checks.json'), join(p.dir, 'skills'),
       ...(p.skills ?? []).flatMap((s) => [join(p.dir, 'skills', s), join(p.dir, 'skills', s, 'SKILL.md'), join(p.dir, 'skills', s, 'declared-checks.json')]),
     ]),
   ];

@@ -14,7 +14,7 @@ import * as provenance from '../../../engine/checks/helpers/provenance.mjs';
 //
 // ADVISORY, like everything in this pack: the loss is a missing why for a rule, never a
 // broken repo. RELEVANCE-FIRST like its siblings: inert unless this repo IS the store -
-// only the one repo that holds `<path>/<email>/` packs has anything to judge.
+// only the one repo that holds `<path>/<login>/` packs has anything to judge.
 const PACK = 'claude-code-web-users-support';
 
 // @deprecated The sidecar folder a person's provenance sat in while the store was flat and
@@ -27,7 +27,7 @@ export const provenanceDirOf = (store) => `${store.path}-provenance`;
 
 const rule = {
   id: 'preferences-provenance',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'Every rule in a personal pack this repo stores ends with a marker naming its provenance file in that pack',
   doc: 'packs/claude-code-web-users-support/RULES.md',
   why: 'a rule with no file has no record of when it was set or what prompted it, and the session that changes it next is the only reader who could have written that down',

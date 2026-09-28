@@ -1,6 +1,6 @@
 ---
 name: node-test-discovery
-description: Wiring a `node --test` invocation so it finds the suite — dot-directories are skipped, a path that matches nothing runs zero tests and exits green. Loaded for any edit of a workflow or package.json test script.
+description: Wiring a `node --test` invocation so it actually finds the suite. Loaded for any edit of a workflow or package.json test script.
 metadata:
   body: guidelines
   usage:

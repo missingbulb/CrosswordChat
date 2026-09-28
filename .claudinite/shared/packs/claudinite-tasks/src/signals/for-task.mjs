@@ -1,4 +1,4 @@
-// Signal collection for ONE task (docs/PRINCIPLES.md): exactly that
+// Signal collection for ONE task: exactly that
 // task's declared union, collected at the moment a verdict is asked for. Two
 // callers ask — the scheduler run at every tick (a read it cannot make fails open
 // there) and the executor at pick, which re-derives rather than trusting the
@@ -10,7 +10,7 @@
 // since it last looked, and one that declined for a week then sees the week. With
 // no run in the horizon the window is the task's own cadence (a day for a task
 // stating none) plus an hour of slack. Overlap at the seam — a run's own duration
-// — is absorbed by the preconditions' own dedupe, as the old fixed lookback's was.
+// - is absorbed by the preconditions' own dedupe.
 
 import { itemFacts } from '../../public/work-item-grammar.mjs';
 import { taskSignalNames } from '../contract/task-contract.mjs';
@@ -20,7 +20,7 @@ import { localSignalContext } from '../world/git.mjs';
 // The collectors and the ctx builder, loaded on the first collection and shared by
 // every one after it. Lazy rather than a static or top-level-awaited import because
 // a module under `packs/` may do no work while it is being evaluated: discovery
-// imports every `pack.mjs` before activation is consulted.
+// imports every module manifest before activation is consulted.
 let modulesPromise = null;
 function signalModules() {
   modulesPromise ??= Promise.all([import('./index.mjs'), import('./context.mjs')]);
@@ -101,7 +101,7 @@ export function collectSignalsForTask({ gh, repo, root, config, defaultBranch, i
     const ctx = buildSignalContext({
       root, repo, defaultBranch, now: nowIso, sinceIso: window.sinceIso, config, fleet, packConfigFor,
       // The occurrence's own facts, for the collector that reads one named object
-      // rather than a window (the request read, PRINCIPLES.md).
+      // rather than a window (the request read).
       item: facts, task: taskRef, items, local,
     });
     return { ...out, ...(await collectSignals(gh, ctx, rest)) };

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The rules index: `.claudinite/claudinite-rules.GENERATED.md`, a file of nothing but
+// The rules index: `.claudinite/flat/claudinite-rules.GENERATED.md`, a file of nothing but
 // `@` imports — one per active pack's RULES.md — which the repo's own CLAUDE.md
 // imports in turn. That is the whole artifact; anything else a session needs is read
 // on demand, not carried here.
@@ -32,17 +32,18 @@
 //     lines here are deliberately bare.
 // Import depth is four hops; this uses two (CLAUDE.md → index → a pack's RULES.md).
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { join, dirname, relative, sep } from 'node:path';
+import { join, dirname, relative, sep, posix as posixPath } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadPacks, isActive, SHARED_SUBDIR, TEMP_PACKS_SUBDIR, SESSION_USER_PACK } from './pack-registry.mjs';
 import { shipsPrepareStep } from './pack-conventions.mjs';
 import { settingsPath } from '../settings-file.mjs';
+import { FLAT_DIR } from './flat-dir.mjs';
 
 // The index, and the line a repo's CLAUDE.md carries to pull it in. One definition:
-// the generator writes the first, the converge ensures the second, and the basics
+// the generator writes the first, the update ensures the second, and the basics
 // check that polices a member tests for both.
-export const RULES_INDEX_FILE = join('.claudinite', 'claudinite-rules.GENERATED.md');
-export const RULES_INDEX_IMPORT = '@.claudinite/claudinite-rules.GENERATED.md';
+export const RULES_INDEX_FILE = join(FLAT_DIR, 'claudinite-rules.GENERATED.md');
+export const RULES_INDEX_IMPORT = '@.claudinite/flat/claudinite-rules.GENERATED.md';
 
 // `@` paths are POSIX in a memory file whatever the host separator is.
 const posix = (p) => p.split(sep).join('/');
@@ -52,15 +53,15 @@ const posix = (p) => p.split(sep).join('/');
 // directory is written when a session starts: the generator has never seen it and cannot
 // discover it.
 //
-// Spelled by hand rather than through `relative()`, which resolves a relative path against
-// `process.cwd()` and so reaches for a working directory at import time - in a process
-// whose cwd has been deleted that throws `uv_cwd` and faults the module. Both operands are
-// repo-relative constants under the index's own directory, so the arithmetic is a prefix.
-const SESSION_USER_PROSE = (() => {
-  const prefix = `${posix(dirname(RULES_INDEX_FILE))}/`;
-  const prose = posix(join(TEMP_PACKS_SUBDIR, SESSION_USER_PACK, 'RULES.md'));
-  return prose.startsWith(prefix) ? prose.slice(prefix.length) : prose;
-})();
+// Computed with the POSIX `relative()` over paths rooted at `/` rather than the host
+// one, which resolves a relative path against `process.cwd()` and so reaches for a
+// working directory at import time - in a process whose cwd has been deleted that throws
+// `uv_cwd` and faults the module. Both operands are repo-relative constants, so rooting
+// them at `/` gives the same answer without touching the cwd.
+const SESSION_USER_PROSE = posixPath.relative(
+  `/${posix(dirname(RULES_INDEX_FILE))}`,
+  `/${posix(join(TEMP_PACKS_SUBDIR, SESSION_USER_PACK, 'RULES.md'))}`,
+);
 
 // The repo's declared pack list, read the way every other loader reads it. A missing
 // or malformed settings file means nothing is declared.
@@ -120,17 +121,13 @@ export function ruleImports(active, { indexDir, corpusRoot }) {
   return imports;
 }
 
-// The index as text: a generated-file banner and the imports, nothing else. The banner
-// is an HTML comment on purpose — block comments are stripped before a memory file
-// enters context, so it costs nothing every session while staying visible to anything
-// that opens the file with Read.
+// The index as text: the imports and nothing else. Its name says it is generated.
 export const renderRulesIndex = (imports) => (imports.length
-  ? `<!-- GENERATED — do not hand-edit; every converge rewrites it. Edit a pack's RULES.md. -->\n${
-    imports.map((i) => `@${i.path}`).join('\n')}\n`
+  ? `${imports.map((i) => `@${i.path}`).join('\n')}\n`
   : null);
 
 // The imports for a repo on disk: discover its packs (canon mount + its own local
-// packs) and keep the active ones. Never throws — a caller in a converge treats an
+// packs) and keep the active ones. Never throws — a caller in an update treats an
 // empty list as "nothing to write".
 export async function rulesIndexImports(projectRoot) {
   try {
@@ -141,7 +138,7 @@ export async function rulesIndexImports(projectRoot) {
       corpusRoot: corpusRootFor(projectRoot),
     });
   } catch {
-    return []; // fail soft — a broken loader must never block a converge
+    return []; // fail soft — a broken loader must never block an update
   }
 }
 

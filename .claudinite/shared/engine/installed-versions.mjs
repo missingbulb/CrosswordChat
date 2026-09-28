@@ -13,7 +13,7 @@
 //
 // THE LEGACY BLOCK IS GONE (#1640). Until then every read here fell back to a
 // nested `claudinite` block, because a member reached the record that reshapes its
-// file one converge after the engine that could read the new shape. The convergence
+// file one update after the engine that could read the new shape. The convergence
 // window the `legacy-shape-in-use` advisory opened has passed, and a member still
 // carrying the block now reads as having no mount at all.
 // A version is stored data, so an entry written before its pack was renamed still
@@ -30,7 +30,7 @@ import { isVersion } from './version.mjs';
 // more - a member still carrying one reads as having no versions installed, which is
 // this change's stated cost. But a fielded pack version imports this name BY NAME,
 // and the engine lane reaches a member ahead of the pack lane, so deleting it would
-// fault that pack at link time and the failed self-test would refuse the converge
+// fault that pack at link time and the failed self-test would refuse the update
 // carrying the fix. It comes out when no fielded pack version names it any more
 // (#1911), which is the scan `engine-pack-lane-shims` runs.
 // @legacy-tolerance advisory:none retire:#1911

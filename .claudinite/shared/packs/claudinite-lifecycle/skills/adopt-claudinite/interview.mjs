@@ -2,7 +2,7 @@
 // Adoption interviews — the mandatory questions a pack asks when a project
 // adopts it. A pack that needs the project's INTENT before it can provide value
 // (a research wiki with no subject is a silent no-op) declares its questions in an
-// optional `questions` field on its pack.mjs:
+// optional `questions` field on its manifest:
 //
 //   questions: [{ id: 'goals', prompt: '…', distill: '…' }]
 //
@@ -58,7 +58,7 @@ export function interviewState(packs, config) {
     // by the project — it's there because another pack's ability rides it.
     // Until the project engages with it (its own config or answers on the
     // entry), its adoption questions don't apply: the interview guides a
-    // CHOSEN adoption, and nagging every consumer whose baseline pulls a
+    // CHOSEN adoption, and nagging every consumer whose basics declaration pulls a
     // mechanism pack in would train owners to ignore the note.
     if (entry?.via?.length && entry.config === undefined && !Object.keys(entry.answers ?? {}).length) continue;
     const { questions, errors: qErrors } = packQuestions(pack);

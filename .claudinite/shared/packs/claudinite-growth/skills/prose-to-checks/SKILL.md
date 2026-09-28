@@ -1,6 +1,6 @@
 ---
 name: prose-to-checks
-description: Mine pack prose (RULES.md, SKILL.md) for always-testable rules that were never converted to checks, and convert the strongest ones. Use when auditing packs for convertible rules, when the weekly prose-to-checks sweep runs, or as the upgrade pass over prose a growth-extract run just wrote.
+description: Mine pack prose for always-testable rules never converted to checks, and convert the strongest. Use when auditing packs for convertible rules, or over prose a growth run just wrote.
 metadata:
   body: workflow
   usage:
@@ -126,21 +126,21 @@ say (a relation between two documents, a value that depends on the tree). A decl
 is a schema check in disguise, and a coded rule mirroring a schema's shape by hand is one that will drift.
 
 1. **Author the check** in the owning pack, at the ladder's highest check rung the rule allows: an entry
-   in `<pack>/declared-checks.json` when its logic is patterns over files, dropping to `<pack>/<rule>.mjs`
-   listed in `pack.mjs` only when it needs what patterns can't say. Either way the failure message *is*
+   in `<pack>/declared-checks.json` when its logic is patterns over files, dropping to a module under
+   `<pack>/worldRules/` or `<pack>/workRules/` only when it needs what patterns can't say. Either way the failure message *is*
    the rule (what / why / fix — plus, for a rule module, the `doc:` pointer back to the prose; a
    declaration carries no pointer and must state its own case).
 2. **Write the fixture first and see it fail** — a violating fixture must find, a clean one must
    not (the test lives beside the pack's other tests). A conversion with no proving fixture
    doesn't ship.
-3. **Ship at real severity, fail-fast** — blocking for a defect, advisory when the rule is
+3. **Ship at the real `on_fail`, fail-fast** - `block` for a defect, `advise` when the rule is
    directional by kind, or when the condition is blocking-grade but **irreversible by the time it is
    observable** (an append-only transcript, a published artifact). A blocking finding no edit can
    retract never converges — it spends every remaining Stop cycle on something nothing can fix.
    Advisory there is *diagnostic*: it names the cause the moment it appears.
-   - **Declare `since: '<today>'` beside the severity.** A blocking check is enforced as advisory for
+   - **Declare `since: '<today>'` beside the `on_fail`.** A blocking check is enforced as advisory for
      its first two weeks, so a conversion whose backlog the tree still carries lands at its real
-     severity now and starts biting once somebody has had time to clear it. Never soften a real
+     `on_fail` now and starts biting once somebody has had time to clear it. Never soften a real
      defect to `advisory` for that reason — the window is what makes softening unnecessary.
    - **Prefer a positive allowlist over an enumerated list of the bad cases.** Match the one allowed
      shape and flag everything else, rather than banning the violations you can name. An allowlist
@@ -200,7 +200,7 @@ the pack's `_declined.md`, dated, so no later pass re-derives the verdict.
 
 ## Bounds
 
-- **One PR, bounded surface** — the new rule module, its `pack.mjs` line, its fixture, and the
+- **One PR, bounded surface** - the new rule module or declaration, its fixture, and the
   trimmed prose. Don't "improve" unrelated rules while you're in there.
 - **Never delete a rule you didn't convert** — the deletion test is only ever asked of a rule a
   *landed* check now enforces.

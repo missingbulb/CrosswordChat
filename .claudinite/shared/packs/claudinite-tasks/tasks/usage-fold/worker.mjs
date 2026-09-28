@@ -2,38 +2,45 @@
 // (cwd = this task dir, bounded by code_work_timeout).
 // The whole task: no agent phase.
 //
-// It holds NO counting logic. The counting and folding are `fold-usage.mjs`, its
-// SIBLING in this task folder — nothing outside this task uses them, so that is
-// where they live and where their tests point. This file is the I/O shell:
+// Two halves, each folding its own rolling file past its own watermarks, delivered on
+// one pull request: the SESSION half below, and the MACHINERY half - what the
+// scheduler and executor cost - in `machinery-half.mjs`. They stay two files because
+// their sources differ: this half re-reads capture files for free off a local branch,
+// that one reads only rate-limited REST listings, and one source's outage must not
+// cost the other's rows.
+//
+// It holds NO counting logic: the counting and folding live in sibling modules,
+// and this is the session half's I/O shell:
 //
 //   1. fetch the orphan `conversation-logs` branch (plain local git — the branch is
 //      in this repo, so one tree read plus one blob read per file beats any REST
 //      round-trip, and there is no rate budget to spend);
 //   2. count each capture file still in the raw retention window;
 //   3. list the scheduler's and executor's completed workflow runs past the
-//      `runsFoldedThrough` watermark (read-runs.mjs) — how often the machinery ran,
+//      `runsFoldedThrough` watermark - how often the machinery ran,
 //      including the runs that opened no session at all;
 //   4. list the work items that CLOSED past the `queueFoldedThrough` watermark
-//      (read-queue.mjs) — what each occurrence came to, and the parks each collected;
+//      - what each occurrence came to, and the parks each collected;
 //   4b. list the pull requests MERGED past the `prsFoldedThrough` watermark
-//      (read-prs.mjs) — what each one took from opening, from its issue and from the
+//      - what each one took from opening, from its issue and from the
 //      session that did the work;
 //   5. read the local git history and the releases listing for the day series neither
 //      of the above can answer — commits, lines and releases;
 //   6. fold: hour rows over the last three days, day rows recomputed from scratch,
 //      appended rows past their watermarks, week rows advanced past `foldedThrough`;
-//   7. deliver the regenerated `.claudinite/local/usage.GENERATED.json` on a PR
-//      that lands itself where this repo's delivery settings allow (the shared
-//      landing helper owns those nuances — packs/claudinite-tasks/src/deliver/land-pr.mjs) — and
-//      open NOTHING when the recompute is byte-identical apart from its stamp.
+//   7. deliver the folded `.claudinite/usage/sessions-and-elements.json`, beside the
+//      machinery half's file, on a PR that lands itself where this repo's delivery
+//      settings allow - leaving out a file whose recompute is byte-identical apart
+//      from its stamp, and opening NOTHING when both are.
 //
-// The aggregate lives under `.claudinite/local/` because that is the repo-owned area
-// the vendoring refresh never touches; the mount root itself is read-only canon.
+// The aggregate lives under `.claudinite/usage/`, beside the repo's other rolling
+// records, where the vendoring refresh never reaches; the mount root itself is
+// read-only canon.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { baseTip, readAt, remoteUrl } from '../../public/delivery.mjs';
+import { baseTip, readAt, readRollingAt, remoteUrl } from '../../public/delivery.mjs';
 import { AUTOMERGE_TRAILER } from '../../src/contract/merge-policy.mjs';
 
 import {
@@ -44,9 +51,17 @@ import { makeReader, readRuns } from './read-runs.mjs';
 import { makeReader as makeQueueReader, readQueueOutcomes } from './read-queue.mjs';
 import { readMergedPrs, prRecordsFrom } from './read-prs.mjs';
 import { settingsPath } from '../../../../engine/settings-file.mjs';
+import { TASKS_USAGE_PATH } from '../../src/items/tasks-usage-format.mjs';
+import { foldMachinery } from './machinery-half.mjs';
 
 const BRANCH = 'conversation-logs';
-export const USAGE_PATH = '.claudinite/local/usage.GENERATED.json';
+// A rolling file, not a regenerated one: every fold starts from the last, so it carries
+// no GENERATED in its name.
+export const USAGE_PATH = '.claudinite/usage/sessions-and-elements.json';
+// Where it lived before `.claudinite/usage/`. Read as the prior state until the file has
+// moved, and moved by the delivery rather than dropped.
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#2323
+export const LEGACY_USAGE_PATH = '.claudinite/local/usage.GENERATED.json';
 
 // The run's own logger, under the task's name and its item. Module-level because the
 // helpers below log too; `worker` takes the one the runner built.
@@ -62,7 +77,7 @@ const git = (root, args) => execFileSync('git', ['-C', root, ...args], {
 
 // --- the raw window -----------------------------------------------------------
 
-// The capture filename standard (packs/claudinite-growth/README.md): keyed to the
+// The capture filename standard: keyed to the
 // pull request a merge landed (`pr-<n>`) or to an issue (`issue-<n>`), where `0`
 // means "no associated issue" — a SessionEnd capture. The other key is `null`.
 // Exported for the tests.
@@ -226,12 +241,11 @@ export function dayLadder(nowIso, days = DAY_WINDOW_DAYS) {
 
 // --- main ---------------------------------------------------------------------
 
-export async function worker({ root, repo, token, defaultBranch, automerge, deliver, log: runLog }) {
-  log = runLog;
-  const base = defaultBranch ?? 'main';
-  const remote = remoteUrl(repo, token);
-
-  // No logs branch is no longer "nothing to do": the capture-derived half of the
+// The session half: capture files, run listings, closed items, merged PRs and the git
+// history, folded into `USAGE_PATH`. Hands back the file, or nothing when the
+// recompute is byte-identical apart from its stamp.
+async function foldSessions({ root, repo, token, base, remote, baseSha, now, log }) {
+  // No logs branch is not "nothing to do": the capture-derived half of the
   // aggregate is empty, but every other source — the run listings, the queue's own
   // closed items, the git history — exists as soon as the repo has a scheduler, and a
   // repo whose sessions are all unattended is exactly the one worth counting.
@@ -252,13 +266,12 @@ export async function worker({ root, repo, token, defaultBranch, automerge, deli
   // already been folded. A fold PR still open when the next run fires is rebuilt from
   // the base — days recompute statelessly and the watermark advances from the same
   // place, so nothing is ever counted twice.
-  const baseSha = baseTip(root, remote, base);
   // Decoded on the way in: the prior file may have been written by any version of this
   // format, and the fold works in named counters throughout.
+  const rolling = readRollingAt(root, baseSha, USAGE_PATH, LEGACY_USAGE_PATH);
   let prior = {};
-  try { prior = decodeUsage(JSON.parse(readAt(root, baseSha, USAGE_PATH) ?? '{}')); } catch { /* unparsable → refold */ }
+  try { prior = decodeUsage(JSON.parse(rolling.text ?? '{}')); } catch { /* unparsable → refold */ }
 
-  const now = new Date().toISOString();
   const reader = makeReader({ token });
 
   // The outside sources. Each is INDEPENDENTLY fail-soft: one that cannot be read
@@ -288,11 +301,10 @@ export async function worker({ root, repo, token, defaultBranch, automerge, deli
   if (releases === null) log('the releases listing could not be read — the release rows are absent this run');
   else if (releases.truncated) log('more than 100 releases exist — the far end of the release series may be under-counted');
 
-  const today = now.slice(0, 10);
   const text = renderUsageFile(encodeUsage(foldUsage({
     files,
     prior,
-    today,
+    today: now.slice(0, 10),
     now,
     generated: now,
     runs: runs.runs,
@@ -304,38 +316,90 @@ export async function worker({ root, repo, token, defaultBranch, automerge, deli
     dayFields: dayFieldsFrom({ commits, releases, ladder }),
   })));
 
+  const summary = `${files.length} capture file(s), ${runs.runs.length} run(s), ${queue.records.length} closed item(s) `
+    + `and ${prs.prs.length} merged PR(s)`;
   // Compared WITHOUT the freshness stamp, which moves every run by construction: a
   // repo where nothing happened must still open nothing, and the stamp is the one line
-  // that would otherwise make every hourly fold a PR.
+  // that would otherwise make every fold a PR.
   const landed = readAt(root, baseSha, USAGE_PATH);
   if (landed !== null && withoutStamp(landed) === withoutStamp(text)) {
-    log(`${files.length} capture file(s) folded — recompute is byte-identical, nothing to deliver`);
-    return;
+    return { files: {}, moves: {}, summary: `${summary} - byte-identical` };
+  }
+  return { files: { [USAGE_PATH]: text }, moves: rolling.moves, summary };
+}
+
+// Runs every half, then lands whatever changed on ONE pull request. A half that
+// throws costs only its own file: the others still deliver, and the run then fails
+// with every half's error, so a broken half is never mistaken for a quiet one.
+export async function deliverFolds({ halves, deliver, automerge, log }) {
+  const files = {};
+  const moves = {};
+  const failures = [];
+  const summaries = [];
+  for (const [name, fold] of Object.entries(halves)) {
+    try {
+      const out = await fold();
+      Object.assign(files, out.files);
+      Object.assign(moves, out.moves);
+      summaries.push(`${name}: ${out.summary}`);
+    } catch (err) {
+      log(`the ${name} half failed - its file is unchanged this run: ${err?.stack ?? err}`);
+      failures.push(`${name}: ${err?.message ?? err}`);
+    }
+  }
+  for (const line of summaries) log(line);
+
+  if (Object.keys(files).length) {
+    const pr = await deliver({
+      files,
+      moves,
+      // The arming trailer carries the task's own automerge, so the
+      // automerge-policy-scope check re-measures this delivery's diff wherever the
+      // PR's CI runs check_the_work - the code lane's equivalent of the agent
+      // lane's stamp-before-merge.
+      message: `Claudinite: fold usage\n\n${AUTOMERGE_TRAILER}: ${automerge}`,
+      title: 'Claudinite: usage fold',
+      body: [
+        'Regenerated the repo\'s rolling usage records:',
+        '',
+        ...Object.keys(files).map((path) => `- \`${path}\``),
+        '',
+        `\`${USAGE_PATH}\` folds what the repo's sessions did - its captured conversation`,
+        "logs, its workflow run listings, the queue's closed work items, its merged pull",
+        'requests and its git history. Hour rows cover the last three days; day rows are',
+        'recomputed from scratch every run; the run, queue and merged-PR rows and the week',
+        'rows are appended once, past their own watermarks.',
+        '',
+        `\`${TASKS_USAGE_PATH}\` folds what the machinery itself cost - per workflow the runs,`,
+        "jobs, billed minutes and, only where this pack's config carries `actionsMinuteRate`,",
+        'the spend they imply; per run its API calls and wall time per phase; per task its',
+        'outcomes, parks and latency samples. Every tier is appended once past its own watermark.',
+        '',
+        'A file whose recompute differs only in its `generated` stamp is left out, and a fold',
+        'where neither moved opens no PR at all. Machine-written - never hand-edit either;',
+        'each fold starts from the last, so a lost copy is lost history.',
+      ].join('\n'),
+    });
+    log(`${pr.reused ? 'updated' : 'opened'} PR ${pr.number !== null ? `#${pr.number}` : `on ${pr.branch}`}`
+      + `${pr.merged ? ' (landed)' : pr.delivery === 'review' ? ' (left for review)' : ''}`);
+  } else if (!failures.length) {
+    log('every recompute is byte-identical - nothing to deliver');
   }
 
-  const pr = await deliver({
-    files: { [USAGE_PATH]: text },
-    // The arming trailer carries the task's own automerge, so the
-    // automerge-policy-scope check re-measures this delivery's diff wherever the
-    // PR's CI runs check_the_work — the code lane's equivalent of the agent
-    // lane's stamp-before-merge.
-    message: `Claudinite: fold usage metrics\n\n${AUTOMERGE_TRAILER}: ${automerge}`,
-    title: 'Claudinite: usage fold',
-    body: [
-      `Regenerated \`${USAGE_PATH}\` from this repo's captured conversation logs, its`,
-      "workflow run listings, the queue's own closed work items, its merged pull",
-      'requests, and its git history.',
-      '',
-      'Hour rows cover the last three days; day rows are recomputed from scratch every',
-      'run from the sources still readable; week rows are appended once, past the',
-      '`foldedThrough` watermark. The run, queue and merged-PR rows are appended once',
-      'past their own watermarks — all are rate-limited REST reads, not a local branch.',
-      'A recompute that differs only in its `generated` stamp opens no PR at all.',
-      'Machine-written — never hand-edit it.',
-    ].join('\n'),
+  if (failures.length) throw new Error(`usage fold: ${failures.join('; ')}`);
+}
+
+export async function worker({ root, repo, token, defaultBranch, automerge, deliver, log: runLog }) {
+  log = runLog;
+  const base = defaultBranch ?? 'main';
+  const remote = remoteUrl(repo, token);
+  const baseSha = baseTip(root, remote, base);
+  const now = new Date().toISOString();
+  await deliverFolds({
+    halves: {
+      sessions: () => foldSessions({ root, repo, token, base, remote, baseSha, now, log }),
+      machinery: () => foldMachinery({ root, repo, token, baseSha, now, log }),
+    },
+    deliver, automerge, log,
   });
-  log(`${files.length} capture file(s), ${runs.runs.length} run(s), ${queue.records.length} closed item(s) `
-    + `and ${prs.prs.length} merged PR(s) folded — `
-    + `${pr.reused ? 'updated' : 'opened'} PR ${pr.number !== null ? `#${pr.number}` : `on ${pr.branch}`}`
-    + `${pr.merged ? ' (landed)' : pr.delivery === 'review' ? ' (left for review)' : ''}`);
 }

@@ -1,6 +1,6 @@
 ---
 name: writing-repo-scanning-checks
-description: How a check that scans the repo picks its file set, strips comments before matching a forbidden token, and proves itself silent against real sources. Loaded for any edit of a coded or declared check.
+description: How a repo-scanning check picks its files, strips comments, and proves itself silent on real sources. Loaded for any edit of a coded or declared check.
 metadata:
   body: guidelines
   usage:

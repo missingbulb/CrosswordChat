@@ -1,17 +1,16 @@
-// Post-hoc enforcement of a task's declared outcome ceiling (per-project-scheduling
-// docs/PRINCIPLES.md). The executor runs this in code AFTER the subagent finishes:
+// Post-hoc enforcement of a task's declared outcome ceiling. The executor runs this
+// in code AFTER the subagent finishes:
 // the outcome is a ceiling enforced, not merely requested in prose, so a `none`
 // task that opened a PR — or a task that merged one with nothing authorized —
 // fails the run and converges to needs-human. "No change" is always legal.
 //
 // This seam judges LANE-LEVEL facts only (did the run open, did it merge). A
 // granular `automerge` policy permits the merge here; whether the actual
-// diff sat inside the policy is the policy engine's verdict (merge-policy.mjs),
-// made where the tree is readable — the landing lane's CLI and the
+// diff sat inside the policy is the policy engine's verdict, made where the tree is readable - the landing lane's CLI and the
 // automerge-policy-scope work check.
 //
 // Pushes to non-default branches (e.g. the conversation-logs prune) are outside
-// the PR taxonomy (PRINCIPLES.md) and are not judged here — the caller passes only
+// the PR taxonomy and are not judged here - the caller passes only
 // what the task did to PULL REQUESTS.
 
 import { canonicalOutcome, opensPullRequest } from '../contract/task-contract.mjs';

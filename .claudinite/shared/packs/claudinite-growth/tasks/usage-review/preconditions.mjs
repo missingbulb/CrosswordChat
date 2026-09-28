@@ -8,15 +8,17 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readUsageFile, USAGE_PATH } from './read-record.mjs';
-import { REVIEW_PATH } from './report.mjs';
+import { REVIEW_PATH, LEGACY_PATHS } from './report.mjs';
 
 const repoRoot = () => process.env.CLAUDINITE_REPO_ROOT || process.cwd();
 
 const foldedThrough = (root) => readUsageFile(root)?.foldedThrough ?? null;
 
 const reviewedThrough = (root) => {
-  try { return JSON.parse(readFileSync(join(root, REVIEW_PATH), 'utf8')).window?.to ?? null; }
-  catch { return null; }
+  for (const path of [REVIEW_PATH, LEGACY_PATHS[REVIEW_PATH]]) {
+    try { return JSON.parse(readFileSync(join(root, path), 'utf8')).window?.to ?? null; } catch { /* not at this path */ }
+  }
+  return null;
 };
 
 // The sessions the fold carries for the trailing window - the denominator every

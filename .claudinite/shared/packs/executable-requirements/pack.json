@@ -1,0 +1,21 @@
+{
+  "version": "60928.1",
+  "minEngineVersion": "60928.1",
+  "ruleRoutingGuidance": {
+    "belongs": "running a numbered spec as tests: dev/requirements layout, requirement ids, kinds, coverage and gallery gates, determinism rules",
+    "excludes": "doc-first judgment, owner-owned expecteds and honest-gap tracking — spec-driven-product; general test practice — basics writing-tests"
+  },
+  "pitch": "Turns the repo's requirements document into a spec that runs as tests. Every requirement line gets a case in a standard layout, and the project's own gates prove each one is covered and that rendered outputs stay byte-stable. Three skills do the authoring work: writing a requirement leaf and picking its case kind, writing a saga that captures a multi-step story as a golden storyboard, and making rendered expected outputs deterministic. A couple of rules and a check keep the case layout consistent.",
+  "questions": [
+    {
+      "id": "ui_testing",
+      "prompt": "How are the executable UI requirements exercised — what is the UI-testing mechanism (browser/E2E such as Playwright, DOM-level golden rendering, a headless harness), or is there none yet? Most requirements should be verifiable by a short test that drives to a state and makes a VISUAL assertion (a committed golden the owner checks by sight), so this fixes how a requirement becomes that assertion.",
+      "distill": "recorded as intent; it fixes the harness the requirements.md drives its UI gates through, and the visual-golden path most leaves take for simplest owner verification"
+    },
+    {
+      "id": "requirements_source",
+      "prompt": "Where do the requirements come from — an existing requirements/spec document, the issue tracker, or authored fresh? Name the path or source so the spec is seeded from it rather than reinvented.",
+      "distill": "record the source; set config.spec to the executable spec's home (default dev/requirements/requirements.md) and extract the initial requirements from the named source"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # executable-requirements pack
 
-Active when the repo has `dev/requirements/requirements.md`. The concrete framework standard for
+Declared by hand: nothing in a repo's shape says it runs its spec this way. The concrete framework standard for
 running a spec as tests: layout, case naming, the coverage gate's duties, the kind vocabulary
 (including the storyboard `saga` kind), the machine-managed gallery, and the determinism rules that
 make rendered expecteds byte-stable. Prose-only: every rule here is enforced by gates **the

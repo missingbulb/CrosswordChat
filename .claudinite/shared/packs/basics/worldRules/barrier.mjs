@@ -1,7 +1,6 @@
 import {
   normalizeEdges, barrierFindings, staleFindings, specFinding,
 } from '../../../engine/checks/helpers/reference-scanning.mjs';
-import { DEFAULT_DOC } from '../barriers.mjs';
 
 // The project-declared barrier check: a repo states its folder-access graph as
 // `config.barriers.rules` on its basics pack entry in .claudinite-settings.json
@@ -9,12 +8,10 @@ import { DEFAULT_DOC } from '../barriers.mjs';
 // enforces it. A rule owns its exceptions — carve-out strings and reviewed
 // { path, to?, reason } crossings both live in the rule's own `except`, so a NEW
 // coupling in an already-reviewed file still fails and paid-down debt goes stale.
-// (A pack that ships a *fixed* barrier contributes it as manifest data instead —
-// barriers.mjs beside this file builds those.)
 const rule = {
   id: 'barrier',
-  severity: 'blocking',
-  doc: DEFAULT_DOC,
+  on_fail: 'block',
+  doc: 'packs/basics/barriers.md',
   description: "Folders must not reference across a declared barrier (the basics pack entry's config.barriers)",
   why: 'a declared folder barrier encodes an architectural boundary; a crossing reference erodes it silently',
 

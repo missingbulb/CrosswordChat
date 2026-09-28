@@ -1,5 +1,5 @@
 // Loading a task's OWN precondition terms — the extension mechanism the built-in
-// vocabulary leaves room for (docs/PRINCIPLES.md).
+// vocabulary leaves room for.
 // A task whose gate is its own (an age against a configured retention, a manifest
 // against a release tag, a fleet read) ships `preconditions.mjs` beside its
 // `task.json`, exporting `terms`: a map from term name to
@@ -7,8 +7,8 @@
 // beside its only consumer, so reading the declaration and reading the gate are
 // one directory apart.
 //
-// Split from precondition-policy.mjs, which stays pure over the signals: this is
-// the half that touches the filesystem, and the evaluator is handed the result.
+// Kept apart from the evaluator, which stays pure over the signals: this is the
+// half that touches the filesystem, and the evaluator is handed the result.
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';

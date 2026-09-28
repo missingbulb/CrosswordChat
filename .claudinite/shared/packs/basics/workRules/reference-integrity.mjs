@@ -21,7 +21,7 @@ const migrationGoverns = (work) => {
 
 const rule = {
   id: 'reference-integrity',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'Relative Markdown links must resolve, and no tracked file may reference a deleted path',
   doc: 'packs/basics/skills/repo-text-sweeps/SKILL.md',
   scope: 'work',

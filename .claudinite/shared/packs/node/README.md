@@ -2,6 +2,11 @@
 
 Active when the repo has a `package.json` at its root or one directory down.
 
+## Environment (`env`)
+
+A cloud session gets `npm ci` run in each directory the pack entry's `config.dirs` lists, and in
+the repo root when it lists none: `{ "id": "node", "config": { "dirs": ["firebase/functions"] } }`.
+
 ## Rules (`RULES.md`)
 
 | Rule | Severity | Reason | Enforcement |

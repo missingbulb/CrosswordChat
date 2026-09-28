@@ -91,7 +91,7 @@ function arms(body) {
 
 const rule = {
   id: 'stt-error-map-has-default',
-  severity: 'blocking',
+  on_fail: 'block',
   description: 'A speech-recognition error mapping is total — every name maps to a kind',
   doc: 'packs/web-speech/RULES.md',
   why: 'the Web Speech error-name set is open — browsers extend it — so a mapping switch with no catch-all returns undefined for a name it does not enumerate; the dialog policy then compares undefined against every kind it knows, takes its do-nothing arm, and the session dies without throwing, logging, or changing the UI',

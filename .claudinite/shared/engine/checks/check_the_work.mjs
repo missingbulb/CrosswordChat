@@ -8,7 +8,7 @@
 //   --transcript PATH   the session transcript — conversation rules self-skip without it
 //   --changed / --base REF / --root DIR   as in check_the_world.mjs
 import { buildContext } from './helpers/repo-context.mjs';
-import { discoverPacks } from '../pack_loader/pack-registry.mjs';
+import { discoverPacks, isActive } from '../pack_loader/pack-registry.mjs';
 import { runActivePackRules } from './run-active-pack-rules.mjs';
 import { READS_THE_SESSION } from './helpers/work.mjs';
 import { reportFindings } from './report-findings.mjs';
@@ -19,13 +19,13 @@ const has = (flag) => args.includes(flag);
 const value = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : null);
 const root = value('--root') || process.cwd();
 
-const { packs } = await discoverPacks({ localRoot: root });
 const ctx = buildContext({
   root,
   mode: has('--changed') ? 'changed' : 'all',
   baseOverride: value('--base'),
   transcriptPath: value('--transcript'),
 });
+const { packs } = await discoverPacks({ localRoot: root, checksFor: (id) => isActive({ id }, ctx.config) });
 
 const timings = [];
 const started = performance.now();

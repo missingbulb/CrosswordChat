@@ -321,9 +321,11 @@
   close, and where two fields claim the same fact, let each mean what its own source said and leave
   the call to the consumer.
 
-- **Writing a comment** — carry the why, or a cross-file relationship the code can't state itself;
-  if the code plus a known convention already says it, write nothing. Describe the current state,
-  never the edit that produced it: don't explain the change you just made, and don't note what was
-  removed or renamed. If a comment narrates a past fix, keep only the part still true of the code in
-  front of you. When it must name a path, spell that path in one canonical place and point every
-  other mention there.
+- **Writing a comment**:
+  - Never write a comment that restates the code in other words.
+  - Never comment on a function call to explain how it works; avoid explaining what it returns
+    unless that is crucial.
+  - Never explain details of how the callee operates (retries, timing, dependencies).
+  - Never describe how the code used to be or how it changed.
+  - Avoid mentioning file paths and names.
+  - Avoid writing a comment that would need editing when an unrelated change happens.

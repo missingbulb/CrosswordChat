@@ -1,5 +1,5 @@
-// Where a task's declaration lives and how it is loaded (task-declaration-text.mjs
-// says what a task.json is and how its fields are read). Everything that resolves
+// Where a task's declaration lives and how it is loaded; what the file is and how
+// its fields are read is re-exported from its text module. Everything that resolves
 // a declaration — discovery, the dispatch validators, the checks that gate on a
 // task folder — goes through the names here.
 
