@@ -1,17 +1,11 @@
 {
   "usage-findings": {
-    "value": 9,
+    "value": 8,
     "previous": 9,
-    "note": "2026-08-31 to 2026-09-27"
+    "note": "2026-09-01 to 2026-09-28"
   },
   "usage-newest": {
     "rows": [
-      {
-        "subject": "committing",
-        "rule": "skill-forced-only-small",
-        "cause": "known",
-        "since": "2026-09-25"
-      },
       {
         "subject": "changing-pack-elements",
         "rule": "skill-triggered-missing-moments",
