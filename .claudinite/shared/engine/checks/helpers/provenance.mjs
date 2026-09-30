@@ -347,13 +347,17 @@ const isDir = (io, p) => io.listDir(p) !== null;
 const listDirs = (io, p) => (io.listDir(p) ?? []).filter((n) => !n.startsWith('.') && isDir(io, `${p}/${n}`)).sort();
 const listFiles = (io, p) => (io.listDir(p) ?? []).filter((n) => !isDir(io, `${p}/${n}`)).sort();
 
-// The `id:` a rule module declares - every string literal assigned to an `id` key,
-// which is how every coded rule in the corpus spells it.
+// The `id:` a rule module declares - every string literal assigned to an `id` key, and
+// a `const id = '…'` that an object takes by shorthand (`{ id, … }`), the spelling
+// member-authored rules use.
 export function checkIdsIn(source) {
+  const text = String(source ?? '');
   const out = [];
   const re = /\bid\s*:\s*['"]([^'"]+)['"]/g;
   let m;
-  while ((m = re.exec(String(source ?? ''))) !== null) out.push(m[1]);
+  while ((m = re.exec(text)) !== null) out.push(m[1]);
+  const constant = /\bconst\s+id\s*=\s*['"]([^'"]+)['"]/.exec(text);
+  if (constant && /[{,]\s*id\s*[,}]/.test(text) && !out.includes(constant[1])) out.push(constant[1]);
   return out;
 }
 

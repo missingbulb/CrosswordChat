@@ -84,6 +84,11 @@ const isAdoptionHandover = (v) => Array.isArray(v) && v.every((o) => o !== null
 // Every CANON pack does declare both — asserted by engine-tests/pack-versions.test.mjs,
 // which is a canon-side test rather than a conformance rule precisely because it is
 // true of this tree only.
+// The fingerprint fields `relevanceDetector` replaced: accepted on a manifest, carried by
+// no conversion.
+// @legacy-tolerance advisory:legacy-shape-in-use retire:#2374
+export const RETIRED_FINGERPRINT_FIELDS = ['detect', 'marker'];
+
 export const PACK_FIELDS = {
   id: { required: true, describe: 'the pack id — the directory name by convention, and declared only to override that', valid: (v) => typeof v === 'string' && v.length > 0 },
   version: { describe: 'the pack version — date-anchored <day>.<n>, advanced by a pack release', valid: isDeclaredVersion },
