@@ -2,9 +2,10 @@
 // Convert a pack's `pack.mjs` manifest into the `pack.json` the loader prefers. The
 // module is evaluated and its default export written back as data, key order kept, so
 // the JSON loads to exactly what the module did. A `relevanceDetector` pattern becomes
-// its source string, or `{ source, flags }` where it carries a flag. A value JSON cannot
-// carry - a function, a module that imports a sibling - leaves the manifest a module,
-// which the loader still reads, and says why. Comments do not survive.
+// its source string, or `{ source, flags }` where it carries a flag, and the retired
+// fingerprint fields are dropped. A value JSON cannot carry - a function, a module that
+// imports a sibling - leaves the manifest a module, which the loader still reads, and
+// says why. Comments do not survive.
 //
 // Two callers. The `pack-json-manifests` migration record runs this against a member's
 // OWN local packs on its nightly update, through the registry's io, evaluating each
@@ -17,6 +18,7 @@ import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'no
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { MANIFEST_JSON, MANIFEST_MODULE } from '../pack_loader/pack-conventions.mjs';
+import { RETIRED_FINGERPRINT_FIELDS } from '../pack_loader/pack-schema.mjs';
 import { LOCAL_PACK_ROOT } from './task-declarations-to-json.mjs';
 
 const isPlainObject = (v) => v !== null && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
@@ -42,8 +44,9 @@ export async function manifestToJson(source, { url = `data:text/javascript;base6
     return { why: `it does not evaluate on its own: ${e.message}` };
   }
   if (!isPlainObject(mod)) return { why: 'its default export is not an object' };
+  const kept = Object.fromEntries(Object.entries(mod).filter(([k]) => !RETIRED_FINGERPRINT_FIELDS.includes(k)));
   try {
-    return { json: `${JSON.stringify(toData(mod, ''), null, 2)}\n` };
+    return { json: `${JSON.stringify(toData(kept, ''), null, 2)}\n` };
   } catch (e) {
     return { why: e.message };
   }
