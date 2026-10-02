@@ -63,7 +63,7 @@ An edit that leaves an entry the same size or larger, re-quotes the now-canon ru
 owning pack's fix is a **corruption, not a dedup**. When in doubt about a kept item, leave it
 byte-for-byte unchanged rather than "reconcile" its wording. The `dedup-prune-integrity` check
 ([dedup-integrity.mjs](../../workRules/dedup-integrity.mjs)) is the machine backstop: it reds the session
-when a dedup-labeled commit grows a local-pack prose file, or when any change adds a line that
+when a dedup-labeled commit grows a local-pack prose file other than a provenance log, or when any change adds a line that
 restates a canon rule.
 
 ## The keep-test: says *more*, not merely says it more specifically

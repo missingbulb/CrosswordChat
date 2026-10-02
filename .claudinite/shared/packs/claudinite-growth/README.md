@@ -177,7 +177,7 @@ machine halves.
 
 | Rule | Kind | What |
 |---|---|---|
-| `dedup-prune-integrity` | work-scope ([dedup-integrity.mjs](workRules/dedup-integrity.mjs)) | a dedup edit only removes portable text — never grows a local pack or re-imports a canon rule |
+| `dedup-prune-integrity` | work-scope ([dedup-integrity.mjs](workRules/dedup-integrity.mjs)) | a dedup edit only removes portable text: it never grows a local pack's prose beyond its provenance logs, or re-imports a canon rule |
 | `growth-write-scope` | work-scope ([growth-write-scope.mjs](workRules/growth-write-scope.mjs)) | a growth run (extract, dedup, either sweep) writes only the repo's own local packs |
 
 Every run this pack schedules writes the local packs and nothing else. `growth-write-scope` is the

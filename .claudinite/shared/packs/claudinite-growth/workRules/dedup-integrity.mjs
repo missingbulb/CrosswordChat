@@ -1,6 +1,7 @@
 import { sep } from 'node:path';
 import { finding } from '../../../engine/checks/helpers/findings.mjs';
 import { LOCAL_PACKS_SUBDIR } from '../../../engine/pack_loader/pack-registry.mjs';
+import { PROVENANCE_DIR } from '../../../engine/pack_loader/pack-conventions.mjs';
 
 // The machine backstop for the growth-dedup task doc's rule: a dedup edit only ever REMOVES
 // portable text. The routine has instead reworded partially-covered items —
@@ -32,10 +33,15 @@ import { LOCAL_PACKS_SUBDIR } from '../../../engine/pack_loader/pack-registry.mj
 //      is that it never edits the canon it prunes against. A branch reaching
 //      outside local packs is canon work that merely mentions dedup.
 //
+//      A pack's provenance files are exempt from the shrink measure, never from
+//      the fingerprint: a remove prune must append a `retired` entry to the
+//      element's append-only decision log, so that file always grows.
+//
 // git emits '/'-separated paths, so the platform-joined constant is normalized.
 const LOCAL_ROOT = `${LOCAL_PACKS_SUBDIR.split(sep).join('/')}/`;
 
 const isLocalPackProse = (file) => file.endsWith('.md') && file.startsWith(LOCAL_ROOT);
+const isProvenance = (file) => file.slice(LOCAL_ROOT.length).split('/')[1] === PROVENANCE_DIR;
 
 const RESTATES_CANON = /\b(?:is|are) portable\s*\(canon\)|\bpack owns\b|\bcanon (?:now )?owns\b|\bowned by (?:the )?canon\b/i;
 const DEDUP_RUN = /\bdedup\b|\bcanon now (?:covers|owns)\b/i;
@@ -71,7 +77,7 @@ const rule = {
     const isDedupRun = work.commits.some((m) => DEDUP_RUN.test(m)) &&
       work.changedFiles.every((f) => f.startsWith(LOCAL_ROOT));
     if (isDedupRun) {
-      for (const file of prose) {
+      for (const file of prose.filter((f) => !isProvenance(f))) {
         const base = work.readBase(file);
         const head = work.read(file);
         // A file absent at base (new pack) or gone at head (whole-file prune)
