@@ -57,6 +57,10 @@
     {
       "id": "host-page",
       "version": "60928.1"
+    },
+    {
+      "id": "headless-browser",
+      "version": "60928.1"
     }
   ],
   "taskScheduler": {
