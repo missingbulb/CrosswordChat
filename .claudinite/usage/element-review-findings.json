@@ -1,15 +1,15 @@
 {
-  "generated": "2026-10-06T00:00:00Z",
+  "generated": "2026-10-07T00:00:00Z",
   "window": {
-    "from": "2026-09-08",
-    "to": "2026-10-05",
+    "from": "2026-09-09",
+    "to": "2026-10-06",
     "daysCovered": 28,
     "previous": {
-      "from": "2026-08-11",
-      "to": "2026-09-07",
+      "from": "2026-08-12",
+      "to": "2026-09-08",
       "daysCovered": 1
     },
-    "foldedThrough": "2026-10-05",
+    "foldedThrough": "2026-10-06",
     "subjects": {
       "skills": 42,
       "checks": 98,
@@ -35,7 +35,7 @@
         "tokens": 193
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     },
     {
       "rule": "skill-triggered-missing-moments",
@@ -55,7 +55,7 @@
         "moments": 17
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     },
     {
       "rule": "skill-triggered-missing-moments",
@@ -75,7 +75,7 @@
         "moments": 44
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     },
     {
       "rule": "skill-triggered-missing-moments",
@@ -95,7 +95,7 @@
         "moments": 16
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     },
     {
       "rule": "skill-triggered-missing-moments",
@@ -115,7 +115,7 @@
         "moments": 34
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     },
     {
       "rule": "skill-triggered-missing-moments",
@@ -135,7 +135,7 @@
         "moments": 142
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     },
     {
       "rule": "skill-triggered-missing-moments",
@@ -155,7 +155,7 @@
         "moments": 7
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     },
     {
       "rule": "skill-triggered-missing-moments",
@@ -175,7 +175,7 @@
         "moments": 18
       },
       "since": "2026-09-23",
-      "lasting": false
+      "lasting": true
     }
   ],
   "notEvaluated": [
