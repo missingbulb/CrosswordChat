@@ -23,7 +23,7 @@
 
 ## 2026-09-07 · moved · reduced to the repo's residue in local/crossword-chat (#407)
 - **Source:** the fleet-wide consolidation to one local pack per repo, named for the repo
-  (missingbulb/Claudinite#1691, here #396), once canon published `host-page` and a widened
+  (#396), once canon published `host-page` and a widened
   `web-speech`.
 - **Reason:** the general judgment was canon's now; what stays is only what is true of this repo and
   this host.
