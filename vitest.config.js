@@ -7,5 +7,7 @@ export default defineConfig({
       'dev/requirements/**/*.test.js',
     ],
     environment: 'node',
+    // A UI render launches a cold Chromium per case, which can outrun the 5s default.
+    testTimeout: 20000,
   },
 });
