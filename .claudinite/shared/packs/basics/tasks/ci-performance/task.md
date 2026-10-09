@@ -40,7 +40,7 @@ that concludes "this is the correct cost" is the point of taking the measurement
 
 ## What you must not do
 
-- **Deliver on the branch your item names — that is the deliverable.** Push to `Target-branch:` and open the PR on it, the way [deliver-pr.md](../../../claudinite-tasks/src/deliver/deliver-pr.md) says. Never search for an open pull request or pick a branch of your own. What happens to it after that is the delivery machinery's, not this run's.
+- **Deliver on the branch your item names — that is the deliverable.** Push to `Target-branch:` and open the PR on it, the way your instructions say to deliver a pull request. Never search for an open pull request or pick a branch of your own. What happens to it after that is the delivery machinery's, not this run's.
 - **Never make a test weaker to make it faster** — deleting coverage, dropping a case, loosening an
   assertion, or excluding a suite from the run. If a test genuinely costs more than it is worth,
   that is an argument to put to the owner on the tracker, not a change to land here.

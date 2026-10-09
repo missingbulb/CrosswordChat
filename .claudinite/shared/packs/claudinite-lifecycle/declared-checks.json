@@ -3,15 +3,16 @@
     "id": "claudinite-isolation",
     "on_fail": "block",
     "failureMessage": "the vendored canon is refreshed nightly and refactored upstream — code that reaches into it inherits every canon rename as a breaking change",
-    "fix": "inline the few lines you need into your own tree, remove the reference, or accept it with a reason in .claudinite-settings.json (rule \"claudinite-isolation\")",
+    "fix": "inline the few lines you need into your own tree, remove the reference, or accept it with a reason under checks.accept in .claudinite/settings.yaml (rule \"claudinite-isolation\")",
     "relevantWhen": { "pathExists": ".claudinite/shared" },
     "forbidReferences": [
       {
         "from": ".",
         "to": ".claudinite",
         "matchUniqueFilenames": false,
+        "allow": [".claudinite/local"],
         "except": [".claudinite", ".claude", ".github/workflows", ".gitignore", ".gitattributes", "CLAUDE.md", ".claudinite-settings.json"],
-        "reason": "consumer files must not couple to the vendored canon — the wiring files are the reviewed exceptions (vendoring/DESIGN.md)"
+        "reason": "consumer files must not couple to the vendored canon — the wiring files are the reviewed exceptions (vendoring/DESIGN.md); the Node declaration stays one while a half-moved member still holds it, until missingbulb/ClaudiniteEngine#50 retires the legacy shapes"
       }
     ]
   },
@@ -49,19 +50,9 @@
         "fix": "add a concurrency: group so overlapping runs serialize (double-run safety)"
       },
       {
-        "require": "/packs\\/claudinite-tasks\\/src\\/schedule\\/run\\.mjs/",
-        "what": "does not run the vendored scheduler entry",
-        "fix": "run the vendored scheduler entry: node .claudinite/shared/packs/claudinite-tasks/src/schedule/run.mjs"
-      },
-      {
-        "require": "/^\\s*contents:\\s*write\\b/m",
-        "what": "does not grant contents: write",
-        "fix": "set permissions.contents: write — the update runner pushes its delivery branch; without it the self-refresh 403s"
-      },
-      {
-        "require": "/^\\s*pull-requests:\\s*write\\b/m",
-        "what": "does not grant pull-requests: write",
-        "fix": "set permissions.pull-requests: write — the update runner opens its PR and arms auto-merge; without it the PR create 403s"
+        "require": "/\\bcn schedule run\\b/",
+        "what": "does not run the engine's scheduler",
+        "fix": "run `cn schedule run`"
       }
     ]
   },
@@ -71,10 +62,10 @@
     "failureMessage": "claudinite-lifecycle carries Claudinite's own rules — the mount, the declaration, adoption, the update and the task contract — a member that does not declare it runs the machinery with none of them",
     "checkParsedFiles": [
       {
-        "file": ".claudinite-settings.json",
-        "requireValueInArray": { "atField": "packs", "value": "claudinite-lifecycle", "matchingEntryObjectsByField": "id" },
+        "filesMatching": "/^\\.claudinite\\/settings\\.(yaml|toml|json)$/",
+        "requireValueInArray": { "atField": "packs.declared", "value": "claudinite-lifecycle", "matchingEntryObjectsByField": "id" },
         "what": "does not declare the mandatory \"claudinite-lifecycle\" pack",
-        "fix": "add \"claudinite-lifecycle\" to \"packs\" — it is basics' own dependency, so the requires closure writes it back the next time the declaration is written"
+        "fix": "add \"claudinite-lifecycle\" to packs.declared in {path}"
       }
     ]
   },

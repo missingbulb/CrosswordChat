@@ -1,10 +1,17 @@
-name: Bump extension patch version
+name: Bump extension version
 description: >-
-  Bumps the extension's PATCH version across the manifest and package.json (the
-  two version records the standard keeps in sync) and outputs the new version.
-  The generic form of the per-repo patch-bumpers the daily auto-release used to
-  require — the caller passes only its manifest/package paths (release config),
-  never a bump script. Composite so it adds no reusable-workflow nesting level.
+  Raises the extension's version across the manifest and package.json (the two
+  version records the standard keeps in sync) and outputs the new version. The
+  scheme and the rewrite live in bump.mjs beside this file; the caller passes
+  only its manifest/package paths (release config), never a bump script.
+  Composite so it adds no reusable-workflow nesting level.
+
+  The ROUTINE bump is not this action: a change that touches a shipped file
+  raises the patch in its own PR (`cer/version-bumped`), and the release flow
+  ships whatever version it finds on main. What runs here is the deliberate
+  minor or major — dispatched by hand. The directory keeps its older
+  bump-extension-patch name because it is vendored into every extension repo,
+  where a rename would strand the old copy.
 
 inputs:
   manifest_path:
@@ -13,10 +20,14 @@ inputs:
   package_json_path:
     description: Path of the package.json kept in sync with the manifest
     required: true
+  part:
+    description: Which part to raise — patch, minor or major
+    required: false
+    default: patch
 
 outputs:
   version:
-    description: The new X.Y.Z version after the patch bump
+    description: The new X.Y.Z version after the bump
     value: ${{ steps.bump.outputs.version }}
 
 runs:
@@ -24,4 +35,7 @@ runs:
   steps:
     - id: bump
       shell: bash
-      run: node "${{ github.action_path }}/bump.mjs" "${{ inputs.manifest_path }}" "${{ inputs.package_json_path }}"
+      run: >-
+        node "${{ github.action_path }}/bump.mjs"
+        "${{ inputs.manifest_path }}" "${{ inputs.package_json_path }}"
+        ${{ inputs.part == 'major' && '--major' || inputs.part == 'minor' && '--minor' || '' }}

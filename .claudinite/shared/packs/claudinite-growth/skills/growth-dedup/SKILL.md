@@ -62,7 +62,7 @@ spends its attention where the new coverage actually is.
 An edit that leaves an entry the same size or larger, re-quotes the now-canon rule, or names the
 owning pack's fix is a **corruption, not a dedup**. When in doubt about a kept item, leave it
 byte-for-byte unchanged rather than "reconcile" its wording. The `dedup-prune-integrity` check
-([dedup-integrity.mjs](../../workRules/dedup-integrity.mjs)) is the machine backstop: it reds the session
+([dedup_prune_integrity.go](../../checks/dedup_prune_integrity.go)) is the machine backstop: it reds the session
 when a dedup-labeled commit grows a local-pack prose file other than a provenance log, or when any change adds a line that
 restates a canon rule.
 
@@ -100,10 +100,10 @@ prune a duplicated prose line. The keep-test above is unchanged.
   real local lesson.
 - **Write only inside the local packs.** A dedup run's whole surface is
   `.claudinite/local/packs/` — never the canon it prunes against, never the project's own code. The
-  `growth-write-scope` check ([growth-write-scope.mjs](../../workRules/growth-write-scope.mjs)) keys on the
+  `growth-write-scope` check ([growth_write_scope.go](../../checks/growth_write_scope.go)) keys on the
   run's pinned `Claudinite growth: dedup local packs` title and reds any path outside that surface.
 - **Record each prune on the element's provenance file**, in the same change, through
-  `provenance.mjs append`: `retired` (superseded by the canon element it names) for a removal -
+  `cn provenance append`: `retired` (superseded by the canon element it names) for a removal -
   the file stays - `weakened` for a strip, `reworded` for a rephrase; the changing-pack-elements
   skill has the grammar.
 - If an edit touches something a test reads, run the repo's offline test suite and keep it green

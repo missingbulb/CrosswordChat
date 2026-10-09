@@ -1,8 +1,8 @@
 name: "Chrome extension: Create Package (reusable)"
 
-# Reusable workflow of the chrome-extension-release standard — the logic behind
+# Reusable workflow of the Chrome Web Store release standard — the logic behind
 # every extension repo's release "create-package" job. Vendored into the
-# extension repo by the chrome-extension-release pack (not hosted in Claudinite);
+# extension repo by the chrome-extension pack (not hosted in Claudinite);
 # the repo's single `chrome-extension-release.yml` orchestrator calls it locally
 # (uses: ./.github/workflows/chrome-extension-create-package.yml) and passes NO
 # repo values. workflow_call ONLY. All repo-specific values come from the

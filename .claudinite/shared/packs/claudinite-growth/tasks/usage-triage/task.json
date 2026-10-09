@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../claudinite-tasks/task.schema.json",
   "id": "usage-triage",
   "description": "Turns a usage-review finding that has stood two weeks into a proposed change to this repo's own local packs - the edit itself, one pull request per subject, for the owner to merge or decline.",
   "trigger": "schedule",

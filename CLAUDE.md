@@ -1,3 +1,3 @@
-@.claudinite/flat/claudinite-rules.GENERATED.md
+@.claudinite/cache/claudinite-rules.GENERATED.md
 
 @dev/procedures/CLAUDE.md

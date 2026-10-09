@@ -75,12 +75,12 @@ of the environment alone cannot know. For each element in the corpus, read its f
 - An **owner decision** entry is not probeable — verify only that the decision hasn't been superseded
   in the repo's own record, and otherwise report it `doc-verified`.
 
-What the run writes back, through `provenance.mjs append` in the same change: `reaffirmed` only
+What the run writes back, through `cn provenance append` in the same change: `reaffirmed` only
 where the probe produced **new** evidence or changed `Retire when` - a rule found still true on the
 old evidence gets no entry, and the run's pull request body is its record; `reworded` or `retired`
 where the probe corrected the rule. An entry is never edited: a stale reason is answered by a new
 entry. An **empty** file met on the way - an element whose history is not yet written - is filled
-first, from `provenance.mjs history <pack> <element>`, source-first, as the
+first, from `cn provenance history <pack> <element>`, source-first, as the
 [backfilling-provenance](../backfilling-provenance/SKILL.md) skill describes.
 
 ## Correcting what is stale

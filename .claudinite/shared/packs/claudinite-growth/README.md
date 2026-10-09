@@ -19,9 +19,12 @@ scheduler (`packs/claudinite-tasks/discover.mjs`) wherever the pack is declared:
 | `rule-revalidation` ([tasks/rule-revalidation/task.md](tasks/rule-revalidation/task.md)) | weekly | corrections to rules whose environment claim no longer probes true, in the repo's own local packs |
 
 (Plus `logs-prune`, agentless and on request only - retention over the conversation-logs branch,
-[tasks/logs-prune/worker.mjs](tasks/logs-prune/worker.mjs). The hourly
+`cn growth prune` as its code-work ([tasks/logs-prune/](tasks/logs-prune/README.md)). The hourly
 [usage-fold](../claudinite-tasks/tasks/usage-fold/README.md) reads that same branch and is
 described below, but it is the claudinite-tasks pack's task, not this one's.)
+
+The pack is marked `"engine": true` in `pack.json`, so the executor runs these tasks as the
+engine's own, under the license.
 
 ## Extraction is one task over two sources
 
@@ -35,7 +38,7 @@ described below, but it is the claudinite-tasks pack's task, not this one's.)
    whether any of it upgrades to a check before the PR opens.
 
 Everything lands in **one** PR, delivered to land where the repo's delivery settings allow
-(`packs/claudinite-tasks/src/deliver/deliver-pr.md`). The lesson bar and the promotion ladder both
+(the pull-request delivery in the routine instructions). The lesson bar and the promotion ladder both
 halves share are [extracting-lessons.md](extracting-lessons.md). Because fresh prose is offered a
 conversion the night it is written, the standing `prose-to-checks-sweep` is weekly: what it sees is
 a backlog.
@@ -50,9 +53,8 @@ Capture needs the live session transcript, so it runs in-session; extraction onl
 already-pushed logs, so it is the conversation half of the ordinary `growth-extract` task.
 
 1. **Capture - a step in the merge-to-main skill.** Right after a merge lands:
-   `node .claudinite/shared/packs/claudinite-growth/capture-log.mjs --pr <n>`
-   (in the canon repo itself: `node packs/claudinite-growth/capture-log.mjs --pr <n>`), `<n>` the
-   pull request the merge landed.
+   `.claudinite/bin/cn growth capture --pr <n>`, `<n>` the pull request the merge landed; the
+   command is the same in a member and in a canon checkout.
    It bundles the session transcript (sidechains inline, timestamp order), **scrubs
    enumeration-first** (every value the environment holds - `process.env` minus a short named
    allowlist of structural values, plus known credential stores - is redacted wherever it appears,
@@ -64,18 +66,18 @@ already-pushed logs, so it is the conversation half of the ordinary `growth-extr
    session's previous capture, whatever event produced it, so any two events chain into disjoint
    files and a zero delta pushes nothing at all.
    The branch is a **work queue, not an archive** - never merged.
-1. **Capture - again, when the session ends** ([session-end.mjs](session-end.mjs), invoked by the
-   engine's SessionEnd hook runner for every active pack that ships one). Same capture, with
-   `--issue 0`: **`0` means "no associated issue"**, in the same filename shape the retention
+1. **Capture - again, when the session ends** (`cn hook session-end`, wherever this pack is
+   declared). Same capture, with `--issue 0`: **`0` means "no associated issue"**, in the same filename shape the retention
    prune, the `conversationLogs` signal and the extract's filename parse read. **Best effort:** a
-   container reclaimed by timeout never fires it, so nothing depends on it having run. An
+   container reclaimed by timeout never fires it, so nothing depends on it having run; the hook
+   always answers and exits clean, and a key that turns in-session growth off captures nothing and
+   says so. An
    `issue-0` log has no PR or issue for the extract to post its summary on; nothing else about its
    lifecycle differs.
    **Unattended sessions capture through the same step, deliberately not through the hook.** A
    scheduled task's executor session ends by having its container reclaimed, which is exactly the
-   ending no `SessionEnd` fires on - so the executor runs the engine's runner itself as its last
-   step and names its work item in `CLAUDINITE_SESSION_ISSUE`, which this step uses in place of
-   `0`.
+   ending no `SessionEnd` fires on - so the executor's session runs
+   `.claudinite/bin/cn growth capture --issue <n>` as its last step, naming its work item.
 2. **The pass - the conversation half of [growth-extract](tasks/growth-extract/task.md)**
    (precondition: a substantive merge; local git on the repo's working tree, MCP only for the
    provenance comment). It applies the
@@ -86,10 +88,11 @@ already-pushed logs, so it is the conversation half of the ordinary `growth-extr
    **Extraction is the only path to permanence**: a log that yields no rule gets no comment, and
    its conversation is gone once retention deletes it.
 3. **Deletion - the agentless `logs-prune` task**
-   ([tasks/logs-prune/worker.mjs](tasks/logs-prune/worker.mjs)), on request only, over the same
-   branch: every capture past `config.retention_days` is removed, on the stamp in its filename
-   alone. **An undeclared retention takes the pack's 10-day default**; `retention_days: 0` is the
-   explicit capture-only opt-out, and a declaration the worker cannot read prunes nothing. There is
+   ([tasks/logs-prune/](tasks/logs-prune/README.md)), on request only, over the same branch: its
+   code-work `cn growth prune` removes every capture past `config.retention_days`, on the stamp in
+   its filename alone, once the engine's `log-past-retention` term reads one past it. **An
+   undeclared retention takes the 10-day default**; `retention_days: 0` is the explicit
+   capture-only opt-out, and a declaration the prune cannot read prunes nothing. There is
    no adoption question over it.
 
 ## Skill-usage metrics - what the mounted skills actually do
@@ -157,12 +160,13 @@ three are listed above.
 - [**extract-from-instructions**](skills/extract-from-instructions/SKILL.md) - routing rules
   somebody already wrote, a repo's `CLAUDE.md` or a person's machine-local one, to their owner and
   onto a rung above prose. Reach for it when a repo adopting Claudinite already carries a
-  `CLAUDE.md`; `adopt-claudinite` offers it during the adoption interview.
+  `CLAUDE.md`; `adopt-claudinite` offers it during the adoption interview. Where the repo has no
+  local pack yet, it starts with `cn pack new <name>`, which scaffolds one and declares it.
 
-`provenance.mjs` beside this README is the tool the three provenance skills name - `mark`,
-`append`, `check`, `convert-references`, `reduce`, `history`, and the backfill's `brief` and
-`apply` - and `provenance-integrity` and `provenance-change-recorded` below are the convention's
-machine halves.
+`cn provenance` is the tool the three provenance skills name - `mark`, `append`, `check` and
+`history` - and `provenance-integrity` and `provenance-change-recorded` below are the convention's
+machine halves. The promotion and backfill verbs a canon maintainer runs (`reduce`, `brief`,
+`apply`, `convert-references`) are not a member's.
 
 ## Rules (`RULES.md`)
 
@@ -172,13 +176,6 @@ machine halves.
 | Wanting a job to run in Actions | high | complexity | prose: <100 words + check (`scheduler-workflow-shape`) |
 | A task writes only local packs | high | correctness | prose: <50 words + check (`growth-write-scope`) |
 | Describing another pack's artifact | medium | complexity | prose: <50 words |
-
-## Coded rules
-
-| Rule | Kind | What |
-|---|---|---|
-| `dedup-prune-integrity` | work-scope ([dedup-integrity.mjs](workRules/dedup-integrity.mjs)) | a dedup edit only removes portable text: it never grows a local pack's prose beyond its provenance logs, or re-imports a canon rule |
-| `growth-write-scope` | work-scope ([growth-write-scope.mjs](workRules/growth-write-scope.mjs)) | a growth run (extract, dedup, either sweep) writes only the repo's own local packs |
 
 Every run this pack schedules writes the local packs and nothing else. `growth-write-scope` is the
 machine guarantee behind that, keyed on those runs' pinned commit titles; the same actions over a
@@ -226,22 +223,21 @@ and reads the same subtree over the GitHub API.
 
 | Check | Severity | Reason | Enforcement |
 |---|---|---|---|
-| `dedup-prune-integrity` | high | correctness | check: blocking |
-| `doc-pointers-resolve` | high | correctness | check: blocking |
-| `growth-write-scope` | high | correctness | check: blocking |
-| `task-worker-restores-main` | high | correctness | check: blocking |
-| `legacy-check-spellings` | low | complexity | check: advisory |
-| `in-session-github-access` | high | correctness | check: blocking |
-| `technology-skill-cites-dated-sources` | high | correctness | check: blocking |
-| `technology-skill-links-inside-its-folder` | medium | complexity | check: blocking |
-| `technology-skill-code-imports-inside-its-folder` | medium | complexity | check: blocking |
-| `provenance-integrity` | high | correctness | check: blocking |
-| `provenance-change-recorded` | high | correctness | check: blocking |
-| `routine-structure` | medium | complexity | check: blocking |
-| `task-declaration-matches-folder` | high | correctness | check: blocking |
-| `task-md-only-when-agentic` | high | correctness | check: blocking |
-| `task-phase-discipline` | medium | complexity | check: advisory |
-| `check-ships-with-test` | high | correctness | check: blocking |
+| `dedup-prune-integrity` | high | correctness | coded: blocking |
+| `doc-pointers-resolve` | high | correctness | declared: blocking |
+| `growth-write-scope` | high | correctness | coded: blocking |
+| `task-worker-restores-main` | high | correctness | cn built-in: blocking |
+| `legacy-check-spellings` | low | complexity | declared: advisory |
+| `technology-skill-cites-dated-sources` | high | correctness | declared: blocking |
+| `technology-skill-links-inside-its-folder` | medium | complexity | declared: blocking |
+| `technology-skill-code-imports-inside-its-folder` | medium | complexity | declared: blocking |
+| `provenance-integrity` | high | correctness | cn built-in: blocking |
+| `provenance-change-recorded` | high | correctness | cn built-in: blocking |
+| `routine-structure` | medium | complexity | cn built-in: blocking |
+| `task-declaration-matches-folder` | high | correctness | cn built-in: blocking |
+| `task-md-only-when-agentic` | high | correctness | cn built-in: blocking |
+| `task-phase-discipline` | medium | complexity | declared: advisory |
+| `check-ships-with-test` | high | correctness | declared: blocking |
 
 The last five are the **task contract** ([the writing-tasks skill](skills/writing-tasks/SKILL.md)).
 Relevance-first: all five are inert until the repo carries a `tasks/<name>/task.json` of its own.
@@ -249,3 +245,15 @@ Relevance-first: all five are inert until the repo carries a `tasks/<name>/task.
 - `task-declaration-matches-folder` - a declaration disagrees with its folder: discovery drops it into `errors` and every run keeps reporting healthy without it.
 - `task-md-only-when-agentic` - an agentless task carries a `task.md`, which the corpus reads as "an agent runs here": prose no session will ever open, judged by the routine contract and named by every work item as the file the run is about.
 - `task-phase-discipline` - a task decides not to run after its precondition already said run, hiding the decision from the run records.
+
+Where each one runs:
+
+- **Inside `cn`.** `provenance-integrity`, `provenance-change-recorded` and `routine-structure`
+  are `cn` built-ins tagged with this pack: they run only where the pack is declared and list under
+  it in `cn check list`; the pack carries no code for them.
+- **Coded.** `growth-write-scope` and `dedup-prune-integrity` police this pack's own runs, and are
+  Go checks in its `checks/`.
+- **Ports with the task runner slice.** `task-declaration-matches-folder`, `task-md-only-when-agentic`
+  and `task-worker-restores-main` assert the task contract, which the engine's task runner slice
+  writes in Go; they port beside it and do not run until then.
+- **Declared.** The rest are this pack's `declared-checks.json`.

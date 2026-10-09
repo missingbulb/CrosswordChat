@@ -5,10 +5,10 @@
 Carried over from the declaration's comments when it became `task.json`.
 
 claudinite-growth task: logs-prune — retention on the `conversation-logs`
-branch. `agent_model: 'none'` with `code_work: 'node worker.mjs'`: the whole pass
-is deterministic code the scheduler runs as a subprocess — no agent, no dispatch
-issue, seconds of runtime. The same shape usage-fold already has over the same
-branch.
+branch. `code_work: "cn growth prune"` and no agent: the whole pass is the
+engine's own deterministic code, run as the item's code-work — no dispatch issue,
+seconds of runtime. The engine writes the branch (`cn growth capture`) and owns
+its filename grammar, so the engine prunes it too.
 
 WHY IT IS NOT PART OF growth-extract. Deleting a capture past retention is
 arithmetic on dates over an orphan branch — which is why the extract worker had
@@ -26,11 +26,12 @@ so a capture reaches retention having been read. The extract-from-conversations
 skill owns that window; this task owns the arithmetic.
 
 The whole contract is the `task.json` beside this file; the retention arithmetic
-its precondition term names is in `preconditions.mjs` beside that.
+its precondition names is the engine's `log-past-retention` term, which reads the
+same `retention_days` resolution `cn growth prune` applies.
 NOTHING ASKS IT (owner, 2026-09-19): a capture the calendar decided to delete is
 data loss nobody asked for, so the branch is pruned only when somebody wakes the
-task. The term beside this file is the content gate on that wake, and it grants a
-bare item — a decline would close the item unrun, leaving no lever at all.
+task. The term is the content gate on that wake, and it grants a bare item — a
+decline would close the item unrun, leaving no lever at all.
 It opens no PR: its whole write is remove commits on the non-default logs
 branch, which is outside the outcome taxonomy.
 One ls-remote, one fetch, one tree read, at most one push — against a branch

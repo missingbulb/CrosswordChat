@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "settings": {
+    "path": ".claudinite/settings.yaml",
+    "format": "yaml"
+  },
+  "engine": {
+    "package": "@claudinite/cli",
+    "version": "1.61009.1",
+    "channel": "staging"
+  },
+  "packs": {
+    "channel": "canary",
+    "declared": [
+      {
+        "id": "basics"
+      },
+      {
+        "id": "claudinite-lifecycle"
+      },
+      {
+        "id": "git-github"
+      },
+      {
+        "id": "chrome-extension"
+      },
+      {
+        "id": "node"
+      },
+      {
+        "id": "spec-driven-product"
+      },
+      {
+        "id": "executable-requirements"
+      },
+      {
+        "id": "claudinite-growth"
+      },
+      {
+        "id": "local/crossword-chat"
+      },
+      {
+        "id": "claude-code-web-users-support",
+        "config": {
+          "repo": "missingbulb/Shepherd"
+        }
+      },
+      {
+        "id": "web-speech"
+      },
+      {
+        "id": "host-page"
+      }
+    ]
+  },
+  "dormant": false,
+  "held": {
+    "basics": "1.61008.1",
+    "chrome-extension": "1.61008.1",
+    "claude-code-web-users-support": "1.61005.1",
+    "claudinite-growth": "1.61009.1",
+    "claudinite-lifecycle": "1.61008.1",
+    "executable-requirements": "1.61004.1",
+    "git-github": "1.61008.2",
+    "host-page": "1.61004.1",
+    "node": "1.61004.1",
+    "spec-driven-product": "1.61004.1",
+    "web-speech": "1.61004.1"
+  }
+}

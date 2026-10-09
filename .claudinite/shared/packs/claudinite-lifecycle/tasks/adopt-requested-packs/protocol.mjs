@@ -8,14 +8,10 @@
 // of this file, and a cross-pack drift guard pins the two together. Change either
 // copy and that guard names the other.
 //
-// The protocol is deliberately tiny: one label, two converged issue titles, and the
+// The protocol is deliberately tiny: two converged issue titles, and the
 // one body element that is DATA rather than prose — the fenced JSON block whose
 // array is the declaration entries to write. Everything else in an issue body is
 // for the human and the agent to read, not to parse.
-
-// The label every add-packs work-list issue in a member carries. The member task's
-// code-work counts open issues under it; the enforcer's sweep converges them.
-export const LABEL = 'add-packs';
 
 // Exactly one converged issue per kind per member — the title IS the convergence key.
 //

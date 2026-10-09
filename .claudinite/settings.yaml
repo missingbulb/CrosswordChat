@@ -1,0 +1,31 @@
+engine:
+  channel: "staging"
+  version: "1.61009.1"
+  manifest: "sha512-N/jNB2wM4vw+urpmNCe7SKgT2hoXcLkbOf1C9NI3U0CMefI+ezorfo9zVGDgdonkzJOUjQQY5GB2lxA7/cw2yQ=="
+packs:
+  channel: "canary"
+  declared:
+    - "basics"
+    - "claudinite-lifecycle"
+    - "git-github"
+    - "chrome-extension"
+    - "node"
+    - "spec-driven-product"
+    - id: "executable-requirements"
+      answers:
+        ui_testing: "DOM-level golden rendering: vitest + jsdom cases in dev/requirements/ui render to PNG snapshots (satori/resvg) compared with pixelmatch (npm run test:ui; npm run refresh:ui regenerates)"
+        requirements_source: "dev/docs/REQUIREMENTS.md (REQ-<AREA>-<NNN> ids, traced by npm run trace)"
+    - "claudinite-growth"
+    - "local/crossword-chat"
+    - id: "claude-code-web-users-support"
+      config:
+        repo: "missingbulb/Shepherd"
+      answers:
+        store: "missingbulb/Shepherd"
+    - "web-speech"
+    - "host-page"
+tasks:
+  routines:
+    default:
+      url: "https://api.anthropic.com/v1/claude_code/routines/trig_01BEUALUT7wNtoSETJPtbKaw/fire"
+      tokenSecret: "CCR_ROUTINE_TOKEN"

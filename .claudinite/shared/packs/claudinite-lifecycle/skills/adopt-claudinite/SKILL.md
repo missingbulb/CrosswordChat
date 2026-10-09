@@ -1,25 +1,51 @@
 ---
 name: adopt-claudinite
-description: Bootstrap Claudinite into a repo: mount, hooks, checks, skills. Use when asked to adopt or set up Claudinite, or to re-vendor a repo's mount.
+description: Bootstrap Claudinite into a repo with cn init: packs, questions, workflows, the executor routine, the handover issue. Use when asked to adopt or set up Claudinite.
 metadata:
   body: workflow
   usage:
     expect: adoption
 ---
 
-Follow [bootstrap.md](../../../../bootstrap.md)'s **fast path** — canonical there, and idempotent
-by design. Everything mechanical is one `bootstrap.mjs` invocation from the fetched canon, so the
-adoption is seven steps: open the adoption issue **first** (the work-scope sweep blocks a commit
-that references no issue), fetch the canon and run the script, ask **every** pending interview
-question it reports in one batched `AskUserQuestion` pass (up to 4 per call, the project-class
-question folded in, and the instruction-conversion offers below) and record the answers via
-`--answer` re-runs, **create the executor routine
-and write its endpoint into the declaration** (Part 6 — this session's work, and before the
-commit so it lands in the same PR), land the adoption as one commit referencing the issue,
-capture the adoption session itself once the PR lands (the fast path's capture step — no
-SessionEnd hook was loaded when this session started, so nothing else will), then file **one
-issue** carrying the script's HANDOVER block, a checkbox per step. Never re-enact the doc's parts
-step by step — they document what the script converges.
+Adoption is one command and the work it leaves for the session. Everything mechanical is
+`cn init`: it pins the newest allowed engine, writes the launcher, the settings, the hooks, the
+three workflows and both indexes, vendors the packs with their `requires`, seeds what they seed,
+stamps their task secrets into the executor workflow, makes the key request, and ends on three
+blocks it prints: QUESTIONS, HANDOVER and NEXT. Never re-create by hand what it wrote.
+
+1. **Run it** from the repo's root, naming the packs the owner chose (`basics` is the usual
+   first; it pulls `claudinite-lifecycle` and `git-github`, and the vendored branch's
+   `directory.GENERATED.md` lists the rest):
+
+   ```
+   npx --yes @claudinite/cli init --packs basics,<id>,...
+   ```
+
+   A repo still running the Node engine (it holds `.claudinite-settings.json`) is not adopted
+   this way: `cn init --from-node` moves it, and its NEXT line starts with removing that file.
+
+2. **Ask every QUESTIONS line in one batched `AskUserQuestion` pass** (up to four per call),
+   folding in the instruction-conversion offers below, and record each answer verbatim with
+   `cn settings answer <pack>/<question> <text>`. `n/a — none wanted` is an answer; never write
+   one on the owner's behalf. A pack added in the same pass (the project-class pack the owner
+   picks) may bring questions of its own through its `requires`: adopt it with `cn adopt` and
+   ask what that prints, so the interview takes two passes at most. Init exits 0 with questions
+   pending; the `adoption-answers-pending` check blocks the commit until they are answered.
+
+3. **Create the executor routine** where `claudinite-tasks` is declared: `create_trigger` makes
+   it, the SETUP block in its own prompt carries the model and repo binding the API cannot set,
+   and its endpoint goes on the `claudinite-tasks` entry's
+   `config.agenticTaskInvocationEndpoints` in `.claudinite/settings.*` **before the commit**, so
+   it lands in the same pull request. Only the `CCR_ROUTINE_TOKEN` secret is a human's step.
+
+4. **Land one pull request**: commit everything init wrote, with the answers and the endpoint,
+   and open it for a person to merge. The world sweep runs in its CI; the Stop hook carries the
+   work checks.
+
+5. **File the HANDOVER block as one issue**, a checkbox per row, written per
+   [writing-handover-issues](../../../basics/skills/writing-handover-issues/SKILL.md), and link it
+   from the pull request. Every row is a setting, an install or a secret no token the session
+   holds can write.
 
 **The instructions the repo already has.** A repo adopting usually carries a `CLAUDE.md`, and this
 is the moment its rules become carriers instead of being copied into a pack by hand later. In the
@@ -29,54 +55,8 @@ the session can read that the file exists - whether to convert the person's mach
 in this same PR; that skill's routing is what decides which rule is the repo's and which is the
 person's, and it never writes the machine-local file.
 
-Two things the fast path spells out and a session keeps getting wrong. A fresh project's
-interview takes **two** passes, because declaring the project-class pack pulls in a `requires`
-closure whose questions cannot exist until it is declared — and never more, because an answer is
-stored verbatim, so an open-ended one needs no clarifying popup. And the executor routine is
-**unfinished, not human-only**: `create_trigger` makes it, the SETUP block in its own prompt
-carries the model and repo binding the API cannot set, and only the `CCR_ROUTINE_TOKEN` secret is
-a step the hand-over issue takes. (1)
-
-Bootstrap is the one place `apply-vendor-set.mjs` is the right tool, and only because the repo is at
-version zero: it stamps every declared pack at the newest version, and with no older state there is
-nothing to skip. Read the next section before reaching for it anywhere else.
-
-**Refreshing** an already-vendored repo is **not** a session's job, and must not be hand-rolled.
-Force the repo's own update task and let the flow do it — through the **GitHub MCP tools**, which is
-the surface a session actually has (an unattended or web session carries no `gh` CLI, and a `curl`
-to a repo outside the session's own scope 403s with `Use add_repo to request access` — which the
-repo being adopted usually is, so a shell recipe fails exactly where this is most needed):
-
-```
-actions_run_trigger(method: "run_workflow", owner: …, repo: …,
-                    workflow_id: "claudinite-scheduler.yml",
-                    ref: "main",                                  # see below
-                    inputs: { wake: "update" })
-```
-
-`ref` is the **default branch**, not whatever branch you are on: a `workflow_dispatch` always runs the
-workflow definition from the default branch, so dispatching against a feature branch neither picks up
-a workflow you only added there nor changes which definition runs. In a local session with `gh`
-authenticated, `gh workflow run claudinite-scheduler.yml -f wake=update` is the same call.
-
-Then **watch it to a terminal state** — a forced run is how you see a change to scheduled machinery
-work *now*, and parking it on "check tomorrow" is the failure this lever exists to prevent. A
-dispatched run is not attached to a PR, so read it with `get_job_logs(run_id, failed_only: true)`
-("0 failed jobs" means green) rather than any PR-scoped check query.
-
-**Never refresh a stamped repo by running `apply-vendor-set.mjs` against it.** It advances every
-declared pack's stamp to the newest version without applying the records in between, and
-`migrationApplies` is `want > have` — so each record it skips stops applying *permanently*, not just
-this cycle. The repo is left claiming a version whose shape it was never migrated into, and because
-the stamp is the only thing that remembers, nothing downstream can tell. This is silent, and it does
-not self-heal.
-
-The update flow exists precisely because a refresh is more than laying files down: it applies the
-version-ranged records, opens one reviewable PR, withholds anything bound for `.github/workflows/`
-that the Action token cannot write, and ends at the apply stage when a record's rules need a reader.
-A session that re-vendors by hand does none of that while looking like it succeeded.
-
-**Never** hand-convert a legacy (fetch-at-session-start) member to the
-vendored mount — that conversion is the gated flip note the nightly applies
-([vendoring/DESIGN.md](../../../../vendoring/DESIGN.md), phase 2); until then legacy members are maintained
-per bootstrap.md's transition appendix.
+**Refreshing** an adopted repo is not adoption. Packs and the engine move through the nightly
+`engine/update` task, whose pull requests a person merges; to have it run now, wake it through
+the scheduler (`actions_run_trigger` on `claudinite-scheduler.yml` at the default branch with
+`inputs: { wake: "engine/update" }`) and watch the run to a terminal state. Inside a session,
+`cn update packs` proposes the same pack versions.

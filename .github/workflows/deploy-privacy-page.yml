@@ -8,7 +8,7 @@
 #
 # Deliberately NOT Chrome-specific (hence the unprefixed name): any publish
 # standard whose store listing needs a live privacy-policy URL deploys through
-# it. Vendored into the extension repo by the chrome-extension-release pack;
+# it. Vendored into the extension repo by the chrome-extension pack;
 # workflow_call ONLY. It is invoked by "Chrome extension: Publish to Chrome Web
 # Store" (uses: ./.github/workflows/deploy-privacy-page.yml) so the page is
 # refreshed whenever the listing ships (and, because that publish workflow runs

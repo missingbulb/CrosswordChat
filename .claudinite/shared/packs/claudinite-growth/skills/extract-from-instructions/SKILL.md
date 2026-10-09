@@ -85,6 +85,11 @@ was never finished.
 
 ## 4. Write it into the destination pack
 
+Where the repo has no local pack yet, create it first: `.claudinite/bin/cn pack new <name>
+[--belongs TEXT] [--excludes TEXT]` writes its manifest, its `RULES.md` and its `_pack.md` born
+entry, declares it as `local/<name>` and refreshes the rules index; the routing guidance it takes
+is the sort above, in a line each.
+
 Author each rule as that pack's own kind of content: `writing-pack-prose` for a rule's wording and
 its marker, `writing-repo-scanning-checks` for a check, `writing-tasks` for a task,
 `writing-claudinite-skills` for a skill. Every element born here takes its `born` entry with

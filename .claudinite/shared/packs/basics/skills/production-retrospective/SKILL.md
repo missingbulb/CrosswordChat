@@ -9,7 +9,7 @@ metadata:
 
 # Production retrospective
 
-[verify-in-production](../verify-in-production/SKILL.md) proves a **point assertion**, once:
+The task-flow pack's `verify-in-production` proves a **point assertion**, once:
 artifact X reads Y, pass or fail. An element big enough to have a design deserves a second look of
 a different kind — not "did it go live" but "did the design survive contact". Once it has worked
 *as planned* for about a week, somebody should read its production record and answer four
@@ -41,7 +41,7 @@ Two triggers own the filing today:
 
 - **A migration plan's chain.** The retrospective is the chain's **last link**, filed with the
   rest of the chain when the plan is agreed —
-  [writing-migration-plans](../writing-migration-plans/SKILL.md) owns the chain's mechanics. It
+  task-flow's `writing-migration-plans` owns the chain's mechanics. It
   rides `Blocked-by:` on the final execution step, so the queue holds it until the migration is
   actually done.
 - **A merge that completes a design-doc'd element outside any chain.** File it at the merge,
@@ -82,7 +82,7 @@ and a number nobody thought to record cannot be read back. The brief answers, co
 ## What you file
 
 One issue on the ad-hoc lane — the same lane and the same first-lines field-block placement
-[`/do-later`](../do-later/SKILL.md) files under, with the mark it applies: **`task:origin:ad-hoc`**.
+task-flow's `/do-later` files under, with the mark it applies: **`task:origin:ad-hoc`**.
 Title `Retrospective: <the element, in a few words>`. Make it a **sub-issue** of the element's
 tracking issue (or, with no tracker, of the design's own issue), so the element shows the review
 still owed on it.

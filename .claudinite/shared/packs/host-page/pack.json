@@ -1,6 +1,6 @@
 {
-  "version": "60928.1",
-  "minEngineVersion": "60928.1",
+  "version": "1.61004.1",
+  "minEngineVersion": "1.61001.1",
   "ruleRoutingGuidance": {
     "belongs": "driving a web app you do not own — its DOM, synthetic input, change watching, injected UI",
     "excludes": "how your code reaches the page — chrome-extension; fetching a site's data — web-scraping"

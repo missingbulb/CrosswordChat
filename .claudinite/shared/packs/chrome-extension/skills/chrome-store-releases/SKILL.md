@@ -48,7 +48,7 @@ general names so other standards reuse them as-is. When in doubt, prefix.
   workflow check — the repo picks the mechanism, the invariant is fixed).
 - **The bump belongs to the change, not to the pipeline.** A change that touches a shipped file
   (anything under the repo's `ship_paths`) raises the **patch** in the same PR, across the manifest
-  and `package.json` together. `cer/version-bumped` is what holds that line, and
+  and `package.json` together. `version-bumped` is what holds that line, and
   `node .github/actions/bump-extension-patch/bump.mjs <manifest_path> <package_json_path>` is what
   writes it. Merging that PR *is* cutting the release. A change that ships nothing — a README, a
   test, a workflow — needs no bump and cuts no release.
@@ -58,7 +58,7 @@ general names so other standards reuse them as-is. When in doubt, prefix.
   version"** means that dispatch, or the same edit by hand on a branch.
 - **No workflow writes a version on its own.** The daily run and "Release: Create Package" alike
   ship whatever version is on `main`, and no-op when it has already been released. So a shipped
-  change that forgot its bump is never released — which is the failure `cer/version-bumped` exists
+  change that forgot its bump is never released — which is the failure `version-bumped` exists
   to catch on the PR instead.
 
 **Artifact**
@@ -122,7 +122,7 @@ called by the publish reusable — a repo never dispatches it directly.
   variables → Actions → Variables). Store secrets travel via `secrets: inherit`.
 - Every unattended workflow (all of the above; not PR CI) reports failures through the
   `report-failure` composite action baked into the reusable workflows — a red run must reach a
-  human, never sit unseen in the Actions list. Each failure opens a **fresh** `workflow-failure`
+  human, never sit unseen in the Actions list. Each failure opens a **fresh** failure
   issue, and any earlier open failure issues for the **same** workflow are closed as duplicates of
   it, so the newest failure is always the single open bug to triage. Repos no longer carry a
   `report-failure.yml`; a repo's own non-standard unattended workflows use the vendored action
@@ -133,7 +133,7 @@ called by the publish reusable — a repo never dispatches it directly.
   already out and no-ops), and it leaves no window in which the pipeline and the repo disagree about
   what the current version is. Release + publish are invoked via `workflow_call` because a
   `GITHUB_TOKEN` push triggers no workflows.
-- `ship_paths` is what `cer/version-bumped` reads to decide whether a change owed a bump, so the
+- `ship_paths` is what `version-bumped` reads to decide whether a change owed a bump, so the
   declaration that used to be the daily filter is now the check's scope — one statement of what
   ships, read on the PR instead of a day later. A repo whose shipping set is a curated subset (not a
   whole directory) lists it there and keeps its build's own ship-set test honest against that list.
@@ -297,7 +297,7 @@ extension; the upstream reference is
 5. Submit for review — approval takes hours to a few days (`ITEM_PENDING_REVIEW` = success).
    While the item is **pending review the API rejects uploads** — hold the pipeline dry run
    until the first review completes. Every subsequent upload must carry a **strictly higher**
-   version, which is why every shipped change raises one (`cer/version-bumped`); a "version must be
+   version, which is why every shipped change raises one (`version-bumped`); a "version must be
    greater" rejection on a dry run is a **pass** — it proves the credential wiring works
    end to end.
 
@@ -390,7 +390,7 @@ Any PR that changes the manifest's `permissions`, `host_permissions`, or `option
    for the manual dashboard step — the Privacy-practices tab must carry a written justification
    for the new permission, and the store blocks publishing the new version until it does, so the
    next store publish (daily or manual) stalls on it. (If the daily pipeline hits it first, the
-   failed publish lands on its `workflow-failure` tracking issue; the proactive issue beats the
+   failed publish lands on its failure tracking issue; the proactive issue beats the
    reactive one.) After updating the dashboard, re-run the publish.
 2. Expect deeper store review than a plain code update — permission changes re-open scrutiny.
 3. A new **required** permission that carries an install-time warning disables the extension

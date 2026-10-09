@@ -25,4 +25,4 @@ all, which is what bounds the cost of the one agentic stage in the loop.
 
 The edit, and the element's provenance entry for it in the same diff - so the log
 entry merges only if the change does. That entry's `Source` names the usage rule by
-id and the finding's issue by number, with the figures it was read from.
+id and the finding's subject, with the figures it was read from.
