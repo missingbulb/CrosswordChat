@@ -11,19 +11,19 @@
 // the scheduler is the repo's only cron, and this is the surface
 // that fires the daily release.
 //
-// It reads nothing for itself: the runner hands it the repository, the branch and a
-// REST client already carrying the Action's token. A non-204 dispatch, or a throw,
-// exits non-zero - the scheduler then converges the task to needs-human.
+// The runner hands it the repository and the branch; it reaches GitHub through
+// its own REST client, which reads the Action's token. A non-204 dispatch, or a
+// throw, exits non-zero - the scheduler then converges the task to needs-human.
 
+import { makeGh } from './github-api.mjs';
 
 // The vendored orchestrator's file name and the dispatch mode that runs its daily
 // leg (the release-workflows check's stubFile / RELEASE.md §Workflow). Bare literals —
-// this worker imports nothing from the engine, and the name is the
-// conformance-pinned fingerprint.
+// the name is the conformance-pinned fingerprint.
 const ORCHESTRATOR_FILE = 'chrome-extension-release.yml';
 const DISPATCH_MODE = 'daily';
 
-export async function worker({ repo, defaultBranch, gh, log }) {
+export async function worker({ repo, defaultBranch, log }, gh = makeGh()) {
   const ref = defaultBranch ?? 'main';
 
   // Fire the orchestrator's daily leg via workflow_dispatch — the orchestrator is
