@@ -1,7 +1,7 @@
 # crossword-chat pack (local)
 
 CrosswordChat's **residue** pack: the repo's own instances of rules the mounted canon states in
-general. Declared by hand as `local/crossword-chat` in `.claudinite-settings.json`.
+general. Declared by hand as `local/crossword-chat` in `.claudinite/settings.yaml`.
 
 The judgment lives in canon: `host-page` owns guesting in a web app you do not own, `web-speech`
 owns the browser voice surfaces, and `chrome-extension` owns how the code reaches the page. What
