@@ -31,7 +31,7 @@ Two consequences worth knowing before you start:
 
 - **A file whose language the parser cannot read counts as code**, so a comment edit there
   reds the run. The checkable set is `COMMENT_CHECKABLE` in
-  [`engine/checks/helpers/code-scanning.mjs`](../../../../engine/checks/helpers/code-scanning.mjs);
+  `engine/checks/helpers/code-scanning.mjs`;
   outside it, leave the file alone and say so in the wrap-up.
 - **Adding or deleting a code file is never comment-only**, and neither is deleting a
   `README.md`. If a file's every comment should go, the file keeps its code and loses its

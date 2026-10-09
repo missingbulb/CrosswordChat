@@ -9,12 +9,18 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import * as findings from '../../../../engine/checks/helpers/findings.mjs';
 
 const engine = (root, mod) => {
   const shared = join(root, '.claudinite', 'shared', 'engine', mod);
   return existsSync(shared) ? shared : join(root, 'engine', mod);
 };
+
+// What a rule does when it fails, read the way the engine reads it: `on_fail`, or the
+// retired `severity` spelling a declaration may still carry until it acts on
+// `legacy-check-spellings`; neither is unknown, never a default.
+const ON_FAIL = ['block', 'advise'];
+const RETIRED_SPELLING = { blocking: 'block', advisory: 'advise' };
+export const onFailOf = (rule) => (ON_FAIL.includes(rule?.on_fail) ? rule.on_fail : RETIRED_SPELLING[rule?.severity]) ?? null;
 
 const read = (path) => { try { return readFileSync(path, 'utf8'); } catch { return ''; } };
 
@@ -74,7 +80,7 @@ export function readRules(packs, packRules) {
     const subject = {
       id: rule.id,
       pack: pack?.id ?? null,
-      on_fail: (typeof findings.onFailOf === 'function' ? findings.onFailOf(rule) : rule.on_fail) ?? null,
+      on_fail: onFailOf(rule),
       scope: rule.spec?.scope ?? rule.scope ?? null,
       ownerSkill: rule.ownerSkill ?? null,
       proseTwin: pack ? hasProseTwin(pack, rule.id) : false,

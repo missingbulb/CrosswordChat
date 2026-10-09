@@ -74,7 +74,7 @@ into one skill, so a load carries the whole procedure; **G** stays.
 ## What to look for — the check-the-world test
 
 For each rule that cleared the gate, ask the one question from
-[engine/checks/DESIGN.md](../../../../engine/checks/DESIGN.md): **does it constrain a *static
+engine/checks/DESIGN.md: **does it constrain a *static
 signature in the repo artifact* — something a post-hoc scan could observe?**
 
 - **Yes → a conversion candidate.** A dangling-reference rule, a filename convention, a workflow
@@ -193,7 +193,7 @@ Whether a check covers a rule is a judgment about meaning, so this test is appli
 
 The verdict is recorded where the next pass reads it: a `converted` entry on the element's
 provenance file, its `Mechanism` the check and why coded or declared, its `Reason` the deletion
-test's outcome (prose deleted, or kept and what it still carries), through `provenance.mjs
+test's outcome (prose deleted, or kept and what it still carries), through `cn provenance
 append` in the same change; the new check's file is the same element's where the rule and the
 check are one guideline, or its own where they are not. A rule judged **not checkable** goes on
 the pack's `_declined.md`, dated, so no later pass re-derives the verdict.

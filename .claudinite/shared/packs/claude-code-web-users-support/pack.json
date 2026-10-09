@@ -1,6 +1,6 @@
 {
-  "version": "60928.1",
-  "minEngineVersion": "60928.1",
+  "version": "1.61005.1",
+  "minEngineVersion": "1.61003.1",
   "ruleRoutingGuidance": {
     "belongs": "what a project offers people working from Claude Code on the web, where the session knows who they are",
     "excludes": "project conventions and process — those are the packs that own each subject"

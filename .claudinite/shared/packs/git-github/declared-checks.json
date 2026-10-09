@@ -65,7 +65,7 @@
         "whenFileMatches": "/^\\s*(schedule|workflow_run|repository_dispatch):/m",
         "require": "/failure\\(\\)|report-failure/",
         "what": "triggers unattended (schedule, workflow_run, or repository_dispatch) but has no visible failure escalation (no failure() job, no report-failure call)",
-        "fix": "add a job that runs on failure() and opens a workflow-failure tracking issue a human will see (or use the shared report-failure action)"
+        "fix": "add a job that runs on failure() and opens a failure tracking issue a human will see (or use the shared report-failure action)"
       }
     ]
   },

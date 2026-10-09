@@ -16,7 +16,7 @@ description: >-
   and an action step adds no level. Platform-agnostic by design — any publish
   standard's workflows (Chrome extension or otherwise) report through it.
 
-  Vendored into the extension repo by the chrome-extension-release pack, so a
+  Vendored into the extension repo by the chrome-extension pack, so a
   caller references it by the local path:
 
     report-failure:
@@ -61,21 +61,15 @@ runs:
         prefix="⚠️ Workflow failing: ${WORKFLOW}"
         title="${prefix} — $(date -u +%Y-%m-%d) (run ${RUN_ID})"
 
-        # Create the label idempotently — GitHub won't make it on demand, and a
-        # list filtered by a non-existent label errors.
-        gh label create workflow-failure --repo "$REPO" --color B60205 \
-          --description "An unattended workflow failed and needs a human" \
-          2>/dev/null || true
-
         # Earlier OPEN failure issues for THIS SAME workflow (matched on the
         # exact prefix in jq, so it's deterministic — no search-index lag, and a
         # different workflow's bug is never treated as a duplicate of this one).
-        mapfile -t olds < <(gh issue list --repo "$REPO" --label workflow-failure \
-          --state open --json number,title --limit 100 \
+        mapfile -t olds < <(gh issue list --repo "$REPO" \
+          --state open --json number,title --limit 1000 \
           -q "map(select(.title | startswith(\"$prefix\"))) | .[].number")
 
         # Open a fresh bug for THIS failure.
-        url="$(gh issue create --repo "$REPO" --title "$title" --label workflow-failure --body "$(
+        url="$(gh issue create --repo "$REPO" --title "$title" --body "$(
           printf '%s\n' \
             "The **${WORKFLOW}** workflow failed: [view run](${RUN_URL})." \
             "" \

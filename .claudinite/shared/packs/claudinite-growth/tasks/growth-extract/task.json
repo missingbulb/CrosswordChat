@@ -1,9 +1,8 @@
 {
-  "$schema": "../../../claudinite-tasks/task.schema.json",
   "id": "growth-extract",
   "description": "The growth lifecycle's capture stage: mines the window's repository activity and the captured conversation logs for durable lessons, folds them into this repository's local packs, and runs prose-to-checks over what it wrote.",
   "schedule_after": [
-    "claudinite-lifecycle/update"
+    "engine/update"
   ],
   "trigger": "schedule",
   "preconditions": [

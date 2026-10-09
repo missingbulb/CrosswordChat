@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../claudinite-tasks/task.schema.json",
   "id": "prose-to-checks-sweep",
   "description": "Mines this repository's existing pack prose for always-testable rules the conversion missed and converts the strongest ones into checks.",
   "trigger": "schedule",

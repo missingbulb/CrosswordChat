@@ -42,10 +42,9 @@ the window than about its subject.
 
 ## What happens to a finding
 
-It appears in the file and on the dashboard. If it is still there two weeks later and
-its cause is `known` or `probable`, the review files one `usage-finding` issue for it,
-updates that issue while the finding persists, and closes it with the clearing figures
-the day it goes. A finding with an `unknown` cause never files.
+It appears in the file, on the dashboard and in the review's pull request, and nowhere
+else: the review files no issue. A finding still there two weeks later with a `known`
+or `probable` cause is what the triage reads.
 
 Proposing a change is a different task: [usage-triage](../usage-triage/README.md)
 reads the lasting findings and opens a pull request carrying the edit itself, which

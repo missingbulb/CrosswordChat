@@ -49,21 +49,21 @@ Runtime host access — the two rules that concern `host_permissions` — is the
 |---|---|---|---|
 | `content-script-module-syntax` | high | correctness | check: blocking |
 | `declarative-content-set-icon` | medium | correctness | check: blocking |
-| `cer/release-workflows` | high | correctness | check: blocking |
+| `release-workflows` | high | correctness | check: blocking |
 | `cer/template-tokens` | high | correctness | check: blocking |
 | `cer/release-config` | high | correctness | check: blocking |
 | `cer/version-sync` | high | correctness | check: blocking |
-| `cer/version-bumped` | high | correctness | check: blocking |
+| `version-bumped` | high | correctness | check: blocking |
 | `cer/release-layout` | medium | correctness | check: blocking |
 | `cer/readme-sections` | low | complexity | check: blocking |
 | `cer/privacy-permission-alignment` | critical | legal | check: blocking |
 | `cer/permission-added-store-issue` | high | legal | check: advisory |
 
-Every `cer/` rule is about a release that would otherwise fail — or publish the wrong thing — only once it reached the store, and every one of them is inert until this repo ships the pipeline. `cer/version-bumped` judges the diff, so it fires in a change that ships files without moving the version.
+Every release check (`release-workflows`, `version-bumped` and the `cer/` ones) is about a release that would otherwise fail — or publish the wrong thing — only once it reached the store, and every one of them is inert until this repo ships the pipeline. `version-bumped` judges the diff, so it fires in a change that ships files without moving the version.
 
 ## Skills
 
-[**chrome-store-releases**](skills/chrome-store-releases/SKILL.md) is the release standard itself — the vendored workflows and composite actions, `.github/release.config`, versioning and the packaged artifact, the store secrets, the README install sections, and the manual Chrome Web Store steps. It is the contract the `cer/` checks judge against, reached when a pipeline is being set up or debugged rather than carried by every session in the repo.
+[**chrome-store-releases**](skills/chrome-store-releases/SKILL.md) is the release standard itself — the vendored workflows and composite actions, `.github/release.config`, versioning and the packaged artifact, the store secrets, the README install sections, and the manual Chrome Web Store steps. It is the contract the release checks judge against, reached when a pipeline is being set up or debugged rather than carried by every session in the repo.
 
 ## Task
 

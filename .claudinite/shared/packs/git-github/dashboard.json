@@ -1,5 +1,5 @@
 {
-  "$schema": "../claudinite-dashboard/dashboard-descriptor.schema.json",
+  "$schema": "../claudinite-single-repo-dashboard/dashboard-descriptor.schema.json",
   "widgets": [
     {
       "id": "stars",
@@ -10,6 +10,5 @@
       "source": "repo-stars"
     }
   ],
-  "repo": ["stars"],
-  "fleet": { "member": "stars" }
+  "repo": ["stars"]
 }

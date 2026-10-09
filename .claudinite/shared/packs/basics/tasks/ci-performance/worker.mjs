@@ -11,7 +11,8 @@
 // regression is decided in one place and tested there rather than inferred from a
 // live repo's weather.
 
-import { findOrCreateTracker, writeTracker } from '../../../claudinite-tasks/public/github.mjs';
+import { github, log } from '@claudinite/sdk';
+import { makeGh } from './github-api.mjs';
 
 export const WINDOW_DAYS = 7;
 // A regression has to clear BOTH bars. The ratio alone fires on a fast workflow
@@ -124,8 +125,8 @@ export function reportBody(summary, { repo, nowIso, steps = [] }) {
 // The standing record this task keeps. Its own, named here and nowhere else.
 export const TRACKER_TITLE = '[claudinite] CI performance';
 
-export async function worker({ repo, gh, log }) {
-
+// The run ledger and a run's jobs have no SDK action; the tracker does.
+export async function worker({ repo }, gh = makeGh()) {
   const { status, json } = await gh(`/repos/${repo}/actions/runs?per_page=100&status=completed`);
   if (status !== 200) throw new Error(`run ledger unreadable: GET actions/runs returned ${status}`);
   const runs = json?.workflow_runs ?? [];
@@ -156,13 +157,13 @@ export async function worker({ repo, gh, log }) {
   const comment = summary.regressions.length
     ? `${nowIso} — regression: ${detail}. Investigating by the \`ci-performance-evaluation\` skill.`
     : null;
-  // THIS TASK's tracker, resolved by this task — the shared helper owns only the
-  // exact-title lookup and the create-then-close pair, never the decision to keep
+  // THIS TASK's tracker, resolved by this task — the engine's tracker actions own only
+  // the exact-title lookup and the create-then-close pair, never the decision to keep
   // one. Every run rewrites the body (the measurement IS the record), so
   // find-or-create is right here; the comment is conditional, because a dated note
   // per run turns a standing record into a scroll of identical lines nobody reads.
-  const { number: tracker } = await findOrCreateTracker(gh, repo, TRACKER_TITLE);
-  await writeTracker(gh, repo, tracker, { body, comment });
+  const { number: tracker } = await github.findOrCreateTracker({ title: TRACKER_TITLE });
+  await github.writeTracker({ number: tracker, body, ...(comment ? { comment } : {}) });
   log(`tracker #${tracker} refreshed`);
 
   if (!summary.regressions.length) {

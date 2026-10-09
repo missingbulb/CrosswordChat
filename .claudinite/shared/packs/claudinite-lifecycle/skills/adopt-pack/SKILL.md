@@ -20,27 +20,31 @@ could be added. **Match the owner's plain-words name to a pack id yourself** bef
 disambiguate — pack ids rarely read like how people describe them, so read the candidate's entry
 there and confirm the fit.
 
-Add each chosen pack's id to `packs` in `.claudinite-settings.json`. A pack that only makes sense
-alongside another names it in `requires`; `resolveDeclaredPacks` pulls that closure in when the
-declaration is written, so you declare what you *chose* and its dependencies follow (e.g.
-`spec-driven-product` pulls `executable-requirements`). An unknown pack name — or an unknown
-property on an entry — is a blocking **settings** error, not a conformance finding; fix the name.
+Declare every chosen pack in one command:
+
+```
+cn adopt <id>[,<id>...]
+```
+
+It resolves every id and its `requires` closure before writing anything, so you declare what you
+*chose* and its dependencies follow (e.g. `spec-driven-product` pulls `executable-requirements`);
+it adds them to `packs.declared` in `.claudinite/settings.*`. A pack already declared is
+**refused**, and so is an id no index lists; fix the name rather than editing the file by hand.
 
 ## 2. Interview — the part that is easy to skip and must not be
 
 A pack that needs the project's intent before it can provide value declares `questions` on its
-manifest (see [packs/README.md](../../../README.md) and the machinery in
-[../adopt-claudinite/interview.mjs](../adopt-claudinite/interview.mjs)). For **every** newly
-declared pack that asks questions:
+manifest (see packs/README.md); `cn adopt` prints the ones still unanswered
+as its QUESTIONS block. For **every** newly declared pack that asks questions:
 
 - Where a question says the repo may already hold the answer (a product brief, an existing
   requirements doc, the issue tracker), **read that first and confirm** rather than asking cold.
 - Otherwise ask the owner directly (`AskUserQuestion`), one question at a time, at the point of
   adoption — when a human asked for the adoption, they are present by construction.
-- Record each answer **verbatim** on that pack's entry as `answers: { "<question-id>": "<text>" }`.
-  `"n/a — none wanted"` is a valid answer and stops the asking. Where the question carries a
-  `distill` note, derive the entry's `config` from the answer (e.g. `executable-requirements`'s
-  spec path → `config.spec`).
+- Record each answer **verbatim** with `cn settings answer <pack>/<question> <text>`, which
+  writes it on that pack's entry as `answers`. `"n/a — none wanted"` is a valid answer and stops
+  the asking. Where the question carries a `distill` note, derive the entry's `config` from the
+  answer (e.g. `executable-requirements`'s spec path → `config.spec`).
 
 ### When nobody is there to ask
 
@@ -63,47 +67,14 @@ the order matters:
 
 A pack that asks nothing adopts fully unattended; this section costs it nothing.
 
-## 3. Re-vendor
+## 3. What `cn adopt` already did
 
-The new packs' prose, checks, and skills must land under the tracked `.claudinite/shared/` mount,
-**and the repo must be stamped with the version it is now at.** Fetch a fresh canon to scratch and
-run its install runner against the checkout — sessions never fetch:
-
-```
-node <canon>/packs/claudinite-lifecycle/updates/install.mjs --target . <pack-id> [<pack-id>…]
-```
-
-**Do not hand-roll this with `apply-vendor-set.mjs`.** It lays the files down correctly and does one
-thing that nothing notices for weeks: it stamps **every declared pack** at the newest version,
-whether or not the records between were ever applied. `migrationApplies` is `want > have`, so once
-the stamp reaches a record's own version that record stops applying — not for this cycle, but
-permanently. Re-vendoring a repo to add one pack therefore silently burns every pending record for
-the packs it *already* had, and the repo is left claiming a version whose shape it was never
-migrated into.
-
-That is correct behaviour at version zero, where there is no older state to skip; it is wrong
-everywhere else, and adding a pack to a live repo is everywhere else.
-
-The runner declares each pack, vendors its content, stamps it and every pack in its `requires`
-closure at the newest version, runs any one-shot seed ops, and gates on the updated tree's own
-self-test. It exits non-zero on a refusal or an unanswered interview — a pack already installed is
-**refused**, because reinstalling would restamp the repo to the newest version while skipping every
-record in between.
-
-**Adopting `claudinite-tasks` also scaffolds the two workflow files** — the scheduler run with
-its drain, and the label-event executor:
-
-```
-node .claudinite/shared/packs/claudinite-tasks/src/adopt/converge-workflows.mjs <owner/repo>
-```
-
-`.github/workflows/` is the one directory a member's nightly may never push to, so these arrive
-here or not at all. They are static from this moment: the cron minute and both hours are hashed
-from the repo's full name and never restamped afterwards, and every `run:` names a
-mount path behind which the code updates nightly. The command is a no-op when both files are
-already right. A repo adopting this pack also needs its CCR routine endpoints — the executor's and
-the work-item session's — pointed at `public/instructions.md` in its own mount; that is a console
-setting, so it belongs in the handover issue §4b files.
+The same command vendored the new packs for the pinned engine under `.claudinite/shared/packs/`,
+regenerated the rules and skills indexes, and printed a line for each file it wrote on the pack's
+behalf: `seeded <path>` for a pack's `seedOps` (written once, owned by the repo from then on) and
+`stamped <NAME> into .github/workflows/claudinite-executor.yml` for each secret a new pack's tasks
+need. Both belong in this pull request; never hand-copy a pack's files into the mount instead.
+The skills mount at the next SessionStart.
 
 ## 4. Scaffold what the pack now demands
 
@@ -116,8 +87,8 @@ per the pack's own README template; the pack's rules are the checklist.
 ## 4b. File what adoption cannot do
 
 A pack may declare `adoptionHandover` — steps only a human can perform (a repository or
-console setting, a permission, a secret). The install runner prints them; they are not
-optional and they are not PR-body notes. **Open one tracking issue per adopting repo**,
+console setting, a permission, a secret). `cn adopt` prints them as its HANDOVER block; they are
+not optional and they are not PR-body notes. **Open one tracking issue per adopting repo**,
 a checkbox per step, written per
 [writing-handover-issues](../../../basics/skills/writing-handover-issues/SKILL.md) — so
 each step's `breaks` (what is broken while it is off) and `done` (its closing condition)
@@ -129,15 +100,14 @@ open issue for the same steps, comment there rather than opening a second.
 
 ## 5. Land
 
-World and work checks green (`.claudinite/shared/engine/checks/check_the_world.mjs`; the Stop hook
-carries the work checks). Commit referencing the task's issue, push, open one PR. Content a pack
+World and work checks green (`cn check world`; the Stop hook carries the work checks). Commit referencing the task's issue, push, open one PR. Content a pack
 seeds through this flow — a `product-wiki` wiki's first researched, cited pages — rides the same
 review gate as any other change; it is never pushed straight to the default branch.
 
 **A failing check is your work, not the reviewer's.** Declaring a pack is what switched those rules
 on, so every finding they now produce belongs to this change — fix it here, in the repo, before the
-PR opens. Two things that are *not* fixes: silencing a rule by adding it to `rules`/`accept` in
-`.claudinite-settings.json`, and undeclaring the pack to make the findings stop. Both turn a real
+PR opens. Two things that are *not* fixes: silencing a rule by adding it to `checks.rules`/`checks.accept`
+in `.claudinite/settings.*`, and undeclaring the pack to make the findings stop. Both turn a real
 signal off on the repo's first exposure to it. If a finding genuinely cannot be satisfied — the pack
 demands structure this repo has decided against — that is evidence the pack is **not** the right fit:
 drop it from the declaration, say why on the PR, and let the smaller adoption land.

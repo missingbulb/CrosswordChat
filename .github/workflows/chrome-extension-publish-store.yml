@@ -1,8 +1,8 @@
 name: "Chrome extension: Publish to Chrome Web Store (reusable)"
 
-# Reusable workflow of the chrome-extension-release standard — the logic behind
+# Reusable workflow of the Chrome Web Store release standard — the logic behind
 # every extension repo's store publish. Vendored into the extension repo by the
-# chrome-extension-release pack (not hosted in Claudinite); the repo's single
+# chrome-extension pack (not hosted in Claudinite); the repo's single
 # `chrome-extension-release.yml` orchestrator owns the workflow_dispatch trigger
 # and calls this locally, and the daily auto-release
 # (chrome-extension-daily-release.yml) calls it with the tag it just released.
@@ -24,7 +24,7 @@ name: "Chrome extension: Publish to Chrome Web Store (reusable)"
 #   CHROME_EXTENSION_ID     the item/app ID from the Web Store dashboard URL
 #   CHROME_CLIENT_ID        OAuth client ID  } minted once against the
 #   CHROME_CLIENT_SECRET    OAuth client secret } Chrome Web Store API — see the
-#   CHROME_REFRESH_TOKEN    OAuth refresh token } Claudinite chrome-extension-release guide.
+#   CHROME_REFRESH_TOKEN    OAuth refresh token } the Claudinite chrome-store-releases standard.
 #
 # The calling job must grant `permissions: contents: read, pages: write,
 # id-token: write, issues: write` (store download + privacy-page deploy + the

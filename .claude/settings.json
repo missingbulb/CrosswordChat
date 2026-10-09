@@ -1,11 +1,43 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": ".claudinite/bin/cn hook post-tool-use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": ".claudinite/bin/cn hook pre-tool-use",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": ".claudinite/bin/cn hook session-end",
+            "type": "command"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claudinite/shared/engine/hooks/session-start-command.sh"
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claudinite/launch\" hook session-start",
+            "type": "command"
           }
         ]
       }
@@ -14,29 +46,8 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claudinite/shared/engine/hooks/stop-command.mjs"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claudinite/shared/engine/hooks/pretooluse-command.mjs"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claudinite/shared/engine/hooks/session-end-command.mjs"
+            "command": ".claudinite/bin/cn hook stop",
+            "type": "command"
           }
         ]
       }
@@ -45,19 +56,8 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claudinite/shared/engine/hooks/user-prompt-submit-command.mjs"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claudinite/shared/engine/hooks/post-tool-use-command.mjs"
+            "command": ".claudinite/bin/cn hook user-prompt-submit",
+            "type": "command"
           }
         ]
       }

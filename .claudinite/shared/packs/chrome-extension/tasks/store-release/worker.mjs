@@ -17,7 +17,7 @@
 
 
 // The vendored orchestrator's file name and the dispatch mode that runs its daily
-// leg (release-workflows.mjs STUB_FILE / RELEASE.md §Workflow). Bare literals —
+// leg (the release-workflows check's stubFile / RELEASE.md §Workflow). Bare literals —
 // this worker imports nothing from the engine, and the name is the
 // conformance-pinned fingerprint.
 const ORCHESTRATOR_FILE = 'chrome-extension-release.yml';

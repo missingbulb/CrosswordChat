@@ -58,7 +58,7 @@ Write the entry in the file grammar and append it through the tool, which valida
 refuses one that carries a secret:
 
 ```
-node packs/claudinite-growth/provenance.mjs append <pack> <element> <<'EOF'
+cn provenance append <pack> <element> <<'EOF'
 ## 2026-09-21 · reworded · the consequence clause said why twice (#2210)
 - **Reason:** the second sentence restated the rule; cut.
 - **Actor:** @handle (owner).
@@ -67,8 +67,8 @@ node packs/claudinite-growth/provenance.mjs append <pack> <element> <<'EOF'
 EOF
 ```
 
-In a member the tool is `.claudinite/shared/packs/claudinite-growth/provenance.mjs`, and
-the pack is under `.claudinite/local/packs/`. `--changed` in place of the element appends the
+In a member the pack is under `.claudinite/local/packs/`, named by its id or as
+`local/<name>`. `--changed` in place of the element appends the
 same entry to every element the working tree's diff touched - a sweep's one-line entries.
 The fields, each written only where there is something behind it: `Source`, `Reason`,
 `Actor` (the person by handle with their role, or the run and who merged it - never an

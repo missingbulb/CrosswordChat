@@ -21,7 +21,7 @@
 // is the whole life the brief has. A standing issue would outlive it by a week and
 // then hold a stale window.
 
-import { loadConfig } from '../../../../engine/checks/helpers/repo-context.mjs';
+import { packs } from '@claudinite/sdk';
 
 const log = (s) => console.log(`growth-dedup code_work: ${s}`);
 
@@ -212,16 +212,15 @@ async function windowCommits(gh, repo, branch, sinceIso) {
   return out;
 }
 
-export async function worker({ repo, root, defaultBranch, gh, item: workItem, log }) {
+export async function worker({ repo, defaultBranch, gh, item: workItem, log }) {
   const branch = defaultBranch ?? 'main';
 
   const sinceIso = new Date(Date.now() - WINDOW_DAYS * 86400000).toISOString();
   // The repo's OWN declaration decides which packs are the yardstick: a canon
   // pack it does not declare contributes no prose, no checks and no coverage.
-  // `loadConfig` normalizes a local pack's `local/<id>` token to the bare id, so
-  // this list mixes both kinds — and needs no filter, since the mount roots
-  // `canonPackOf` matches exclude the local tree outright.
-  const declared = loadConfig(root).packs ?? [];
+  // The engine's list holds local packs too, by bare id, and needs no filter,
+  // since the mount roots `canonPackOf` matches exclude the local tree outright.
+  const declared = (await packs()).map((p) => p.id);
   const summary = summarizeCanonWindow(await windowCommits(gh, repo, branch, sinceIso), declared);
 
   // The brief, onto the run's OWN work item. The queue hands every code-work run its

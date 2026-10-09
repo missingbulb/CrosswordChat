@@ -44,7 +44,7 @@ Three responsibilities, strictly separated (owner, 2026-08-06):
    parks their own world has since answered, and a health review of the open set.
    It runs first because what it frees is what the ask and the drain gate read.
 
-The engine is vendored under `.claudinite/shared/packs/claudinite-tasks/`; the basics
+The engine is the `cn` binary the member pins (`.claudinite/bin/cn`); the basics
 pack owns the conformance guards for the surfaces a repo authors around it —
 scheduling is core Claudinite discipline, present wherever basics is
 declared (everywhere), not an opt-in feature.
@@ -59,8 +59,8 @@ outage self-heals by looking at the queue rather than by replaying a ledger.
   `claudinite-scheduler.yml` carries a single cron: two ticks a day, twelve
   hours apart, every task asked at both, on a repo-hashed minute constrained to
   **:10-:50** and a repo-hashed hour (written once when the file is scaffolded,
-  and preserved by every update after: `packs/claudinite-tasks/src/adopt/hash-minute.mjs`, a pure function of the repo full name that
-  bootstrap stamps in and the update re-derives), a `concurrency` group, a
+  and preserved by every update after: a pure function of the repo full name that
+  adoption stamps in and the update re-derives), a `concurrency` group, a
   `workflow_dispatch` trigger (whose one `wake` input is how a task is forced,
   here or from another repo), and a call into the vendored scheduler run — no logic of its own
   (schema and behaviour changes ride the vendor refresh, not workflow edits). It
@@ -92,8 +92,8 @@ outage self-heals by looking at the queue rather than by replaying a ledger.
   `task-declaration-shape` bounds the length; the rest is yours.
 
 - **Every task declaration carries the full contract.** A `tasks/<name>/task.json`
-  (one JSON object, `"$schema"` pointing at `packs/claudinite-tasks/task.schema.json`
-  so an editor validates it; keys grouped as identity, scheduling, outcome, then the
+  (one JSON object with no `"$schema"` key — the engine validates it, `cn tasks
+  contract`, and publishes no schema file to point at; keys grouped as identity, scheduling, outcome, then the
   `code_*` fields, then the `agent_*` fields) declares `id` (matching its directory), `description`
   (below), `trigger` (`schedule | request` — who mints an occurrence, below),
   `preconditions` (what must then hold — optional, and absent means nothing does; its
@@ -138,7 +138,7 @@ outage self-heals by looking at the queue rather than by replaying a ledger.
   scheduler run and executor read agent_model/expected_outcome/preconditions from this file — never from the work
   item — so an illegal or missing value means a task never fires, fires wrong,
   or writes past its declared ceiling. The same contract
-  (`packs/claudinite-tasks/src/contract/task-contract.mjs`) is re-validated at run time, so the
+  (the engine's) is re-validated at run time, so the
   static and runtime views can't drift. A task declares **no scope**: reach is a
   property of which endpoint the hand-off calls, `invocation_endpoint` below, and
   nothing else in the system has a concept of scope.
@@ -182,8 +182,8 @@ outage self-heals by looking at the queue rather than by replaying a ledger.
   task that keeps an aggregated record across runs resolves the issue in its **own**
   code-work and passes the number to its agentic phase the ordinary way — the hand-off
   payload's `delivered.issue`, which the executor renders into the work item as an `Issue:` line
-  the worker doc points at. The exact-title lookup and the create-then-close pair are
-  a library that code-work may call (`packs/claudinite-tasks/public/github.mjs`), never a phase:
+  the worker doc points at. The exact-title lookup and the write are SDK actions that
+  code-work may call (`github.findOrCreateTracker`, `github.writeTracker`), never a phase:
   whether a run with nothing to say should mint a tracker at all is the task's own
   judgment, and a task whose output is its PR answers no.
 
@@ -209,36 +209,44 @@ remainder for **work code-work could not do**, never for a re-check of whether
 the run should have happened.
 
 **Declare that worker as `code_worker_mjs`, and write only the work.** The field
-names the module - `"code_worker_mjs": "worker.mjs"` - and the runner supplies the
-entry point, so the module exports one function and nothing else:
+names the module - `"code_worker_mjs": "worker.mjs"` - and the engine's runner supplies
+the entry point, so the module exports one function and nothing else:
 
 ```js
-export async function worker({ gh, log, deliver, root, repo, defaultBranch, item, context, target, secrets }) {
+import { github, git, commitMessage, fail, requeue, requestAgent } from '@claudinite/sdk';
+
+export async function worker({ root, repo, defaultBranch, item, context, target, secrets, log }) {
   // … the work. Return nothing, or a verdict:
-  //   { triage: { kind, detail } }        the park's routing, for a run that must fail
-  //   { requeue: { until, reason } }      come back later; the item blocks until then
-  //   { requestAgent: { delivered, reason } }   hand off to the agentic phase
+  //   requeue(until, reason)                  come back later; the item blocks until then
+  //   requestAgent({ delivered, reason })     hand off to the agentic phase
+  // and end a run that must fail with fail(kind, message), kind naming the park.
 }
 ```
 
-The bag is the `CLAUDINITE_*` environment already parsed, so a worker reads no
-environment of its own and a test calls it with a bag it built. Beside the parsed
-values it carries the run's **instruments**, already built, so a worker never
-assembles one for itself:
+The bag is the run's parameters already parsed — the checkout, the repository, the
+default branch, the item, its context lines, the branch and pull request the executor
+resolved (`target`), the declared `secrets`, `automerge`, `stepSummary` and the `log`
+— so a worker reads no environment of its own and a test calls it with a bag it built.
+Everything that reaches outside the process goes through **`@claudinite/sdk`**, which
+only the engine's runner resolves:
 
-- **`gh`** - a REST client on the Action's own token. There is no run without one
-  (the executor's workflow always sets `GITHUB_TOKEN`), so never guard on the
-  token before using it. A client on a DIFFERENT credential is a different object
-  and stays the worker's own: a declared secret really can be missing, and the
-  worker is what says so in the terms of its whole grant.
-- **`log`** - one line under this task's name and its item.
-- **`deliver`** - the generated-file delivery with the checkout, the repository,
-  the base branch, the token, the branch and pull request the executor resolved,
-  the task that is writing and the logger already bound. Pass what is your own:
-  `files`, `title`, `body`, `message`.
-- **`automerge`** - what this task authorizes to land unreviewed, as the arming
-  trailer's own expression, for a worker that pushes a commit itself.
-- **`token`**, **`stepSummary`** - the raw readings, for the few that need them.
+- **`github.<action>`** - the repository's API under the job's token, as named actions
+  (`openPr`, `createComment`, `readFile`, `listIssues`, `dispatchWorkflow`,
+  `findOrCreateTracker`, `writeTracker`). The pack lists the actions it takes in its
+  `pack.json`'s `githubActions`, and a call outside that grant is refused. An endpoint
+  with no action is a REST call of the worker's own on `GITHUB_TOKEN`, which the job
+  always sets; a client on a DIFFERENT credential stays the worker's own too: a
+  declared secret really can be missing, and the worker is what says so.
+- **`git(...args)`** - git in the checkout, with the token reaching only the commands
+  that talk to the remote. It resolves to `{ code, stdout, stderr }`; a non-zero exit
+  is an answer, not a throw.
+- **`commitMessage(subject, body)`** - a subject with the `Claudinite-Task:` and
+  automerge-policy trailers every commit a task writes carries.
+- **`config(packId)`**, **`packs()`** - a declared pack's config, and the declared packs.
+
+A pull request lands only when it was opened through `github.openPr` on
+`target.branch`, or is `target.pr` amended: that is what tells the executor there is
+one to land.
 
 **Name what you take, and take the contract at its word.** Destructure the fields
 this worker reads rather than accepting the bag whole - the signature is where a
@@ -250,10 +258,9 @@ is null. What a worker does validate is the world - an API that answered 404, a 
 that is not there - never the shape of what it was handed.
 
 `secrets` holds the ones this task declared, and an unset value is absent rather
-than empty. A throw is the failure channel - the runner prints the failure line,
-the stack and the `.triage` an error carries, and sets the exit code; a returned
-`triage` is that same failure by another road, since the queue reads a park's
-routing only off a non-zero exit. The raw `code_work` form still takes a whole
+than empty. A throw is the failure channel, and `fail(kind, message)` is a throw
+carrying the park's routing; the runner prints the failure and sets the exit code,
+since the queue reads a park only off a non-zero exit. The raw `code_work` form still takes a whole
 command for a work step that is not a node module, and the two are never declared
 together.
 
@@ -279,8 +286,7 @@ where the mechanics belong: `agent_model`, `schedule_after`, `expected_outcome` 
 **What happens to the run's pull request is never in `task.md`** — not whether it
 merges itself, not what it authorizes to land unreviewed, not what becomes of an
 earlier run's still-open one. Say what this run must do (open a PR, never merge
-it, what its body must carry), point at the shared delivery procedure
-([deliver-pr.md](../../../claudinite-tasks/src/deliver/deliver-pr.md)) where the run must
+it, what its body must carry), say to deliver it as the routine instructions say where the run must
 invoke one, and stop. Watch for the spelled-out form, which names no field and so
 reads as ordinary instruction: "an earlier round's pull request closes as
 superseded once yours exists" *is* `expected_outcome`. (2)
@@ -301,7 +307,7 @@ Declare one only when its rule applies.
 - **`on_interrupt: 'requeue' | 'needs-human'`** (default `requeue`) — declare `'needs-human'`
   only for a genuinely one-shot side effect (a store submission, an external notification):
   it makes every recovery path that would re-execute the task converge to triage instead.
-- **`invocation_endpoint: '<name>'`** — a key into the repo's `taskScheduler.endpoints`, for a
+- **`invocation_endpoint: '<name>'`** — a key into the `claudinite-tasks` entry's `config.agenticTaskInvocationEndpoints`, for a
   task whose agentic phase needs reach the repo's ordinary sessions lack. **Never a URL**: a
   task declaration is vendored verbatim into every consuming repo, so deployment detail and
   anything adjacent to a credential stay in that repo's own config.
@@ -387,8 +393,8 @@ mistake:
 - **Repo shape.** "This repo ships the release pipeline", "this repo has a
   vendored mount" are facts adoption settled, not questions worth re-asking every
   night. A repo that carries a pack but not one task's subject names that task in
-  its own `.claudinite-settings.json` — `taskScheduler.disabledTasks:
-  ['<pack>/<task>']` — which the scheduler reads before asking anything.
+  its own `.claudinite/settings.*`, on the `claudinite-tasks` entry's `config.disabledTasks:
+  ['<pack>/<task>']`, which the scheduler reads before asking anything.
 - **Scope.** Which files, PRs or members a granted run works on is the worker's
   decision, made in the work sections from the same signals. The conditions decide
   run or no-run, nothing else.
@@ -444,13 +450,12 @@ repo goes red when a task quietly stops running.
 
 A worker never looks for an open pull request, never picks a branch name and never
 closes a previous run's pull request. The executor resolves all of that from the
-task's `expected_outcome` before code-work starts and hands it in — code-work reads
-`CLAUDINITE_TARGET_BRANCH` (the branch to push to), `CLAUDINITE_TARGET_PR` (the pull
-request to push onto, set only when the run amends one) and `CLAUDINITE_TARGET_MODE`;
-an agent session reads the same as `Target-branch:`, `Target-pr:` and `Supersedes:`
-fields on its item. A code-work lane that lands a pull request takes them as
-parameters (`deliverGenerated`'s `branch`/`pr`); a task with a pull request to report
-names it in the hand-off payload's `delivered.pr`, which is what tells the executor a
+task's `expected_outcome` before code-work starts and hands it in — a worker reads
+`target.branch` (the branch to push to), `target.pr` (the pull request to push onto,
+set only when the run amends one) and `target.mode` off its bag; an agent session
+reads the same as `Target-branch:`, `Target-pr:` and `Supersedes:` fields on its item.
+A worker that lands a pull request pushes to `target.branch` and opens it there with
+`github.openPr` unless `target.pr` names one, which is what tells the executor a
 `supersede_existing_pr` run's successor now exists.
 
 ## The precondition is the ONLY decision point
@@ -470,22 +475,19 @@ runs**. That decision is the preconditions' alone:
 - **A failing worker may say why it failed.** The executor sees an exit code and
   nothing more, so it cannot tell a token missing a scope (a person's five-second
   fix) from an exception in the worker's own code (a bug). A worker that knows
-  prints one line on either stream before exiting non-zero, and the park is routed
-  by it:
+  ends the run with `fail(kind, message)`, and the park is routed by it:
 
-  ```
-  claudinite-needs-human: action — FLEET_GITHUB_TOKEN lacks Actions: write
+  ```js
+  fail('action', 'FLEET_GITHUB_TOKEN lacks Actions: write');
   ```
 
-  The kind is `action`, `decision`, `approval` or `failure`; the last marker in the
-  output wins, so a worker sweeping many targets may revise its verdict as it goes.
-  No marker — and every worker written before this existed — parks at `failure`,
-  which is the lane that means "someone reads the trace".
+  The kind is `action`, `decision`, `approval` or `failure`. Any other throw parks
+  at `failure`, which is the lane that means "someone reads the trace".
 - **"The work ran and produced nothing" is always legal** — that is an empty
   outcome, not a skip. The line: did the phase *do* the work and find it empty,
   or *decline* to do it?
-- The conditional agent hand-off (a code-work worker requesting the agentic phase
-  via `CLAUDINITE_REQUEST_AGENT`) escalates on **work code-work could not do** —
+- The conditional agent hand-off (a code-work worker returning `requestAgent(...)`)
+  escalates on **work code-work could not do** —
   never on a re-check of whether the run should have happened.
 
 The `task-phase-discipline` world check (advisory, heuristic) hunts for tasks
@@ -518,9 +520,10 @@ exit 128 for want of an upstream, and either failure can go unnoticed for days:
 nothing about the *next* task's own logic is wrong, so its own tests and checks
 stay green while it quietly does nothing (or the wrong thing) run after run.
 
-So any worker script that ends in a commit or a push starts by restoring `main`
-— `git fetch origin main && git checkout main` (or `git switch main`), *before*
-the write, not after. Never repair this by pushing straight to `main`
+So any worker script that ends in a commit or a push either never moves the checkout
+— it builds the commit on a scratch index over the fetched base and pushes the sha —
+or starts by restoring `main` (`git fetch origin main && git checkout main`),
+*before* the write, not after. Never repair this by pushing straight to `main`
 (`git push origin HEAD:main`) as a workaround for a stray branch: that can push
 an unreviewed commit past its own review surface. Restoring first is what keeps
 one task's delivery from becoming the next task's silent starting state.
@@ -626,7 +629,7 @@ closing or running anything.
 ## A dormant scheduler runs nothing
 
 A project nobody is working on stops its scheduler. It declares that on the pack that
-owns the scheduler, not at the top level of `.claudinite-settings.json` — a repo
+owns the scheduler, not at the top level of `.claudinite/settings.*` — a repo
 declaring no `claudinite-tasks` has no scheduler for the word to mean anything about:
 
 ```json

@@ -10,8 +10,8 @@ it runs the extract-from-activity skill over the window's commits/PRs/issues
 and the extract-from-conversations skill over the captured conversation logs,
 then runs prose-to-checks over what it just wrote to see whether any of it
 upgrades to a check — and lands the whole run through a single PR delivered
-per the repo's delivery settings (task.md → the shared deliver-pr.md
-procedure). Worker: task.md.
+per the repo's delivery settings (task.md → the routine
+instructions' pull-request delivery). Worker: task.md.
 
 The two halves were separate tasks (growth-extract + conversation-extract)
 firing at the same daily anchor, each opening its own PR against the same local
@@ -22,8 +22,8 @@ corpus the other one was concurrently writing. One task, two source skills.
 
 The ordering, declared with `schedule_after:` — and now the ONLY thing carrying it, since
 the staggered anchor hours retired with the twice-daily cron. This task reads a mount
-`claudinite-lifecycle/update` converges, so it yields while that task's item is live this
-cycle and runs the moment it converges — or rolls. The offset only ever implied this; the
+the engine's `engine/update` refreshes, so it yields while that task's item is live this
+cycle and runs the moment it lands — or rolls. The offset only ever implied this; the
 declaration enforces it.
 A substantive default-branch change is the whole trigger — the term names the
 commits, and task.md says what else the window puts in scope.

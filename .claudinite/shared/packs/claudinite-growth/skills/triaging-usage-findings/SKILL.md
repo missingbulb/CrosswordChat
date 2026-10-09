@@ -23,7 +23,7 @@ Before the figures. The element's file under its pack's `provenance/` is the
 decision log, and five things in it change what you may propose:
 
 - **`Rejected`** - this exact cause already considered and refused. The finding is
-  then not new evidence; say so on its issue and open nothing.
+  then not new evidence; say so in the run's summary and open nothing.
 - **`Source`** - what the element was born from, so the proposal undoes no lesson
   it never read.
 - **`Mechanism`** - why this rung of the ladder. A refused rung is not re-proposed
@@ -48,19 +48,19 @@ the mechanism settles it and you are choosing among the listed ones.
 
 ## 3. Write the change only where a cause is settled
 
-Otherwise comment the finding's issue with what you read and what would settle it,
-and open no pull request: an unsettled proposal rewrites content that may have
+Otherwise say in the run's summary what you read and what would settle it, and open
+no pull request or issue: an unsettled proposal rewrites content that may have
 been right.
 
 Where it lands, the pull request carries the element's provenance entry in the
 same diff, so the log entry merges only if the change does - a declined proposal
 leaves the log untouched, which is the correct record of a decision not taken.
 [changing-pack-elements](../changing-pack-elements/SKILL.md) names the kind. That
-entry's `Source` names the usage rule by id and the finding's issue by number,
-with the figures it was read from:
+entry's `Source` names the usage rule by id and the finding's subject, with the
+figures it was read from:
 
 ```
-- **Source:** usage review rule `skill-forced-only-small`, #2211 - 31 loads in the
+- **Source:** usage review rule `skill-forced-only-small` over `acme-skill` - 31 loads in the
   28 days to 2026-10-03, 30 of them held by a guard; 212 tokens.
 ```
 
@@ -70,7 +70,7 @@ and the figures it thought it from.
 ## What the body says
 
 The cause settled on and what settled it, the provenance fields read, the window
-the finding was written from, and the finding's issue number. A proposal merged
+the finding was written from, and the finding's rule and subject. A proposal merged
 weeks later lands against figures that have since moved, and the window is what
 lets a reviewer see that.
 

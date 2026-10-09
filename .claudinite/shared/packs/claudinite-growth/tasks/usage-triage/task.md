@@ -15,16 +15,16 @@ settled.
 `.claudinite/local/packs/` - this repo's own packs, and nothing else. A finding
 about a subject that arrived from a canon is not this repo's to change: it belongs
 to whoever maintains that shelf, and the review's file is the evidence they read.
-Leave it, and say so on its issue.
+Leave it, and say so in the run's summary.
 
 The Context section is binding scope: propose about the subjects it names, and do
 not re-derive which findings count. The review's file,
 `.claudinite/usage/element-review-findings.json`, carries each finding's figures,
-its possible causes and its issue number.
+and its possible causes.
 
-Never merge what you open. Where you settle no cause, comment that finding's issue
-with what you read and what would settle it, and open nothing for it.
+Never merge what you open, and file no issue. Where you settle no cause, say in the
+run's summary what you read and what would settle it, and open nothing for it.
 
-Deliver the pull request through the [shared procedure](../../../claudinite-tasks/src/deliver/deliver-pr.md).
+Deliver the pull request as your instructions say to deliver a pull request.
 Its body names the cause you settled on and what settled it, the provenance fields
-you read, the window the finding was written from, and the finding's issue number.
+you read, the window the finding was written from, and the finding's rule and subject.

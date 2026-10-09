@@ -20,13 +20,11 @@ points below (merge method, CI gating). Don't go hunting for one it doesn't name
 3. If the PR has check runs, wait for them to pass. None — merge without waiting.
 4. `merge_pull_request`, `merge_method: squash`, title `<subject> (#<pr>)`. Don't pre-read
    mergeability; the call fails loudly.
-5. Capture the conversation:
-   `node .claudinite/shared/packs/claudinite-growth/capture-log.mjs --pr <pr>`
-   (in the canon repo: `node packs/claudinite-growth/capture-log.mjs --pr <pr>`). Skip only if
+5. Capture the conversation: `.claudinite/bin/cn growth capture --pr <pr>`. Skip only if
    the repo doesn't declare `claudinite-growth`. A later merge in the same session runs it
    again. (1)
-6. Run the basics pack's
-   [verify-in-production](../../../basics/skills/verify-in-production/SKILL.md) skill, unasked.
+6. Run the task-flow pack's
+   `verify-in-production` skill, unasked.
    This step is that skill's **only** trigger — it files against what the squash actually landed,
    which is why it runs here and not when the code was written or the PR opened. It decides
    whether this change needs a production check at all — most don't — and files the issue that
