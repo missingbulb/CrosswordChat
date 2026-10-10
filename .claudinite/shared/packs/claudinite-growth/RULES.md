@@ -15,7 +15,7 @@
 
 - **Writing a task here, or the skill one loads** — the corpus is `.claudinite/local/packs/` and
   no config widens it; a skill states the method and names no corpus, so the same action over a
-  canon's `packs/` shelf is a `claudinite-canon-curation` task loading that same skill.
+  canon's `packs/` shelf is an engine fleet task loading that same skill.
   (writing-task-skill)
 
 - **Describing another pack's artifact** — point at the pack that owns it

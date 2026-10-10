@@ -8,8 +8,8 @@ This pack carries the **repo-side** stages: capturing a repo's own lessons into 
 and pruning them once the shared canon covers them. The central **promote** stage is a home-only
 duty that runs canon-side, so it lives outside this pack.
 
-Its scheduled work is four tasks under this pack's own `tasks/`, each discovered by the repo's
-scheduler (`packs/claudinite-tasks/discover.mjs`) wherever the pack is declared:
+Its scheduled work is four tasks under this pack's own `tasks/`, each discovered by the engine's
+task scheduler wherever the pack is declared:
 
 | Task | Runs when | Where it lands |
 |---|---|---|
@@ -19,9 +19,9 @@ scheduler (`packs/claudinite-tasks/discover.mjs`) wherever the pack is declared:
 | `rule-revalidation` ([tasks/rule-revalidation/task.md](tasks/rule-revalidation/task.md)) | weekly | corrections to rules whose environment claim no longer probes true, in the repo's own local packs |
 
 (Plus `logs-prune`, agentless and on request only - retention over the conversation-logs branch,
-`cn growth prune` as its code-work ([tasks/logs-prune/](tasks/logs-prune/README.md)). The hourly
-[usage-fold](../claudinite-tasks/tasks/usage-fold/README.md) reads that same branch and is
-described below, but it is the claudinite-tasks pack's task, not this one's.)
+`cn growth prune` as its code-work ([tasks/logs-prune/](tasks/logs-prune/README.md)). The
+engine's own `engine/usage-fold` task reads that same branch and is described below, but it is
+the engine's built-in, not this pack's.)
 
 The pack is marked `"engine": true` in `pack.json`, so the executor runs these tasks as the
 engine's own, under the license.
@@ -97,7 +97,7 @@ already-pushed logs, so it is the conversation half of the ordinary `growth-extr
 
 ## Skill-usage metrics - what the mounted skills actually do
 
-The [usage-fold](../claudinite-tasks/tasks/usage-fold/README.md) task counts skill loads **and
+The engine's built-in `engine/usage-fold` task counts skill loads **and
 their denominators** (captures, merges, sessions, user messages, user commands) out of the logs
 this pack captures, into `.claudinite/usage/sessions-and-elements.json`: day rows recomputed statelessly
 inside the raw retention window, week rows appended once past a `foldedThrough` watermark. The
@@ -125,7 +125,7 @@ and writes nothing outside its own file.
 [usage-triage](tasks/usage-triage/README.md) is the one stage that changes anything: weekly, over
 findings that have stood two weeks with a cause a diff can argue from, it opens one pull request
 per subject carrying the edit itself, with automerge `nothing`. The same method over a canon's own
-shelf is `claudinite-canon-curation`'s task of that name; both load
+shelf is the engine's fleet task of that name; both load
 [triaging-usage-findings](skills/triaging-usage-findings/SKILL.md), which states the method and
 names no corpus.
 
@@ -179,8 +179,8 @@ machine halves. The promotion and backfill verbs a canon maintainer runs (`reduc
 
 Every run this pack schedules writes the local packs and nothing else. `growth-write-scope` is the
 machine guarantee behind that, keyed on those runs' pinned commit titles; the same actions over a
-canon's `packs/` shelf are `claudinite-canon-curation` tasks, titled so this gate reads them as
-somebody else's business.
+canon's `packs/` shelf are the engine's fleet tasks, titled so this gate reads them as somebody
+else's business.
 
 ## Rules expire when the environment moves - revalidation
 
@@ -193,7 +193,7 @@ run is what lets the task hold no state between runs.
 
 Its scope is `.claudinite/local/packs/`, the same corpus `prose-to-checks-sweep` works and the only
 one this pack ever writes; a canon pack's environmental claims are re-probed on the shelf that
-publishes them, by `claudinite-canon-curation/canon-rule-revalidation`, through the same
+publishes them, by the engine's fleet task `canon-rule-revalidation`, through the same
 [revalidating-rules](skills/revalidating-rules/SKILL.md) skill.
 
 A probe that cannot run is logged **unprobed** and the rule is left untouched, reported in the

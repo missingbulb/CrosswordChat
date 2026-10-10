@@ -22,7 +22,7 @@ blocks it prints: QUESTIONS, HANDOVER and NEXT. Never re-create by hand what it 
    ```
 
    A repo still running the Node engine (it holds `.claudinite-settings.json`) is not adopted
-   this way: `cn init --from-node` moves it, and its NEXT line starts with removing that file.
+   this way: it is moved, in a session following ClaudiniteEngine's move-member-off-node skill.
 
 2. **Ask every QUESTIONS line in one batched `AskUserQuestion` pass** (up to four per call),
    folding in the instruction-conversion offers below, and record each answer verbatim with
@@ -32,11 +32,10 @@ blocks it prints: QUESTIONS, HANDOVER and NEXT. Never re-create by hand what it 
    ask what that prints, so the interview takes two passes at most. Init exits 0 with questions
    pending; the `adoption-answers-pending` check blocks the commit until they are answered.
 
-3. **Create the executor routine** where `claudinite-tasks` is declared: `create_trigger` makes
-   it, the SETUP block in its own prompt carries the model and repo binding the API cannot set,
-   and its endpoint goes on the `claudinite-tasks` entry's
-   `config.agenticTaskInvocationEndpoints` in `.claudinite/settings.*` **before the commit**, so
-   it lands in the same pull request. Only the `CCR_ROUTINE_TOKEN` secret is a human's step.
+3. **Create the executor routine**: `create_trigger` makes it, the SETUP block in its own
+   prompt carries the model and repo binding the API cannot set, and its endpoint goes under the
+   top-level `tasks.routines` in `.claudinite/settings.*` **before the commit**, so it lands in
+   the same pull request. Only the `CCR_ROUTINE_TOKEN` secret is a human's step.
 
 4. **Land one pull request**: commit everything init wrote, with the answers and the endpoint,
    and open it for a person to merge. The world sweep runs in its CI; the Stop hook carries the

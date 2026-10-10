@@ -6,12 +6,12 @@ the capabilities that depend on knowing *who* is here — or on the managed cont
 live. Today that is two: the pack each person brings with them, which the engine copies into
 the repo at session start from a configured store repo wherever this pack is declared; and
 [`environment-setup-command.sh`](environment-setup-command.sh), the generic body a project pastes
-into its web environment's **Setup script** field so the image carries the toolchains the base image
-doesn't ship. The script's content is the same for every project — it just runs every active pack's
-declared `env` install through the engine's `env-requirements.mjs`, so it never changes as
-requirements do (bootstrap.md Part 9 walks the setup). Nobody has to go looking for that body:
-the pack's `adoptionHandover` step has the filing session quote it inline, so the issue asking
-for the paste carries the block to copy.
+into its web environment's **Setup script** field so the image already holds the engine the repo
+pins, and SessionStart downloads nothing. The setup script starts in the checkout's parent
+directory, so the body looks for the checkout holding `.claudinite/launch` and runs
+`sh .claudinite/launch env install` there, and it never fails. The body is the same for every
+project, and it is the same line `cn init` and the move quote in their HANDOVER block, so the
+issue asking for the paste carries it whether or not the repo declares this pack.
 
 Declared, and seeded by `--init`. The pack holds an **address**, not the content: `config.repo` (and
 an optional `config.path`, default `preferences`) name the store that holds one `<login>/` directory

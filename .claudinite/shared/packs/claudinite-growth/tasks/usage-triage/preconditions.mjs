@@ -1,10 +1,5 @@
 // usage-triage's gate: is there a finding worth spending an opus session on?
 //
-// The same question, over the same file, as claudinite-canon-curation's task of
-// this name asks about the shelf. Duplicated rather than shared: the two packs are
-// independent by construction, and a pack-to-pack import is what that forbids. The
-// drift guard is a test asserting the two files agree.
-//
 // A finding earns a proposal only once it has stood two weeks AND its cause is
 // well enough known that a diff can argue from it. Everything else - a young
 // finding, a finding whose cause the record cannot settle - stays in the review
