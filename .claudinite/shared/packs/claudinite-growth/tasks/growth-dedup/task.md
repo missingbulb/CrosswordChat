@@ -43,7 +43,7 @@ That brief is the run's *starting point*, not a second bound: the Context's pack
 may cite, so a local item covered by an older line in one of those packs is a legitimate prune when you can
 quote that line. What the brief buys you is attention spent where the *new* coverage is, instead of re-reading
 a corpus whose lines mostly predate this run. It is complete except where it says otherwise — a file whose
-diff was too large to fetch, and a per-file line cap, are both stated in place with the remainder counted; go
+diff has no text patch, and a per-file line cap, are both stated in place with the remainder counted; go
 read those files directly.
 
 A window in which no declared canon pack moved says so, and that run compares the repo's fresh local items

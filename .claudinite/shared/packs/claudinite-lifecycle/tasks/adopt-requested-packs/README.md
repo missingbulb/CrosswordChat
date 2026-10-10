@@ -8,8 +8,8 @@ claudinite-growth task: adopt-requested-packs — adopt the packs this repo's
 `add-packs` work-list issues ask for, in THIS repo, by this repo's own agent.
 
 THE MEMBER HALF OF THE FLEET FAN-OUT (#749, folded onto the queue's own request
-mode in #1119). A fleet enforcer (the claudinite-fleet-sheepdog pack's
-fleet-add-missing-packs task) decides a member is missing packs — a weekly
+mode in #1119). A fleet manager (the engine's fleet task
+fleet/fleet-add-missing-packs, `cn fleet add-packs`) decides a member is missing packs — a weekly
 fingerprint scan SUSPECTS them, or the owner REQUESTS them by hand with config
 and interview answers decided — and, per member, converges one `add-packs`
 work-list issue HERE, marked `task:origin:ad-hoc` with a `Task:` field naming

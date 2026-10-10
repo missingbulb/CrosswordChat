@@ -3,7 +3,7 @@
 Daily, deterministic, and it changes nothing it reviews.
 
 Every skill the repo mounts declares what usage it expects of itself, in its
-frontmatter `metadata.usage` block. The [usage fold](../../../claudinite-tasks/tasks/usage-fold/README.md)
+frontmatter `metadata.usage` block. The engine's usage fold (`engine/usage-fold`)
 records what actually happened. This task compares the two, by a file of rule
 declarations rather than by code, and writes what it found.
 

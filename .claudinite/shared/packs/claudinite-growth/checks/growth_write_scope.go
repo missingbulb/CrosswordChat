@@ -47,7 +47,7 @@ func growthWriteScope(repo checksdk.Repo) []checksdk.Finding {
 		out = append(out, checksdk.Finding{
 			Path:     p,
 			Sentence: "a growth run touched " + p + ", outside " + localPacks,
-			Fix:      "a growth run improves the repo's own packs, never the canon or the project's code — keep the whole write surface inside the local packs; a site-tied lesson lands as the owning pack's entry naming the site, and the same action over a canon's packs/ shelf is a claudinite-canon-curation task's",
+			Fix:      "a growth run improves the repo's own packs, never the canon or the project's code — keep the whole write surface inside the local packs; a site-tied lesson lands as the owning pack's entry naming the site, and the same action over a canon's packs/ shelf is an engine fleet task's",
 		})
 	}
 	return out

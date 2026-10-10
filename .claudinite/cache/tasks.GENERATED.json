@@ -158,7 +158,6 @@
         "id": "usage-review",
         "description": "Compares what each skill declares about its own usage against what the record shows, by a file of readable rule declarations, and writes the findings with their causes and recommendations. Changes nothing it reviews.",
         "schedule_after": [
-          "claudinite-tasks/usage-fold",
           "engine/usage-fold"
         ],
         "trigger": "schedule",

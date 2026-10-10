@@ -1,5 +1,4 @@
 {
-  "$schema": "../claudinite-single-repo-dashboard/dashboard-descriptor.schema.json",
   "widgets": [
     {
       "id": "stars",
