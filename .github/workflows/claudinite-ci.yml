@@ -3,7 +3,9 @@
 # against this repo, and on any other PR it refuses a moved pin or
 # launcher. The update job dispatches this workflow on its PR's branch,
 # since GitHub starts no pull_request run for a PR the job token opened;
-# land then merges that PR once check is green.
+# land then merges that PR once check is green. check caches the coded
+# checks binary under its own key, so only a run whose engine or checks
+# changed builds it.
 name: claudinite-ci
 
 on:
@@ -34,6 +36,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
           fetch-depth: 0
+          persist-credentials: false
       - name: who opened the change
         id: who
         env:
@@ -61,6 +64,16 @@ jobs:
           echo "base=$base" >> "$GITHUB_OUTPUT"
       - name: download the pinned engine
         run: sh .claudinite/launch version
+      - name: name the checks build
+        id: checks
+        continue-on-error: true
+        run: .claudinite/bin/cn check key >> "$GITHUB_OUTPUT"
+      - name: restore the checks build
+        if: steps.checks.outputs.key != ''
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.checks.outputs.dir }}
+          key: claudinite-checks-${{ runner.os }}-${{ runner.arch }}-${{ steps.checks.outputs.key }}
       - name: cn check world
         env:
           AUTHOR: ${{ steps.who.outputs.author }}
@@ -80,6 +93,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: false
       - name: download the pinned engine
         run: sh .claudinite/launch version
       - name: cn update land
