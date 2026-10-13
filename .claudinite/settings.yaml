@@ -24,6 +24,8 @@ packs:
         store: "missingbulb/Shepherd"
     - "web-speech"
     - "host-page"
+  sources:
+    - "missingbulb/Shepherd"
 tasks:
   routines:
     default:
