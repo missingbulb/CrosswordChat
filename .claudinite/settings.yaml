@@ -1,7 +1,7 @@
 engine:
   channel: "staging"
-  version: "1.61012.1"
-  manifest: "sha512-f4oREj6OM6qssyzAL0TB9tUUiAwYF1ZXr43J0BtUfHpQ2kLqd8SxJTZsySBqbXaXM2g2vIfJxQJx3kmjgIuoDw=="
+  version: "1.61014.3"
+  manifest: "sha512-vR1UTBJF8zE2L8QSROd6AoROo4EE8bZhfk/Z+mb7tlz+EfOyziJHeEKxsjcu+Jwpc8Fc8wH8Y5/ZOWXwjO2pZw=="
 packs:
   channel: "canary"
   declared:
@@ -16,7 +16,8 @@ packs:
         ui_testing: "DOM-level golden rendering: vitest + jsdom cases in dev/requirements/ui render to PNG snapshots (satori/resvg) compared with pixelmatch (npm run test:ui; npm run refresh:ui regenerates)"
         requirements_source: "dev/docs/REQUIREMENTS.md (REQ-<AREA>-<NNN> ids, traced by npm run trace)"
     - "claudinite-growth"
-    - "local/crossword-chat"
+    - id: "crossword-chat"
+      source: "local"
     - id: "claude-code-web-users-support"
       config:
         repo: "missingbulb/Shepherd"
@@ -26,8 +27,14 @@ packs:
     - "host-page"
   sources:
     - "missingbulb/Shepherd"
+  manager:
+    repo: "missingbulb/Shepherd"
 tasks:
   routines:
     default:
       url: "https://api.anthropic.com/v1/claude_code/routines/trig_01BEUALUT7wNtoSETJPtbKaw/fire"
       tokenSecret: "CCR_ROUTINE_TOKEN"
+  merge:
+    "engine/update": "merge-safe-changes"
+  frequency:
+    "engine/update": "weekly"

@@ -1,33 +1,33 @@
 #!/bin/sh
-# Claudinite launcher. A member checks this file in as .claudinite/launch,
-# unchanged; only the engine update replaces it.
+# Claudinite engine setup. A member checks this file in as
+# .claudinite/setup-cn.sh, unchanged; only the engine update replaces it.
 #
-#   sh .claudinite/launch <cn arguments>    fetch, verify and cache the pinned engine, then run it
-#   sh .claudinite/launch env install       fetch, verify and cache only (environment pre-warm)
+#   sh .claudinite/setup-cn.sh    fetch, verify and cache the pinned engine, and link .claudinite/bin/cn to it
 #
 # It reads engine.version and engine.manifest from .claudinite/settings.yaml,
-# .toml or .json, downloads that release's manifest.json and this platform's
+# downloads that release's manifest.json and this platform's
 # binary from the npm registry, or from the GitHub releases of the
 # repository engine.releases names (owner/name, tag v<version>, assets named
 # as npm's tarballs), checks the manifest against the pin and the
-# binary against the manifest, caches the binary read-only, links
-# .claudinite/bin/cn to it and execs it. Nothing is trusted that the pin
+# binary against the manifest, caches the binary read-only and links
+# .claudinite/bin/cn to it. Nothing is trusted that the pin
 # does not cover; the registry's identity is immaterial to integrity.
 #
-# Only SessionStart and the Actions download step invoke it; every other hook
-# runs .claudinite/bin/cn directly. Wired to Stop, its exit 2 on a refusal
-# blocks the stop, and the next stop attempt hits it again, in a loop.
+# It never runs cn: every caller runs .claudinite/bin/cn itself once this
+# exits 0. On a failure it removes that link, so no other engine runs in
+# its place, says why on stderr, prints a line telling the session to stop
+# and ask the person on stdout, and exits 1.
 #
-# Bootstrap: the @claudinite/cli packages carry this file as their bin, so
-# `npx --yes @claudinite/cli adopt <packs>` runs it from the package
-# npx unpacked, through a symlink. Run with adopt in a repository holding no
-# settings file (or with the retired init), it takes the version and the
-# binary's hash from the package's own manifest.json, fetches and checks the binary as above, caches it with the
-# manifest and manifest.sig.json, and execs cn adopt, which verifies that
-# signature before it writes anything. Windows is not covered: npm's shim
-# for a sh script there is the desktop work.
-# Any other command run through that bin runs the member's own pin, the
-# member being the directory --repo names or else the working directory.
+#   sh setup-cn.sh --from-package DIR
+#
+# The @claudinite/cli package carries this file as package/launch, beside
+# its manifest.json and manifest.sig.json, for its npx bin to adopt a
+# repository with: from DIR, the folder the package unpacked to, it takes
+# the version and the binary's hash from the package's own manifest.json,
+# fetches and checks the binary as above, caches it with the manifest and
+# manifest.sig.json, which cn adopt verifies before it writes anything, and
+# prints the binary's path instead of linking it. Windows is not covered:
+# npm's shim for a sh script there is the desktop work.
 #
 # CLAUDINITE_REGISTRY overrides the registry, CLAUDINITE_GITHUB the GitHub
 # host releases are read from and CLAUDINITE_MAX_DOWNLOAD_BYTES the download
@@ -38,17 +38,25 @@ registry=${CLAUDINITE_REGISTRY:-https://registry.npmjs.org}
 github=${CLAUDINITE_GITHUB:-https://github.com}
 max_bytes=${CLAUDINITE_MAX_DOWNLOAD_BYTES:-67108864}
 
-if [ "${GITHUB_ACTIONS:-}" = true ]; then
-  context=actions
-elif [ "${1:-}" = hook ] && [ "${2:-}" = session-start ]; then
-  context=session-start
-elif [ "${1:-}" = hook ]; then
-  context=guard
-else
-  context="command"
+# Run as .claudinite/launch, the name engines before the rename wrote it
+# under and every caller they wired still names, it is that launcher: it
+# runs cn with its arguments once the engine is in place, and a failure
+# exits as each of those callers expects.
+#
+# @legacy-tolerance advisory:launcher-renamed retire:#224
+legacy=
+if [ "${0##*/}" = launch ] && [ "${1:-}" != --from-package ]; then
+  if [ "${1:-}" = hook ] && [ "${2:-}" = session-start ]; then
+    legacy=session-start
+  elif [ "${1:-}" = hook ]; then
+    legacy=guard
+  else
+    legacy='command'
+  fi
 fi
 
 tmp=
+here=
 cleanup() {
   if [ -n "$tmp" ]; then
     chmod -R u+w "$tmp" 2>/dev/null
@@ -60,40 +68,56 @@ trap cleanup EXIT
 trap 'cleanup; exit 1' HUP INT TERM
 
 say() {
-  printf 'claudinite launch: %s\n' "$*" >&2
+  printf 'claudinite setup: %s\n' "$*" >&2
 }
 
-# A configuration or integrity failure: the engine never runs.
-refuse() {
+# fail_with CODE: the engine never runs, so the link to it goes.
+fail_with() {
   cleanup
+  if [ -n "$here" ] && [ -z "$from_package" ]; then
+    rm -f "$here/bin/cn" "$here/bin/cn.exe"
+  fi
+  exit "$1"
+}
+
+# A configuration or integrity failure.
+refuse() {
   say "$1"
-  case $context in
-    session-start)
-      printf 'Claudinite refused to run its engine: %s: stop and ask the person before continuing.\n' "$1"
-      exit 0 ;;
-    guard) exit 2 ;;
-    *) exit 1 ;;
+  printf 'Claudinite refused to set up its engine: %s: stop and ask the person before continuing.\n' "$1"
+  case $legacy in
+    session-start) fail_with 0 ;;
+    guard) fail_with 2 ;;
   esac
+  fail_with 1
 }
 
 # The registry could not be reached; nothing verified is cached.
 unreachable() {
-  cleanup
-  case $context in
-    session-start)
-      say "could not fetch $1"
-      printf 'Claudinite could not fetch its engine from %s: stop and ask the person before continuing.\n' "$1"
-      exit 0 ;;
-    guard)
-      say "could not fetch the engine from $1; continuing without it, and SessionStart will say so again"
-      exit 0 ;;
-    *)
-      say "could not fetch the engine from $1"
-      exit 1 ;;
+  say "could not fetch the engine from $1"
+  printf 'Claudinite could not fetch its engine from %s: stop and ask the person before continuing.\n' "$1"
+  case $legacy in
+    session-start | guard) fail_with 0 ;;
   esac
+  fail_with 1
 }
 
-# The shapes a value must have, by shell patterns alone: the launcher runs
+from_package=
+if [ -z "$legacy" ]; then
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --from-package)
+        [ $# -ge 2 ] || refuse "--from-package needs the package's folder"
+        from_package=$2
+        shift 2 ;;
+      --from-package=*)
+        from_package=${1#*=}
+        shift ;;
+      *) refuse "unknown argument $1: setup-cn.sh takes only --from-package DIR" ;;
+    esac
+  done
+fi
+
+# The shapes a value must have, by shell patterns alone: the script runs
 # once per session and per workflow step, and each tool it starts costs a
 # process.
 digits() {
@@ -124,85 +148,41 @@ dir_of() {
   esac
 }
 
-# Step 1: the pin, from exactly one settings file.
+# Step 1: the pin, from the settings file.
 
-dir_of "$0"
-here=$(cd "$dir" && pwd) || refuse "cannot locate the .claudinite folder"
-
-# Run as the npm package's bin, through the symlink npm made.
-self=$0
-while [ -L "$self" ]; do
-  link=$(readlink "$self") || break
-  case $link in
-    /*) self=$link ;;
-    *) dir_of "$self"; self=$dir/$link ;;
-  esac
-done
-dir_of "$self"
-pkgdir=$(cd "$dir" && pwd) || refuse "cannot locate the launcher's folder"
-bootstrap=
-if [ -f "$pkgdir/manifest.json" ] && [ -f "$pkgdir/package.json" ]; then
-  if [ "${1:-}" = init ]; then
-    bootstrap=1
-  else
-    repo=.
-    want=
-    for arg do
-      if [ -n "$want" ]; then
-        want=
-        [ -d "$arg" ] && repo=$arg
-        continue
-      fi
-      case $arg in
-        --) break ;;
-        --repo|-repo) want=1 ;;
-        --repo=*|-repo=*) [ -d "${arg#*=}" ] && repo=${arg#*=} ;;
-      esac
-    done
-    here=$(cd "$repo" && pwd)/.claudinite || refuse "cannot locate the repository $repo"
-    if [ "${1:-}" = adopt ] && [ ! -f "$here/settings.yaml" ] && [ ! -f "$here/settings.toml" ] && [ ! -f "$here/settings.json" ]; then
-      bootstrap=1
-    fi
+if [ -n "$from_package" ]; then
+  pkgdir=$(cd "$from_package" && pwd) || refuse "cannot locate the package folder $from_package"
+  if [ ! -f "$pkgdir/manifest.json" ] || [ ! -f "$pkgdir/package.json" ]; then
+    refuse "$pkgdir holds no manifest.json and package.json"
   fi
-fi
-
-format=
-count=0
-for ext in yaml toml json; do
-  if [ -f "$here/settings.$ext" ]; then
-    format=$ext
-    count=$((count + 1))
-  fi
-done
-
-if [ -n "$bootstrap" ]; then
   settings=$pkgdir/manifest.json
   [ -f "$pkgdir/manifest.sig.json" ] || refuse "$pkgdir holds no manifest.sig.json, and cn adopt never runs from an unsigned manifest"
 else
-  [ "$count" -eq 1 ] || refuse "exactly one of .claudinite/settings.yaml, .claudinite/settings.toml or .claudinite/settings.json must exist, found $count in ${here%/.claudinite}"
-  settings=$here/settings.$format
+  dir_of "$0"
+  here=$(cd "$dir" && pwd) || refuse "cannot locate the .claudinite folder"
+  settings=$here/settings.yaml
+  [ -f "$settings" ] || refuse ".claudinite/settings.yaml does not exist in ${here%/.claudinite}"
 fi
 
 # The engine block's values, read in one pass. No parser: the values the
-# launcher needs are plain quoted strings, read with a strict pattern. A key
+# script needs are plain quoted strings, read with a strict pattern. A key
 # absent reads empty; a key present twice reads "duplicate", and one not
 # holding a plain quoted string, or a releases value not naming a GitHub
-# repository, "malformed". The pass also counts a JSON file's engine keys and
-# decodes the pin to the lowercase hex the hash tools print.
+# repository, "malformed". The pass also decodes the pin to the lowercase
+# hex the hash tools print.
 read_pin() {
-  awk -v format="$format" -v repo='[A-Za-z0-9-]+/[A-Za-z0-9_-][A-Za-z0-9._-]*' '
-  function value(key,   sep, n, i, line, v, found) {
-    sep = (format == "toml") ? "=" : ":"
+  awk -v repo='[A-Za-z0-9-]+/[A-Za-z0-9_-][A-Za-z0-9._-]*' '
+  function value(key,   n, i, line, v, found) {
     n = 0
     for (i = 1; i <= nlines; i++) {
       line = lines[i]
-      if (line ~ ("^[ \t]*\"?" key "\"?[ \t]*" sep)) { n++; found = line }
+      if (line ~ ("^[ \t]*\"?" key "\"?[ \t]*:")) { n++; found = line }
     }
     if (n == 0) return ""
     if (n > 1) return "duplicate"
-    if (found !~ ("^[ \t]*\"?" key "\"?[ \t]*" sep "[ \t]*\"[^\"]*\"[ \t]*$")) return "malformed"
+    if (found !~ ("^[ \t]*\"?" key "\"?[ \t]*:[ \t]*\"[^\"]*\"[ \t]*$")) return "malformed"
     v = found
-    sub("^[ \t]*\"?" key "\"?[ \t]*" sep "[ \t]*\"", "", v)
+    sub("^[ \t]*\"?" key "\"?[ \t]*:[ \t]*\"", "", v)
     sub("\"[ \t]*$", "", v)
     return (v == "") ? "malformed" : v
   }
@@ -223,28 +203,11 @@ read_pin() {
     }
     return out
   }
-  { all = all $0 }
-  format == "yaml" && /^engine:[ \t]*$/ { inb = 1; next }
-  format == "yaml" && inb && /^[^ \t]/ { inb = 0 }
-  format == "toml" && /^\[engine\][ \t]*$/ { inb = 1; next }
-  format == "toml" && inb && /^[ \t]*\[/ { inb = 0 }
-  format != "json" && inb { lines[++nlines] = $0 }
+  /^engine:[ \t]*$/ { inb = 1; next }
+  inb && /^[^ \t]/ { inb = 0 }
+  inb { lines[++nlines] = $0 }
   END {
-    engines = 0
-    if (format == "json") {
-      gsub(/\r/, "", all)
-      rest = all
-      while (match(rest, /"engine"[ \t]*:/)) { engines++; rest = substr(rest, RSTART + RLENGTH) }
-      block = ""
-      rest = all
-      while (match(rest, /"engine"[ \t]*:[ \t]*\{[^{}]*\}/)) {
-        block = substr(rest, RSTART, RLENGTH); rest = substr(rest, RSTART + RLENGTH)
-      }
-      sub(/^"engine"[ \t]*:[ \t]*\{/, "", block); sub(/\}$/, "", block)
-      nlines = split(block, lines, ",")
-    }
     pin = value("manifest")
-    print engines
     print value("version")
     print pin
     print value("package")
@@ -255,7 +218,7 @@ read_pin() {
   }' "$settings"
 }
 
-if [ -n "$bootstrap" ]; then
+if [ -n "$from_package" ]; then
   # The version and package as the package npx unpacked names them; the
   # manifest's own hash stands in for the pin.
   version=$(sed -n 's/^ *"version": *"\([0-9]*\.[0-9]*\.[0-9]*\)",\{0,1\}$/\1/p' "$pkgdir/manifest.json" | head -n 1)
@@ -265,13 +228,10 @@ if [ -n "$bootstrap" ]; then
     || refuse "$pkgdir/package.json must name \"@claudinite/cli\" or \"@claudinite/cli-rc\""
 else
   pinned=$(read_pin) || refuse "cannot read $settings"
-  engines=0 version='' manifest_pin='' package='' releases='' pin_hex=''
-  { read -r engines; read -r version; read -r manifest_pin; read -r package; read -r releases; read -r pin_hex; } <<EOF
+  version='' manifest_pin='' package='' releases='' pin_hex=''
+  { read -r version; read -r manifest_pin; read -r package; read -r releases; read -r pin_hex; } <<EOF
 $pinned
 EOF
-  if [ "$format" = json ]; then
-    [ "$engines" -eq 1 ] || refuse "$settings must hold exactly one \"engine\" object, found $engines"
-  fi
   [ -n "$package" ] || package=@claudinite/cli
 
   is_version "$version" \
@@ -320,13 +280,13 @@ else
   refuse "no SHA-256 tool found (sha256sum, shasum or openssl)"
 fi
 for tool in curl tar; do
-  command -v "$tool" >/dev/null 2>&1 || refuse "$tool is not installed; the launcher needs it to fetch the engine"
+  command -v "$tool" >/dev/null 2>&1 || refuse "$tool is not installed; the engine setup needs it to fetch the engine"
 done
 
-# The bootstrap's pin is the hash of the manifest npx unpacked, as the
+# The package's pin is the hash of the manifest npx unpacked, as the
 # lowercase hex the hash tools print; a settings file's pin was decoded to
 # that hex as it was read.
-if [ -n "$bootstrap" ]; then
+if [ -n "$from_package" ]; then
   pin_hex=$(sha512 "$pkgdir/manifest.json")
 fi
 
@@ -349,7 +309,7 @@ private_dir() {
   fi
   [ -L "$1" ] && refuse "the cache directory $1 is a symbolic link"
   [ "$os" = windows ] && return 0
-  # shellcheck disable=SC3067 # -O is in every sh the launcher runs under (dash, bash, busybox, zsh)
+  # shellcheck disable=SC3067 # -O is in every sh the script runs under (dash, bash, busybox, zsh)
   [ -O "$1" ] || private_refused "$1"
 }
 # private_refused names the mode and owner found on a cache folder that is
@@ -447,20 +407,17 @@ if ! cached_ok; then
   cleanup
 fi
 
-if [ "${1:-}" = env ] && [ "${2:-}" = install ] && [ "$#" -eq 2 ]; then
-  exit 0
-fi
-
-if [ -n "$bootstrap" ]; then
+if [ -n "$from_package" ]; then
   chmod u+w "$vdir/manifest.sig.json" 2>/dev/null
   { cp "$pkgdir/manifest.sig.json" "$vdir/.manifest.sig.json.$$" && chmod 0444 "$vdir/.manifest.sig.json.$$" \
     && mv -f "$vdir/.manifest.sig.json.$$" "$vdir/manifest.sig.json"; } || refuse "cannot place manifest.sig.json in $vdir"
-  exec "$vdir/$bin" "$@"
+  printf '%s\n' "$vdir/$bin"
+  exit 0
 fi
 
-# Step 5: link, unpack, run.
+# Step 5: link.
 
-# shellcheck disable=SC3013 # -ef is in every sh the launcher runs under (dash, bash, busybox, zsh)
+# shellcheck disable=SC3013 # -ef is in every sh the script runs under (dash, bash, busybox, zsh)
 if [ ! "$here/bin/$bin" -ef "$vdir/$bin" ]; then
   mkdir -p "$here/bin" || refuse "cannot create $here/bin"
   if ! ln -sfn "$vdir/$bin" "$here/bin/$bin" 2>/dev/null; then
@@ -468,6 +425,6 @@ if [ ! "$here/bin/$bin" -ef "$vdir/$bin" ]; then
     cp "$vdir/$bin" "$here/bin/$bin" || refuse "cannot link or copy the engine into $here/bin"
   fi
 fi
-# Unpacking the embedded runner script and SDK beside the binary is a no-op
-# until the engine embeds them (no pack JavaScript runs yet).
-exec "$vdir/$bin" "$@"
+if [ -n "$legacy" ]; then
+  exec "$vdir/$bin" "$@"
+fi
