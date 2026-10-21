@@ -45,8 +45,15 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: download the pinned engine
-        run: sh .claudinite/launch version
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/claudinite
+            ~/.npm/_cacache
+          key: cn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.claudinite/settings.yaml') }}
+          restore-keys: cn-${{ runner.os }}-${{ runner.arch }}-
+      - name: install the pinned engine
+        run: npx --yes --prefer-offline @claudinite/setup@1.0.1
       - name: cn execute loop
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -67,8 +74,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: download the pinned engine
-        run: sh .claudinite/launch version
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/claudinite
+            ~/.npm/_cacache
+          key: cn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.claudinite/settings.yaml') }}
+          restore-keys: cn-${{ runner.os }}-${{ runner.arch }}-
+      - name: install the pinned engine
+        run: npx --yes --prefer-offline @claudinite/setup@1.0.1
       - name: cn execute dispatch --continue
         env:
           GITHUB_TOKEN: ${{ github.token }}
