@@ -1,8 +1,6 @@
 @../shared/packs/basics/RULES.md
 @../shared/packs/chrome-extension/RULES.md
 @../shared/packs/claude-code-web-users-support/RULES.md
-@../shared/packs/claudinite-growth/RULES.md
-@../shared/packs/claudinite-lifecycle/RULES.md
 @../shared/packs/executable-requirements/RULES.md
 @../shared/packs/host-page/RULES.md
 @../shared/packs/node/RULES.md

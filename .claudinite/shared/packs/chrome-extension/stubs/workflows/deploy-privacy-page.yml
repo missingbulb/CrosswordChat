@@ -22,7 +22,7 @@
 # `main` to publish.
 #
 # The calling job must grant `permissions: contents: read, pages: write,
-# id-token: write, issues: write` (Pages deploy + the failure reporter).
+# id-token: write` (Pages deploy).
 name: Deploy privacy policy to GitHub Pages (reusable)
 
 on:
@@ -88,18 +88,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-
-  # A standalone (dispatch-stub) Pages deploy is unattended — a failure just
-  # turns the run red. Surface it as a tracking issue. The job-level permission
-  # below is what the token actually carries (the top-level block above omits
-  # issues on purpose); the caller grants issues:write through its call.
-  report-failure:
-    needs: [build, deploy]
-    if: failure()
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - uses: ./.github/actions/report-failure
-        with:
-          workflow: "Deploy privacy policy to GitHub Pages"

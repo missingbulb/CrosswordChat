@@ -17,7 +17,6 @@ Chrome Web Store API usage, same secrets, same versioning and artifact rules, sa
 sections — so set a new repo up against that contract rather than authoring its pipeline. The workflow **logic** is authored once, in this
 pack's [`stubs/`](../../stubs/) — the [orchestrator](../../stubs/workflows/chrome-extension-release.yml), the
 five `workflow_call`-only **reusable workflows**, and the
-[report-failure](../../stubs/actions/report-failure/action.yml),
 [read-release-config](../../stubs/actions/read-release-config/action.yml) and
 [bump-extension-patch](../../stubs/actions/bump-extension-patch/action.yml) composite actions — and
 **vendored into each extension repo's own `.github/`**, where the whole pipeline runs with no
@@ -36,8 +35,8 @@ repo ships a bump or filter script any more. Reference implementation:
 
 Naming in the flat `.github/workflows/` namespace: Chrome-specific logic carries the
 `chrome-extension-` prefix (future publish standards — other stores — will live beside it);
-genuinely platform-agnostic pieces (`deploy-privacy-page.yml`, the `report-failure` action) keep
-general names so other standards reuse them as-is. When in doubt, prefix.
+genuinely platform-agnostic pieces (`deploy-privacy-page.yml`) keep general names so other
+standards reuse them as-is. When in doubt, prefix.
 
 ## The contract
 
@@ -83,10 +82,7 @@ general names so other standards reuse them as-is. When in doubt, prefix.
 
 **Workflow** — **one** orchestrator per repo, [`chrome-extension-release.yml`](../../stubs/workflows/chrome-extension-release.yml), named exactly
 `Release to Chrome Store`. It owns only the triggers; its three `if:`-guarded jobs each call a **local**
-reusable workflow (`./.github/workflows/…`, all vendored alongside it). The failure reporter keys
-tracking issues on the **per-operation** names baked into the reusable workflows (`Release: Create
-Package`, `Release: Publish to Chrome Web Store`, `Release: Daily Auto-Release`) — not on the
-orchestrator's `name:` — so collapsing to one entry point loses no per-operation triage:
+reusable workflow (`./.github/workflows/…`, all vendored alongside it):
 
 | job (trigger) | reusable workflow it calls — what it does |
 |---|---|
@@ -120,13 +116,8 @@ called by the publish reusable — a repo never dispatches it directly.
   so a repo can't ship a placeholder-configured zip. These are the genuine per-**environment**
   values that must not be committed; they live in repository **variables** (Settings → Secrets and
   variables → Actions → Variables). Store secrets travel via `secrets: inherit`.
-- Every unattended workflow (all of the above; not PR CI) reports failures through the
-  `report-failure` composite action baked into the reusable workflows — a red run must reach a
-  human, never sit unseen in the Actions list. Each failure opens a **fresh** failure
-  issue, and any earlier open failure issues for the **same** workflow are closed as duplicates of
-  it, so the newest failure is always the single open bug to triage. Repos no longer carry a
-  `report-failure.yml`; a repo's own non-standard unattended workflows use the vendored action
-  directly (`uses: ./.github/actions/report-failure`).
+- The pipeline opens no issues: a failed run is the red run in the Actions list. A repo's own
+  issues are kept however that repo keeps them, which the pipeline does not know.
 - Daily auto-release semantics: it asks the **release list**, not a file diff — has the version
   currently on `main` been released? That is self-healing by construction (a failed day retries the
   next with nothing to undo, and a day whose merges shipped nothing carries the version that is

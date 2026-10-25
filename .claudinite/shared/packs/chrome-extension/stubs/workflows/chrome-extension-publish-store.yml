@@ -27,8 +27,7 @@ name: "Chrome extension: Publish to Chrome Web Store (reusable)"
 #   CHROME_REFRESH_TOKEN    OAuth refresh token } the Claudinite chrome-store-releases standard.
 #
 # The calling job must grant `permissions: contents: read, pages: write,
-# id-token: write, issues: write` (store download + privacy-page deploy + the
-# failure reporters).
+# id-token: write` (store download + privacy-page deploy).
 on:
   workflow_call:
     inputs:
@@ -127,27 +126,10 @@ jobs:
   # PRIVACY.md the listing points at. No needs on publish, so it also deploys
   # when the upload leg fails (e.g. before the first publication, when the store
   # item and secrets don't exist yet) — that's how the /privacy/ URL first goes
-  # live. It reports its OWN failures, so the issues:write below lets that
-  # reporter run.
+  # live.
   deploy-privacy-page:
     uses: ./.github/workflows/deploy-privacy-page.yml
     permissions:
       contents: read
       pages: write
       id-token: write
-      issues: write
-
-  # This workflow is run by hand and then left alone, so a failed upload
-  # otherwise just turns the run red with nobody alerted. Open a fresh failure
-  # issue instead. Covers only `publish`; the deploy-privacy-page reusable
-  # workflow reports its own failures.
-  report-failure:
-    needs: publish
-    if: failure()
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - uses: ./.github/actions/report-failure
-        with:
-          workflow: "Release: Publish to Chrome Web Store"
