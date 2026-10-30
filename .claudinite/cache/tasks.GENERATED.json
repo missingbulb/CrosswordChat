@@ -57,8 +57,25 @@
         "code_work_timeout": 120
       }
     },
-    "claudinite-growth/growth-dedup": {
-      "path": ".claudinite/shared/packs/claudinite-growth/tasks/growth-dedup/task.json",
+    "claudinite/adopt-requested-packs": {
+      "path": ".claudinite/temp/packs/claudinite/tasks/adopt-requested-packs/task.json",
+      "declaration": {
+        "id": "adopt-requested-packs",
+        "description": "The member half of the fleet fan-out: adopts the packs an add-packs work list asks for, in this repository, by this repository's own agent.",
+        "trigger": "request",
+        "expected_outcome": "fresh_pr",
+        "automerge": [
+          "claudinite-shared-packs",
+          "claudinite-settings-updates",
+          "generated-file-changes"
+        ],
+        "agent_model": "sonnet",
+        "agent_instructions": "task.md",
+        "agent_execution_timeout": 3600
+      }
+    },
+    "claudinite/growth-dedup": {
+      "path": ".claudinite/temp/packs/claudinite/tasks/growth-dedup/task.json",
       "declaration": {
         "id": "growth-dedup",
         "description": "The growth lifecycle's pruning stage: reconciles this repository's local packs against the canon it mounts, removing local items the canon now covers and keeping those the canon states too generally.",
@@ -78,8 +95,8 @@
         "agent_execution_timeout": 1800
       }
     },
-    "claudinite-growth/growth-extract": {
-      "path": ".claudinite/shared/packs/claudinite-growth/tasks/growth-extract/task.json",
+    "claudinite/growth-extract": {
+      "path": ".claudinite/temp/packs/claudinite/tasks/growth-extract/task.json",
       "declaration": {
         "id": "growth-extract",
         "description": "The growth lifecycle's capture stage: mines the window's repository activity and the captured conversation logs for durable lessons, folds them into this repository's local packs, and runs prose-to-checks over what it wrote.",
@@ -89,33 +106,21 @@
         "trigger": "schedule",
         "preconditions": [
           "schedule:at-most-daily",
-          "substantive-change"
+          "substantive-change || session-captured"
         ],
         "expected_outcome": "amend_existing_or_create_new_pr",
         "automerge": [
           "under:.claudinite/local"
         ],
+        "code_work": "in-process: growth extract",
+        "code_work_timeout": 600,
         "agent_model": "opus",
         "agent_instructions": "task.md",
         "agent_execution_timeout": 2700
       }
     },
-    "claudinite-growth/logs-prune": {
-      "path": ".claudinite/shared/packs/claudinite-growth/tasks/logs-prune/task.json",
-      "declaration": {
-        "id": "logs-prune",
-        "description": "Retention on the conversation-logs branch: deletes capture files older than the configured window so the branch stays bounded.",
-        "trigger": "request",
-        "preconditions": [
-          "log-past-retention"
-        ],
-        "expected_outcome": "no_code_changes",
-        "code_work": "cn growth prune",
-        "code_work_timeout": 60
-      }
-    },
-    "claudinite-growth/prose-to-checks-sweep": {
-      "path": ".claudinite/shared/packs/claudinite-growth/tasks/prose-to-checks-sweep/task.json",
+    "claudinite/prose-to-checks-sweep": {
+      "path": ".claudinite/temp/packs/claudinite/tasks/prose-to-checks-sweep/task.json",
       "declaration": {
         "id": "prose-to-checks-sweep",
         "description": "Mines this repository's existing pack prose for always-testable rules the conversion missed and converts the strongest ones into checks.",
@@ -133,8 +138,8 @@
         "agent_execution_timeout": 2700
       }
     },
-    "claudinite-growth/rule-revalidation": {
-      "path": ".claudinite/shared/packs/claudinite-growth/tasks/rule-revalidation/task.json",
+    "claudinite/rule-revalidation": {
+      "path": ".claudinite/temp/packs/claudinite/tasks/rule-revalidation/task.json",
       "declaration": {
         "id": "rule-revalidation",
         "description": "Re-probes the pack rules whose truth lives outside this repository, such as what the harness rejects or which tools exist, and corrects the ones the platform has moved under.",
@@ -152,28 +157,8 @@
         "agent_execution_timeout": 2700
       }
     },
-    "claudinite-growth/usage-review": {
-      "path": ".claudinite/shared/packs/claudinite-growth/tasks/usage-review/task.json",
-      "declaration": {
-        "id": "usage-review",
-        "description": "Compares what each skill declares about its own usage against what the record shows, by a file of readable rule declarations, and writes the findings with their causes and recommendations. Changes nothing it reviews.",
-        "schedule_after": [
-          "engine/usage-fold"
-        ],
-        "trigger": "schedule",
-        "preconditions": [
-          "schedule:at-most-daily",
-          "fold-moved-since-review",
-          "window-has-sessions:10"
-        ],
-        "expected_outcome": "amend_existing_or_create_new_pr",
-        "automerge": "nothing",
-        "code_worker_mjs": "worker.mjs",
-        "code_work_timeout": 900
-      }
-    },
-    "claudinite-growth/usage-triage": {
-      "path": ".claudinite/shared/packs/claudinite-growth/tasks/usage-triage/task.json",
+    "claudinite/usage-triage": {
+      "path": ".claudinite/temp/packs/claudinite/tasks/usage-triage/task.json",
       "declaration": {
         "id": "usage-triage",
         "description": "Turns a usage-review finding that has stood two weeks into a proposed change to this repo's own local packs - the edit itself, one pull request per subject, for the owner to merge or decline.",
@@ -187,23 +172,6 @@
         "agent_model": "opus",
         "agent_instructions": "task.md",
         "agent_execution_timeout": 2700
-      }
-    },
-    "claudinite-lifecycle/adopt-requested-packs": {
-      "path": ".claudinite/shared/packs/claudinite-lifecycle/tasks/adopt-requested-packs/task.json",
-      "declaration": {
-        "id": "adopt-requested-packs",
-        "description": "The member half of the fleet fan-out: adopts the packs an add-packs work list asks for, in this repository, by this repository's own agent.",
-        "trigger": "request",
-        "expected_outcome": "fresh_pr",
-        "automerge": [
-          "claudinite-shared-packs",
-          "claudinite-settings-updates",
-          "generated-file-changes"
-        ],
-        "agent_model": "sonnet",
-        "agent_instructions": "task.md",
-        "agent_execution_timeout": 3600
       }
     }
   }

@@ -28,11 +28,6 @@ name: Release to Chrome Store
 #                               or bump (with `part`, minor or major — raises the
 #                               version, pushes it, and packages the result)
 #
-# The Actions-tab entry is named "Release to Chrome Store"; the failure reporter keys its
-# tracking issues on the per-operation names ("Release: Create Package", etc.)
-# baked into the reusable workflows, so collapsing to one entry point loses no
-# per-operation triage.
-#
 # secrets: inherit passes the four CHROME_* store secrets through to the reusable
 # workflows.
 #
@@ -72,7 +67,6 @@ permissions:
   contents: write
   pages: write
   id-token: write
-  issues: write
 
 # Daily runs (scheduled, or a mode=daily dispatch) share one queue so a manual
 # dispatch can't race the scheduled release; every other run gets its own group.

@@ -29,6 +29,10 @@ points below (merge method, CI gating). Don't go hunting for one it doesn't name
    which is why it runs here and not when the code was written or the PR opened. It decides
    whether this change needs a production check at all — most don't — and files the issue that
    comes back once the change is live. Never offer the owner to check later instead.
+7. Last, once per session: run `.claudinite/bin/cn growth from-session --decide`. On `run`, load
+   the `growth-from-session` skill and follow it; on `skip (<reason>)`, do nothing and say
+   nothing. The code decides, so call it after every merge without judging the repo's
+   growth settings yourself.
 
 Don't re-read an issue to confirm it closed — `Closes #<issue>` does that on merge.
 

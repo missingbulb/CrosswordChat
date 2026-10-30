@@ -27,8 +27,8 @@ name: "Chrome extension: Create Package (reusable)"
 # the default checkout (github.sha) would build the pre-bump tree and no-op on
 # the old version.
 #
-# The calling job must grant `permissions: contents: write, issues: write`
-# (release publishing + the failure reporter).
+# The calling job must grant `permissions: contents: write` (release
+# publishing).
 on:
   workflow_call:
     inputs:
@@ -181,19 +181,3 @@ jobs:
             ${{ steps.cfg.outputs.zip_path }}
             ${{ steps.build.outputs.prod_zip }}
           generate_release_notes: true
-
-  # Auto-runs on a bump-merge to main with no human watching, so a silent failure
-  # here means the release never gets cut and the "bump version" flow stalls
-  # unnoticed. Surface it as a tracking issue. (A clean no-op release=false run is
-  # success, not failure, so it never reaches here.) The issue is keyed on the
-  # standard's job name, stable across repos and callers.
-  report-failure:
-    needs: release
-    if: failure()
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - uses: ./.github/actions/report-failure
-        with:
-          workflow: "Release: Create Package"

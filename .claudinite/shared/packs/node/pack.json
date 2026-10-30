@@ -1,5 +1,5 @@
 {
-  "version": "1.61004.1",
+  "version": "1.61030.1",
   "minEngineVersion": "1.61001.1",
   "ruleRoutingGuidance": {
     "belongs": "conventions for a Node/npm project — module resolution, ESM vs CJS, dependency justification, jsdom test divergences",
@@ -11,20 +11,20 @@
     "paths": "^([^/]+/)?package\\.json$"
   },
   "env": {
-    "label": "Node dependencies (npm ci)",
+    "label": "Node dependencies (npm)",
     "setup": {
       "forEach": "dirs",
       "whenUnset": [
         "."
       ],
-      "template": "( cd \"{}\" && npm ci ) || true"
+      "template": "( cd \"{}\" && if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then npm ci; else npm install --no-package-lock --no-audit --no-fund; fi ) || true"
     },
     "probe": {
       "forEach": "dirs",
       "whenUnset": [
         "."
       ],
-      "template": "[ -d \"{}/node_modules\" ]"
+      "template": "[ -d \"{}/node_modules\" ] || ( cd \"{}\" && node -e \"const p=require('./package.json');process.exit(['dependencies','devDependencies','optionalDependencies'].some(k=>Object.keys(p[k]||0).length)?1:0)\" )"
     }
   }
 }

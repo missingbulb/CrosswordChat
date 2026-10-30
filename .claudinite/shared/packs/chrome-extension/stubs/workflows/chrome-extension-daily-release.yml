@@ -30,15 +30,10 @@ name: "Chrome extension: Daily Auto-Release (reusable)"
 #      workflow with the fresh tag (auto-publishing to users, and refreshing
 #      the privacy page as that workflow always does).
 #
-# Unattended (scheduled), so failures must reach a human: the called workflows
-# report their own job failures as fresh tracking issues, and the
-# report-failure job below covers this workflow's own jobs — including a
-# called workflow failing to even start.
-#
 # The check job runs on a bare runner (no npm ci): the config action and the
 # version read are dependency-free node. Callers must pass `secrets: inherit`
 # (for the store secrets the publish leg needs) and grant `permissions:
-# contents: write, pages: write, id-token: write, issues: write`.
+# contents: write, pages: write, id-token: write`.
 on:
   workflow_call:
     inputs:
@@ -97,14 +92,12 @@ jobs:
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
-  # Tests → zip → GitHub Release, at main's pinned tip. Its internal
-  # report-failure job needs issues: write granted through this call.
+  # Tests → zip → GitHub Release, at main's pinned tip.
   release:
     needs: check
     if: needs.check.outputs.release == 'true'
     permissions:
       contents: write
-      issues: write
     uses: ./.github/workflows/chrome-extension-create-package.yml
     with:
       ref: ${{ needs.check.outputs.sha }}
@@ -112,34 +105,17 @@ jobs:
 
   # Upload the just-released zip to the Chrome Web Store and publish it to
   # users. secrets: inherit passes the four CHROME_* store secrets through;
-  # the pages/id-token grants are for its privacy-page deploy, issues for the
-  # nested failure reporters. The publish workflow reads the zip name from the
-  # repo's release config itself, so only the tag is forwarded here.
+  # the pages/id-token grants are for its privacy-page deploy. The publish
+  # workflow reads the zip name from the repo's release config itself, so only
+  # the tag is forwarded here.
   publish:
     needs: [check, release]
     permissions:
       contents: read
       pages: write
       id-token: write
-      issues: write
     uses: ./.github/workflows/chrome-extension-publish-store.yml
     with:
       tag: v${{ needs.check.outputs.version }}
       auto_publish: true
     secrets: inherit
-
-  # Scheduled + nobody watching = every failure must converge to a fresh
-  # tracking issue a human sees. Covering release/publish here too can
-  # double-report (their internal reporters also fire on their own job failures)
-  # — accepted, so that a called workflow failing before its internal reporter
-  # can run (e.g. a workflow-file error) still reaches a human.
-  report-failure:
-    needs: [check, release, publish]
-    if: failure()
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - uses: ./.github/actions/report-failure
-        with:
-          workflow: "Release: Daily Auto-Release"
