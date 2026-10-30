@@ -4,8 +4,11 @@ Active when the repo has a `package.json` at its root or one directory down.
 
 ## Environment (`env`)
 
-A cloud session gets `npm ci` run in each directory the pack entry's `config.dirs` lists, and in
-the repo root when it lists none: `{ "id": "node", "config": { "dirs": ["firebase/functions"] } }`.
+A cloud session gets the dependencies installed in each directory the pack entry's `config.dirs`
+lists, and in the repo root when it lists none:
+`{ "id": "node", "config": { "dirs": ["firebase/functions"] } }`. A directory with a lockfile
+gets `npm ci`; one without gets `npm install`, which writes no lockfile. A `package.json` that
+declares no dependencies needs nothing installed, so it passes with no `node_modules`.
 
 ## Rules (`RULES.md`)
 

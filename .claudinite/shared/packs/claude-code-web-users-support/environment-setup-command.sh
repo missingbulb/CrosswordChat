@@ -5,6 +5,7 @@
 # somebody to paste it.
 
 # Runs when the environment image is built, starting in the checkout's PARENT
-# dir, so it looks for the checkout holding a launcher rather than assuming one;
-# it never fails, since a failing setup script takes the session down with it.
-for d in . *; do [ -f "$d/.claudinite/launch" ] && (cd "$d" && sh .claudinite/launch env install); done; true
+# dir, so it runs each checkout's generated env setup script rather than
+# assuming one checkout; it never fails, since a failing setup script takes the
+# session down with it.
+for f in .claudinite/cache/env-setup.GENERATED.sh */.claudinite/cache/env-setup.GENERATED.sh; do [ -f "$f" ] && bash "$f"; done; true

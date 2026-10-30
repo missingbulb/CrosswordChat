@@ -11,7 +11,7 @@ import (
 // The Chrome Web Store release pipeline is vendored into each consumer's
 // own .github/: the orchestrator (stubFile, named stubName) owns the
 // triggers and calls the local reusable workflows, which with the
-// privacy-page reusable and three composite actions the pack's stubs/
+// privacy-page reusable and two composite actions the pack's stubs/
 // materialize beside it.
 const (
 	stubFile = "chrome-extension-release.yml"
@@ -27,7 +27,7 @@ var (
 		"chrome-extension-bump-version.yml",
 	}
 	vendoredWorkflows = append(append([]string{}, orchestratorCalls...), "deploy-privacy-page.yml")
-	vendoredActions   = []string{"read-release-config", "bump-extension-patch", "report-failure"}
+	vendoredActions   = []string{"read-release-config", "bump-extension-patch"}
 )
 
 // Whether the repo ships to the store gates the pack's whole release half,

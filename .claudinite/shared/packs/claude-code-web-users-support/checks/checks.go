@@ -24,6 +24,8 @@ func init() {
 		"a person trusts that nobody but them or the admin edited their pack only while their directory has its code-owner line", storeCodeowners)
 	register("preferences-provenance", "packs/claude-code-web-users-support/RULES.md",
 		"a rule with no file has no record of when it was set or what prompted it, and the session that changes it next is the only reader who could have written that down", preferencesProvenance)
+	checksdk.Register(checksdk.Check{ID: "preferences-nothing-to-run", Tags: []string{"world"}, OnFail: "block", Doc: "packs/claude-code-web-users-support/README.md",
+		Why: "the engine runs no task and no env step from a personal pack, so one declared there reads as work that never happens", Run: preferencesNothingToRun})
 }
 
 func storeConfigured(repo checksdk.Repo) []checksdk.Finding {
@@ -198,4 +200,52 @@ func preferencesProvenance(repo checksdk.Repo) []checksdk.Finding {
 		}
 	}
 	return out
+}
+
+var envKey = regexp.MustCompile(`(?m)^env\s*[:=]`)
+
+// preferencesNothingToRun reports each person's pack holding a tasks/
+// directory, once per pack, and each personal manifest declaring env.
+func preferencesNothingToRun(repo checksdk.Repo) []checksdk.Finding {
+	s, _, under, ok := held(repo)
+	if !ok {
+		return nil
+	}
+	prefix := s.path + "/"
+	seen := map[string]bool{}
+	var out []checksdk.Finding
+	for _, f := range under {
+		login, rest, _ := strings.Cut(f[len(prefix):], "/")
+		switch {
+		case strings.HasPrefix(rest, "tasks/") && !seen[login]:
+			seen[login] = true
+			out = append(out, checksdk.Finding{
+				Path:     prefix + login + "/tasks",
+				Sentence: "declares tasks in a personal pack, and nothing runs a personal pack's tasks",
+				Fix:      "delete " + prefix + login + "/tasks/, or move the task into a pack the project declares",
+			})
+		case strings.HasPrefix(rest, "pack.") && !strings.Contains(rest, "/") && declaresEnv(repo, f, rest):
+			out = append(out, checksdk.Finding{
+				Path:     f,
+				Sentence: "declares env in a personal pack, and nothing runs a personal pack's env steps",
+				Fix:      "remove the env key, or move the step into a pack the project declares",
+			})
+		}
+	}
+	return out
+}
+
+// declaresEnv reports whether manifest file, named name, has a top-level
+// env key.
+func declaresEnv(repo checksdk.Repo, file, name string) bool {
+	text, _ := repo.Read(file)
+	if name == "pack.json" {
+		var m map[string]json.RawMessage
+		if json.Unmarshal([]byte(text), &m) != nil {
+			return false
+		}
+		_, ok := m["env"]
+		return ok
+	}
+	return envKey.MatchString(text)
 }
