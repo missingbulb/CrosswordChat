@@ -18,9 +18,8 @@ failure message *is* the rule, and each selects its inputs from `.github/workflo
 that ships no workflows hears from none of them.
 
 Most also read `packs/<pack>/stubs/workflows/`, since a stub is copied verbatim into every repo
-adopting its pack and is judged there by these same checks. The two that do not are
-`gha/no-scheduled-fleet-executor` and `gha/scheduled-failure-escalation`, which judge a repo
-rather than a file.
+adopting its pack and is judged there by these same checks. The one that does not is
+`gha/scheduled-failure-escalation`, which judges a repo rather than a file.
 
 The guards judge a tool call rather than a file — a GitHub MCP call or a shell command about to
 run — and carry the platform behaviour that makes the call wrong.
@@ -31,7 +30,6 @@ run — and carry the platform behaviour that makes the call wrong.
 | `gha/run-pipefail` | high | correctness | check: blocking |
 | `gha/checkout-submodules` | high | correctness | check: blocking |
 | `gha/pages-artifact-symlinks` | high | correctness | check: blocking |
-| `gha/no-scheduled-fleet-executor` | medium | correctness | check: blocking |
 | `gha/scheduled-failure-escalation` | high | correctness | check: advisory |
 | `gha/label-create-before-add` | medium | correctness | check: advisory |
 | `gha/unique-automation-branch` | medium | correctness | check: advisory |
