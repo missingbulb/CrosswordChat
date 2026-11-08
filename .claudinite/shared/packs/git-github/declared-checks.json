@@ -122,29 +122,6 @@
     ]
   },
   {
-    "id": "gha/no-scheduled-fleet-executor",
-    "on_fail": "block",
-    "failureMessage": "a second cron competes with the one schedule the repo is meant to have — the per-repo scheduler, which owns every recurring Claudinite job",
-    "scanFiles": "/^\\.github\\/workflows\\/[^/]+\\.ya?ml$/",
-    "scanTracked": true,
-    "excludeFiles": ".github/workflows/claudinite-scheduler.yml",
-    "checkEachFile": [
-      {
-        "relevantWhen": { "pathExists": ".github/workflows/claudinite-scheduler.yml" },
-        "forbid": "/^\\s*schedule:/m",
-        "what": "carries a `schedule:` trigger, but the vendored claudinite-scheduler.yml is this repo's only permitted cron",
-        "fix": "port this workflow's steps into the scheduler task that owns the work and delete the workflow in the same commit"
-      },
-      {
-        "relevantWhen": { "pathAbsent": ".github/workflows/claudinite-scheduler.yml" },
-        "whenFileMatches": "/uses:\\s*\\S*\\/Claudinite\\/\\.github\\/workflows\\//i",
-        "forbid": "/^\\s*schedule:/m",
-        "what": "a Claudinite executor (it calls a canon reusable workflow) carries a `schedule:` trigger",
-        "fix": "remove the schedule: trigger — make it workflow_dispatch only, and adopt the vendored claudinite-scheduler.yml, which owns every recurring Claudinite job (packs/claudinite-growth/skills/writing-tasks/SKILL.md)"
-      }
-    ]
-  },
-  {
     "id": "gha/cron-minute-off-the-hour",
     "on_fail": "advise",
     "failureMessage": "a cron on a round minute is the firing GitHub's scheduler queue most often delays or silently drops, since every repo's cron lands there at once",

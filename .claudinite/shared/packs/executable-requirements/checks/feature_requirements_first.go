@@ -13,7 +13,8 @@ import (
 // After the owner's latest feature-classified comment, an independent
 // commit updating the spec (no code alongside) must precede the first
 // code commit. Scoped by the comment's time, so earlier work on the branch
-// is never re-litigated.
+// is never re-litigated, and to a branch the comment's turn ran on, so a
+// later branch of the same session is not judged by it.
 
 // The executable spec's canonical home; a project whose spec lives
 // elsewhere names it on its pack entry (config.spec).
@@ -29,11 +30,11 @@ func init() {
 	})
 }
 
-// isCode is product work rather than specification: neither Markdown nor
+// isCode is product work rather than specification: neither Markdown, nor
 // part of the requirements tree, whose goldens and harness code are the
-// spec's own machinery.
+// spec's own machinery, nor Claudinite's own tree.
 func isCode(f string) bool {
-	return !strings.HasSuffix(f, ".md") && !strings.HasPrefix(f, "dev/requirements/")
+	return !strings.HasSuffix(f, ".md") && !strings.HasPrefix(f, "dev/requirements/") && !strings.HasPrefix(f, ".claudinite/")
 }
 
 func specPath(repo checksdk.Repo) string {
@@ -55,7 +56,9 @@ func featureRequirementsFirst(repo checksdk.Repo) []checksdk.Finding {
 			feature = &t
 		}
 	}
-	if feature == nil {
+	// A turn that recorded no branch says nothing about where its work
+	// went, so it judges whatever branch is checked out.
+	if feature == nil || len(feature.Branches) > 0 && !slices.Contains(feature.Branches, repo.Branch()) {
 		return nil
 	}
 	// With no spec in the repo no commit could satisfy the ordering, and
