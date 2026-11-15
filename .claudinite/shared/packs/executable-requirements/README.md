@@ -41,7 +41,8 @@ in `deterministic-expecteds`.
   runs, so unregistered must be red.
 - **The ordering** an interactive feature run also has, which `feature-requirements-first`
   checks: after the owner's feature-classified comment, an independent commit updating the spec
-  (no code alongside) precedes the first code commit on the branch. The spec's path defaults to
+  (no code alongside) precedes the first code commit on the branch that comment's work went to;
+  a file under `.claudinite/` is not code. The spec's path defaults to
   the canonical `dev/requirements/requirements.md`; a project whose spec lives elsewhere (a
   non-canonical layout, or the pack pulled in via a `requires` from `spec-driven-product`) names
   it on the pack entry as `config.spec`.
